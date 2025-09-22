@@ -213,8 +213,53 @@ export default function BatchGenerator() {
         console.warn('Erro ao gerar imagem, continuando sem imagem');
       }
 
-      // 4. Salvar no banco de dados
+      // 4. Se imagem existir, transferir para Supabase Storage e obter URL pública
+      let coverPublicUrl: string | null = null;
+      if (imageUrl) {
+        try {
+          const resp = await fetch('/api/image-proxy', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ url: imageUrl })
+          });
+          if (resp.ok) {
+            const contentType = resp.headers.get('content-type') || 'image/png';
+            const blob = await resp.blob();
+
+            let ext = 'png';
+            if (contentType.includes('jpeg') || contentType.includes('jpg')) ext = 'jpg';
+            if (contentType.includes('webp')) ext = 'webp';
+            // Bucket e prefixo conforme o projeto
+            const BUCKET = 'media';
+            const PREFIX = 'app-26/images';
+            const fileName = `${PREFIX}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+
+            const { error: uploadError } = await supabase.storage
+              .from(BUCKET)
+              .upload(fileName, blob, { cacheControl: '3600', upsert: false, contentType });
+
+            if (!uploadError) {
+              const { data: publicData } = supabase.storage
+                .from(BUCKET)
+                .getPublicUrl(fileName);
+              coverPublicUrl = publicData?.publicUrl || null;
+            } else {
+              console.warn('Falha ao subir imagem de lote para Supabase:', uploadError);
+            }
+          }
+        } catch (e) {
+          console.warn('Erro ao transferir imagem para Supabase (lote):', e);
+        }
+      }
+
+      // 5. Salvar no banco de dados
       updateStepStatus(index, 'Salvando', 'generating');
+      // Obter usuário atual para preencher created_by
+      let currentUserId: string | null = null;
+      try {
+        const { data: authData } = await supabase.auth.getUser();
+        currentUserId = authData?.user?.id || null;
+      } catch {}
       const { error: saveError } = await supabase
         .from('audios')
         .insert({
@@ -224,7 +269,8 @@ export default function BatchGenerator() {
           audio_url: audioData.audio_url,
           transcript: prayerData.prayer_text,
           category_id: categoryId,
-          cover_url: imageUrl,
+          cover_url: coverPublicUrl,
+          created_by: currentUserId,
         });
 
       if (saveError) {

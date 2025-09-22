@@ -127,6 +127,64 @@ export default function AIGenerator({ onAudioGenerated }: AIGeneratorProps) {
     setDebugLogs(prev => [newLog, ...prev].slice(0, 10)); // Manter apenas os 10 últimos logs
   };
 
+  // Upload da imagem gerada (URL temporária) para o Supabase Storage e retorna URL pública
+  const uploadImageToSupabaseFromUrl = async (temporaryUrl: string): Promise<string> => {
+    try {
+      console.log('⬆️ Baixando imagem temporária via proxy para upload no Supabase...', temporaryUrl);
+      const response = await fetch('/api/image-proxy', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url: temporaryUrl })
+      });
+      if (!response.ok) {
+        throw new Error(`Falha ao baixar imagem: HTTP ${response.status}`);
+      }
+
+      const contentType = response.headers.get('content-type') || 'image/png';
+      const blob = await response.blob();
+
+      // Determinar extensão
+      let ext = 'png';
+      if (contentType.includes('jpeg') || contentType.includes('jpg')) ext = 'jpg';
+      if (contentType.includes('webp')) ext = 'webp';
+      if (temporaryUrl.match(/\.jpe?g($|\?)/)) ext = 'jpg';
+      if (temporaryUrl.match(/\.png($|\?)/)) ext = 'png';
+      if (temporaryUrl.match(/\.webp($|\?)/)) ext = 'webp';
+
+      // Bucket e prefixo compatíveis com seu projeto
+      const BUCKET = 'media';
+      const PREFIX = 'app-26/images';
+      const fileName = `${PREFIX}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from(BUCKET)
+        .upload(fileName, blob, {
+          cacheControl: '3600',
+          upsert: false,
+          contentType,
+        });
+
+      if (uploadError) {
+        console.error('❌ Erro ao fazer upload da imagem no Supabase:', uploadError);
+        throw uploadError;
+      }
+
+      const { data: publicData } = supabase.storage
+        .from(BUCKET)
+        .getPublicUrl(fileName);
+
+      if (!publicData?.publicUrl) {
+        throw new Error('Não foi possível obter URL pública da imagem');
+      }
+
+      console.log('✅ Imagem hospedada no Supabase:', publicData.publicUrl);
+      return publicData.publicUrl;
+    } catch (err) {
+      console.error('❌ Falha ao hospedar imagem no Supabase:', err);
+      throw err;
+    }
+  };
+
   // Função para copiar URL para clipboard
   const copyToClipboard = async (text: string) => {
     try {
@@ -470,6 +528,13 @@ export default function AIGenerator({ onAudioGenerated }: AIGeneratorProps) {
 
     setIsSaving(true);
     try {
+      // Obter usuário atual para preencher created_by
+      const { data: authData, error: authError } = await supabase.auth.getUser();
+      if (authError) {
+        console.error('❌ Erro ao obter usuário autenticado:', authError);
+      }
+      const currentUserId = authData?.user?.id || null;
+
       const selectedVoiceInfo = ELEVENLABS_VOICES.find(v => v.id === selectedVoice);
       
       // Usar a descrição editável do áudio com informação da voz
@@ -484,8 +549,19 @@ export default function AIGenerator({ onAudioGenerated }: AIGeneratorProps) {
         transcript: prayerData.prayer_text,
         duration: audioDuration ? Math.round(audioDuration) : null, // NOVO: Salvar duração
         category_id: selectedCategory,
+        image_present: !!imageUrl,
       });
       
+      // Se houver imagem gerada, enviar para o Storage e obter URL pública
+      let coverPublicUrl: string | null = null;
+      if (imageUrl) {
+        try {
+          coverPublicUrl = await uploadImageToSupabaseFromUrl(imageUrl);
+        } catch (e) {
+          console.warn('⚠️ Prosseguindo sem cover_url devido a erro no upload da imagem.');
+        }
+      }
+
       // Salvar o áudio na tabela audios
       const { data: audioData, error: audioError } = await supabase
         .from('audios')
@@ -497,6 +573,8 @@ export default function AIGenerator({ onAudioGenerated }: AIGeneratorProps) {
           transcript: prayerData.prayer_text,
           duration: audioDuration ? Math.round(audioDuration) : null, // NOVO: Salvar duração em segundos
           category_id: selectedCategory,
+          cover_url: coverPublicUrl,
+          created_by: currentUserId,
         })
         .select()
         .single();
