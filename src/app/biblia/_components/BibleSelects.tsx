@@ -10,7 +10,6 @@ interface BibleSelectsProps {
   maxChapters: number;
   books: Array<{ code: string; name: string; chapters: number }>;
   navigateToChapter: (book: string, chapter: number, verse?: number) => void;
-  setShowReferenceModal: (show: boolean) => void;
   setShowBibleSearchModal: (show: boolean) => void;
 }
 
@@ -20,7 +19,6 @@ export function BibleSelects({
   maxChapters,
   books,
   navigateToChapter,
-  setShowReferenceModal,
   setShowBibleSearchModal
 }: BibleSelectsProps) {
   return (
@@ -60,17 +58,6 @@ export function BibleSelects({
       </Select>
 
       <div className="flex gap-2">
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => setShowReferenceModal(true)}
-          className="flex items-center gap-2 min-h-[44px]"
-          aria-label="Ir para referência bíblica"
-        >
-          <Search size={16} />
-          Ir para
-        </Button>
-
         <Button
           variant="outline"
           size="sm"

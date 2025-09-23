@@ -73,7 +73,59 @@ export async function POST(req: NextRequest) {
       try { return JSON.parse(settings.prayer_quote_history ?? '[]'); } catch { return []; }
     })().filter(h => within30Days(h.date));
     
-    // Modo IA (OpenAI) se habilitado
+    // 1) Modo Frases (tabela phrases) – prioridade para automação diária
+    //    Avança 1 registro/dia e faz wrap para o primeiro ao final
+    const usePhrases = true; // ativado por padrão para automação baseada no banco
+    if (usePhrases) {
+      // Cursor salvo nas configurações (começa em 1)
+      const cursor = Number.parseInt(settings.phrases_cursor || '1', 10) || 1;
+
+      // Buscar registro atual (>= cursor)
+      const { data: currentRows, error: currentErr } = await supabase
+        .from('phrases')
+        .select('id, livro, capitulo, versiculo, texto')
+        .gte('id', cursor)
+        .order('id', { ascending: true })
+        .limit(1);
+
+      if (!currentErr) {
+        // Buscar também o primeiro registro para wrap e o próximo após o atual
+        const [{ data: firstRows }, { data: nextRows }] = await Promise.all([
+          supabase
+            .from('phrases')
+            .select('id')
+            .order('id', { ascending: true })
+            .limit(1),
+          supabase
+            .from('phrases')
+            .select('id')
+            .gt('id', cursor)
+            .order('id', { ascending: true })
+            .limit(1)
+        ]);
+
+        const current = (currentRows && currentRows[0]) || null;
+        const firstId = firstRows && firstRows[0]?.id;
+        const nextId = nextRows && nextRows[0]?.id;
+
+        if (current) {
+          const reference = `${getBookName(current.livro)} ${current.capitulo}:${current.versiculo}`;
+          const text = (current.texto || '').trim();
+
+          await Promise.all([
+            setSetting('prayer_quote_text', text),
+            setSetting('prayer_quote_reference', reference),
+            setSetting('prayer_quote_last_updated_at', new Date().toISOString()),
+            setSetting('phrases_cursor', String(nextId || firstId || current.id))
+          ]);
+
+          return NextResponse.json({ text, reference, mode: 'phrases', phrase_id: current.id });
+        }
+      }
+      // Se a tabela não existir ou falhar, segue para IA/heurística
+    }
+
+    // 2) Modo IA (OpenAI) se habilitado
     const aiEnabled = (settings.prayer_quote_ai_enabled ?? 'false') === 'true';
     let chosen: any = null;
 

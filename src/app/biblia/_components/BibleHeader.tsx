@@ -10,7 +10,6 @@ interface BibleHeaderProps {
   bookName: string;
   books: Array<{ code: string; name: string; chapters: number }>;
   navigateToChapter: (book: string, chapter: number, verse?: number) => void;
-  setShowReferenceModal: (show: boolean) => void;
   setShowBibleSearchModal: (show: boolean) => void;
   onFontScaleChange: (scale: number) => void;
   onThemeChange: (isDark: boolean) => void;
@@ -24,7 +23,6 @@ export function BibleHeader({
   bookName,
   books,
   navigateToChapter,
-  setShowReferenceModal,
   setShowBibleSearchModal,
   onFontScaleChange,
   onThemeChange,
@@ -41,7 +39,6 @@ export function BibleHeader({
             maxChapters={maxChapters}
             books={books}
             navigateToChapter={navigateToChapter}
-            setShowReferenceModal={setShowReferenceModal}
             setShowBibleSearchModal={setShowBibleSearchModal}
           />
 

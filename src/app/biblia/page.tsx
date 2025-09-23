@@ -15,8 +15,6 @@ import { BibleHeader } from './_components/BibleHeader';
 import { BibleContent } from './_components/BibleContent';
 import { BibleFooter } from './_components/BibleFooter';
 
-// Modais existentes
-import ReferenceModal from './_components/ReferenceModal';
 import BibleSearchModal from './_components/BibleSearchModal';
 
 interface Verse {
@@ -31,7 +29,6 @@ function BibliaPageContent() {
   const [verses, setVerses] = useState<Verse[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
-  const [showReferenceModal, setShowReferenceModal] = useState<boolean>(false);
   const [showBibleSearchModal, setShowBibleSearchModal] = useState<boolean>(false);
   const [isInitialized, setIsInitialized] = useState<boolean>(false);
 
@@ -338,7 +335,6 @@ function BibliaPageContent() {
         bookName={bookName}
         books={BOOKS}
         navigateToChapter={handleNavigateToChapter}
-        setShowReferenceModal={setShowReferenceModal}
         setShowBibleSearchModal={setShowBibleSearchModal}
         onFontScaleChange={handleFontScaleChange}
         onThemeChange={handleThemeChange}
@@ -382,13 +378,6 @@ function BibliaPageContent() {
           📍
         </button>
       )}
-
-      {/* Modal de Referência */}
-      <ReferenceModal
-        isOpen={showReferenceModal}
-        onClose={() => setShowReferenceModal(false)}
-        onNavigate={handleNavigateToChapter}
-      />
 
       {/* Modal de Busca Bíblica */}
       <BibleSearchModal
