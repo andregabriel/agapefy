@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { Search, BookOpen, Loader2, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { searchVerses, getBookName, type SearchResult } from '@/lib/search';
+import { searchBible, getBookName, type SearchResult } from '@/lib/search';
 
 interface BibleSearchModalProps {
   isOpen: boolean;
@@ -46,7 +46,7 @@ export default function BibleSearchModal({ isOpen, onClose, onNavigate }: BibleS
       setError(null);
       setHasSearched(true);
 
-      const searchResults = await searchVerses(searchQuery.trim());
+      const searchResults = await searchBible(searchQuery.trim());
       
       // Verificar se não foi cancelado
       if (!controller.signal.aborted) {
