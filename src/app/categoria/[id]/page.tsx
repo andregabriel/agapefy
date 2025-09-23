@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
-import { getCategoryContent, getRecentCategoryContent } from '@/lib/supabase-queries';
+import { getCategoryContent } from '@/lib/supabase-queries';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, Play, Heart, Download, Clock, Music, List, PlayCircle } from 'lucide-react';
 import Link from 'next/link';
@@ -14,6 +14,7 @@ import { useRoutinePlaylist } from '@/hooks/useRoutinePlaylist';
 import { useUserActivity } from '@/hooks/useUserActivity';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
+import { isRecentesCategoryName } from '@/lib/utils';
 
 interface Audio {
   id: string;
@@ -314,7 +315,7 @@ export default function CategoriaPage() {
         console.log('📋 Categoria encontrada:', categoryData.name);
 
         // Verificar se é uma categoria especial
-        const isSpecialCategory = ['Favoritos', 'Downloads', 'Rotina', 'Recentes'].includes(categoryData.name);
+        const isSpecialCategory = ['Favoritos', 'Downloads', 'Rotina'].includes(categoryData.name) || isRecentesCategoryName(categoryData.name);
 
         if (isSpecialCategory) {
           console.log('⭐ Categoria especial detectada:', categoryData.name);
@@ -391,7 +392,7 @@ export default function CategoriaPage() {
   };
 
   const { audios: displayAudios, playlists: displayPlaylists, loading: specialLoading } = getSpecialCategoryContent();
-  const isSpecialCategory = category && ['Favoritos', 'Downloads', 'Rotina', 'Recentes'].includes(category.name);
+  const isSpecialCategory = category && (['Favoritos', 'Downloads', 'Rotina'].includes(category.name) || isRecentesCategoryName(category.name));
   const finalLoading = loading || (isSpecialCategory && specialLoading);
 
   if (finalLoading) {
@@ -472,7 +473,7 @@ export default function CategoriaPage() {
           >
             <ArrowLeft size={20} />
           </Button>
-          <h1 className="text-3xl font-bold text-white">{category.name === 'Recentes' ? 'Orações Recentes' : category.name}</h1>
+          <h1 className="text-3xl font-bold text-white">{isRecentesCategoryName(category.name) ? 'Orações Recentes' : category.name}</h1>
         </div>
 
         {category.description && (

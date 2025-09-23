@@ -4,7 +4,7 @@ import { useEffect, useState, useCallback, useRef } from 'react';
 import { 
   getCategories, 
   getCategoryContent,
-  getRecentCategoryContent,
+  getPlaylistsByCategory,
   type Category, 
   type Playlist, 
   type Audio 
@@ -20,6 +20,8 @@ import { PrayerStatsSection } from './_components/PrayerStatsSection';
 import { PrayerQuoteSection } from '@/components/PrayerQuoteSection';
 import { useAppSettings } from '@/hooks/useAppSettings';
 import { useUserActivity } from '@/hooks/useUserActivity';
+import { isRecentesCategoryName } from '@/lib/utils';
+import { ActivitiesSection } from '@/app/eu/_components/ActivitiesSection';
 
 interface CategoryWithContent extends Category {
   audios: Audio[];
@@ -32,11 +34,23 @@ export default function HomePage() {
   const [categoriesLoading, setCategoriesLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const { settings } = useAppSettings();
-  const { activities, loading: activitiesLoading } = useUserActivity();
+  const { activities, loading: activitiesLoading, formatRelativeDate, formatTime } = useUserActivity();
   
   // Refs para controle de estado
   const loadingRef = useRef(false);
   const mountedRef = useRef(true);
+  const recentActivitiesCarouselRef = useRef<HTMLDivElement | null>(null);
+
+  const scrollCarousel = (ref: React.RefObject<HTMLDivElement>, direction: 'left' | 'right') => {
+    const carousel = ref.current;
+    if (!carousel) return;
+    const scrollAmount = 200;
+    const currentScroll = carousel.scrollLeft;
+    const targetScroll = direction === 'left' 
+      ? currentScroll - scrollAmount 
+      : currentScroll + scrollAmount;
+    carousel.scrollTo({ left: targetScroll, behavior: 'smooth' });
+  };
 
   // Cleanup no unmount
   useEffect(() => {
@@ -100,13 +114,13 @@ export default function HomePage() {
                 let audios: Audio[] = [];
                 let playlists: Playlist[] = [];
 
-                if (category.name === 'Recentes') {
-                  const recent = await getRecentCategoryContent({
-                    categoryId: category.id,
-                    activities: (activities as any) || []
-                  });
-                  audios = recent.audios;
-                  playlists = recent.playlists;
+                if (isRecentesCategoryName(category.name)) {
+                  // Replicar lógica de /eu: usar atividades do usuário para áudios
+                  const activityAudios = (activities || []).map((a: any) => a.audio);
+                  // Carregar playlists vinculadas à categoria "Recentes"
+                  const recentPlaylists = await getPlaylistsByCategory(category.id);
+                  audios = activityAudios;
+                  playlists = recentPlaylists;
                 } else {
                   const content = await getCategoryContent(category.id);
                   audios = content.audios || [];
@@ -149,7 +163,7 @@ export default function HomePage() {
       
       // Filtrar categorias: manter se tiver conteúdo OU se for "Recentes"
       const categoriesWithActualContent = categoriesWithContentData.filter(
-        cat => cat.name === 'Recentes' || cat.audios.length > 0 || cat.playlists.length > 0
+        cat => isRecentesCategoryName(cat.name) || cat.audios.length > 0 || cat.playlists.length > 0
       );
       
       setCategoriesWithContent(categoriesWithActualContent);
@@ -174,11 +188,11 @@ export default function HomePage() {
     if (!mountedRef.current) return;
 
     setCategoriesWithContent(prev => {
-      const hasRecentes = prev.some(c => c.name === 'Recentes');
+      const hasRecentes = prev.some(c => isRecentesCategoryName(c.name));
       if (!hasRecentes) return prev;
 
       return prev.map(c => 
-        c.name === 'Recentes' 
+        isRecentesCategoryName(c.name)
           ? { ...c, audios: (activities || []).map((a: any) => a.audio) }
           : c
       );
@@ -231,33 +245,51 @@ export default function HomePage() {
 
   return (
     <div className="px-4 py-6 pt-6 space-y-8">
-      {/* Conteúdo principal */}
+      {/* Conteúdo principal (inclui Recentes na posição definida pelo admin) */}
       {categoriesWithContent.length === 0 ? (
         <EmptyState 
           categoriesLoading={categoriesLoading}
           onRefresh={handleRefreshCategories}
         />
       ) : (
-        categoriesWithContent.map((category, index) => (
-          <div key={category.id}>
-            {/* Renderizar categoria */}
-            <CategorySection
-              category={category}
-              index={index}
-            />
-            
-            {/* Inserir frase bíblica na posição dinâmica */}
-            {(() => {
-              const pos = Number.parseInt(settings.prayer_quote_position || '0', 10);
-              const effectivePos = Number.isFinite(pos) ? Math.max(0, pos) : 0;
-              return index === effectivePos;
-            })() && (
-              <div className="my-8">
-                <PrayerQuoteSection />
-              </div>
-            )}
-          </div>
-        ))
+        (() => {
+          // Agora renderizamos a lista completa de categorias respeitando a ordem do admin.
+          // Quando a categoria for "Recentes", mostramos a ActivitiesSection no lugar dela.
+          const total = categoriesWithContent.length;
+          const effectiveQuotePos = (() => {
+            const rawPos = Number.parseInt(settings.prayer_quote_position || '0', 10);
+            return Number.isFinite(rawPos)
+              ? Math.max(0, Math.min(total, rawPos))
+              : 0;
+          })();
+
+          return categoriesWithContent.map((category, index) => (
+            <div key={category.id}>
+              {isRecentesCategoryName(category.name) ? (
+                <ActivitiesSection
+                  activities={activities}
+                  activitiesLoading={activitiesLoading}
+                  scrollCarousel={scrollCarousel}
+                  recentActivitiesCarouselRef={recentActivitiesCarouselRef}
+                  formatRelativeDate={formatRelativeDate}
+                  formatTime={formatTime}
+                />
+              ) : (
+                <CategorySection
+                  category={category}
+                  index={index}
+                />
+              )}
+
+              {/* Inserir frase bíblica na posição dinâmica baseada na lista completa */}
+              {index === effectiveQuotePos && (
+                <div className="my-8">
+                  <PrayerQuoteSection />
+                </div>
+              )}
+            </div>
+          ));
+        })()
       )}
 
       {/* Indicador de loading para refresh */}

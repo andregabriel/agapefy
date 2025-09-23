@@ -1,0 +1,87 @@
+   ▲ Next.js 15.2.4
+   - Local:        http://localhost:3005
+   - Network:      http://192.168.15.16:3005
+   - Environments: .env.local
+
+ ✓ Starting...
+ ✓ Ready in 1428ms
+ ○ Compiling / ...
+ ✓ Compiled / in 2.1s (1177 modules)
+📊 AuthContext: Estado atual - User: false Loading: true
+ GET /?vscodeBrowserReqId=1758654099240 200 in 2514ms
+ ✓ Compiled in 369ms (533 modules)
+📊 AuthContext: Estado atual - User: false Loading: true
+ GET /?vscodeBrowserReqId=1758654172441 200 in 35ms
+ ✓ Compiled /login in 405ms (1186 modules)
+ GET /login 200 in 473ms
+ GET / 200 in 24ms
+ ✓ Compiled in 674ms (1208 modules)
+ GET / 200 in 51ms
+ ✓ Compiled in 269ms (1208 modules)
+ GET / 200 in 43ms
+ GET /login 200 in 15ms
+ ✓ Compiled /middleware in 162ms (101 modules)
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ ✓ Compiled /admin in 484ms (1267 modules)
+ GET /admin 200 in 511ms
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ GET /admin 200 in 11ms
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ ✓ Compiled /admin/categorias in 437ms (1302 modules)
+ GET /admin/categorias 200 in 468ms
+ GET / 200 in 18ms
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ GET /admin 200 in 15ms
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ GET /admin/categorias 200 in 11ms
+ GET / 200 in 15ms
+ ✓ Compiled in 457ms (1316 modules)
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ GET /admin/categorias 200 in 46ms
+ ✓ Compiled in 242ms (1316 modules)
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ GET /admin/categorias 200 in 32ms
+ GET / 200 in 13ms
+📊 AuthContext: Estado atual - User: false Loading: true
+ GET / 200 in 122ms
+ GET /login 200 in 13ms
+ ✓ Compiled /favicon.ico in 218ms (737 modules)
+ GET /favicon.ico 200 in 479ms
+ GET / 200 in 35ms
+📊 AuthContext: Estado atual - User: false Loading: true
+ GET / 200 in 99ms
+ GET /login 200 in 16ms
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ GET /admin 200 in 14ms
+ GET / 200 in 15ms
+ ○ Compiling /busca ...
+ ✓ Compiled /busca in 830ms (1347 modules)
+ GET /busca 200 in 915ms
+📊 AuthContext: Estado atual - User: false Loading: true
+ GET / 200 in 190ms
+ GET / 200 in 191ms
+📊 AuthContext: Estado atual - User: false Loading: true
+ GET / 200 in 26ms
+ ✓ Compiled /favicon.ico in 103ms (754 modules)
+ GET /favicon.ico 200 in 354ms
+ GET /busca 200 in 38ms
+ ✓ Compiled /biblia in 253ms (1394 modules)
+ GET /biblia 200 in 284ms
+ ✓ Compiled /amigos in 490ms (1428 modules)
+ GET /amigos 200 in 563ms
+ ○ Compiling /eu ...
+ ✓ Compiled /eu in 805ms (3158 modules)
+ GET /eu 200 in 877ms
+ ⚠ Fast Refresh had to perform a full reload due to a runtime error.
+📊 AuthContext: Estado atual - User: false Loading: true
+ GET /eu 200 in 152ms
+📊 AuthContext: Estado atual - User: false Loading: true
+ GET /eu 200 in 37ms
+ GET /favicon.ico 200 in 220ms
+ GET /biblia 200 in 21ms
+ GET /biblia 200 in 16ms
+📊 AuthContext: Estado atual - User: false Loading: true
+ GET / 200 in 50ms
+ GET /biblia 200 in 15ms
+📊 AuthContext: Estado atual - User: false Loading: true
+ GET /biblia 200 in 55ms

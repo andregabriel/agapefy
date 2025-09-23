@@ -4,6 +4,7 @@ import { ContentCard } from './ContentCard';
 import { QuickAccessIcons } from './QuickAccessIcons';
 import { CarouselIndicators } from './CarouselIndicators';
 import { deduplicateById, getLayoutClasses } from '../_utils/homeUtils';
+import { isRecentesCategoryName } from '@/lib/utils';
 import type { Category, Audio, Playlist } from '@/lib/supabase-queries';
 
 interface CategoryWithContent extends Category {
@@ -82,7 +83,7 @@ export function CategorySection({ category, index }: CategorySectionProps) {
         {!category.is_featured && (
           <div className="flex items-center justify-between mb-6">
             <div>
-              <h2 className="text-2xl font-bold text-white mb-1">{category.name === 'Recentes' ? 'Orações Recentes' : category.name}</h2>
+              <h2 className="text-2xl font-bold text-white mb-1">{isRecentesCategoryName(category.name) ? 'Orações Recentes' : category.name}</h2>
             </div>
           </div>
         )}

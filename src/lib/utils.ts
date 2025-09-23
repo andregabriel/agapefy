@@ -18,3 +18,19 @@ export function formatDate(date: string | Date): string {
     year: 'numeric',
   }).format(new Date(date));
 }
+
+// Normaliza strings removendo acentos e caixa para comparações robustas
+export function normalizeText(input?: string | null): string {
+  if (!input) return '';
+  return input
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .trim();
+}
+
+// Identifica a categoria "Recentes" mesmo que seja salva como "Orações Recentes"
+export function isRecentesCategoryName(name?: string | null): boolean {
+  const normalized = normalizeText(name);
+  return normalized === 'recentes' || normalized === 'oracoes recentes';
+}

@@ -29,7 +29,7 @@ import { toast } from 'sonner';
 import { 
   getCategories, 
   getCategoryContent,
-  getRecentCategoryContent,
+  getPlaylistsByCategory,
   type Category, 
   type Audio, 
   type Playlist 
@@ -37,6 +37,7 @@ import {
 import { supabase } from '@/lib/supabase';
 import { useAppSettings } from '@/hooks/useAppSettings';
 import { useUserActivity } from '@/hooks/useUserActivity';
+import { isRecentesCategoryName } from '@/lib/utils';
 
 interface CategoryWithContent extends Category {
   audios: Audio[];
@@ -100,12 +101,10 @@ export default function AdminCategoriasPage() {
       // Carregar conteúdo para cada categoria
       const categoriesWithContent = await Promise.all(
         categoriesData.map(async (category) => {
-          if (category.name === 'Recentes') {
-            const recent = await getRecentCategoryContent({
-              categoryId: category.id,
-              activities: (activities as any) || []
-            });
-            return { ...category, audios: recent.audios, playlists: recent.playlists } as any;
+          if (isRecentesCategoryName(category.name)) {
+            const activityAudios = (activities || []).map((a: any) => a.audio);
+            const recentPlaylists = await getPlaylistsByCategory(category.id);
+            return { ...category, audios: activityAudios, playlists: recentPlaylists } as any;
           }
 
           const { audios, playlists } = await getCategoryContent(category.id);
@@ -610,7 +609,7 @@ export default function AdminCategoriasPage() {
                         <div className="flex items-center space-x-4">
                           <div>
                     <CardTitle className="flex items-center space-x-2">
-                      <span>{category.name === 'Recentes' ? 'Orações Recentes' : category.name}</span>
+                      <span>{isRecentesCategoryName(category.name) ? 'Orações Recentes' : category.name}</span>
                               {category.is_featured && (
                                 <Badge variant="secondary">Destaque</Badge>
                               )}
@@ -693,8 +692,8 @@ export default function AdminCategoriasPage() {
                             </div>
                           ) : (
                             <div className="grid gap-3">
-                              {category.audios.map((audio) => (
-                                <div key={audio.id} className="flex items-center justify-between p-3 border rounded-lg">
+                              {category.audios.map((audio, idx) => (
+                                <div key={`${category.id}-${audio.id}-${idx}`} className="flex items-center justify-between p-3 border rounded-lg">
                                   <div>
                                     <h4 className="font-medium">{audio.title}</h4>
                                     {audio.subtitle && (
