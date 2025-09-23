@@ -393,7 +393,7 @@ function BibliaPageContent() {
       {/* Modal de Busca Bíblica */}
       <BibleSearchModal
         isOpen={showBibleSearchModal}
-        onClose={() => setShowBibleSearch(false)}
+        onClose={() => setShowBibleSearchModal(false)}
         onNavigate={handleNavigateToChapter}
       />
     </div>

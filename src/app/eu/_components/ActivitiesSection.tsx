@@ -32,7 +32,7 @@ export function ActivitiesSection({
         <div>
           <h2 className="text-2xl font-bold text-white mb-1 flex items-center">
             <History className="h-6 w-6 mr-2 text-green-500" />
-            Atividades Recentes
+            Orações Recentes
           </h2>
           <p className="text-sm text-gray-400">
             {activities.length > 0 ? 

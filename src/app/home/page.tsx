@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback, useRef } from 'react';
 import { 
   getCategories, 
   getCategoryContent,
+  getRecentCategoryContent,
   type Category, 
   type Playlist, 
   type Audio 
@@ -17,6 +18,8 @@ import { CategorySection } from './_components/CategorySection';
 import { LoadingIndicator } from './_components/LoadingIndicator';
 import { PrayerStatsSection } from './_components/PrayerStatsSection';
 import { PrayerQuoteSection } from '@/components/PrayerQuoteSection';
+import { useAppSettings } from '@/hooks/useAppSettings';
+import { useUserActivity } from '@/hooks/useUserActivity';
 
 interface CategoryWithContent extends Category {
   audios: Audio[];
@@ -28,6 +31,8 @@ export default function HomePage() {
   const [loading, setLoading] = useState(true);
   const [categoriesLoading, setCategoriesLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const { settings } = useAppSettings();
+  const { activities, loading: activitiesLoading } = useUserActivity();
   
   // Refs para controle de estado
   const loadingRef = useRef(false);
@@ -62,7 +67,11 @@ export default function HomePage() {
       console.log('🏠 Carregando categorias com conteúdo na home...');
       
       // Buscar categorias primeiro
-      const categories = await getCategories();
+      let categories = await getCategories();
+
+      // Respeitar visibilidade na Home (default: true)
+      categories = categories.filter((cat) => (cat as any).is_visible !== false);
+
       console.log('✅ Categorias encontradas:', categories.length);
       
       if (!mountedRef.current) return; // Componente foi desmontado
@@ -87,20 +96,28 @@ export default function HomePage() {
           const batchResults = await Promise.allSettled(
             batch.map(async (category) => {
               try {
-                const { audios, playlists } = await getCategoryContent(category.id);
+                // Conteúdo padrão
+                let audios: Audio[] = [];
+                let playlists: Playlist[] = [];
+
+                if (category.name === 'Recentes') {
+                  const recent = await getRecentCategoryContent({
+                    categoryId: category.id,
+                    activities: (activities as any) || []
+                  });
+                  audios = recent.audios;
+                  playlists = recent.playlists;
+                } else {
+                  const content = await getCategoryContent(category.id);
+                  audios = content.audios || [];
+                  playlists = content.playlists || [];
+                }
+
                 console.log(`🎵 Categoria "${category.name}": ${audios.length} áudios + ${playlists.length} playlists`);
-                return {
-                  ...category,
-                  audios: audios || [],
-                  playlists: playlists || []
-                };
+                return { ...category, audios, playlists };
               } catch (error) {
                 console.warn(`⚠️ Erro ao carregar conteúdo da categoria "${category.name}":`, error);
-                return {
-                  ...category,
-                  audios: [],
-                  playlists: []
-                };
+                return { ...category, audios: [], playlists: [] };
               }
             })
           );
@@ -130,9 +147,9 @@ export default function HomePage() {
       
       if (!mountedRef.current) return;
       
-      // Filtrar apenas categorias que têm conteúdo (áudios ou playlists)
+      // Filtrar categorias: manter se tiver conteúdo OU se for "Recentes"
       const categoriesWithActualContent = categoriesWithContentData.filter(
-        cat => cat.audios.length > 0 || cat.playlists.length > 0
+        cat => cat.name === 'Recentes' || cat.audios.length > 0 || cat.playlists.length > 0
       );
       
       setCategoriesWithContent(categoriesWithActualContent);
@@ -150,7 +167,23 @@ export default function HomePage() {
         setCategoriesLoading(false);
       }
     }
-  }, []);
+  }, [activities]);
+
+  // Atualizar "Recentes" quando atividades mudarem
+  useEffect(() => {
+    if (!mountedRef.current) return;
+
+    setCategoriesWithContent(prev => {
+      const hasRecentes = prev.some(c => c.name === 'Recentes');
+      if (!hasRecentes) return prev;
+
+      return prev.map(c => 
+        c.name === 'Recentes' 
+          ? { ...c, audios: (activities || []).map((a: any) => a.audio) }
+          : c
+      );
+    });
+  }, [activities]);
 
   // Carregar dados na inicialização (apenas uma vez)
   useEffect(() => {
@@ -168,6 +201,7 @@ export default function HomePage() {
       focusTimeout = setTimeout(() => {
         if (mountedRef.current && !loadingRef.current) {
           console.log('👁️ Página ganhou foco, recarregando categorias...');
+          // Não limpar conteúdo existente para evitar "pisca"
           loadCategoriesWithContent(true);
         }
       }, 1000); // 1 segundo de debounce
@@ -212,8 +246,12 @@ export default function HomePage() {
               index={index}
             />
             
-            {/* Inserir frase bíblica na posição 2 (após primeira categoria) */}
-            {index === 0 && (
+            {/* Inserir frase bíblica na posição dinâmica */}
+            {(() => {
+              const pos = Number.parseInt(settings.prayer_quote_position || '0', 10);
+              const effectivePos = Number.isFinite(pos) ? Math.max(0, pos) : 0;
+              return index === effectivePos;
+            })() && (
               <div className="my-8">
                 <PrayerQuoteSection />
               </div>

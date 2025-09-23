@@ -67,6 +67,8 @@ export default function ConfiguracoesPage() {
     );
   }
 
+  const DEFAULT_AI_PROMPT = `Você é um curador bíblico. Escolha um único versículo da Bíblia que seja claro, edificante, compreensível para leigos e autocontido. Evite genealogias, leis rituais, profecias e visões enigmáticas ou trechos violentos/duros sem contexto. Prefira trechos que transmitam esperança, encorajamento, sabedoria prática ou conforto. Não repita nenhum dos últimos 30 versículos informados.`;
+
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
@@ -165,6 +167,96 @@ export default function ConfiguracoesPage() {
                   }))}
                   placeholder="Ex: Mateus 18:20"
                 />
+              </div>
+
+              {/* Atualização diária e Atualizar agora */}
+              <div className="flex items-center justify-between">
+                <Label>Atualização diária automática</Label>
+                <Switch
+                  checked={(localSettings.prayer_quote_auto_enabled ?? 'true') === 'true'}
+                  onCheckedChange={(checked) => setLocalSettings(prev => ({
+                    ...prev,
+                    prayer_quote_auto_enabled: checked ? 'true' : 'false'
+                  }))}
+                />
+              </div>
+
+              {/* Seleção via IA (OpenAI) */}
+              <div className="flex items-center justify-between">
+                <Label>Seleção via IA (OpenAI)</Label>
+                <Switch
+                  checked={(localSettings.prayer_quote_ai_enabled ?? 'false') === 'true'}
+                  onCheckedChange={(checked) => setLocalSettings(prev => ({
+                    ...prev,
+                    prayer_quote_ai_enabled: checked ? 'true' : 'false'
+                  }))}
+                />
+              </div>
+
+              {/* Prompt base da IA (editável) */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="prayer_quote_ai_prompt_template">Prompt da IA (curadoria do versículo)</Label>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setLocalSettings(prev => ({
+                      ...prev,
+                      prayer_quote_ai_prompt_template: DEFAULT_AI_PROMPT
+                    }))}
+                  >
+                    Restaurar padrão
+                  </Button>
+                </div>
+                <Textarea
+                  id="prayer_quote_ai_prompt_template"
+                  value={localSettings.prayer_quote_ai_prompt_template || ''}
+                  onChange={(e) => setLocalSettings(prev => ({
+                    ...prev,
+                    prayer_quote_ai_prompt_template: e.target.value
+                  }))}
+                  placeholder="Texto do prompt que orienta a IA na escolha do versículo"
+                  rows={5}
+                />
+                <p className="text-xs text-gray-500">A IA usa este prompt como instrução inicial. O texto oficial do versículo sempre vem do Supabase.</p>
+              </div>
+
+              <div>
+                <Button
+                  variant="outline"
+                  onClick={async () => {
+                    try {
+                      // Salvar silenciosamente as configs relevantes antes de acionar a atualização
+                      const pending: Promise<any>[] = [];
+                      if (settings.prayer_quote_ai_enabled !== (localSettings.prayer_quote_ai_enabled ?? 'false')) {
+                        pending.push(updateSetting('prayer_quote_ai_enabled', localSettings.prayer_quote_ai_enabled ?? 'false'));
+                      }
+                      if ((settings.prayer_quote_ai_prompt_template ?? '') !== (localSettings.prayer_quote_ai_prompt_template ?? '')) {
+                        pending.push(updateSetting('prayer_quote_ai_prompt_template', localSettings.prayer_quote_ai_prompt_template ?? ''));
+                      }
+                      await Promise.all(pending);
+
+                      const res = await fetch('/api/daily-quote?force=true', { method: 'POST' });
+                      const data = await res.json();
+                      if (res.ok) {
+                        setLocalSettings(prev => ({
+                          ...prev,
+                          prayer_quote_text: data.text ?? prev.prayer_quote_text,
+                          prayer_quote_reference: data.reference ?? prev.prayer_quote_reference
+                        }));
+                        const mode = data.mode === 'ai' ? 'via IA' : 'via heurística';
+                        toast.success(`Citação atualizada (${mode})!`);
+                      } else {
+                        toast.error(data?.error || 'Falha ao atualizar');
+                      }
+                    } catch (e) {
+                      toast.error('Falha ao atualizar');
+                    }
+                  }}
+                >
+                  Atualizar agora
+                </Button>
               </div>
 
             </CardContent>

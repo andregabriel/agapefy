@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
-import { getCategoryContent } from '@/lib/supabase-queries';
+import { getCategoryContent, getRecentCategoryContent } from '@/lib/supabase-queries';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, Play, Heart, Download, Clock, Music, List, PlayCircle } from 'lucide-react';
 import Link from 'next/link';
@@ -373,8 +373,11 @@ export default function CategoriaPage() {
       
       case 'Recentes':
         return {
-          audios: activities.map(activity => activity.audio),
-          playlists: [],
+          audios: (activities || []).reduce((acc: any[], a: any) => {
+            if (!acc.some(x => x.id === a.audio.id)) acc.push(a.audio);
+            return acc;
+          }, []),
+          playlists,
           loading: activitiesLoading
         };
       
@@ -469,7 +472,7 @@ export default function CategoriaPage() {
           >
             <ArrowLeft size={20} />
           </Button>
-          <h1 className="text-3xl font-bold text-white">{category.name}</h1>
+          <h1 className="text-3xl font-bold text-white">{category.name === 'Recentes' ? 'Orações Recentes' : category.name}</h1>
         </div>
 
         {category.description && (

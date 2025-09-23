@@ -82,7 +82,7 @@ export function CategorySection({ category, index }: CategorySectionProps) {
         {!category.is_featured && (
           <div className="flex items-center justify-between mb-6">
             <div>
-              <h2 className="text-2xl font-bold text-white mb-1">{category.name}</h2>
+              <h2 className="text-2xl font-bold text-white mb-1">{category.name === 'Recentes' ? 'Orações Recentes' : category.name}</h2>
             </div>
           </div>
         )}

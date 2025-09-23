@@ -29,13 +29,14 @@ import { toast } from 'sonner';
 import { 
   getCategories, 
   getCategoryContent,
-  getPlaylistsByCategory,
+  getRecentCategoryContent,
   type Category, 
   type Audio, 
   type Playlist 
 } from '@/lib/supabase-queries';
 import { supabase } from '@/lib/supabase';
 import { useAppSettings } from '@/hooks/useAppSettings';
+import { useUserActivity } from '@/hooks/useUserActivity';
 
 interface CategoryWithContent extends Category {
   audios: Audio[];
@@ -45,6 +46,7 @@ interface CategoryWithContent extends Category {
 export default function AdminCategoriasPage() {
   const { user } = useAuth();
   const { settings, updateSetting, loading: settingsLoading } = useAppSettings();
+  const { activities, loading: activitiesLoading } = useUserActivity();
   const [categories, setCategories] = useState<CategoryWithContent[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedCategory, setSelectedCategory] = useState<CategoryWithContent | null>(null);
@@ -55,7 +57,8 @@ export default function AdminCategoriasPage() {
     description: '',
     image_url: '',
     layout_type: 'spotify',
-    is_featured: false
+    is_featured: false,
+    is_visible: true
   });
   
   const [newPlaylistForm, setNewPlaylistForm] = useState({
@@ -97,6 +100,14 @@ export default function AdminCategoriasPage() {
       // Carregar conteúdo para cada categoria
       const categoriesWithContent = await Promise.all(
         categoriesData.map(async (category) => {
+          if (category.name === 'Recentes') {
+            const recent = await getRecentCategoryContent({
+              categoryId: category.id,
+              activities: (activities as any) || []
+            });
+            return { ...category, audios: recent.audios, playlists: recent.playlists } as any;
+          }
+
           const { audios, playlists } = await getCategoryContent(category.id);
           return {
             ...category,
@@ -119,6 +130,13 @@ export default function AdminCategoriasPage() {
   useEffect(() => {
     loadCategories();
   }, []);
+
+  // Atualizar conteúdo da categoria "Recentes" quando atividades mudarem
+  useEffect(() => {
+    if (!activitiesLoading) {
+      loadCategories();
+    }
+  }, [activitiesLoading]);
 
   // Salvar configurações da frase bíblica
   const handleSaveQuoteSettings = async () => {
@@ -158,7 +176,8 @@ export default function AdminCategoriasPage() {
         description: '',
         image_url: '',
         layout_type: 'spotify',
-        is_featured: false
+        is_featured: false,
+        is_visible: true
       });
       setShowNewCategoryDialog(false);
       loadCategories();
@@ -198,7 +217,8 @@ export default function AdminCategoriasPage() {
           description: editingCategory.description,
           image_url: editingCategory.image_url,
           layout_type: editingCategory.layout_type,
-          is_featured: editingCategory.is_featured
+          is_featured: editingCategory.is_featured,
+          is_visible: (editingCategory as any).is_visible ?? true
         })
         .eq('id', editingCategory.id);
 
@@ -348,7 +368,8 @@ export default function AdminCategoriasPage() {
       layout_type: category.layout_type || 'spotify',
       is_featured: category.is_featured || false,
       created_at: category.created_at,
-      order_position: category.order_position
+      order_position: category.order_position,
+      is_visible: (category as any).is_visible ?? true
     });
     setShowEditCategoryDialog(true);
   };
@@ -525,242 +546,291 @@ export default function AdminCategoriasPage() {
       </div>
 
       <div className="grid gap-6">
-        {categories.map((category, index) => (
-          <Card key={category.id}>
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-4">
-                  <div>
-                    <CardTitle className="flex items-center space-x-2">
-                      <span>{category.name}</span>
-                      {category.is_featured && (
-                        <Badge variant="secondary">Destaque</Badge>
-                      )}
-                      <Badge variant="outline">{category.layout_type}</Badge>
-                    </CardTitle>
-                    <p className="text-gray-600 mt-1">{category.description}</p>
-                  </div>
-                </div>
-                
-                <div className="flex items-center space-x-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handleMoveCategory(category.id, 'up')}
-                    disabled={index === 0}
-                  >
-                    <ArrowUp size={16} />
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handleMoveCategory(category.id, 'down')}
-                    disabled={index === categories.length - 1}
-                  >
-                    <ArrowDown size={16} />
-                  </Button>
-                  
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleOpenEditCategory(category);
-                    }}
-                    className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
-                    title="Editar categoria"
-                    data-testid={`edit-cat-${category.id}`}
-                  >
-                    <Edit size={16} />
-                  </Button>
-                  
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handleDeleteCategory(category.id)}
-                  >
-                    <Trash2 size={16} />
-                  </Button>
-                </div>
-              </div>
-            </CardHeader>
-            
-            <CardContent>
-              <Tabs defaultValue="audios" className="w-full">
-                <TabsList className="grid w-full grid-cols-2">
-                  <TabsTrigger value="audios" className="flex items-center space-x-2">
-                    <Music size={16} />
-                    <span>Orações ({category.audios.length})</span>
-                  </TabsTrigger>
-                  <TabsTrigger value="playlists" className="flex items-center space-x-2">
-                    <List size={16} />
-                    <span>Playlists ({category.playlists.length})</span>
-                  </TabsTrigger>
-                </TabsList>
-                
-                {/* Tab de Orações/Áudios */}
-                <TabsContent value="audios" className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <h3 className="text-lg font-semibold">Orações da Categoria</h3>
-                    <Button size="sm" variant="outline">
-                      <Plus size={16} className="mr-2" />
-                      Adicionar Oração
+        {(() => {
+          const current = Number.parseInt(settings.prayer_quote_position || '0', 10);
+          const quotePos = Number.isFinite(current)
+            ? Math.max(0, Math.min(categories.length, current))
+            : 0;
+
+          const QuoteCard = () => (
+            <Card>
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <CardTitle className="flex items-center space-x-2">
+                    <Heart className="text-blue-600" size={18} />
+                    <span>Frase Bíblica</span>
+                  </CardTitle>
+                  <div className="flex items-center space-x-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={async () => {
+                        const newPos = Math.max(0, quotePos - 1);
+                        await updateSetting('prayer_quote_position', String(newPos));
+                        toast.success('Posição atualizada!');
+                      }}
+                      disabled={quotePos <= 0}
+                    >
+                      <ArrowUp size={16} />
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={async () => {
+                        const newPos = Math.min(categories.length, quotePos + 1);
+                        await updateSetting('prayer_quote_position', String(newPos));
+                        toast.success('Posição atualizada!');
+                      }}
+                      disabled={quotePos >= categories.length}
+                    >
+                      <ArrowDown size={16} />
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setShowSettingsDialog(true)}
+                      title="Configurações da Frase Bíblica"
+                    >
+                      <Settings size={16} />
                     </Button>
                   </div>
-                  
-                  {category.audios.length === 0 ? (
-                    <div className="text-center py-8 text-gray-500">
-                      <Music size={48} className="mx-auto mb-4 opacity-50" />
-                      <p>Nenhuma oração nesta categoria</p>
-                    </div>
-                  ) : (
-                    <div className="grid gap-3">
-                      {category.audios.map((audio) => (
-                        <div key={audio.id} className="flex items-center justify-between p-3 border rounded-lg">
+                </div>
+              </CardHeader>
+            </Card>
+          );
+
+          return (
+            <>
+              {categories.map((category, index) => (
+                <React.Fragment key={`cat-${category.id}`}>
+                  {index === quotePos && <QuoteCard />}
+                  <Card>
+                    <CardHeader>
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center space-x-4">
                           <div>
-                            <h4 className="font-medium">{audio.title}</h4>
-                            {audio.subtitle && (
-                              <p className="text-sm text-gray-600">{audio.subtitle}</p>
-                            )}
-                            <p className="text-xs text-gray-500">
-                              {audio.duration ? `${Math.round(audio.duration / 60)} min` : 'Duração não definida'}
-                            </p>
-                          </div>
-                          <div className="flex items-center space-x-2">
-                            <Button size="sm" variant="outline">
-                              <Edit size={16} />
-                            </Button>
-                            <Button size="sm" variant="outline">
-                              <Trash2 size={16} />
-                            </Button>
+                    <CardTitle className="flex items-center space-x-2">
+                      <span>{category.name === 'Recentes' ? 'Orações Recentes' : category.name}</span>
+                              {category.is_featured && (
+                                <Badge variant="secondary">Destaque</Badge>
+                              )}
+                              <Badge variant="outline">{category.layout_type}</Badge>
+                            </CardTitle>
+                            <p className="text-gray-600 mt-1">{category.description}</p>
                           </div>
                         </div>
-                      ))}
-                    </div>
-                  )}
-                </TabsContent>
-                
-                {/* Tab de Playlists */}
-                <TabsContent value="playlists" className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <h3 className="text-lg font-semibold">Playlists da Categoria</h3>
-                    <Dialog open={showNewPlaylistDialog} onOpenChange={setShowNewPlaylistDialog}>
-                      <DialogTrigger asChild>
-                        <Button 
-                          size="sm" 
-                          variant="outline"
-                          onClick={() => setSelectedCategory(category)}
-                        >
-                          <Plus size={16} className="mr-2" />
-                          Nova Playlist
-                        </Button>
-                      </DialogTrigger>
-                      <DialogContent>
-                        <DialogHeader>
-                          <DialogTitle className="text-gray-900">Criar Nova Playlist</DialogTitle>
-                        </DialogHeader>
-                        <div className="space-y-4">
-                          <div>
-                            <Label htmlFor="playlist-title" className="text-gray-700 font-medium">Título</Label>
-                            <Input
-                              id="playlist-title"
-                              value={newPlaylistForm.title}
-                              onChange={(e) => setNewPlaylistForm(prev => ({ ...prev, title: e.target.value }))}
-                              placeholder="Título da playlist"
-                              className="text-gray-900 bg-white border-gray-300"
-                            />
-                          </div>
-                          <div>
-                            <Label htmlFor="playlist-description" className="text-gray-700 font-medium">Descrição</Label>
-                            <Textarea
-                              id="playlist-description"
-                              value={newPlaylistForm.description}
-                              onChange={(e) => setNewPlaylistForm(prev => ({ ...prev, description: e.target.value }))}
-                              placeholder="Descrição da playlist"
-                              className="text-gray-900 bg-white border-gray-300"
-                            />
-                          </div>
-                          <div>
-                            <Label htmlFor="playlist-cover" className="text-gray-700 font-medium">URL da Capa</Label>
-                            <Input
-                              id="playlist-cover"
-                              value={newPlaylistForm.cover_url}
-                              onChange={(e) => setNewPlaylistForm(prev => ({ ...prev, cover_url: e.target.value }))}
-                              placeholder="https://exemplo.com/capa.jpg"
-                              className="text-gray-900 bg-white border-gray-300"
-                            />
-                          </div>
-                          <div className="flex items-center space-x-2">
-                            <input
-                              type="checkbox"
-                              id="playlist-public"
-                              checked={newPlaylistForm.is_public}
-                              onChange={(e) => setNewPlaylistForm(prev => ({ ...prev, is_public: e.target.checked }))}
-                            />
-                            <Label htmlFor="playlist-public" className="text-gray-700">Playlist pública</Label>
-                          </div>
-                          <div className="flex space-x-2">
-                            <Button onClick={handleCreatePlaylist} className="flex-1">
-                              <Save size={16} className="mr-2" />
-                              Criar Playlist
-                            </Button>
-                            <Button variant="outline" onClick={() => setShowNewPlaylistDialog(false)}>
-                              Cancelar
-                            </Button>
-                          </div>
+                        
+                        <div className="flex items-center space-x-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleMoveCategory(category.id, 'up')}
+                            disabled={index === 0}
+                          >
+                            <ArrowUp size={16} />
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleMoveCategory(category.id, 'down')}
+                            disabled={index === categories.length - 1}
+                          >
+                            <ArrowDown size={16} />
+                          </Button>
+                          
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleOpenEditCategory(category);
+                            }}
+                            className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                            title="Editar categoria"
+                            data-testid={`edit-cat-${category.id}`}
+                          >
+                            <Edit size={16} />
+                          </Button>
+                          
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleDeleteCategory(category.id)}
+                          >
+                            <Trash2 size={16} />
+                          </Button>
                         </div>
-                      </DialogContent>
-                    </Dialog>
-                  </div>
-                  
-                  {category.playlists.length === 0 ? (
-                    <div className="text-center py-8 text-gray-500">
-                      <List size={48} className="mx-auto mb-4 opacity-50" />
-                      <p>Nenhuma playlist nesta categoria</p>
-                    </div>
-                  ) : (
-                    <div className="grid gap-3">
-                      {category.playlists.map((playlist) => (
-                        <div key={playlist.id} className="flex items-center justify-between p-3 border rounded-lg">
-                          <div>
-                            <h4 className="font-medium">{playlist.title}</h4>
-                            {playlist.description && (
-                              <p className="text-sm text-gray-600">{playlist.description}</p>
-                            )}
-                            <div className="flex items-center space-x-4 mt-1">
-                              <p className="text-xs text-gray-500">
-                                {playlist.audio_count || 0} orações
-                              </p>
-                              <Badge variant={playlist.is_public ? "default" : "secondary"} className="text-xs">
-                                {playlist.is_public ? "Pública" : "Privada"}
-                              </Badge>
+                      </div>
+                    </CardHeader>
+                    
+                    <CardContent>
+                      <Tabs defaultValue="audios" className="w-full">
+                        <TabsList className="grid w-full grid-cols-2">
+                          <TabsTrigger value="audios" className="flex items-center space-x-2">
+                            <Music size={16} />
+                            <span>Orações ({category.audios.length})</span>
+                          </TabsTrigger>
+                          <TabsTrigger value="playlists" className="flex items-center space-x-2">
+                            <List size={16} />
+                            <span>Playlists ({category.playlists.length})</span>
+                          </TabsTrigger>
+                        </TabsList>
+                        
+                        {/* Tab de Orações/Áudios */}
+                        <TabsContent value="audios" className="space-y-4">
+                          <div className="flex items-center justify-between">
+                            <h3 className="text-lg font-semibold">Orações da Categoria</h3>
+                            <Button size="sm" variant="outline">
+                              <Plus size={16} className="mr-2" />
+                              Adicionar Oração
+                            </Button>
+                          </div>
+                          
+                          {category.audios.length === 0 ? (
+                            <div className="text-center py-8 text-gray-500">
+                              <Music size={48} className="mx-auto mb-4 opacity-50" />
+                              <p>Nenhuma oração nesta categoria</p>
                             </div>
+                          ) : (
+                            <div className="grid gap-3">
+                              {category.audios.map((audio) => (
+                                <div key={audio.id} className="flex items-center justify-between p-3 border rounded-lg">
+                                  <div>
+                                    <h4 className="font-medium">{audio.title}</h4>
+                                    {audio.subtitle && (
+                                      <p className="text-sm text-gray-600">{audio.subtitle}</p>
+                                    )}
+                                    <p className="text-xs text-gray-500">
+                                      {audio.duration ? `${Math.round(audio.duration / 60)} min` : 'Duração não definida'}
+                                    </p>
+                                  </div>
+                                  <div className="flex items-center space-x-2">
+                                    <Button size="sm" variant="outline">
+                                      <Edit size={16} />
+                                    </Button>
+                                    <Button size="sm" variant="outline">
+                                      <Trash2 size={16} />
+                                    </Button>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </TabsContent>
+                        
+                        {/* Tab de Playlists */}
+                        <TabsContent value="playlists" className="space-y-4">
+                          <div className="flex items-center justify-between">
+                            <h3 className="text-lg font-semibold">Playlists da Categoria</h3>
+                            <Dialog open={showNewPlaylistDialog} onOpenChange={setShowNewPlaylistDialog}>
+                              <DialogTrigger asChild>
+                                <Button 
+                                  size="sm" 
+                                  variant="outline"
+                                  onClick={() => setSelectedCategory(category)}
+                                >
+                                  <Plus size={16} className="mr-2" />
+                                  Nova Playlist
+                                </Button>
+                              </DialogTrigger>
+                              <DialogContent>
+                                <DialogHeader>
+                                  <DialogTitle className="text-gray-900">Criar Nova Playlist</DialogTitle>
+                                </DialogHeader>
+                                <div className="space-y-4">
+                                  <div>
+                                    <Label htmlFor="playlist-title" className="text-gray-700 font-medium">Título</Label>
+                                    <Input
+                                      id="playlist-title"
+                                      value={newPlaylistForm.title}
+                                      onChange={(e) => setNewPlaylistForm(prev => ({ ...prev, title: e.target.value }))}
+                                      placeholder="Título da playlist"
+                                      className="text-gray-900 bg-white border-gray-300"
+                                    />
+                                  </div>
+                                  <div>
+                                    <Label htmlFor="playlist-description" className="text-gray-700 font-medium">Descrição</Label>
+                                    <Textarea
+                                      id="playlist-description"
+                                      value={newPlaylistForm.description}
+                                      onChange={(e) => setNewPlaylistForm(prev => ({ ...prev, description: e.target.value }))}
+                                      placeholder="Descrição da playlist"
+                                      className="text-gray-900 bg-white border-gray-300"
+                                    />
+                                  </div>
+                                  <div>
+                                    <Label htmlFor="playlist-cover" className="text-gray-700 font-medium">URL da Capa</Label>
+                                    <Input
+                                      id="playlist-cover"
+                                      value={newPlaylistForm.cover_url}
+                                      onChange={(e) => setNewPlaylistForm(prev => ({ ...prev, cover_url: e.target.value }))}
+                                      placeholder="https://exemplo.com/capa.jpg"
+                                      className="text-gray-900 bg-white border-gray-300"
+                                    />
+                                  </div>
+                                  <div className="flex items-center space-x-2">
+                                    <input
+                                      type="checkbox"
+                                      id="playlist-public"
+                                      checked={newPlaylistForm.is_public}
+                                      onChange={(e) => setNewPlaylistForm(prev => ({ ...prev, is_public: e.target.checked }))}
+                                    />
+                                    <Label htmlFor="playlist-public" className="text-gray-700">Playlist pública</Label>
+                                  </div>
+                                  <div className="flex space-x-2">
+                                    <Button onClick={handleCreatePlaylist} className="flex-1">
+                                      <Save size={16} className="mr-2" />
+                                      Criar Playlist
+                                    </Button>
+                                    <Button variant="outline" onClick={() => setShowNewPlaylistDialog(false)}>
+                                      Cancelar
+                                    </Button>
+                                  </div>
+                                </div>
+                              </DialogContent>
+                            </Dialog>
                           </div>
-                          <div className="flex items-center space-x-2">
-                            <Button 
-                              size="sm" 
-                              variant="outline"
-                              onClick={() => setEditingPlaylist(playlist)}
-                            >
-                              <Edit size={16} />
-                            </Button>
-                            <Button 
-                              size="sm" 
-                              variant="outline"
-                              onClick={() => handleDeletePlaylist(playlist.id)}
-                            >
-                              <Trash2 size={16} />
-                            </Button>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </TabsContent>
-              </Tabs>
-            </CardContent>
-          </Card>
-        ))}
+                          
+                          {category.playlists.length === 0 ? (
+                            <div className="text-center py-8 text-gray-500">
+                              <List size={48} className="mx-auto mb-4 opacity-50" />
+                              <p>Nenhuma playlist nesta categoria</p>
+                            </div>
+                          ) : (
+                            <div className="grid gap-3">
+                              {category.playlists.map((playlist) => (
+                                <div key={playlist.id} className="flex items-center justify-between p-3 border rounded-lg">
+                                  <div>
+                                    <h4 className="font-medium">{playlist.title}</h4>
+                                    {playlist.description && (
+                                      <p className="text-sm text-gray-600">{playlist.description}</p>
+                                    )}
+                                    <p className="text-xs text-gray-500">
+                                      {playlist.audio_count ? `${playlist.audio_count} áudios` : 'Sem contagem'}
+                                    </p>
+                                  </div>
+                                  <div className="flex items-center space-x-2">
+                                    <Button size="sm" variant="outline" onClick={() => handleEditPlaylist(playlist)}>
+                                      <Edit size={16} />
+                                    </Button>
+                                    <Button size="sm" variant="outline" onClick={() => handleDeletePlaylist(playlist.id)}>
+                                      <Trash2 size={16} />
+                                    </Button>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </TabsContent>
+                      </Tabs>
+                    </CardContent>
+                  </Card>
+                </React.Fragment>
+              ))}
+              {quotePos >= categories.length && <QuoteCard />}
+            </>
+          );
+        })()}
       </div>
 
       {/* Dialog para editar categoria */}

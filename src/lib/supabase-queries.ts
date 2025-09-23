@@ -9,6 +9,7 @@ export interface Category {
   order_position?: number;
   is_featured?: boolean;
   layout_type?: string;
+  is_visible?: boolean;
 }
 
 export interface Audio {
