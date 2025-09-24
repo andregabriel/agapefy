@@ -459,3 +459,9 @@
  GET /biblia 200 in 1010ms
  ✓ Compiled /biblicus in 145ms (766 modules)
  GET /biblicus 200 in 187ms
+ ✓ Compiled in 1951ms (2811 modules)
+ GET /biblicus 200 in 214ms
+ GET / 200 in 215ms
+ ✓ Compiled in 737ms (2811 modules)
+ GET /biblicus 200 in 85ms
+ GET / 200 in 86ms

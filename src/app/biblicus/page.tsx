@@ -266,7 +266,7 @@ export default function Page() {
               <p>• Respondo apenas com base na Bíblia.</p>
               <p>• Cito versículos relevantes quando aplicável.</p>
               <p>• Preservo a neutralidade em temas polêmicos.</p>
-              <p>• Informo quando o tema não tem uma resposta direta na Bíblia.</p>
+              <p>• Informo quando o tema não tem resposta direta na Bíblia.</p>
             </div>
             <div className="mt-4 text-sm text-zinc-700 space-y-2">
               <div className="font-medium">ℹ️ Sobre o Biblicus</div>
