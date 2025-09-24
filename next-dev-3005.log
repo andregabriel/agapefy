@@ -465,3 +465,24 @@
  ✓ Compiled in 737ms (2811 modules)
  GET /biblicus 200 in 85ms
  GET / 200 in 86ms
+ GET / 200 in 15ms
+ GET /biblia 200 in 25ms
+ GET /biblicus 200 in 11ms
+ GET /biblia 200 in 11ms
+ GET /biblicus 200 in 12ms
+ GET /biblia 200 in 13ms
+ GET /biblicus 200 in 12ms
+ GET /biblia 200 in 9ms
+ GET /biblicus 200 in 11ms
+ ✓ Compiled in 2.5s (2811 modules)
+ GET /biblicus 200 in 80ms
+ ✓ Compiled in 812ms (2811 modules)
+ GET /biblicus 200 in 32ms
+ GET /biblia 200 in 17ms
+📊 AuthContext: Estado atual - User: false Loading: true
+ GET / 200 in 206ms
+📊 AuthContext: Estado atual - User: false Loading: true
+ GET / 200 in 39ms
+ GET /biblia 200 in 10ms
+ GET /biblicus 200 in 12ms
+ GET /biblia 200 in 15ms
