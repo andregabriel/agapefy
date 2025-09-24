@@ -960,3 +960,42 @@
  ✓ Compiled /favicon.ico in 1397ms (754 modules)
  GET /favicon.ico 200 in 1629ms
  GET /favicon.ico 200 in 206ms
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ GET /admin 200 in 50ms
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+📊 AuthContext: Estado atual - User: false Loading: true
+ GET /admin 200 in 142ms
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ ○ Compiling /admin/categorias ...
+ ✓ Compiled /admin/categorias in 3.5s (756 modules)
+ GET /admin/categorias 200 in 3706ms
+ ✓ Compiled in 1074ms (2085 modules)
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ GET /biblia 200 in 219ms
+ GET /biblicus 200 in 225ms
+ GET /admin/categorias 200 in 219ms
+ ✓ Compiled in 420ms (2085 modules)
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ GET /biblia 200 in 50ms
+ GET /biblicus 200 in 53ms
+ GET /admin/categorias 200 in 54ms
+ ✓ Compiled in 2.4s (2830 modules)
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ GET /biblia 200 in 381ms
+ GET /biblicus 200 in 394ms
+ GET /admin/categorias 200 in 234ms
+ ✓ Compiled in 591ms (2085 modules)
+ GET /biblicus 200 in 48ms
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ GET /biblia 200 in 59ms
+ GET /admin/categorias 200 in 32ms
+ ✓ Compiled in 1030ms (2830 modules)
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ GET /biblicus 200 in 261ms
+ GET /biblia 200 in 264ms
+ GET /admin/categorias 200 in 272ms
+ ✓ Compiled in 500ms (2085 modules)
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ GET /biblia 200 in 94ms
+ GET /biblicus 200 in 121ms
+ GET /admin/categorias 200 in 161ms
