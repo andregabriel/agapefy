@@ -3,7 +3,6 @@
 
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import { RotateCcw } from 'lucide-react';
 
 interface FontSizeControlProps {
   onScaleChange: (scale: number) => void;
@@ -15,7 +14,6 @@ export default function FontSizeControl({ onScaleChange }: FontSizeControlProps)
   const MIN_SCALE = 0.90;
   const MAX_SCALE = 1.30;
   const STEP = 0.05;
-  const DEFAULT_SCALE = 1.0;
 
   // Carregar escala do localStorage (client-only)
   useEffect(() => {
@@ -62,13 +60,6 @@ export default function FontSizeControl({ onScaleChange }: FontSizeControlProps)
     saveScale(newScale);
   };
 
-  // Reset fonte
-  const resetFont = () => {
-    setScale(DEFAULT_SCALE);
-    onScaleChange(DEFAULT_SCALE);
-    saveScale(DEFAULT_SCALE);
-  };
-
   // Formatar indicador de escala
   const formatScale = (value: number) => {
     return `${Math.round(value * 100)}%`;
@@ -85,7 +76,7 @@ export default function FontSizeControl({ onScaleChange }: FontSizeControlProps)
         size="sm"
         onClick={decreaseFont}
         disabled={!canDecrease}
-        className="min-h-[44px] min-w-[44px] p-2"
+        className="h-10 w-10 p-0"
         aria-label="Diminuir tamanho da fonte"
         title="Diminuir fonte"
       >
@@ -93,7 +84,7 @@ export default function FontSizeControl({ onScaleChange }: FontSizeControlProps)
       </Button>
 
       {/* Indicador de escala */}
-      <div className="px-2 py-1 text-xs font-medium text-gray-600 bg-gray-100 rounded min-w-[50px] text-center">
+      <div className="px-2 py-1 text-[11px] font-medium text-gray-600 bg-gray-100 rounded min-w-[42px] text-center">
         {formatScale(scale)}
       </div>
 
@@ -103,24 +94,14 @@ export default function FontSizeControl({ onScaleChange }: FontSizeControlProps)
         size="sm"
         onClick={increaseFont}
         disabled={!canIncrease}
-        className="min-h-[44px] min-w-[44px] p-2"
+        className="h-10 w-10 p-0"
         aria-label="Aumentar tamanho da fonte"
         title="Aumentar fonte"
       >
         <span className="text-sm font-medium">A+</span>
       </Button>
 
-      {/* Botão Reset */}
-      <Button
-        variant="outline"
-        size="sm"
-        onClick={resetFont}
-        className="min-h-[44px] min-w-[44px] p-2"
-        aria-label="Resetar tamanho da fonte"
-        title="Resetar fonte"
-      >
-        <RotateCcw size={16} />
-      </Button>
+      {/* Botão Reset removido para reduzir poluição visual */}
     </div>
   );
 }

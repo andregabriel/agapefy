@@ -22,53 +22,55 @@ export function BibleSelects({
   setShowBibleSearchModal
 }: BibleSelectsProps) {
   return (
-    <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-      <Select 
-        value={book} 
+    <div className="flex w-full items-center gap-2">
+      <div className="flex-1">
+        <Select 
+        value={book}
         onValueChange={(value) => navigateToChapter(value, 1)}
         aria-label="Selecionar livro da Bíblia"
-      >
-        <SelectTrigger className="w-48 min-h-[44px]">
-          <SelectValue placeholder="Selecione o livro" />
-        </SelectTrigger>
-        <SelectContent>
-          {books.map((bookItem) => (
-            <SelectItem key={bookItem.code} value={bookItem.code}>
-              {bookItem.name}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
-
-      <Select 
-        value={chapter.toString()} 
-        onValueChange={(value) => navigateToChapter(book, parseInt(value, 10))}
-        aria-label="Selecionar capítulo"
-      >
-        <SelectTrigger className="w-32 min-h-[44px]">
-          <SelectValue placeholder="Capítulo" />
-        </SelectTrigger>
-        <SelectContent>
-          {Array.from({ length: maxChapters }, (_, i) => i + 1).map((chapterNum) => (
-            <SelectItem key={chapterNum} value={chapterNum.toString()}>
-              Capítulo {chapterNum}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
-
-      <div className="flex gap-2">
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => setShowBibleSearchModal(true)}
-          className="flex items-center gap-2 min-h-[44px]"
-          aria-label="Buscar na Bíblia"
         >
-          <Search size={16} />
-          Buscar
-        </Button>
+          <SelectTrigger className="w-full h-10 text-sm">
+            <SelectValue placeholder="Selecione o livro" />
+          </SelectTrigger>
+          <SelectContent>
+            {books.map((bookItem) => (
+              <SelectItem key={bookItem.code} value={bookItem.code}>
+                {bookItem.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
+
+      <div className="w-[110px]">
+        <Select 
+          value={chapter.toString()} 
+          onValueChange={(value) => navigateToChapter(book, parseInt(value, 10))}
+          aria-label="Selecionar capítulo"
+        >
+          <SelectTrigger className="w-full h-10 text-sm">
+            <SelectValue placeholder="Capítulo" />
+          </SelectTrigger>
+          <SelectContent>
+            {Array.from({ length: maxChapters }, (_, i) => i + 1).map((chapterNum) => (
+              <SelectItem key={chapterNum} value={chapterNum.toString()}>
+                Capítulo {chapterNum}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
+      <Button
+        variant="outline"
+        size="sm"
+        onClick={() => setShowBibleSearchModal(true)}
+        className="h-10 w-10 p-0"
+        aria-label="Buscar na Bíblia"
+        title="Buscar na Bíblia"
+      >
+        <Search size={18} />
+      </Button>
     </div>
   );
 }

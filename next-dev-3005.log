@@ -486,3 +486,421 @@
  GET /biblia 200 in 10ms
  GET /biblicus 200 in 12ms
  GET /biblia 200 in 15ms
+📊 AuthContext: Estado atual - User: false Loading: true
+ GET /biblia 200 in 53ms
+📊 AuthContext: Estado atual - User: false Loading: true
+ GET /biblia 200 in 60ms
+ ○ Compiling /favicon.ico ...
+ ✓ Compiled /favicon.ico in 1075ms (760 modules)
+ GET /favicon.ico 200 in 1347ms
+📊 AuthContext: Estado atual - User: false Loading: true
+ GET /biblia 200 in 128ms
+📊 AuthContext: Estado atual - User: false Loading: true
+ GET /biblia 200 in 53ms
+ GET /favicon.ico 200 in 205ms
+ GET /favicon.ico 200 in 206ms
+ ✓ Compiled in 1836ms (2813 modules)
+ GET /biblia 200 in 129ms
+ GET /biblia 200 in 130ms
+ ✓ Compiled in 474ms (2813 modules)
+ GET /biblia 200 in 76ms
+ ✓ Compiled in 504ms (2813 modules)
+ GET /biblia 200 in 39ms
+ ✓ Compiled in 694ms (2813 modules)
+ GET /biblia 200 in 65ms
+ ✓ Compiled in 998ms (2813 modules)
+ GET /biblia 200 in 88ms
+📊 AuthContext: Estado atual - User: false Loading: true
+ GET /biblia 200 in 148ms
+📊 AuthContext: Estado atual - User: false Loading: true
+ GET /biblia 200 in 49ms
+📊 AuthContext: Estado atual - User: false Loading: true
+ GET /biblia 200 in 33ms
+ ○ Compiling /favicon.ico ...
+ ✓ Compiled /favicon.ico in 1109ms (761 modules)
+📊 AuthContext: Estado atual - User: false Loading: true
+ GET /biblia 200 in 889ms
+ GET /favicon.ico 200 in 1592ms
+ GET /favicon.ico 200 in 207ms
+📊 AuthContext: Estado atual - User: false Loading: true
+ GET /biblia 200 in 31ms
+📊 AuthContext: Estado atual - User: false Loading: true
+ GET /biblia 200 in 61ms
+ GET /favicon.ico 200 in 207ms
+📊 AuthContext: Estado atual - User: false Loading: true
+ GET / 200 in 61ms
+📊 AuthContext: Estado atual - User: false Loading: true
+ GET / 200 in 45ms
+ ○ Compiling /login ...
+ ✓ Compiled /login in 943ms (774 modules)
+ GET /login 200 in 1203ms
+ ✓ Compiled in 821ms (2842 modules)
+ GET /biblia 200 in 84ms
+ GET /login 200 in 85ms
+📊 AuthContext: Estado atual - User: false Loading: true
+ GET / 200 in 88ms
+📊 AuthContext: Estado atual - User: false Loading: true
+ GET / 200 in 43ms
+ GET /favicon.ico 200 in 215ms
+ GET /login 200 in 17ms
+ GET /favicon.ico 200 in 207ms
+📊 AuthContext: Estado atual - User: false Loading: true
+ GET / 200 in 40ms
+ GET /login 200 in 19ms
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ ○ Compiling /admin ...
+ ✓ Compiled /admin in 783ms (770 modules)
+ GET /admin 200 in 833ms
+ GET / 200 in 13ms
+📊 AuthContext: Estado atual - User: false Loading: true
+ GET / 200 in 127ms
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ GET /admin 200 in 7ms
+ ○ Compiling /eu ...
+ ✓ Compiled /eu in 1716ms (1625 modules)
+ GET /eu 200 in 1916ms
+ GET /eu 200 in 550ms
+ GET /eu 200 in 23ms
+ ○ Compiling /eu/config ...
+ ✓ Compiled /eu/config in 2.3s (3714 modules)
+ GET /eu/config 200 in 1679ms
+ GET /eu/config 200 in 162ms
+ GET /eu/config 200 in 2378ms
+📊 AuthContext: Estado atual - User: false Loading: true
+ GET /eu/config 200 in 428ms
+ GET /biblia 200 in 367ms
+ GET /eu 200 in 367ms
+ ✓ Compiled /favicon.ico in 249ms (1654 modules)
+📊 AuthContext: Estado atual - User: false Loading: true
+ GET /eu 200 in 709ms
+ GET /favicon.ico 200 in 822ms
+ GET /favicon.ico 200 in 204ms
+📊 AuthContext: Estado atual - User: false Loading: true
+ GET /eu 200 in 31ms
+📊 AuthContext: Estado atual - User: false Loading: true
+ GET /eu 200 in 61ms
+ GET /favicon.ico 200 in 206ms
+ GET /favicon.ico 200 in 207ms
+ GET /favicon.ico 200 in 207ms
+📊 AuthContext: Estado atual - User: false Loading: true
+ GET / 200 in 40ms
+📊 AuthContext: Estado atual - User: false Loading: true
+ GET / 200 in 39ms
+📊 AuthContext: Estado atual - User: false Loading: true
+ GET / 200 in 26ms
+📊 AuthContext: Estado atual - User: false Loading: true
+ GET / 200 in 33ms
+ GET /favicon.ico 200 in 207ms
+ GET /eu 200 in 8ms
+ GET /eu/config 200 in 8ms
+ GET /login 200 in 13ms
+📊 AuthContext: Estado atual - User: false Loading: true
+ GET / 200 in 53ms
+ GET /login 200 in 26ms
+ GET / 200 in 11ms
+📊 AuthContext: Estado atual - User: false Loading: true
+ GET / 200 in 34ms
+ GET /biblia 200 in 17ms
+ GET /login 200 in 9ms
+📊 AuthContext: Estado atual - User: false Loading: true
+ GET / 200 in 34ms
+📊 AuthContext: Estado atual - User: false Loading: true
+ GET / 200 in 56ms
+📊 AuthContext: Estado atual - User: false Loading: true
+ GET / 200 in 36ms
+📊 AuthContext: Estado atual - User: false Loading: true
+ GET / 200 in 49ms
+ GET /favicon.ico 200 in 276ms
+ ○ Compiling /amigos ...
+ ✓ Compiled /amigos in 1448ms (1643 modules)
+ GET /amigos 200 in 1550ms
+ GET /login 200 in 12ms
+📊 AuthContext: Estado atual - User: false Loading: true
+ GET / 200 in 123ms
+📊 AuthContext: Estado atual - User: false Loading: true
+ GET / 200 in 44ms
+📊 AuthContext: Estado atual - User: false Loading: true
+ GET / 200 in 33ms
+📊 AuthContext: Estado atual - User: false Loading: true
+ GET / 200 in 56ms
+ GET /favicon.ico 200 in 221ms
+ GET /favicon.ico 200 in 206ms
+📊 AuthContext: Estado atual - User: false Loading: true
+ GET / 200 in 33ms
+📊 AuthContext: Estado atual - User: false Loading: true
+ GET /favicon.ico 200 in 210ms
+ GET / 200 in 69ms
+ GET /favicon.ico 200 in 207ms
+ GET /favicon.ico 200 in 206ms
+📊 AuthContext: Estado atual - User: false Loading: true
+ GET / 200 in 43ms
+📊 AuthContext: Estado atual - User: false Loading: true
+ GET / 200 in 58ms
+ GET /login 200 in 20ms
+ GET /login 200 in 13ms
+ GET /favicon.ico 200 in 209ms
+ GET / 200 in 10ms
+ GET /login 200 in 8ms
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ ○ Compiling /admin ...
+ ✓ Compiled /admin in 959ms (1649 modules)
+ GET /admin 200 in 1035ms
+ GET /biblia 200 in 22ms
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ GET /admin 200 in 13ms
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ ○ Compiling /admin/categorias ...
+ ✓ Compiled /admin/categorias in 2.3s (762 modules)
+ GET /admin/categorias 200 in 2576ms
+ ✓ Compiled in 1779ms (2825 modules)
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ GET /biblia 200 in 92ms
+📊 AuthContext: Estado atual - User: false Loading: true
+ GET /admin/categorias 200 in 278ms
+ GET /admin/categorias 200 in 281ms
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+📊 AuthContext: Estado atual - User: false Loading: true
+ GET /admin/categorias 200 in 50ms
+ ✓ Compiled /favicon.ico in 172ms (765 modules)
+ GET /favicon.ico 200 in 436ms
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+📊 AuthContext: Estado atual - User: false Loading: true
+ GET /admin/categorias 200 in 105ms
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+📊 AuthContext: Estado atual - User: false Loading: true
+ GET /admin/categorias 200 in 56ms
+ GET /favicon.ico 200 in 205ms
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+📊 AuthContext: Estado atual - User: false Loading: true
+ GET /admin/categorias 200 in 38ms
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ GET /favicon.ico 200 in 226ms
+ GET /login 200 in 129ms
+📊 AuthContext: Estado atual - User: false Loading: true
+ GET /admin/categorias 200 in 368ms
+ GET /login 200 in 14ms
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ GET /admin 200 in 20ms
+ ✓ Compiled in 1239ms (2839 modules)
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ GET /login 200 in 72ms
+ GET /biblia 200 in 73ms
+ GET /admin 200 in 75ms
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ GET /admin/categorias 200 in 11ms
+ ✓ Compiled in 379ms (2835 modules)
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ GET /biblia 200 in 58ms
+📊 AuthContext: Estado atual - User: false Loading: true
+ GET /admin/categorias 200 in 201ms
+ GET /admin/categorias 200 in 211ms
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+📊 AuthContext: Estado atual - User: false Loading: true
+ GET /admin/categorias 200 in 42ms
+ GET /favicon.ico 200 in 208ms
+ ✓ Compiled in 1981ms (2835 modules)
+ GET /biblia 200 in 55ms
+ ○ Compiling /_not-found ...
+ ✓ Compiled /_not-found in 1152ms (2839 modules)
+📊 AuthContext: Estado atual - User: false Loading: true
+ GET /.well-known/appspecific/com.chrome.devtools.json 404 in 1308ms
+ GET /biblia 200 in 163ms
+ ✓ Compiled in 1020ms (2839 modules)
+ GET /biblia 200 in 40ms
+ ✓ Compiled in 4.2s (2825 modules)
+ GET /biblia 200 in 136ms
+📊 AuthContext: Estado atual - User: false Loading: true
+ GET / 200 in 144ms
+ ○ Compiling /favicon.ico ...
+ ✓ Compiled /favicon.ico in 729ms (765 modules)
+ GET /login 200 in 1032ms
+ GET /favicon.ico 200 in 1163ms
+ GET /favicon.ico 200 in 205ms
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ GET /admin 200 in 14ms
+ GET /favicon.ico 200 in 209ms
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ GET /admin 200 in 8ms
+ ✓ Compiled in 1061ms (2837 modules)
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ GET /biblia 200 in 73ms
+ GET /admin 200 in 80ms
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ GET /admin 200 in 7ms
+ ✓ Compiled in 542ms (2837 modules)
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ GET /biblia 200 in 289ms
+ GET /admin 200 in 121ms
+ ✓ Compiled in 486ms (2074 modules)
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ GET /admin 200 in 20ms
+ GET /biblia 200 in 17ms
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ ○ Compiling /admin/configuracoes ...
+ ✓ Compiled /admin/configuracoes in 1582ms (776 modules)
+ GET /admin/configuracoes 200 in 1630ms
+ GET /favicon.ico 200 in 212ms
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ GET /admin/categorias 200 in 12ms
+ GET /favicon.ico 200 in 208ms
+ ✓ Compiled in 1364ms (2813 modules)
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ GET /biblia 200 in 79ms
+ GET /admin/categorias 200 in 95ms
+ GET /biblia 200 in 8ms
+ ✓ Compiled in 1978ms (2815 modules)
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ GET /biblia 200 in 59ms
+ GET /admin/categorias 200 in 62ms
+ ✓ Compiled /biblicus in 158ms (730 modules)
+ GET /biblicus 200 in 265ms
+ ✓ Compiled in 1791ms (2791 modules)
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ GET /biblicus 200 in 123ms
+ GET /admin/categorias 200 in 135ms
+ ○ Compiling /api/biblicus/chat ...
+ ✓ Compiled /api/biblicus/chat in 3.4s (866 modules)
+ POST /api/biblicus/chat 200 in 53327ms
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ GET /admin 200 in 47ms
+ ○ Compiling /favicon.ico ...
+ ✓ Compiled /favicon.ico in 884ms (733 modules)
+ GET /favicon.ico 200 in 1120ms
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ ○ Compiling /admin/gerar-conteudo ...
+ ✓ Compiled /admin/gerar-conteudo in 4s (2820 modules)
+ GET /admin/gerar-conteudo 200 in 4090ms
+ GET /favicon.ico 200 in 212ms
+ ✓ Compiled /api/generate-prayer in 293ms (2824 modules)
+ POST /api/generate-prayer 200 in 3427ms
+ POST /api/generate-prayer 200 in 3103ms
+ ○ Compiling / ...
+ ✓ Compiled / in 3.1s (775 modules)
+ GET / 200 in 3197ms
+ GET / 200 in 12ms
+ ✓ Compiled /favicon.ico in 195ms (777 modules)
+ GET /favicon.ico 200 in 436ms
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ ✓ Compiled /admin in 155ms (786 modules)
+ GET /admin 200 in 201ms
+ GET /favicon.ico 200 in 210ms
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ GET /admin/categorias 200 in 13ms
+ GET /favicon.ico 200 in 205ms
+ GET /biblia 200 in 18ms
+📊 AuthContext: Estado atual - User: false Loading: true
+ GET / 200 in 224ms
+ GET /biblia 200 in 9ms
+📊 AuthContext: Estado atual - User: false Loading: true
+ GET /biblia 200 in 64ms
+📊 AuthContext: Estado atual - User: false Loading: true
+ GET /biblia 200 in 34ms
+📊 AuthContext: Estado atual - User: false Loading: true
+ GET /biblia 200 in 60ms
+ GET /favicon.ico 200 in 214ms
+📊 AuthContext: Estado atual - User: false Loading: true
+ GET /biblia 200 in 26ms
+📊 AuthContext: Estado atual - User: false Loading: true
+ GET /biblia 200 in 40ms
+ ✓ Compiled in 2.7s (2833 modules)
+📊 AuthContext: Estado atual - User: false Loading: true
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ GET /biblia 200 in 255ms
+ GET /biblia 200 in 262ms
+ GET / 200 in 2924ms
+ GET /biblia 200 in 294ms
+ GET /admin/categorias 200 in 69ms
+📊 AuthContext: Estado atual - User: false Loading: true
+ GET / 200 in 50ms
+ ✓ Compiled in 802ms (2833 modules)
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ GET /biblia 200 in 78ms
+ GET / 200 in 80ms
+ GET /admin/categorias 200 in 85ms
+📊 AuthContext: Estado atual - User: false Loading: true
+ GET / 200 in 85ms
+📊 AuthContext: Estado atual - User: false Loading: true
+ GET / 200 in 56ms
+📊 AuthContext: Estado atual - User: false Loading: true
+ GET / 200 in 41ms
+📊 AuthContext: Estado atual - User: false Loading: true
+ GET / 200 in 57ms
+📊 AuthContext: Estado atual - User: false Loading: true
+ GET / 200 in 32ms
+📊 AuthContext: Estado atual - User: false Loading: true
+ GET / 200 in 60ms
+ GET /biblia 200 in 17ms
+ ○ Compiling /favicon.ico ...
+ ✓ Compiled /favicon.ico in 880ms (764 modules)
+ GET /favicon.ico 200 in 1158ms
+📊 AuthContext: Estado atual - User: false Loading: true
+ GET / 200 in 133ms
+📊 AuthContext: Estado atual - User: false Loading: true
+ GET / 200 in 56ms
+ GET /favicon.ico 200 in 219ms
+ ○ Compiling /login ...
+ ✓ Compiled /login in 1719ms (777 modules)
+ GET /favicon.ico 200 in 406ms
+📊 AuthContext: Estado atual - User: false Loading: true
+ GET /biblia 200 in 94ms
+📊 AuthContext: Estado atual - User: false Loading: true
+ GET /biblia 200 in 250ms
+📊 AuthContext: Estado atual - User: false Loading: true
+ GET /biblia 200 in 30ms
+📊 AuthContext: Estado atual - User: false Loading: true
+ GET /biblia 200 in 46ms
+ GET /favicon.ico 200 in 205ms
+📊 AuthContext: Estado atual - User: false Loading: true
+ GET /biblia 200 in 24ms
+📊 AuthContext: Estado atual - User: false Loading: true
+ GET /biblia 200 in 60ms
+ GET /favicon.ico 200 in 207ms
+📊 AuthContext: Estado atual - User: false Loading: true
+ GET /biblia 200 in 24ms
+📊 AuthContext: Estado atual - User: false Loading: true
+ GET /biblia 200 in 50ms
+ GET /favicon.ico 200 in 206ms
+ GET /favicon.ico 200 in 205ms
+📊 AuthContext: Estado atual - User: false Loading: true
+ GET /biblia 200 in 23ms
+📊 AuthContext: Estado atual - User: false Loading: true
+ GET /biblia 200 in 62ms
+ GET /favicon.ico 200 in 208ms
+ GET /favicon.ico 200 in 205ms
+📊 AuthContext: Estado atual - User: false Loading: true
+ GET /biblia 200 in 23ms
+📊 AuthContext: Estado atual - User: false Loading: true
+ GET /biblia 200 in 25ms
+ ✓ Compiled in 2.2s (2833 modules)
+ GET /biblia 200 in 138ms
+ GET /biblia 200 in 140ms
+ GET /biblia 200 in 141ms
+ GET /biblia 200 in 141ms
+ ✓ Compiled in 846ms (2833 modules)
+ GET /biblia 200 in 79ms
+ GET /biblia 200 in 80ms
+ GET /biblia 200 in 80ms
+ ⚠ Fast Refresh had to perform a full reload. Read more: https://nextjs.org/docs/messages/fast-refresh-reload
+📊 AuthContext: Estado atual - User: false Loading: true
+ GET /biblia 200 in 131ms
+ ○ Compiling /favicon.ico ...
+ ✓ Compiled /favicon.ico in 770ms (764 modules)
+📊 AuthContext: Estado atual - User: false Loading: true
+ GET /biblia 200 in 201ms
+ GET /favicon.ico 200 in 1064ms
+ GET /favicon.ico 200 in 206ms
+ ○ Compiling /biblicus ...
+ ✓ Compiled /biblicus in 2.1s (753 modules)
+ GET /biblicus 200 in 1162ms
+ GET /biblicus 200 in 2581ms
+ GET /biblia 200 in 13ms
+ GET /biblicus 200 in 7ms
+ GET / 200 in 16ms
+ ○ Compiling /login ...
+ ✓ Compiled /login in 1519ms (752 modules)
+ GET /login 200 in 1641ms
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ GET /admin 200 in 41ms
+ GET / 200 in 20ms

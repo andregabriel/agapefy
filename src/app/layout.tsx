@@ -16,17 +16,18 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const isLoginPage = pathname === '/login';
   const isBuscaPage = pathname === '/busca';
+  const isBibliaPage = pathname === '/biblia';
 
   return (
     <html lang="pt-BR">
       <body className={`${inter.className} bg-black text-white min-h-screen`}>
         <AuthProvider>
           <PlayerProvider>
-            {/* Header - não mostrar na página de login nem busca */}
-            {!isLoginPage && !isBuscaPage && <Header />}
+            {/* Header - não mostrar na página de login, busca ou biblia */}
+            {!isLoginPage && !isBuscaPage && !isBibliaPage && <Header />}
             
             {/* Main content */}
-            <main className={`flex-1 ${!isLoginPage ? 'pb-20' : ''} ${!isLoginPage && !isBuscaPage ? 'pt-16' : ''}`}>
+            <main className={`flex-1 ${!isLoginPage ? 'pb-20' : ''} ${!isLoginPage && !isBuscaPage && !isBibliaPage ? 'pt-16' : ''}`}>
               {children}
             </main>
             

@@ -52,7 +52,7 @@ export default function ThemeToggle({ onThemeChange }: ThemeToggleProps) {
       variant="outline"
       size="sm"
       onClick={toggleTheme}
-      className="min-h-[44px] min-w-[44px] p-2"
+      className="h-10 w-10 p-0"
       aria-label="Alternar tema"
       title={isDark ? "Mudar para tema claro" : "Mudar para tema escuro"}
     >

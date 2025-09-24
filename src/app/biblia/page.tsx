@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef, Suspense, useCallback } from 'react';
 import Link from 'next/link';
+import { MessageCircle } from 'lucide-react';
 import { useSwipe } from './_components/useSwipe';
 import { useSearchParams } from 'next/navigation';
 
@@ -342,15 +343,7 @@ function BibliaPageContent() {
         headerThemeClasses={headerThemeClasses}
       />
 
-      {/* CTA Biblicus */}
-      <div className="px-4 mt-3">
-        <Link
-          href="/biblicus"
-          className="inline-flex items-center justify-center rounded-lg bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 font-medium shadow-sm transition-colors"
-        >
-          Pergunte ao Biblicus
-        </Link>
-      </div>
+      {/* CTA Biblicus removido (agora no header como pill) */}
 
       {/* Conteúdo principal */}
       <BibleContent
@@ -394,9 +387,10 @@ function BibliaPageContent() {
       <Link
         href="/biblicus"
         aria-label="Pergunte ao Biblicus"
-        className="fixed bottom-20 right-4 w-14 h-14 bg-emerald-600 hover:bg-emerald-700 text-white rounded-full shadow-lg hover:shadow-xl transition-all duration-200 flex items-center justify-center text-2xl focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2"
+        className="fixed bottom-20 right-4 inline-flex items-center gap-1 h-10 px-3 rounded-full bg-emerald-600 hover:bg-emerald-700 text-white text-sm shadow-lg hover:shadow-xl transition-colors focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2"
       >
-        💬
+        <MessageCircle size={16} />
+        <span className="ml-1">Biblicus</span>
       </Link>
 
       {/* Modal de Busca Bíblica */}
