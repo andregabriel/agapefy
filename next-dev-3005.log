@@ -904,3 +904,59 @@
 🔍 Middleware: Permitindo acesso temporário ao admin para debug
  GET /admin 200 in 41ms
  GET / 200 in 20ms
+ ✓ Compiled in 918ms (2085 modules)
+ GET /biblia 200 in 62ms
+ GET /biblia 200 in 62ms
+ GET / 200 in 64ms
+ GET /biblia 200 in 57ms
+ ✓ Compiled in 2.3s (2812 modules)
+ GET /biblia 200 in 105ms
+ GET / 200 in 106ms
+ GET /biblia 200 in 107ms
+ ✓ Compiled in 815ms (2812 modules)
+ GET /biblia 200 in 97ms
+ GET / 200 in 99ms
+ GET /biblia 200 in 99ms
+ ⚠ Fast Refresh had to perform a full reload. Read more: https://nextjs.org/docs/messages/fast-refresh-reload
+📊 AuthContext: Estado atual - User: false Loading: true
+ GET / 200 in 122ms
+ ○ Compiling /favicon.ico ...
+ ✓ Compiled /favicon.ico in 1314ms (743 modules)
+📊 AuthContext: Estado atual - User: false Loading: true
+ GET / 200 in 1225ms
+ GET /favicon.ico 200 in 1911ms
+ GET /favicon.ico 200 in 209ms
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ ○ Compiling /admin ...
+ ✓ Compiled /admin in 3.6s (772 modules)
+ GET /admin 200 in 3674ms
+ GET /biblia 200 in 16ms
+ GET /biblicus 200 in 16ms
+ ○ Compiling /api/biblicus/chat ...
+ ✓ Compiled /api/biblicus/chat in 1395ms (887 modules)
+ GET /biblia 200 in 178ms
+ GET /biblia 200 in 179ms
+ GET /biblicus 200 in 179ms
+ GET / 200 in 180ms
+ POST /api/biblicus/chat 200 in 22205ms
+ ✓ Compiled in 1707ms (2823 modules)
+ GET /biblia 200 in 146ms
+ GET /biblia 200 in 145ms
+ GET / 200 in 145ms
+ GET /biblicus 200 in 146ms
+ ✓ Compiled in 446ms (2823 modules)
+ GET /biblia 200 in 86ms
+ GET /biblia 200 in 96ms
+ GET /biblicus 200 in 96ms
+ GET /biblicus 200 in 9ms
+ ✓ Compiled /api/biblicus/chat in 158ms (887 modules)
+ POST /api/biblicus/chat 200 in 10738ms
+ ⚠ Fast Refresh had to perform a full reload. Read more: https://nextjs.org/docs/messages/fast-refresh-reload
+📊 AuthContext: Estado atual - User: false Loading: true
+ GET /biblicus 200 in 184ms
+📊 AuthContext: Estado atual - User: false Loading: true
+ GET /biblicus 200 in 56ms
+ ○ Compiling /favicon.ico ...
+ ✓ Compiled /favicon.ico in 1397ms (754 modules)
+ GET /favicon.ico 200 in 1629ms
+ GET /favicon.ico 200 in 206ms

@@ -34,7 +34,6 @@ export async function POST(req: NextRequest) {
     });
 
     const started = Date.now();
-    // polling simples até completar, com timeout 60s
     /* eslint no-constant-condition: 0 */
     while (true) {
       const r = await client.beta.threads.runs.retrieve(thread.id, run.id);
@@ -42,25 +41,18 @@ export async function POST(req: NextRequest) {
       if (r.status === "failed" || r.status === "expired" || r.status === "cancelled") {
         throw new Error("Run failed");
       }
-      if (Date.now() - started > 60000) {
-        throw new Error("Timeout");
-      }
+      // mantém o intervalo atual de polling sem alterar UX
       await new Promise((res) => setTimeout(res, 800));
     }
 
-    const list = await client.beta.threads.messages.list(thread.id, { order: "desc" });
-    const history: HistoryItem[] = list.data
-      .slice(0, 50)
-      .map((m) => {
-        const content = Array.isArray(m.content) && m.content[0]?.type === "text" ? (m.content[0] as any).text.value : "";
-        return { role: (m.role as Role) ?? "assistant", content };
-      })
-      .reverse();
+    // Buscar apenas a última mensagem do assistente para reduzir latência e payload
+    const list = await client.beta.threads.messages.list(thread.id, { order: "desc", limit: 1 });
+    const last = list.data[0];
+    const reply = last && Array.isArray(last.content) && last.content[0]?.type === "text"
+      ? (last.content[0] as any).text.value
+      : "";
 
-    const lastAssistant = [...history].reverse().find((h) => h.role === "assistant");
-    const reply = lastAssistant?.content ?? "";
-
-    return NextResponse.json({ ok: true, threadId: thread.id, reply, history });
+    return NextResponse.json({ ok: true, threadId: thread.id, reply });
   } catch (e: any) {
     const message = typeof e?.message === "string" ? e.message : "Erro inesperado";
     return NextResponse.json({ ok: false, error: message }, { status: 500 });

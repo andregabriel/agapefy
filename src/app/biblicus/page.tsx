@@ -76,7 +76,8 @@ export default function Page() {
       if (!msg.trim() || loading) return;
       setError(null);
       setLoading(true);
-      setMessages((prev) => [...prev, { role: "user", content: msg, ts: Date.now() }]);
+      const now = Date.now();
+      setMessages((prev) => [...prev, { role: "user", content: msg, ts: now }]);
       setInput("");
       try {
         const res = await fetch("/api/biblicus/chat", {
@@ -90,10 +91,8 @@ export default function Page() {
             setThreadId(data.threadId);
             localStorage.setItem("biblicus:threadId", data.threadId);
           }
-          const mapped: Msg[] = Array.isArray(data.history)
-            ? data.history.map((h: { role: Role; content: string }) => ({ role: h.role, content: h.content ?? "", ts: Date.now() }))
-            : [];
-          setMessages(mapped);
+          const reply: string = data?.reply ?? "";
+          setMessages((prev) => [...prev, { role: "assistant", content: reply, ts: Date.now() }]);
         } else {
           const errMsg = data?.error || "Erro ao comunicar com o Biblicus";
           setMessages((prev) => [...prev, { role: "assistant", content: `[Erro] ${errMsg}`, ts: Date.now() }]);
@@ -196,7 +195,14 @@ export default function Page() {
         })}
         {loading && (
           <div className="mr-auto bg-zinc-100 text-zinc-900 rounded-2xl px-4 py-2">
-            Buscando a resposta na Bíblia, aguarde alguns segundos...
+            <div className="flex items-center gap-2">
+              <span>Buscando a resposta na Bíblia, aguarde alguns segundos…</span>
+              <span className="inline-flex items-center gap-1" aria-hidden>
+                <span className="h-1.5 w-1.5 rounded-full bg-zinc-400/90 animate-bounce" style={{ animationDelay: "0ms" }} />
+                <span className="h-1.5 w-1.5 rounded-full bg-zinc-400/90 animate-bounce" style={{ animationDelay: ".15s" }} />
+                <span className="h-1.5 w-1.5 rounded-full bg-zinc-400/90 animate-bounce" style={{ animationDelay: ".3s" }} />
+              </span>
+            </div>
           </div>
         )}
         {/* Spacer anti-sobreposição para não esconder conteúdo atrás do composer/bottom-nav */}
