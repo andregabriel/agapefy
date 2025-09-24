@@ -85,3 +85,377 @@
  GET /biblia 200 in 15ms
 📊 AuthContext: Estado atual - User: false Loading: true
  GET /biblia 200 in 55ms
+ GET / 200 in 10ms
+ ✓ Compiled in 981ms (3238 modules)
+ GET /biblia 200 in 666ms
+ GET /biblia 200 in 666ms
+ GET / 200 in 668ms
+ GET / 200 in 20ms
+ GET /biblia 200 in 20ms
+ GET /biblia 200 in 19ms
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ ✓ Compiled /admin in 144ms (1637 modules)
+ GET /admin 200 in 190ms
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ ✓ Compiled /admin/categorias in 136ms (1652 modules)
+ GET /admin/categorias 200 in 170ms
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+📊 AuthContext: Estado atual - User: false Loading: true
+ GET /admin/categorias 200 in 102ms
+ ✓ Compiled in 308ms (1527 modules)
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ ○ Compiling /_not-found ...
+ ✓ Compiled /_not-found in 1047ms (3236 modules)
+ GET / 404 in 1108ms
+ GET /admin/categorias 404 in 1002ms
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ GET / 200 in 26ms
+ GET /admin/categorias 200 in 36ms
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ GET / 200 in 29ms
+📊 AuthContext: Estado atual - User: false Loading: true
+ GET /admin/categorias 200 in 136ms
+ GET / 200 in 135ms
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+📊 AuthContext: Estado atual - User: false Loading: true
+ GET /admin/categorias 200 in 43ms
+ ✓ Compiled in 489ms (3149 modules)
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ GET / 200 in 28ms
+ GET /admin/categorias 200 in 36ms
+ ✓ Compiled in 394ms (3149 modules)
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ GET / 200 in 29ms
+ GET /admin/categorias 200 in 37ms
+ GET / 200 in 14ms
+📊 AuthContext: Estado atual - User: false Loading: true
+ GET / 200 in 117ms
+   Reload env: .env.local
+ ✓ Compiled in 513ms (3246 modules)
+📊 AuthContext: Estado atual - User: false Loading: true
+ GET / 200 in 104ms
+ GET / 200 in 110ms
+ GET / 200 in 112ms
+📊 AuthContext: Estado atual - User: false Loading: true
+ GET / 200 in 31ms
+ ✓ Compiled /favicon.ico in 235ms (1634 modules)
+ GET /favicon.ico 200 in 508ms
+ GET /biblia 200 in 32ms
+ ✓ Compiled /biblicus in 420ms (3154 modules)
+ GET /biblicus 200 in 461ms
+📊 AuthContext: Estado atual - User: false Loading: true
+ GET / 200 in 122ms
+ GET /biblia 200 in 20ms
+ GET /biblicus 200 in 15ms
+📊 AuthContext: Estado atual - User: false Loading: true
+ GET /biblicus 200 in 42ms
+📊 AuthContext: Estado atual - User: false Loading: true
+ GET /biblicus 200 in 31ms
+ ○ Compiling /api/biblicus/chat ...
+ ✓ Compiled /api/biblicus/chat in 603ms (2404 modules)
+ POST /api/biblicus/chat 200 in 12217ms
+ ⚠ Fast Refresh had to perform a full reload due to a runtime error.
+📊 AuthContext: Estado atual - User: false Loading: true
+ GET / 200 in 130ms
+📊 AuthContext: Estado atual - User: false Loading: true
+ GET / 200 in 30ms
+ ✓ Compiled /favicon.ico in 286ms (755 modules)
+ GET /favicon.ico 200 in 514ms
+ ✓ Compiled in 671ms (2255 modules)
+ ✓ Compiled in 191ms (1530 modules)
+ GET /biblicus 200 in 75ms
+📊 AuthContext: Estado atual - User: false Loading: true
+ GET / 200 in 94ms
+ GET / 200 in 112ms
+ GET /biblicus 200 in 111ms
+ ✓ Compiled /favicon.ico in 111ms (755 modules)
+📊 AuthContext: Estado atual - User: false Loading: true
+ GET / 200 in 382ms
+ GET /favicon.ico 200 in 587ms
+ ✓ Compiled in 461ms (2285 modules)
+📊 AuthContext: Estado atual - User: false Loading: true
+ GET /biblicus 200 in 136ms
+ GET /biblicus 200 in 136ms
+ GET / 200 in 136ms
+ GET / 200 in 139ms
+📊 AuthContext: Estado atual - User: false Loading: true
+ GET / 200 in 25ms
+ GET /favicon.ico 200 in 208ms
+ ✓ Compiled in 298ms (2287 modules)
+ GET /biblicus 200 in 43ms
+ GET /biblicus 200 in 61ms
+ GET / 200 in 61ms
+ ✓ Compiled in 579ms (2287 modules)
+ GET /biblicus 200 in 38ms
+ GET /biblicus 200 in 37ms
+ GET / 200 in 37ms
+ ✓ Compiled in 340ms (2287 modules)
+ GET /biblicus 200 in 39ms
+ GET / 200 in 40ms
+ GET /biblicus 200 in 40ms
+ ✓ Compiled in 169ms (1531 modules)
+ GET /biblicus 200 in 23ms
+ GET /biblicus 200 in 28ms
+ GET / 200 in 29ms
+ ✓ Compiled /_not-found in 469ms (2378 modules)
+ GET / 404 in 489ms
+ GET /biblicus 404 in 497ms
+ GET /biblicus 404 in 497ms
+ GET /biblicus 200 in 27ms
+ GET /biblicus 200 in 27ms
+ GET / 200 in 27ms
+📊 AuthContext: Estado atual - User: false Loading: true
+📊 AuthContext: Estado atual - User: false Loading: true
+📊 AuthContext: Estado atual - User: false Loading: true
+ GET /biblicus 200 in 122ms
+ GET /biblicus 200 in 132ms
+ GET / 200 in 135ms
+ GET /favicon.ico 200 in 220ms
+ GET /favicon.ico 200 in 206ms
+ ✓ Compiled in 370ms (2291 modules)
+ GET /biblicus 200 in 36ms
+ GET /biblicus 200 in 36ms
+ GET / 200 in 37ms
+ GET / 200 in 13ms
+ GET /biblia 200 in 20ms
+ GET /biblicus 200 in 9ms
+ ⚠ Fast Refresh had to perform a full reload. Read more: https://nextjs.org/docs/messages/fast-refresh-reload
+📊 AuthContext: Estado atual - User: false Loading: true
+ GET /biblicus 200 in 73ms
+📊 AuthContext: Estado atual - User: false Loading: true
+ GET /biblicus 200 in 39ms
+ GET /favicon.ico 200 in 217ms
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ GET /admin 200 in 15ms
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ ○ Compiling /admin/analytics ...
+ ✓ Compiled /admin/analytics in 2.5s (3326 modules)
+ GET /admin/analytics 200 in 2626ms
+ GET /biblicus 200 in 120ms
+ GET /biblicus 200 in 120ms
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ GET /biblicus 200 in 123ms
+ GET /admin/analytics 200 in 10ms
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ GET /admin 200 in 13ms
+ ⚠ Fast Refresh had to perform a full reload. Read more: https://nextjs.org/docs/messages/fast-refresh-reload
+📊 AuthContext: Estado atual - User: false Loading: true
+ GET /biblicus 200 in 119ms
+📊 AuthContext: Estado atual - User: false Loading: true
+ GET /biblicus 200 in 28ms
+ ✓ Compiled /favicon.ico in 324ms (1265 modules)
+ GET /favicon.ico 200 in 577ms
+ GET / 200 in 42ms
+ GET /biblia 200 in 20ms
+ GET /biblicus 200 in 13ms
+ ✓ Compiled /api/biblicus/chat in 487ms (1398 modules)
+ POST /api/biblicus/chat 200 in 21820ms
+📊 AuthContext: Estado atual - User: false Loading: true
+ GET /biblicus 200 in 116ms
+ POST /api/biblicus/chat 200 in 6503ms
+ ✓ Compiled in 547ms (3455 modules)
+ GET /biblicus 200 in 32ms
+ GET /biblicus 200 in 33ms
+ GET /biblicus 200 in 9ms
+ ✓ Compiled in 460ms (3455 modules)
+ GET /biblicus 200 in 30ms
+ GET /biblicus 200 in 31ms
+ GET /biblicus 200 in 17ms
+ GET /biblia 200 in 13ms
+ GET /biblicus 200 in 7ms
+ ✓ Compiled in 754ms (3306 modules)
+ GET /biblicus 200 in 84ms
+ GET /biblicus 200 in 87ms
+ GET /biblicus 200 in 11ms
+ ✓ Compiled in 435ms (3306 modules)
+ GET /biblicus 200 in 44ms
+ GET /biblicus 200 in 45ms
+ GET /biblicus 200 in 17ms
+📊 AuthContext: Estado atual - User: false Loading: true
+ GET / 200 in 159ms
+📊 AuthContext: Estado atual - User: false Loading: true
+ GET / 200 in 24ms
+ ✓ Compiled /login in 357ms (1265 modules)
+ ✓ Compiled (1278 modules)
+ GET /login 200 in 849ms
+ GET /favicon.ico 200 in 999ms
+ GET /favicon.ico 200 in 205ms
+ GET / 200 in 9ms
+ GET /biblia 200 in 16ms
+ GET /biblicus 200 in 9ms
+📊 AuthContext: Estado atual - User: false Loading: true
+ GET /biblicus 200 in 85ms
+ GET / 200 in 12ms
+ ✓ Compiled in 409ms (2057 modules)
+ GET / 200 in 60ms
+ GET /biblicus 200 in 53ms
+ GET /biblicus 200 in 57ms
+ GET /biblicus 200 in 56ms
+ GET /biblicus 200 in 20ms
+ ✓ Compiled in 573ms (3306 modules)
+ GET / 200 in 88ms
+ GET /biblicus 200 in 104ms
+ GET /biblicus 200 in 18ms
+ GET /biblicus 200 in 14ms
+ ✓ Compiled in 218ms (2057 modules)
+ GET / 200 in 19ms
+ GET /biblicus 200 in 26ms
+ GET /biblicus 200 in 26ms
+ GET /biblicus 200 in 10ms
+ ✓ Compiled in 318ms (3306 modules)
+ GET / 200 in 36ms
+ GET /biblicus 200 in 49ms
+ GET /biblicus 200 in 50ms
+ GET /biblicus 200 in 8ms
+ ⚠ Fast Refresh had to perform a full reload. Read more: https://nextjs.org/docs/messages/fast-refresh-reload
+📊 AuthContext: Estado atual - User: false Loading: true
+ GET /biblicus 200 in 115ms
+📊 AuthContext: Estado atual - User: false Loading: true
+ GET /biblicus 200 in 30ms
+ ✓ Compiled /favicon.ico in 321ms (1265 modules)
+ GET /favicon.ico 200 in 572ms
+ GET /biblia 200 in 36ms
+ GET /biblicus 200 in 8ms
+ ✓ Compiled /api/biblicus/chat in 375ms (1400 modules)
+ POST /api/biblicus/chat 200 in 12954ms
+ POST /api/biblicus/chat 200 in 9512ms
+ ✓ Compiled in 2.7s (3306 modules)
+📊 AuthContext: Estado atual - User: false Loading: true
+ GET /?vscodeBrowserReqId=1758729819836 200 in 371ms
+ GET /biblia 200 in 31ms
+ GET /biblicus 200 in 28ms
+ ✓ Compiled /api/biblicus/chat in 340ms (1398 modules)
+ POST /api/biblicus/chat 200 in 18888ms
+ ✓ Compiled in 1473ms (3306 modules)
+ GET /biblicus 200 in 178ms
+ ✓ Compiled in 843ms (3306 modules)
+ GET /biblicus 200 in 62ms
+ ✓ Compiled in 1936ms (3306 modules)
+ GET /biblicus 200 in 55ms
+ ✓ Compiled in 881ms (3306 modules)
+ GET /biblicus 200 in 68ms
+📊 AuthContext: Estado atual - User: false Loading: true
+ GET / 200 in 649ms
+ ○ Compiling /login ...
+ ✓ Compiled /login in 1326ms (1262 modules)
+ GET /login 200 in 1458ms
+ GET /biblia 200 in 21ms
+ GET /biblicus 200 in 15ms
+📊 AuthContext: Estado atual - User: false Loading: true
+ GET /biblicus 200 in 147ms
+📊 AuthContext: Estado atual - User: false Loading: true
+ GET /?vscodeBrowserReqId=1758731125055 200 in 49ms
+ GET /biblia 200 in 12ms
+ GET /biblicus 200 in 10ms
+ ✓ Compiled in 1641ms (3306 modules)
+ GET /biblicus 200 in 128ms
+ GET /biblicus 200 in 127ms
+ GET /biblicus 200 in 129ms
+ ○ Compiling /api/biblicus/chat ...
+ ✓ Compiled /api/biblicus/chat in 866ms (1398 modules)
+ ✓ Compiled in 730ms (3455 modules)
+ GET /biblicus 200 in 137ms
+ GET /biblicus 200 in 141ms
+ POST /api/biblicus/chat 200 in 29729ms
+ ✓ Compiled in 741ms (3455 modules)
+ GET /biblicus 200 in 73ms
+ GET /biblicus 200 in 73ms
+ ✓ Compiled in 749ms (3455 modules)
+ GET /biblicus 200 in 272ms
+ GET /biblicus 200 in 260ms
+ ⚠ Fast Refresh had to perform a full reload. Read more: https://nextjs.org/docs/messages/fast-refresh-reload
+📊 AuthContext: Estado atual - User: false Loading: true
+ GET /biblicus 200 in 126ms
+📊 AuthContext: Estado atual - User: false Loading: true
+ GET /biblicus 200 in 39ms
+ ○ Compiling /favicon.ico ...
+ ✓ Compiled /favicon.ico in 590ms (1265 modules)
+ GET /favicon.ico 200 in 826ms
+ GET /favicon.ico 200 in 209ms
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ GET /admin 200 in 62ms
+ GET /biblia 200 in 21ms
+ GET /biblicus 200 in 16ms
+ ✓ Compiled in 1966ms (3306 modules)
+ GET /biblicus 200 in 151ms
+ GET /biblicus 200 in 153ms
+ GET /biblicus 200 in 155ms
+ ✓ Compiled in 945ms (3306 modules)
+ GET /biblicus 200 in 98ms
+ GET /biblicus 200 in 98ms
+ ✓ Compiled /api/biblicus/chat in 138ms (1398 modules)
+ POST /api/biblicus/chat 200 in 8290ms
+ ⚠ Fast Refresh had to perform a full reload. Read more: https://nextjs.org/docs/messages/fast-refresh-reload
+📊 AuthContext: Estado atual - User: false Loading: true
+ GET /biblicus 200 in 187ms
+📊 AuthContext: Estado atual - User: false Loading: true
+ GET /biblicus 200 in 46ms
+ ○ Compiling /favicon.ico ...
+ ✓ Compiled /favicon.ico in 665ms (1265 modules)
+ GET /favicon.ico 200 in 904ms
+ GET /favicon.ico 200 in 208ms
+📊 AuthContext: Estado atual - User: false Loading: true
+ GET /biblicus 200 in 105ms
+📊 AuthContext: Estado atual - User: false Loading: true
+ GET /favicon.ico 200 in 210ms
+ GET /biblicus 200 in 70ms
+ GET /favicon.ico 200 in 208ms
+ GET /favicon.ico 200 in 206ms
+📊 AuthContext: Estado atual - User: false Loading: true
+ GET /biblicus 200 in 32ms
+📊 AuthContext: Estado atual - User: false Loading: true
+ GET /biblicus 200 in 43ms
+ GET /favicon.ico 200 in 207ms
+ GET /favicon.ico 200 in 210ms
+📊 AuthContext: Estado atual - User: false Loading: true
+ GET /biblia 200 in 58ms
+📊 AuthContext: Estado atual - User: false Loading: true
+ GET /biblia 200 in 79ms
+ GET /favicon.ico 200 in 209ms
+ ○ Compiling /busca ...
+ ✓ Compiled /busca in 1472ms (1280 modules)
+ GET /busca 200 in 1616ms
+ ○ Compiling /amigos ...
+ ✓ Compiled /amigos in 1181ms (1309 modules)
+ GET /amigos 200 in 1311ms
+ ○ Compiling /eu ...
+ ✓ Compiled /eu in 1423ms (2162 modules)
+ GET /eu 200 in 1506ms
+ ○ Compiling /login ...
+ ✓ Compiled /login in 889ms (2175 modules)
+ GET /login 200 in 1016ms
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ GET /admin 200 in 17ms
+ GET /biblia 200 in 15ms
+ GET /biblicus 200 in 15ms
+ ○ Compiling /api/biblicus/chat ...
+ ✓ Compiled /api/biblicus/chat in 1162ms (1780 modules)
+ POST /api/biblicus/chat 200 in 43925ms
+ ✓ Compiled / in 458ms (747 modules)
+ GET / 200 in 705ms
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ GET /admin 200 in 14ms
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ GET /admin 200 in 11ms
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ GET /admin 200 in 12ms
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ GET /admin 200 in 12ms
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ ○ Compiling /admin/categorias ...
+ ✓ Compiled /admin/categorias in 2.4s (752 modules)
+ GET /admin/categorias 200 in 2473ms
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ GET /admin 200 in 15ms
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ ○ Compiling /admin/configuracoes ...
+ ✓ Compiled /admin/configuracoes in 2.1s (2807 modules)
+ GET /admin/configuracoes 200 in 2203ms
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ GET / 200 in 80ms
+ GET /admin/configuracoes 200 in 19ms
+ ○ Compiling /biblia ...
+ ✓ Compiled /biblia in 914ms (761 modules)
+ GET /biblia 200 in 1010ms
+ ✓ Compiled /biblicus in 145ms (766 modules)
+ GET /biblicus 200 in 187ms

@@ -5,6 +5,7 @@ import {
   getCategories, 
   getCategoryContent,
   getPlaylistsByCategory,
+  getCategoryBannerLinks,
   type Category, 
   type Playlist, 
   type Audio 
@@ -22,6 +23,7 @@ import { useAppSettings } from '@/hooks/useAppSettings';
 import { useUserActivity } from '@/hooks/useUserActivity';
 import { isRecentesCategoryName } from '@/lib/utils';
 import { ActivitiesSection } from '@/app/eu/_components/ActivitiesSection';
+import { BannerSection } from './_components/BannerSection';
 
 interface CategoryWithContent extends Category {
   audios: Audio[];
@@ -35,6 +37,7 @@ export default function HomePage() {
   const [error, setError] = useState<string | null>(null);
   const { settings } = useAppSettings();
   const { activities, loading: activitiesLoading, formatRelativeDate, formatTime } = useUserActivity();
+  const [bannerLinks, setBannerLinks] = useState<Record<string, string>>({});
   
   // Refs para controle de estado
   const loadingRef = useRef(false);
@@ -82,6 +85,8 @@ export default function HomePage() {
       
       // Buscar categorias primeiro
       let categories = await getCategories();
+      // Buscar links de banners em paralelo
+      const bannerLinksPromise = getCategoryBannerLinks();
 
       // Respeitar visibilidade na Home (default: true)
       categories = categories.filter((cat) => (cat as any).is_visible !== false);
@@ -99,6 +104,8 @@ export default function HomePage() {
       // Processar categorias em lotes menores para evitar sobrecarga
       const batchSize = 3;
       const categoriesWithContentData: CategoryWithContent[] = [];
+      const resolvedBannerLinks = await bannerLinksPromise;
+      setBannerLinks(resolvedBannerLinks);
       
       for (let i = 0; i < categories.length; i += batchSize) {
         if (!mountedRef.current) return; // Verificar se ainda está montado
@@ -121,6 +128,10 @@ export default function HomePage() {
                   const recentPlaylists = await getPlaylistsByCategory(category.id);
                   audios = activityAudios;
                   playlists = recentPlaylists;
+                } else if (category.layout_type === 'banner') {
+                  // Banner não carrega conteúdo; apenas mantém arrays vazios
+                  audios = [];
+                  playlists = [];
                 } else {
                   const content = await getCategoryContent(category.id);
                   audios = content.audios || [];
@@ -162,9 +173,9 @@ export default function HomePage() {
       if (!mountedRef.current) return;
       
       // Filtrar categorias: manter se tiver conteúdo OU se for "Recentes"
-      const categoriesWithActualContent = categoriesWithContentData.filter(
-        cat => isRecentesCategoryName(cat.name) || cat.audios.length > 0 || cat.playlists.length > 0
-      );
+          const categoriesWithActualContent = categoriesWithContentData.filter(
+            cat => isRecentesCategoryName(cat.name) || cat.layout_type === 'banner' || cat.audios.length > 0 || cat.playlists.length > 0
+          );
       
       setCategoriesWithContent(categoriesWithActualContent);
       console.log('✅ Categorias com conteúdo carregadas:', categoriesWithActualContent.length);
@@ -273,6 +284,12 @@ export default function HomePage() {
                   recentActivitiesCarouselRef={recentActivitiesCarouselRef}
                   formatRelativeDate={formatRelativeDate}
                   formatTime={formatTime}
+                />
+              ) : category.layout_type === 'banner' && bannerLinks[category.id] && category.image_url ? (
+                <BannerSection
+                  title={category.name}
+                  imageUrl={category.image_url}
+                  href={bannerLinks[category.id]}
                 />
               ) : (
                 <CategorySection

@@ -30,6 +30,7 @@ import {
   getCategories, 
   getCategoryContent,
   getPlaylistsByCategory,
+  upsertCategoryBannerLink,
   type Category, 
   type Audio, 
   type Playlist 
@@ -59,7 +60,8 @@ export default function AdminCategoriasPage() {
     image_url: '',
     layout_type: 'spotify',
     is_featured: false,
-    is_visible: true
+    is_visible: true,
+    banner_link: '' as string
   });
   
   const [newPlaylistForm, setNewPlaylistForm] = useState({
@@ -77,6 +79,7 @@ export default function AdminCategoriasPage() {
   
   const [editingPlaylist, setEditingPlaylist] = useState<Playlist | null>(null);
   const [editingCategory, setEditingCategory] = useState<Category | null>(null);
+  const [editingBannerLink, setEditingBannerLink] = useState<string>('');
   const [showNewCategoryDialog, setShowNewCategoryDialog] = useState(false);
   const [showNewPlaylistDialog, setShowNewPlaylistDialog] = useState(false);
   const [showEditCategoryDialog, setShowEditCategoryDialog] = useState(false);
@@ -169,6 +172,10 @@ export default function AdminCategoriasPage() {
 
       if (error) throw error;
 
+      if (newCategoryForm.layout_type === 'banner' && data?.id && newCategoryForm.banner_link) {
+        await upsertCategoryBannerLink(data.id, newCategoryForm.banner_link);
+      }
+
       toast.success('Categoria criada com sucesso!');
       setNewCategoryForm({
         name: '',
@@ -176,7 +183,8 @@ export default function AdminCategoriasPage() {
         image_url: '',
         layout_type: 'spotify',
         is_featured: false,
-        is_visible: true
+        is_visible: true,
+        banner_link: ''
       });
       setShowNewCategoryDialog(false);
       loadCategories();
@@ -222,6 +230,10 @@ export default function AdminCategoriasPage() {
         .eq('id', editingCategory.id);
 
       if (error) throw error;
+
+      if (editingCategory.layout_type === 'banner' && editingCategory.id) {
+        await upsertCategoryBannerLink(editingCategory.id, editingBannerLink || '');
+      }
 
       toast.success('Categoria atualizada com sucesso!');
       setShowEditCategoryDialog(false);
@@ -370,6 +382,8 @@ export default function AdminCategoriasPage() {
       order_position: category.order_position,
       is_visible: (category as any).is_visible ?? true
     });
+    // Não buscamos o link agora para evitar roundtrip; o admin pode preencher/atualizar
+    setEditingBannerLink('');
     setShowEditCategoryDialog(true);
   };
 
@@ -517,9 +531,22 @@ export default function AdminCategoriasPage() {
                       <SelectItem value="grid_3_rows">Grid 3 Linhas</SelectItem>
                       <SelectItem value="double_height">Altura Dobrada</SelectItem>
                       <SelectItem value="full">Full Width</SelectItem>
+                      <SelectItem value="banner">Banner</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
+                {newCategoryForm.layout_type === 'banner' && (
+                  <div>
+                    <Label htmlFor="banner_link" className="text-gray-700 font-medium">Link do Banner</Label>
+                    <Input
+                      id="banner_link"
+                      value={newCategoryForm.banner_link}
+                      onChange={(e) => setNewCategoryForm(prev => ({ ...prev, banner_link: e.target.value }))}
+                      placeholder="/biblicus ou https://exemplo.com/algum-lugar"
+                      className="text-gray-900 bg-white border-gray-300"
+                    />
+                  </div>
+                )}
                 <div className="flex items-center space-x-2">
                   <input
                     type="checkbox"
@@ -884,9 +911,23 @@ export default function AdminCategoriasPage() {
                     <SelectItem value="grid_3_rows">Grid 3 Linhas</SelectItem>
                     <SelectItem value="double_height">Altura Dobrada</SelectItem>
                     <SelectItem value="full">Full Width</SelectItem>
+                    <SelectItem value="banner">Banner</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
+              {editingCategory.layout_type === 'banner' && (
+                <div>
+                  <Label htmlFor="edit-banner-link" className="text-gray-700 font-medium">Link do Banner</Label>
+                  <Input
+                    id="edit-banner-link"
+                    value={editingBannerLink}
+                    onChange={(e) => setEditingBannerLink(e.target.value)}
+                    placeholder="/biblicus ou https://exemplo.com/algum-lugar"
+                    className="text-gray-900 bg-white border-gray-300"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">Usuários serão redirecionados ao clicar na imagem do banner.</p>
+                </div>
+              )}
               <div className="flex items-center space-x-2">
                 <input
                   type="checkbox"

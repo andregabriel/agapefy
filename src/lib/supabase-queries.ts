@@ -69,6 +69,64 @@ export async function getCategories(): Promise<Category[]> {
   return (data as Category[]) || [];
 }
 
+// Banner helpers (category -> link mapping stored in app_settings)
+export async function getCategoryBannerLinks(): Promise<Record<string, string>> {
+  try {
+    const { data, error } = await supabase
+      .from('app_settings')
+      .select('key, value')
+      .like('key', 'category_banner_link:%');
+
+    if (error) {
+      console.error('Erro ao buscar links de banner:', error);
+      return {};
+    }
+
+    const map: Record<string, string> = {};
+    (data || []).forEach((row: any) => {
+      const match = /^category_banner_link:(.+)$/.exec(row.key);
+      if (match && row.value) {
+        map[match[1]] = row.value as string;
+      }
+    });
+    return map;
+  } catch (err) {
+    console.error('Erro inesperado ao buscar links de banner:', err);
+    return {};
+  }
+}
+
+export async function upsertCategoryBannerLink(categoryId: string, linkUrl: string): Promise<{ success: boolean; error?: string }> {
+  try {
+    const { error } = await supabase
+      .from('app_settings')
+      .upsert({ key: `category_banner_link:${categoryId}`, value: linkUrl, type: 'text' }, { onConflict: 'key' });
+    if (error) {
+      console.error('Erro ao salvar link do banner:', error);
+      return { success: false, error: error.message };
+    }
+    return { success: true };
+  } catch (err: any) {
+    return { success: false, error: err?.message || 'Erro desconhecido' };
+  }
+}
+
+export async function deleteCategoryBannerLink(categoryId: string): Promise<{ success: boolean; error?: string }> {
+  try {
+    const { error } = await supabase
+      .from('app_settings')
+      .delete()
+      .eq('key', `category_banner_link:${categoryId}`);
+    if (error) {
+      console.error('Erro ao remover link do banner:', error);
+      return { success: false, error: error.message };
+    }
+    return { success: true };
+  } catch (err: any) {
+    return { success: false, error: err?.message || 'Erro desconhecido' };
+  }
+}
+
 // Buscar playlists públicas
 export async function getPublicPlaylists(): Promise<Playlist[]> {
   const { data, error } = await supabase
