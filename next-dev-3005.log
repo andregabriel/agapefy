@@ -1131,3 +1131,61 @@
  GET /api/whatsapp/setup-webhook 200 in 191ms
  GET /api/whatsapp/setup-webhook 200 in 102ms
  GET /api/whatsapp/setup-webhook 200 in 116ms
+ ✓ Compiled in 1995ms (2977 modules)
+ ✓ Compiled in 1476ms (2134 modules)
+ ○ Compiling /api/whatsapp/setup-webhook ...
+ ✓ Compiled /api/whatsapp/setup-webhook in 933ms (760 modules)
+ GET /api/whatsapp/setup-webhook 200 in 1209ms
+ GET /api/whatsapp/setup-webhook 200 in 101ms
+ GET /api/whatsapp/setup-webhook 200 in 89ms
+ GET /api/whatsapp/setup-webhook 200 in 101ms
+ GET /api/whatsapp/setup-webhook 200 in 108ms
+ GET /api/whatsapp/setup-webhook 200 in 76ms
+ GET /api/whatsapp/setup-webhook 200 in 38ms
+ GET /api/whatsapp/setup-webhook 200 in 35ms
+ GET /api/whatsapp/setup-webhook 200 in 35ms
+ GET /api/whatsapp/setup-webhook 200 in 35ms
+ GET /api/whatsapp/setup-webhook 200 in 33ms
+ GET /api/whatsapp/setup-webhook 200 in 82ms
+ GET /api/whatsapp/setup-webhook 200 in 91ms
+ GET /api/whatsapp/setup-webhook 200 in 118ms
+ GET /api/whatsapp/setup-webhook 200 in 96ms
+ GET /api/whatsapp/setup-webhook 200 in 116ms
+ GET /api/whatsapp/setup-webhook 200 in 90ms
+ GET /api/whatsapp/setup-webhook 200 in 117ms
+ GET /api/whatsapp/setup-webhook 200 in 176ms
+ GET /api/whatsapp/setup-webhook 200 in 64ms
+ GET /api/whatsapp/setup-webhook 200 in 66ms
+ GET /api/whatsapp/setup-webhook 200 in 185ms
+ GET /api/whatsapp/setup-webhook 200 in 116ms
+ GET /api/whatsapp/setup-webhook 200 in 89ms
+ GET /api/whatsapp/setup-webhook 200 in 141ms
+ GET /api/whatsapp/setup-webhook 200 in 119ms
+ GET /api/whatsapp/setup-webhook 200 in 111ms
+ ○ Compiling /whatsapp ...
+ ✓ Compiled /whatsapp in 2.3s (2905 modules)
+📊 AuthContext: Estado atual - User: false Loading: true
+ GET /whatsapp?vscodeBrowserReqId=1758819906987 200 in 2467ms
+ ✓ Compiled in 1522ms (2873 modules)
+ GET /whatsapp?vscodeBrowserReqId=1758819906987 200 in 80ms
+ ✓ Compiled in 395ms (2873 modules)
+ GET /whatsapp?vscodeBrowserReqId=1758819906987 200 in 43ms
+📊 AuthContext: Estado atual - User: false Loading: true
+ GET /whatsapp 200 in 119ms
+ ○ Compiling /_not-found ...
+ ✓ Compiled /_not-found in 2.2s (2877 modules)
+📊 AuthContext: Estado atual - User: false Loading: true
+ GET /.well-known/appspecific/com.chrome.devtools.json 404 in 2372ms
+ GET /whatsapp?vscodeBrowserReqId=1758819906987 200 in 214ms
+ GET /whatsapp 200 in 215ms
+📊 AuthContext: Estado atual - User: false Loading: true
+ GET /whatsapp 200 in 50ms
+📊 AuthContext: Estado atual - User: false Loading: true
+ GET /.well-known/appspecific/com.chrome.devtools.json 404 in 52ms
+ ○ Compiling /favicon.ico ...
+ ✓ Compiled /favicon.ico in 665ms (752 modules)
+ GET /favicon.ico 200 in 924ms
+ ✓ Compiled in 1443ms (2873 modules)
+ GET /whatsapp?vscodeBrowserReqId=1758819906987 200 in 70ms
+ ✓ Compiled in 455ms (2873 modules)
+ GET /whatsapp?vscodeBrowserReqId=1758819906987 200 in 37ms
