@@ -999,3 +999,135 @@
  GET /biblia 200 in 94ms
  GET /biblicus 200 in 121ms
  GET /admin/categorias 200 in 161ms
+ ✓ Compiled in 5.1s (2832 modules)
+ GET /biblicus 200 in 127ms
+ GET /biblia 200 in 128ms
+ ✓ Compiled in 869ms (2832 modules)
+ GET /biblicus 200 in 95ms
+ GET /biblia 200 in 97ms
+ ○ Compiling /login ...
+ ✓ Compiled /login in 1963ms (759 modules)
+ GET /login 200 in 2092ms
+ GET /biblia 200 in 119ms
+ GET /login 200 in 22ms
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ GET /admin 200 in 12ms
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ GET /admin/categorias 200 in 15ms
+📊 AuthContext: Estado atual - User: false Loading: true
+ GET / 200 in 259ms
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ GET /admin 200 in 11ms
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ GET /admin 200 in 8ms
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ GET /admin/categorias 200 in 17ms
+📊 AuthContext: Estado atual - User: false Loading: true
+ GET / 200 in 38ms
+📊 AuthContext: Estado atual - User: false Loading: true
+ GET /biblicus 200 in 52ms
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ GET /admin 200 in 16ms
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ GET /admin/categorias 200 in 15ms
+ GET / 200 in 14ms
+ ○ Compiling /busca ...
+ ✓ Compiled /busca in 3.1s (751 modules)
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ GET /busca 200 in 3287ms
+ GET /busca 200 in 148ms
+ GET /admin/categorias 200 in 149ms
+ ✓ Compiled /biblia in 173ms (774 modules)
+ GET /biblia 200 in 225ms
+ GET /biblicus 200 in 12ms
+ ○ Compiling /api/biblicus/chat ...
+ ✓ Compiled /api/biblicus/chat in 2.2s (923 modules)
+ POST /api/biblicus/chat 200 in 14026ms
+ GET / 200 in 97ms
+ ○ Compiling /player/audio/[audioId] ...
+ ✓ Compiled /player/audio/[audioId] in 10.1s (2857 modules)
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ GET /admin/categorias 200 in 53ms
+ GET /player/audio/ddb741c2-df13-4caf-9091-97a62d591680 200 in 4076ms
+ GET /player/audio/3d01b9f6-6703-4206-96bb-31405e192d1e 200 in 1591ms
+ GET /player/audio/2130da37-8b96-4939-88f6-be883fc56d4e 200 in 11423ms
+ GET /player/audio/2130da37-8b96-4939-88f6-be883fc56d4e 200 in 27ms
+ GET / 200 in 17ms
+ ○ Compiling /amigos ...
+ ✓ Compiled /amigos in 1503ms (759 modules)
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ GET /amigos 200 in 1615ms
+ GET /admin/categorias 200 in 19ms
+ ○ Compiling /descobrir ...
+ ✓ Compiled /descobrir in 1300ms (2865 modules)
+ GET /descobrir 200 in 1337ms
+ GET / 200 in 28ms
+ GET / 200 in 15ms
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ GET /admin 200 in 32ms
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ ○ Compiling /admin/webhook-test ...
+ ✓ Compiled /admin/webhook-test in 2.3s (2848 modules)
+ GET /admin/webhook-test 200 in 2394ms
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ GET /admin 200 in 13ms
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ ○ Compiling /admin/whatsapp ...
+ ✓ Compiled /admin/whatsapp in 1040ms (2862 modules)
+ GET /admin/whatsapp 200 in 1118ms
+ ○ Compiling /api/whatsapp/setup-webhook ...
+ ✓ Compiled /api/whatsapp/setup-webhook in 708ms (2880 modules)
+ GET /api/whatsapp/setup-webhook 200 in 867ms
+📊 AuthContext: Estado atual - User: false Loading: true
+ GET / 200 in 204ms
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ GET /admin 200 in 18ms
+ GET /api/whatsapp/setup-webhook 200 in 67ms
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ GET /admin/whatsapp 200 in 17ms
+ GET /api/whatsapp/setup-webhook 200 in 100ms
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ GET /admin 200 in 20ms
+ GET /api/whatsapp/setup-webhook 200 in 49ms
+ GET /api/whatsapp/setup-webhook 200 in 33ms
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ ○ Compiling /admin/setup ...
+ ✓ Compiled /admin/setup in 1610ms (2892 modules)
+ GET /admin/setup 200 in 1694ms
+ ✓ Compiled /api/test/openai-debug in 304ms (2894 modules)
+ GET /api/test/openai-debug 200 in 1093ms
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ GET /admin 200 in 19ms
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ ✓ Compiled /admin/testes in 400ms (2903 modules)
+ GET /admin/testes 200 in 435ms
+ ○ Compiling /api/whatsapp/debug ...
+ GET /api/test/openai-debug 200 in 866ms
+ ✓ Compiled /api/whatsapp/debug in 869ms (2972 modules)
+ GET /api/whatsapp/debug 200 in 1075ms
+ GET /api/whatsapp/setup-webhook 200 in 71ms
+ GET /api/whatsapp/setup-webhook 200 in 28ms
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ GET /admin/whatsapp 200 in 25ms
+ GET /api/whatsapp/setup-webhook 200 in 75ms
+ GET / 200 in 19ms
+ ○ Compiling /_not-found ...
+ ✓ Compiled /_not-found in 1584ms (2892 modules)
+📊 AuthContext: Estado atual - User: false Loading: true
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ GET /whatsapp 404 in 1765ms
+ GET /admin/categorias 200 in 36ms
+ GET /api/whatsapp/setup-webhook 200 in 82ms
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ GET /admin 200 in 12ms
+ GET /api/whatsapp/setup-webhook 200 in 79ms
+ GET /api/whatsapp/setup-webhook 200 in 74ms
+ GET /api/whatsapp/setup-webhook 200 in 97ms
+ GET /api/whatsapp/setup-webhook 200 in 89ms
+ GET /api/whatsapp/setup-webhook 200 in 88ms
+ GET /api/whatsapp/setup-webhook 200 in 88ms
+ GET /api/whatsapp/setup-webhook 200 in 126ms
+ GET /api/whatsapp/setup-webhook 200 in 87ms
+ GET /api/whatsapp/setup-webhook 200 in 191ms
+ GET /api/whatsapp/setup-webhook 200 in 102ms
+ GET /api/whatsapp/setup-webhook 200 in 116ms

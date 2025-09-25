@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -52,6 +52,10 @@ export default function AdminCategoriasPage() {
   const [categories, setCategories] = useState<CategoryWithContent[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedCategory, setSelectedCategory] = useState<CategoryWithContent | null>(null);
+  const newImageInputRef = useRef<HTMLInputElement | null>(null);
+  const editImageInputRef = useRef<HTMLInputElement | null>(null);
+  const [uploadingNewImage, setUploadingNewImage] = useState(false);
+  const [uploadingEditImage, setUploadingEditImage] = useState(false);
   
   // Estados para formulários
   const [newCategoryForm, setNewCategoryForm] = useState({
@@ -139,6 +143,65 @@ export default function AdminCategoriasPage() {
       loadCategories();
     }
   }, [activitiesLoading]);
+
+  // Upload helper: envia imagem ao Supabase e retorna URL pública
+  const uploadImageToSupabase = async (file: File): Promise<string> => {
+    const BUCKET = 'media';
+    const PREFIX = 'app-26/images/categories';
+    const ext = (file.name.split('.').pop() || 'png').toLowerCase();
+    const fileName = `${PREFIX}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+
+    const { error: uploadError } = await supabase.storage
+      .from(BUCKET)
+      .upload(fileName, file, {
+        cacheControl: '3600',
+        upsert: false,
+        contentType: file.type || 'image/png',
+      });
+
+    if (uploadError) throw uploadError;
+
+    const { data: publicData } = supabase.storage
+      .from(BUCKET)
+      .getPublicUrl(fileName);
+
+    if (!publicData?.publicUrl) throw new Error('Falha ao obter URL pública');
+    return publicData.publicUrl;
+  };
+
+  const handleNewImageFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      setUploadingNewImage(true);
+      const url = await uploadImageToSupabase(file);
+      setNewCategoryForm(prev => ({ ...prev, image_url: url }));
+      toast.success('Imagem enviada!');
+    } catch (err) {
+      console.error('❌ Erro no upload de imagem (nova categoria):', err);
+      toast.error('Erro ao enviar imagem');
+    } finally {
+      setUploadingNewImage(false);
+      if (newImageInputRef.current) newImageInputRef.current.value = '';
+    }
+  };
+
+  const handleEditImageFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !editingCategory) return;
+    try {
+      setUploadingEditImage(true);
+      const url = await uploadImageToSupabase(file);
+      setEditingCategory(prev => (prev ? { ...prev, image_url: url } : prev));
+      toast.success('Imagem enviada!');
+    } catch (err) {
+      console.error('❌ Erro no upload de imagem (editar categoria):', err);
+      toast.error('Erro ao enviar imagem');
+    } finally {
+      setUploadingEditImage(false);
+      if (editImageInputRef.current) editImageInputRef.current.value = '';
+    }
+  };
 
   // Salvar configurações da frase bíblica
   const handleSaveQuoteSettings = async () => {
@@ -509,13 +572,32 @@ export default function AdminCategoriasPage() {
                 </div>
                 <div>
                   <Label htmlFor="image_url" className="text-gray-700 font-medium">URL da Imagem</Label>
-                  <Input
-                    id="image_url"
-                    value={newCategoryForm.image_url}
-                    onChange={(e) => setNewCategoryForm(prev => ({ ...prev, image_url: e.target.value }))}
-                    placeholder="https://exemplo.com/imagem.jpg"
-                    className="text-gray-900 bg-white border-gray-300"
-                  />
+                  <div className="flex gap-2">
+                    <Input
+                      id="image_url"
+                      value={newCategoryForm.image_url}
+                      onChange={(e) => setNewCategoryForm(prev => ({ ...prev, image_url: e.target.value }))}
+                      placeholder="https://exemplo.com/imagem.jpg"
+                      className="text-gray-900 bg-white border-gray-300 flex-1"
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => newImageInputRef.current?.click()}
+                      disabled={uploadingNewImage}
+                      title="Fazer upload para o Supabase"
+                    >
+                      <Upload size={16} />
+                      {uploadingNewImage ? 'Enviando...' : 'Upload'}
+                    </Button>
+                    <input
+                      ref={newImageInputRef}
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={handleNewImageFileChange}
+                    />
+                  </div>
                 </div>
                 <div>
                   <Label htmlFor="layout_type" className="text-gray-700 font-medium">Tipo de Layout</Label>
@@ -889,13 +971,32 @@ export default function AdminCategoriasPage() {
               </div>
               <div>
                 <Label htmlFor="edit-image_url" className="text-gray-700 font-medium">URL da Imagem</Label>
-                <Input
-                  id="edit-image_url"
-                  value={editingCategory.image_url}
-                  onChange={(e) => setEditingCategory(prev => prev ? { ...prev, image_url: e.target.value } : null)}
-                  placeholder="https://exemplo.com/imagem.jpg"
-                  className="text-gray-900 bg-white border-gray-300"
-                />
+                <div className="flex gap-2">
+                  <Input
+                    id="edit-image_url"
+                    value={editingCategory.image_url}
+                    onChange={(e) => setEditingCategory(prev => prev ? { ...prev, image_url: e.target.value } : null)}
+                    placeholder="https://exemplo.com/imagem.jpg"
+                    className="text-gray-900 bg-white border-gray-300 flex-1"
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => editImageInputRef.current?.click()}
+                    disabled={uploadingEditImage}
+                    title="Fazer upload para o Supabase"
+                  >
+                    <Upload size={16} />
+                    {uploadingEditImage ? 'Enviando...' : 'Upload'}
+                  </Button>
+                  <input
+                    ref={editImageInputRef}
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={handleEditImageFileChange}
+                  />
+                </div>
               </div>
               <div>
                 <Label htmlFor="edit-layout_type" className="text-gray-700 font-medium">Tipo de Layout</Label>
