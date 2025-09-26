@@ -121,6 +121,12 @@ const adminRoutes = [
     color: 'text-cyan-500'
   },
   {
+    label: 'WhatsApp IA',
+    icon: MessageSquare,
+    href: '/admin/whatsIA',
+    color: 'text-green-400'
+  },
+  {
     label: 'WhatsApp',
     icon: MessageCircle,
     href: '/admin/whatsapp',

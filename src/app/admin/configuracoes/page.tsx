@@ -154,6 +154,22 @@ export default function ConfiguracoesPage() {
                     }))}
                   />
                 </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="space-y-1">
+                    <Label htmlFor="prayer_quote_auto_time">Horário da atualização</Label>
+                    <Input
+                      id="prayer_quote_auto_time"
+                      type="time"
+                      step={60}
+                      value={localSettings.prayer_quote_auto_time || '07:00'}
+                      onChange={(e) => setLocalSettings(prev => ({
+                        ...prev,
+                        prayer_quote_auto_time: e.target.value
+                      }))}
+                    />
+                    <p className="text-xs text-gray-500">Formato 24h. A automação roda uma vez por dia no horário escolhido.</p>
+                  </div>
+                </div>
               </div>
 
               {/* Manual (Redefinir agora) */}

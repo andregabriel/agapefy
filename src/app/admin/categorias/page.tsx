@@ -30,6 +30,7 @@ import {
   getCategories, 
   getCategoryContent,
   getPlaylistsByCategory,
+  getCategoryBannerLinks,
   upsertCategoryBannerLink,
   type Category, 
   type Audio, 
@@ -88,6 +89,7 @@ export default function AdminCategoriasPage() {
   const [showNewPlaylistDialog, setShowNewPlaylistDialog] = useState(false);
   const [showEditCategoryDialog, setShowEditCategoryDialog] = useState(false);
   const [showSettingsDialog, setShowSettingsDialog] = useState(false);
+  const [bannerLinks, setBannerLinks] = useState<Record<string, string>>({});
 
   // Sincronizar configurações quando carregarem
   useEffect(() => {
@@ -135,6 +137,15 @@ export default function AdminCategoriasPage() {
 
   useEffect(() => {
     loadCategories();
+    // Carregar links de banner para edição e consistência visual
+    (async () => {
+      try {
+        const map = await getCategoryBannerLinks();
+        setBannerLinks(map);
+      } catch (e) {
+        console.warn('Não foi possível carregar links de banner:', e);
+      }
+    })();
   }, []);
 
   // Atualizar conteúdo da categoria "Recentes" quando atividades mudarem
@@ -224,19 +235,76 @@ export default function AdminCategoriasPage() {
   // Criar nova categoria
   const handleCreateCategory = async () => {
     try {
-      const { data, error } = await supabase
+      // Validações específicas para layout banner
+      if (newCategoryForm.layout_type === 'banner') {
+        if (!newCategoryForm.image_url?.trim()) {
+          toast.error('Para layout Banner, envie a imagem.');
+          return;
+        }
+        if (!newCategoryForm.banner_link?.trim()) {
+          toast.error('Para layout Banner, informe o Link do Banner.');
+          return;
+        }
+      }
+
+      // Montar payload apenas com colunas válidas da tabela categories
+      const payload = {
+        name: newCategoryForm.name.trim(),
+        description: newCategoryForm.description?.trim() || null,
+        image_url: newCategoryForm.image_url?.trim() || null,
+        layout_type: newCategoryForm.layout_type,
+        is_featured: !!newCategoryForm.is_featured,
+        is_visible: newCategoryForm.is_visible !== false,
+        order_position: categories.length,
+      } as const;
+
+      if (!payload.name) {
+        toast.error('Informe o nome da categoria.');
+        return;
+      }
+
+      // Verificar duplicidade de nome (feedback amigável antes do insert)
+      const { data: existing, error: existingError } = await supabase
         .from('categories')
-        .insert([{
-          ...newCategoryForm,
-          order_position: categories.length
-        }])
+        .select('id')
+        .eq('name', payload.name)
+        .maybeSingle();
+
+      if (!existingError && existing?.id) {
+        toast.error('Já existe uma categoria com este nome.');
+        return;
+      }
+
+      let { data, error } = await supabase
+        .from('categories')
+        .insert([payload])
         .select()
         .single();
 
-      if (error) throw error;
+      if (error) {
+        const msg = (error as any)?.message || '';
+        console.error('Supabase insert error (categories):', error);
+        // Fallback: alguns bancos locais podem não aceitar "banner" ainda
+        if (payload.layout_type === 'banner' && msg.includes('categories_layout_type_check')) {
+          const fallbackPayload = { ...payload, layout_type: 'full' as const };
+          const retry = await supabase
+            .from('categories')
+            .insert([fallbackPayload])
+            .select()
+            .single();
+          error = (retry as any).error;
+          data = (retry as any).data;
+          if (error) {
+            console.error('Retry insert error (fallback full):', error);
+            throw error;
+          }
+        } else {
+          throw error;
+        }
+      }
 
-      if (newCategoryForm.layout_type === 'banner' && data?.id && newCategoryForm.banner_link) {
-        await upsertCategoryBannerLink(data.id, newCategoryForm.banner_link);
+      if (newCategoryForm.layout_type === 'banner' && data?.id && newCategoryForm.banner_link?.trim()) {
+        await upsertCategoryBannerLink(data.id, newCategoryForm.banner_link.trim());
       }
 
       toast.success('Categoria criada com sucesso!');
@@ -251,9 +319,11 @@ export default function AdminCategoriasPage() {
       });
       setShowNewCategoryDialog(false);
       loadCategories();
-    } catch (error) {
-      console.error('❌ Erro ao criar categoria:', error);
-      toast.error('Erro ao criar categoria');
+    } catch (error: any) {
+      // Log gentil mas informativo
+      const message = error?.message || (typeof error === 'string' ? error : 'Erro desconhecido');
+      console.error('❌ Erro ao criar categoria (detalhes):', message, error);
+      toast.error(message);
     }
   };
 
@@ -445,8 +515,8 @@ export default function AdminCategoriasPage() {
       order_position: category.order_position,
       is_visible: (category as any).is_visible ?? true
     });
-    // Não buscamos o link agora para evitar roundtrip; o admin pode preencher/atualizar
-    setEditingBannerLink('');
+    // Prefill com link existente, se houver
+    setEditingBannerLink(bannerLinks[category.id] || '');
     setShowEditCategoryDialog(true);
   };
 

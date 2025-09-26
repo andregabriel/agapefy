@@ -42,7 +42,7 @@ const adminRouteGroups = [
   {
     title: 'Comunicação',
     routes: adminRoutes.filter(route => 
-      ['/admin/whatsapp', '/admin/webhook-test'].includes(route.href)
+      ['/admin/whatsapp', '/admin/whatsIA', '/admin/webhook-test'].includes(route.href)
     )
   },
   {

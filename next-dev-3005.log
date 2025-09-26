@@ -1189,3 +1189,1129 @@
  GET /whatsapp?vscodeBrowserReqId=1758819906987 200 in 70ms
  ✓ Compiled in 455ms (2873 modules)
  GET /whatsapp?vscodeBrowserReqId=1758819906987 200 in 37ms
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ GET /admin 200 in 31ms
+ ✓ Compiled in 1591ms (2873 modules)
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ GET /admin 200 in 76ms
+ ✓ Compiled in 478ms (2873 modules)
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ GET /admin 200 in 33ms
+📊 AuthContext: Estado atual - User: false Loading: true
+ GET /whatsapp?vscodeBrowserReqId=1758822557652 200 in 132ms
+ ○ Compiling /api/whatsapp/test-message ...
+ ✓ Compiled /api/whatsapp/test-message in 859ms (2891 modules)
+Enviando mensagem de teste para 5531991427001: 📖 Olá! Eu sou o Biblicus
+
+Um assistente virtual da Agapefy para te acompanhar na sua jornada espiritual. ✨
+
+🙌 O que posso fazer:
+
+• Obter respostas baseadas na Bíblia
+• Enviar versículos diariamente
+• Lembrar você dos horários de oração
+• Montar orações personalizadas para você
+
+💬 Comandos disponíveis:
+
+• **/conversa** – Tire dúvidas e converse sobre a Bíblia
+• **/versículos** – Receba mensagens com passagens todos os dias
+• **/lembretes** – Ative lembretes nos horários de oração
+• **/oração** – Tenha uma oração feita especialmente para você
+
+✨ Como usar:
+Cadastre seu número de WhatsApp e comece a conversar comigo. Você poderá enviar mensagens e receber respostas, versículos, lembretes e orações diretamente no seu celular.
+
+🚀 Pronto para começar?
+ GET /whatsapp?vscodeBrowserReqId=1758822557652 200 in 85ms
+✅ Mensagem enviada com sucesso: {
+  zaapId: '019981FEA4947DFBBE31028B9BF08850',
+  messageId: '3EB02A26A336A570770E1C',
+  id: '3EB02A26A336A570770E1C'
+}
+ POST /api/whatsapp/test-message 200 in 1100ms
+📊 AuthContext: Estado atual - User: false Loading: true
+ GET / 200 in 149ms
+ ○ Compiling /biblicus ...
+ ✓ Compiled /biblicus in 1072ms (740 modules)
+📊 AuthContext: Estado atual - User: false Loading: true
+ GET /biblicus 200 in 1271ms
+📊 AuthContext: Estado atual - User: false Loading: true
+ GET /whatsapp 200 in 117ms
+ ○ Compiling /login ...
+ ✓ Compiled /login in 1373ms (745 modules)
+ GET /login 200 in 1462ms
+ GET / 200 in 13ms
+📊 AuthContext: Estado atual - User: false Loading: true
+ GET /whatsapp 200 in 97ms
+ GET /login 200 in 32ms
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ GET /admin 200 in 20ms
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ ○ Compiling /admin/whatsapp ...
+ ✓ Compiled /admin/whatsapp in 525ms (753 modules)
+📊 AuthContext: Estado atual - User: false Loading: true
+ GET /admin/whatsapp 200 in 693ms
+ ✓ Compiled /api/whatsapp/setup-webhook in 494ms (771 modules)
+ GET /api/whatsapp/setup-webhook 200 in 675ms
+📊 AuthContext: Estado atual - User: false Loading: true
+ GET /whatsapp 200 in 122ms
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ GET /admin 200 in 23ms
+ ○ Compiling /biblia ...
+ ✓ Compiled /biblia in 1852ms (730 modules)
+ GET /biblia 200 in 1948ms
+ GET /biblia 200 in 18ms
+ GET /biblia 200 in 8ms
+ ✓ Compiled / in 124ms (761 modules)
+ GET / 200 in 160ms
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ GET /admin 200 in 23ms
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ ○ Compiling /admin/configuracoes ...
+ ✓ Compiled /admin/configuracoes in 1861ms (762 modules)
+ GET /admin/configuracoes 200 in 1958ms
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ GET /whatsapp 200 in 101ms
+ GET /admin/configuracoes 200 in 11ms
+ ✓ Compiled in 3.9s (2889 modules)
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ GET /whatsapp 200 in 69ms
+ GET /admin/configuracoes 200 in 77ms
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ ○ Compiling /_not-found ...
+ ✓ Compiled /_not-found in 3.3s (2994 modules)
+ GET /whatsapp 404 in 3105ms
+ GET /admin/configuracoes 404 in 3084ms
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ GET /whatsapp 200 in 31ms
+ GET /admin/configuracoes 200 in 50ms
+📊 AuthContext: Estado atual - User: false Loading: true
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ GET /whatsapp 200 in 180ms
+📊 AuthContext: Estado atual - User: false Loading: true
+ GET /admin/configuracoes 200 in 84ms
+ ✓ Compiled in 1408ms (2893 modules)
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ GET /whatsapp 200 in 63ms
+ GET /admin/configuracoes 200 in 70ms
+ ✓ Compiled in 677ms (2893 modules)
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ GET /whatsapp 200 in 55ms
+ GET /admin/configuracoes 200 in 64ms
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ GET /admin 200 in 19ms
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ ○ Compiling /admin/biblicus-whatsapp ...
+ ✓ Compiled /admin/biblicus-whatsapp in 3.7s (2900 modules)
+ GET /admin/biblicus-whatsapp 200 in 3824ms
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ GET /whatsapp 200 in 112ms
+ GET /admin/biblicus-whatsapp 200 in 26ms
+ ✓ Compiled in 3s (2892 modules)
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ GET /whatsapp 200 in 93ms
+ GET /admin/biblicus-whatsapp 200 in 102ms
+ ✓ Compiled in 923ms (2892 modules)
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ GET /whatsapp 200 in 101ms
+ GET /admin/biblicus-whatsapp 200 in 103ms
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ ○ Compiling /admin ...
+ ✓ Compiled /admin in 951ms (759 modules)
+ GET /admin 200 in 993ms
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ GET /admin/configuracoes 200 in 18ms
+ ✓ Compiled in 1062ms (2892 modules)
+ ✓ Compiled in 3.2s (2892 modules)
+ ✓ Compiled in 258ms (2141 modules)
+ ✓ Compiled in 1375ms (2892 modules)
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ ○ Compiling /admin ...
+ ✓ Compiled /admin in 705ms (759 modules)
+ GET /admin 200 in 765ms
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ GET /admin/configuracoes 200 in 22ms
+📊 AuthContext: Estado atual - User: false Loading: true
+ GET /whatsapp 200 in 167ms
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ GET /admin 200 in 7ms
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+📊 AuthContext: Estado atual - User: false Loading: true
+ GET /admin 200 in 30ms
+ ○ Compiling /login ...
+ ✓ Compiled /login in 641ms (744 modules)
+ ✓ Compiled (757 modules)
+ GET /login 200 in 1827ms
+ GET /favicon.ico 200 in 1971ms
+ GET /favicon.ico 200 in 206ms
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ GET /admin 200 in 14ms
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ GET /admin 200 in 8ms
+ GET / 200 in 13ms
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ GET /admin 200 in 8ms
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ GET /admin 200 in 13ms
+ ○ Compiling /eu ...
+ ✓ Compiled /eu in 1498ms (1642 modules)
+ GET /eu 200 in 1625ms
+ GET /eu 200 in 25ms
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ GET /admin 200 in 11ms
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ GET /admin/configuracoes 200 in 17ms
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+📊 AuthContext: Estado atual - User: false Loading: true
+ GET /admin/configuracoes 200 in 113ms
+ GET /favicon.ico 200 in 212ms
+ GET /favicon.ico 200 in 205ms
+ ✓ Compiled in 1787ms (2887 modules)
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ GET /admin/configuracoes 200 in 39ms
+ GET /favicon.ico 200 in 208ms
+ ✓ Compiled in 813ms (2141 modules)
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ GET /admin/configuracoes 200 in 17ms
+ GET /favicon.ico 200 in 208ms
+ ○ Compiling /whatsapp ...
+ ✓ Compiled /whatsapp in 651ms (757 modules)
+📊 AuthContext: Estado atual - User: false Loading: true
+ GET /whatsapp?vscodeBrowserReqId=1758834273198 200 in 801ms
+ ✓ Compiled in 452ms (2860 modules)
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ GET /whatsapp?vscodeBrowserReqId=1758834273198 200 in 36ms
+ GET /admin/configuracoes 200 in 46ms
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ GET /admin 200 in 25ms
+ ○ Compiling / ...
+ ✓ Compiled / in 734ms (741 modules)
+ GET / 200 in 820ms
+ ○ Compiling /biblia ...
+ ✓ Compiled /biblia in 1854ms (774 modules)
+ GET /biblia 200 in 1918ms
+ ✓ Compiled /biblicus in 156ms (779 modules)
+ GET /biblicus 200 in 193ms
+📊 AuthContext: Estado atual - User: false Loading: true
+ GET /whatsapp 200 in 213ms
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ GET /admin 200 in 25ms
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ GET /admin/biblicus-whatsapp 200 in 24ms
+📊 AuthContext: Estado atual - User: false Loading: true
+ GET /whatsapp 200 in 80ms
+ GET / 200 in 24ms
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ GET /admin 200 in 14ms
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ GET /admin/biblicus-whatsapp 200 in 17ms
+ ✓ Compiled in 2.5s (2833 modules)
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ GET /whatsapp 200 in 87ms
+ GET /admin/biblicus-whatsapp 200 in 109ms
+ GET /admin/biblicus-whatsapp 200 in 110ms
+ GET /admin/configuracoes 200 in 110ms
+ ✓ Compiled in 400ms (2833 modules)
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ GET /admin/biblicus-whatsapp 200 in 58ms
+ GET /whatsapp 200 in 71ms
+ GET /admin/biblicus-whatsapp 200 in 48ms
+ GET /admin/configuracoes 200 in 48ms
+📊 AuthContext: Estado atual - User: false Loading: true
+ GET /whatsapp?vscodeBrowserReqId=1758835340581 200 in 110ms
+ ✓ Compiled in 2.7s (2836 modules)
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ GET /whatsapp?vscodeBrowserReqId=1758835340581 200 in 70ms
+ GET /whatsapp 200 in 70ms
+ GET /admin/biblicus-whatsapp 200 in 98ms
+ GET /admin/configuracoes 200 in 100ms
+📊 AuthContext: Estado atual - User: false Loading: true
+ GET /whatsapp?vscodeBrowserReqId=1758835402955 200 in 121ms
+ ✓ Compiled in 1539ms (2836 modules)
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ GET /whatsapp 200 in 49ms
+ GET /whatsapp?vscodeBrowserReqId=1758835402955 200 in 51ms
+ GET /admin/configuracoes 200 in 69ms
+ GET /admin/biblicus-whatsapp 200 in 71ms
+ ✓ Compiled in 378ms (2836 modules)
+ GET /whatsapp?vscodeBrowserReqId=1758835402955 200 in 39ms
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ GET /whatsapp 200 in 27ms
+ GET /admin/biblicus-whatsapp 200 in 37ms
+ GET /admin/configuracoes 200 in 42ms
+ ○ Compiling /_not-found ...
+ ✓ Compiled /_not-found in 1444ms (2840 modules)
+📊 AuthContext: Estado atual - User: false Loading: true
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ GET /biblicus-whatsapp?vscodeBrowserReqId=1758835504759 404 in 1978ms
+ GET /whatsapp 200 in 537ms
+ GET /admin/biblicus-whatsapp 200 in 57ms
+ GET /admin/configuracoes 200 in 58ms
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+📊 AuthContext: Estado atual - User: false Loading: true
+ GET /admin/biblicus-whatsapp?vscodeBrowserReqId=1758835512536 200 in 29ms
+ ✓ Compiled in 868ms (2826 modules)
+ ⨯ ./src/app/admin/biblicus-whatsapp/page.tsx
+Error:   [31mx[0m The "use client" directive must be placed before other expressions. Move it to the top of the file to resolve this issue.
+    ,-[[36;1;4m/Users/andregabriel/Library/CloudStorage/Dropbox/agapefy_code/agapefy/src/app/admin/biblicus-whatsapp/page.tsx[0m:61:1]
+ [2m58[0m |   );
+ [2m59[0m | }
+ [2m60[0m | 
+ [2m61[0m | "use client";
+    : [35;1m^^^^^^^^^^^^^[0m
+ [2m62[0m | 
+ [2m63[0m | import { useEffect, useMemo, useState } from "react";
+ [2m64[0m | import { supabase } from "@/lib/supabase";
+    `----
+
+Import trace for requested module:
+./src/app/admin/biblicus-whatsapp/page.tsx
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ ○ Compiling /_error ...
+ ⨯ ./src/app/admin/biblicus-whatsapp/page.tsx
+Error:   [31mx[0m The "use client" directive must be placed before other expressions. Move it to the top of the file to resolve this issue.
+    ,-[[36;1;4m/Users/andregabriel/Library/CloudStorage/Dropbox/agapefy_code/agapefy/src/app/admin/biblicus-whatsapp/page.tsx[0m:61:1]
+ [2m58[0m |   );
+ [2m59[0m | }
+ [2m60[0m | 
+ [2m61[0m | "use client";
+    : [35;1m^^^^^^^^^^^^^[0m
+ [2m62[0m | 
+ [2m63[0m | import { useEffect, useMemo, useState } from "react";
+ [2m64[0m | import { supabase } from "@/lib/supabase";
+    `----
+
+Import trace for requested module:
+./src/app/admin/biblicus-whatsapp/page.tsx
+ GET /admin/biblicus-whatsapp?vscodeBrowserReqId=1758835512536 500 in 7223ms
+ GET /admin/configuracoes 500 in 7223ms
+ GET /admin/biblicus-whatsapp 500 in 7223ms
+ GET /whatsapp 500 in 7227ms
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ GET /whatsapp 500 in 2685ms
+ GET /admin/biblicus-whatsapp?vscodeBrowserReqId=1758835512536 500 in 82ms
+ GET /admin/biblicus-whatsapp 500 in 83ms
+ GET /admin/configuracoes 500 in 83ms
+ GET /whatsapp 500 in 67ms
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ GET /whatsapp 500 in 55ms
+ GET /admin/configuracoes 500 in 57ms
+ GET /admin/biblicus-whatsapp 500 in 72ms
+ GET /admin/biblicus-whatsapp?vscodeBrowserReqId=1758835512536 500 in 72ms
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ GET /whatsapp 500 in 348ms
+ GET /admin/configuracoes 500 in 355ms
+ GET /admin/biblicus-whatsapp 500 in 42ms
+ GET /admin/biblicus-whatsapp?vscodeBrowserReqId=1758835512536 500 in 42ms
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ GET /admin/configuracoes 500 in 24ms
+ GET /admin/biblicus-whatsapp 500 in 33ms
+ GET /admin/biblicus-whatsapp?vscodeBrowserReqId=1758835512536 500 in 34ms
+<w> [webpack.cache.PackFileCacheStrategy] Caching failed for pack: Error: ENOENT: no such file or directory, rename '/Users/andregabriel/Library/CloudStorage/Dropbox/agapefy_code/agapefy/.next/cache/webpack/client-development-fallback/0.pack.gz_' -> '/Users/andregabriel/Library/CloudStorage/Dropbox/agapefy_code/agapefy/.next/cache/webpack/client-development-fallback/0.pack.gz'
+<w> [webpack.cache.PackFileCacheStrategy] Caching failed for pack: Error: ENOENT: no such file or directory, rename '/Users/andregabriel/Library/CloudStorage/Dropbox/agapefy_code/agapefy/.next/cache/webpack/client-development-fallback/0.pack.gz_' -> '/Users/andregabriel/Library/CloudStorage/Dropbox/agapefy_code/agapefy/.next/cache/webpack/client-development-fallback/0.pack.gz'
+<w> [webpack.cache.PackFileCacheStrategy] Caching failed for pack: Error: ENOENT: no such file or directory, rename '/Users/andregabriel/Library/CloudStorage/Dropbox/agapefy_code/agapefy/.next/cache/webpack/client-development-fallback/0.pack.gz_' -> '/Users/andregabriel/Library/CloudStorage/Dropbox/agapefy_code/agapefy/.next/cache/webpack/client-development-fallback/0.pack.gz'
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ GET /admin 500 in 17ms
+ ⨯ ./src/app/admin/biblicus-whatsapp/page.tsx
+Error:   [31mx[0m The "use client" directive must be placed before other expressions. Move it to the top of the file to resolve this issue.
+    ,-[[36;1;4m/Users/andregabriel/Library/CloudStorage/Dropbox/agapefy_code/agapefy/src/app/admin/biblicus-whatsapp/page.tsx[0m:61:1]
+ [2m58[0m |   );
+ [2m59[0m | }
+ [2m60[0m | 
+ [2m61[0m | "use client";
+    : [35;1m^^^^^^^^^^^^^[0m
+ [2m62[0m | 
+ [2m63[0m | import { useEffect, useMemo, useState } from "react";
+ [2m64[0m | import { supabase } from "@/lib/supabase";
+    `----
+
+Import trace for requested module:
+./src/app/admin/biblicus-whatsapp/page.tsx
+ GET /_next/static/webpack/b266ddab19176b83.webpack.hot-update.json 500 in 5599ms
+ GET /_next/static/webpack/b266ddab19176b83.webpack.hot-update.json 500 in 5597ms
+ ⚠ Fast Refresh had to perform a full reload due to a runtime error.
+ ⚠ Fast Refresh had to perform a full reload due to a runtime error.
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ GET /_next/static/webpack/b266ddab19176b83.webpack.hot-update.json 500 in 13ms
+ ⚠ Fast Refresh had to perform a full reload. Read more: https://nextjs.org/docs/messages/fast-refresh-reload
+ GET /whatsapp 200 in 28ms
+ GET /_next/static/webpack/b266ddab19176b83.webpack.hot-update.json 500 in 11ms
+ ⚠ Fast Refresh had to perform a full reload. Read more: https://nextjs.org/docs/messages/fast-refresh-reload
+ GET /admin/biblicus-whatsapp 200 in 38ms
+ GET /admin/biblicus-whatsapp?vscodeBrowserReqId=1758835512536 500 in 41ms
+ GET /whatsapp 500 in 40ms
+ GET /admin 500 in 47ms
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ GET /admin/biblicus-whatsapp 500 in 15ms
+ ⨯ ./src/app/admin/biblicus-whatsapp/page.tsx
+Error:   [31mx[0m The "use client" directive must be placed before other expressions. Move it to the top of the file to resolve this issue.
+    ,-[[36;1;4m/Users/andregabriel/Library/CloudStorage/Dropbox/agapefy_code/agapefy/src/app/admin/biblicus-whatsapp/page.tsx[0m:61:1]
+ [2m58[0m |   );
+ [2m59[0m | }
+ [2m60[0m | 
+ [2m61[0m | "use client";
+    : [35;1m^^^^^^^^^^^^^[0m
+ [2m62[0m | 
+ [2m63[0m | import { useEffect, useMemo, useState } from "react";
+ [2m64[0m | import { supabase } from "@/lib/supabase";
+    `----
+
+Import trace for requested module:
+./src/app/admin/biblicus-whatsapp/page.tsx
+ ⚠ Fast Refresh had to perform a full reload due to a runtime error.
+ GET /_next/static/webpack/b266ddab19176b83.webpack.hot-update.json 500 in 1182ms
+ GET /_next/static/webpack/b266ddab19176b83.webpack.hot-update.json 500 in 671ms
+ ⚠ Fast Refresh had to perform a full reload due to a runtime error.
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ GET /_next/static/webpack/b266ddab19176b83.webpack.hot-update.json 500 in 11ms
+ ⚠ Fast Refresh had to perform a full reload. Read more: https://nextjs.org/docs/messages/fast-refresh-reload
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ GET /_next/static/webpack/b266ddab19176b83.webpack.hot-update.json 500 in 11ms
+ ⚠ Fast Refresh had to perform a full reload. Read more: https://nextjs.org/docs/messages/fast-refresh-reload
+ GET /admin 500 in 28ms
+ GET /admin/biblicus-whatsapp?vscodeBrowserReqId=1758835512536 500 in 34ms
+ GET /admin/biblicus-whatsapp 500 in 28ms
+ GET /whatsapp 500 in 33ms
+ GET /_next/static/webpack/b266ddab19176b83.webpack.hot-update.json 500 in 7ms
+ ⚠ Fast Refresh had to perform a full reload due to a runtime error.
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ ⨯ ./src/app/admin/biblicus-whatsapp/page.tsx
+Error:   [31mx[0m The "use client" directive must be placed before other expressions. Move it to the top of the file to resolve this issue.
+    ,-[[36;1;4m/Users/andregabriel/Library/CloudStorage/Dropbox/agapefy_code/agapefy/src/app/admin/biblicus-whatsapp/page.tsx[0m:61:1]
+ [2m58[0m |   );
+ [2m59[0m | }
+ [2m60[0m | 
+ [2m61[0m | "use client";
+    : [35;1m^^^^^^^^^^^^^[0m
+ [2m62[0m | 
+ [2m63[0m | import { useEffect, useMemo, useState } from "react";
+ [2m64[0m | import { supabase } from "@/lib/supabase";
+    `----
+
+Import trace for requested module:
+./src/app/admin/biblicus-whatsapp/page.tsx
+ GET /admin/biblicus-whatsapp?vscodeBrowserReqId=1758835512536 500 in 2048ms
+ GET /_next/static/webpack/b266ddab19176b83.webpack.hot-update.json 500 in 2676ms
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ ⚠ Fast Refresh had to perform a full reload. Read more: https://nextjs.org/docs/messages/fast-refresh-reload
+ GET /_next/static/webpack/b266ddab19176b83.webpack.hot-update.json 500 in 13ms
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ ⚠ Fast Refresh had to perform a full reload due to a runtime error.
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ GET /whatsapp 500 in 28ms
+ ⚠ Fast Refresh had to perform a full reload. Read more: https://nextjs.org/docs/messages/fast-refresh-reload
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ GET /admin/biblicus-whatsapp?vscodeBrowserReqId=1758835512536 500 in 39ms
+ GET /admin/biblicus-whatsapp 500 in 30ms
+ GET /admin 500 in 31ms
+ ⨯ ./src/app/admin/biblicus-whatsapp/page.tsx
+Error:   [31mx[0m The "use client" directive must be placed before other expressions. Move it to the top of the file to resolve this issue.
+    ,-[[36;1;4m/Users/andregabriel/Library/CloudStorage/Dropbox/agapefy_code/agapefy/src/app/admin/biblicus-whatsapp/page.tsx[0m:61:1]
+ [2m58[0m |   );
+ [2m59[0m | }
+ [2m60[0m | 
+ [2m61[0m | "use client";
+    : [35;1m^^^^^^^^^^^^^[0m
+ [2m62[0m | 
+ [2m63[0m | import { useEffect, useMemo, useState } from "react";
+ [2m64[0m | import { supabase } from "@/lib/supabase";
+    `----
+
+Import trace for requested module:
+./src/app/admin/biblicus-whatsapp/page.tsx
+ GET /_next/static/webpack/b266ddab19176b83.webpack.hot-update.json 500 in 2443ms
+ GET /_next/static/webpack/b266ddab19176b83.webpack.hot-update.json 500 in 2444ms
+ ⚠ Fast Refresh had to perform a full reload. Read more: https://nextjs.org/docs/messages/fast-refresh-reload
+ ⚠ Fast Refresh had to perform a full reload due to a runtime error.
+ GET /_next/static/webpack/b266ddab19176b83.webpack.hot-update.json 500 in 10ms
+ GET / 500 in 2466ms
+ ⚠ Fast Refresh had to perform a full reload due to a runtime error.
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ GET /_next/static/webpack/b266ddab19176b83.webpack.hot-update.json 500 in 10ms
+ GET /whatsapp 500 in 28ms
+ ⚠ Fast Refresh had to perform a full reload. Read more: https://nextjs.org/docs/messages/fast-refresh-reload
+ GET / 500 in 22ms
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ GET /admin/biblicus-whatsapp?vscodeBrowserReqId=1758835512536 500 in 29ms
+ GET /admin/biblicus-whatsapp 500 in 26ms
+ GET /_next/static/webpack/b266ddab19176b83.webpack.hot-update.json 500 in 8ms
+ ⚠ Fast Refresh had to perform a full reload due to a runtime error.
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ ⨯ ./src/app/admin/biblicus-whatsapp/page.tsx
+Module parse failed: Identifier 'useEffect' has already been declared (127:9)
+| });
+| _c = WhatsAppNumberCard;
+> import { useEffect, useMemo, useState } from "react";
+| import { supabase } from "@/lib/supabase";
+| import { toast } from "sonner";
+
+Import trace for requested module:
+./src/app/admin/biblicus-whatsapp/page.tsx
+ GET /admin/biblicus-whatsapp?vscodeBrowserReqId=1758835512536 500 in 1163ms
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ ⨯ ./src/app/admin/biblicus-whatsapp/page.tsx
+Module parse failed: Identifier 'useEffect' has already been declared (127:9)
+| });
+| _c = WhatsAppNumberCard;
+> import { useEffect, useMemo, useState } from "react";
+| import { supabase } from "@/lib/supabase";
+| import { toast } from "sonner";
+
+Import trace for requested module:
+./src/app/admin/biblicus-whatsapp/page.tsx
+ GET /whatsapp 500 in 196ms
+ GET /admin/biblicus-whatsapp?vscodeBrowserReqId=1758835512536 500 in 175ms
+ GET /admin/biblicus-whatsapp 500 in 157ms
+ ⚠ Fast Refresh had to perform a full reload. Read more: https://nextjs.org/docs/messages/fast-refresh-reload
+ GET /_next/static/webpack/b266ddab19176b83.webpack.hot-update.json 500 in 1522ms
+ GET / 500 in 203ms
+ ⚠ Fast Refresh had to perform a full reload. Read more: https://nextjs.org/docs/messages/fast-refresh-reload
+ ⚠ Fast Refresh had to perform a full reload due to a runtime error.
+ GET / 500 in 14ms
+ ⨯ ./src/app/admin/biblicus-whatsapp/page.tsx
+Module parse failed: Identifier 'useEffect' has already been declared (127:9)
+| });
+| _c = WhatsAppNumberCard;
+> import { useEffect, useMemo, useState } from "react";
+| import { supabase } from "@/lib/supabase";
+| import { toast } from "sonner";
+
+Import trace for requested module:
+./src/app/admin/biblicus-whatsapp/page.tsx
+ ⨯ ./src/app/admin/biblicus-whatsapp/page.tsx
+Module parse failed: Identifier 'useEffect' has already been declared (127:9)
+| });
+| _c = WhatsAppNumberCard;
+> import { useEffect, useMemo, useState } from "react";
+| import { supabase } from "@/lib/supabase";
+| import { toast } from "sonner";
+
+Import trace for requested module:
+./src/app/admin/biblicus-whatsapp/page.tsx
+ ⨯ ./src/app/admin/biblicus-whatsapp/page.tsx
+Module parse failed: Identifier 'useEffect' has already been declared (127:9)
+| });
+| _c = WhatsAppNumberCard;
+> import { useEffect, useMemo, useState } from "react";
+| import { supabase } from "@/lib/supabase";
+| import { toast } from "sonner";
+
+Import trace for requested module:
+./src/app/admin/biblicus-whatsapp/page.tsx
+ GET / 500 in 8ms
+ GET / 500 in 8ms
+ ✓ Compiled / in 6.8s (3165 modules)
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+📊 AuthContext: Estado atual - User: false Loading: true
+📊 AuthContext: Estado atual - User: false Loading: true
+ ⚠ Fast Refresh had to perform a full reload. Read more: https://nextjs.org/docs/messages/fast-refresh-reload
+📊 AuthContext: Estado atual - User: false Loading: true
+ GET /whatsapp 200 in 391ms
+ ⚠ Fast Refresh had to perform a full reload due to a runtime error.
+ GET /admin/biblicus-whatsapp?vscodeBrowserReqId=1758835512536 200 in 412ms
+ GET /admin/biblicus-whatsapp 200 in 409ms
+ ○ Compiling / ...
+ ✓ Compiled / in 957ms (3193 modules)
+📊 AuthContext: Estado atual - User: false Loading: true
+📊 AuthContext: Estado atual - User: false Loading: true
+📊 AuthContext: Estado atual - User: false Loading: true
+ ⚠ Fast Refresh had to perform a full reload due to a runtime error.
+ GET / 200 in 1430ms
+📊 AuthContext: Estado atual - User: false Loading: true
+ GET /_next/static/webpack/b266ddab19176b83.webpack.hot-update.json 404 in 1147ms
+📊 AuthContext: Estado atual - User: false Loading: true
+ GET / 200 in 102ms
+📊 AuthContext: Estado atual - User: false Loading: true
+ GET /whatsapp?vscodeBrowserReqId=1758835967766 200 in 65ms
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ GET /admin 200 in 34ms
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ ○ Compiling /admin/categorias ...
+ ✓ Compiled /admin/categorias in 7.4s (3218 modules)
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ GET /admin/categorias 200 in 7437ms
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ GET /whatsapp?vscodeBrowserReqId=1758835967766 200 in 89ms
+ GET /whatsapp 200 in 89ms
+ GET /admin/biblicus-whatsapp 200 in 47ms
+ GET /admin/categorias 200 in 37ms
+📊 AuthContext: Estado atual - User: false Loading: true
+ GET / 200 in 123ms
+ ✓ Compiled /_not-found in 336ms (3208 modules)
+📊 AuthContext: Estado atual - User: false Loading: true
+ GET /categorias 404 in 464ms
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ ✓ Compiled in 607ms (3222 modules)
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+📊 AuthContext: Estado atual - User: false Loading: true
+ GET /categorias 404 in 125ms
+ GET /admin/categorias 200 in 448ms
+ GET /whatsapp 200 in 150ms
+ GET /whatsapp?vscodeBrowserReqId=1758835967766 200 in 151ms
+ GET /admin/biblicus-whatsapp 200 in 53ms
+ ✓ Compiled in 2.7s (3207 modules)
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ GET /whatsapp?vscodeBrowserReqId=1758835967766 200 in 70ms
+ GET /whatsapp 200 in 75ms
+ GET /admin/categorias 200 in 102ms
+ GET /admin/biblicus-whatsapp 200 in 103ms
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+📊 AuthContext: Estado atual - User: false Loading: true
+ GET /admin/biblicus-whatsapp 200 in 114ms
+ ✓ Compiled in 496ms (3207 modules)
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ GET /whatsapp?vscodeBrowserReqId=1758835967766 200 in 50ms
+ GET /whatsapp 200 in 52ms
+ GET /admin/biblicus-whatsapp 200 in 32ms
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ GET /admin/biblicus-whatsapp 200 in 14ms
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ ○ Compiling /admin/testes ...
+ ✓ Compiled /admin/testes in 1619ms (838 modules)
+ GET /admin/testes 200 in 1658ms
+ ○ Compiling /api/whatsapp/debug ...
+ ✓ Compiled /api/whatsapp/debug in 739ms (856 modules)
+ ✓ Compiled (925 modules)
+ GET /api/whatsapp/debug 200 in 2438ms
+ GET /api/test/openai-debug 200 in 3675ms
+ ✓ Compiled in 2.9s (3306 modules)
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ GET /whatsapp 200 in 63ms
+ GET /whatsapp?vscodeBrowserReqId=1758835967766 200 in 68ms
+ GET /admin/biblicus-whatsapp 200 in 86ms
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ GET /admin/biblicus-whatsapp 200 in 14ms
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ GET /admin 200 in 11ms
+ ⨯ ./src/app/admin/biblicus-whatsapp/page.tsx
+Error:   [31mx[0m The "use client" directive must be placed before other expressions. Move it to the top of the file to resolve this issue.
+    ,-[[36;1;4m/Users/andregabriel/Library/CloudStorage/Dropbox/agapefy_code/agapefy/src/app/admin/biblicus-whatsapp/page.tsx[0m:52:1]
+ [2m49[0m |   );
+ [2m50[0m | }
+ [2m51[0m | 
+ [2m52[0m | "use client";
+    : [35;1m^^^^^^^^^^^^^[0m
+ [2m53[0m | 
+ [2m54[0m | import { useEffect, useMemo, useState } from "react";
+ [2m55[0m | import { supabase } from "@/lib/supabase";
+    `----
+
+Import trace for requested module:
+./src/app/admin/biblicus-whatsapp/page.tsx
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ GET /whatsapp?vscodeBrowserReqId=1758835967766 500 in 12ms
+ GET /whatsapp 500 in 17ms
+ GET /admin/biblicus-whatsapp 500 in 21ms
+ GET /whatsapp?vscodeBrowserReqId=1758835967766 500 in 22ms
+ GET /whatsapp 500 in 22ms
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ GET /admin/biblicus-whatsapp 500 in 27ms
+ GET /admin/biblicus-whatsapp 500 in 27ms
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ GET /admin/biblicus-whatsapp 500 in 10ms
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ ○ Compiling /_not-found ...
+ ⨯ ./src/app/admin/biblicus-whatsapp/page.tsx
+Error:   [31mx[0m The "use client" directive must be placed before other expressions. Move it to the top of the file to resolve this issue.
+    ,-[[36;1;4m/Users/andregabriel/Library/CloudStorage/Dropbox/agapefy_code/agapefy/src/app/admin/biblicus-whatsapp/page.tsx[0m:52:1]
+ [2m49[0m |   );
+ [2m50[0m | }
+ [2m51[0m | 
+ [2m52[0m | "use client";
+    : [35;1m^^^^^^^^^^^^^[0m
+ [2m53[0m | 
+ [2m54[0m | import { useEffect, useMemo, useState } from "react";
+ [2m55[0m | import { supabase } from "@/lib/supabase";
+    `----
+
+Import trace for requested module:
+./src/app/admin/biblicus-whatsapp/page.tsx
+ GET /_next/static/webpack/b266ddab19176b83.webpack.hot-update.json 500 in 3779ms
+ GET /_next/static/webpack/b266ddab19176b83.webpack.hot-update.json 500 in 3777ms
+ ⚠ Fast Refresh had to perform a full reload due to a runtime error.
+ ⚠ Fast Refresh had to perform a full reload. Read more: https://nextjs.org/docs/messages/fast-refresh-reload
+ GET /admin/setup 500 in 3800ms
+ GET /_next/static/webpack/b266ddab19176b83.webpack.hot-update.json 500 in 16ms
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ ⚠ Fast Refresh had to perform a full reload. Read more: https://nextjs.org/docs/messages/fast-refresh-reload
+ GET /whatsapp?vscodeBrowserReqId=1758835967766 500 in 40ms
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ GET /_next/static/webpack/b266ddab19176b83.webpack.hot-update.json 500 in 21ms
+ ⚠ Fast Refresh had to perform a full reload. Read more: https://nextjs.org/docs/messages/fast-refresh-reload
+ GET /admin/biblicus-whatsapp 500 in 47ms
+ GET /whatsapp 500 in 23ms
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ GET /admin/setup 500 in 32ms
+ GET /admin/biblicus-whatsapp 500 in 18ms
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ GET /admin 500 in 7ms
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ GET /admin 500 in 7ms
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ GET /admin/testes 500 in 13ms
+ GET /a 500 in 4ms
+ GET /_next/static/webpack/b266ddab19176b83.webpack.hot-update.json 500 in 7ms
+ ⚠ Fast Refresh had to perform a full reload due to a runtime error.
+ ⨯ ./src/app/admin/biblicus-whatsapp/page.tsx
+Error:   [31mx[0m The "use client" directive must be placed before other expressions. Move it to the top of the file to resolve this issue.
+    ,-[[36;1;4m/Users/andregabriel/Library/CloudStorage/Dropbox/agapefy_code/agapefy/src/app/admin/biblicus-whatsapp/page.tsx[0m:52:1]
+ [2m49[0m |   );
+ [2m50[0m | }
+ [2m51[0m | 
+ [2m52[0m | "use client";
+    : [35;1m^^^^^^^^^^^^^[0m
+ [2m53[0m | 
+ [2m54[0m | import { useEffect, useMemo, useState } from "react";
+ [2m55[0m | import { supabase } from "@/lib/supabase";
+    `----
+
+Import trace for requested module:
+./src/app/admin/biblicus-whatsapp/page.tsx
+ GET /whatsapp?vscodeBrowserReqId=1758835967766 200 in 1261ms
+ GET /_next/static/webpack/b266ddab19176b83.webpack.hot-update.json 500 in 1266ms
+ ⚠ Fast Refresh had to perform a full reload. Read more: https://nextjs.org/docs/messages/fast-refresh-reload
+ GET /a 500 in 9ms
+ ⚠ Fast Refresh had to perform a full reload due to a runtime error.
+ GET /_next/static/webpack/b266ddab19176b83.webpack.hot-update.json 500 in 6ms
+ GET / 500 in 23ms
+ ⚠ Fast Refresh had to perform a full reload. Read more: https://nextjs.org/docs/messages/fast-refresh-reload
+ GET /whatsapp?vscodeBrowserReqId=1758835967766 500 in 31ms
+ GET /whatsapp 500 in 26ms
+ GET /_next/static/webpack/b266ddab19176b83.webpack.hot-update.json 500 in 10ms
+ ⚠ Fast Refresh had to perform a full reload. Read more: https://nextjs.org/docs/messages/fast-refresh-reload
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ GET /admin/biblicus-whatsapp 500 in 9ms
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ GET /admin/biblicus-whatsapp 500 in 13ms
+ GET / 500 in 11ms
+ GET / 500 in 6ms
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ ✓ Compiled /_not-found in 7s (3301 modules)
+ GET / 500 in 5965ms
+ GET /whatsapp?vscodeBrowserReqId=1758835967766 500 in 6009ms
+ GET /whatsapp 500 in 6006ms
+📊 AuthContext: Estado atual - User: false Loading: true
+📊 AuthContext: Estado atual - User: false Loading: true
+📊 AuthContext: Estado atual - User: false Loading: true
+ ⚠ Fast Refresh had to perform a full reload due to a runtime error.
+ ⚠ Fast Refresh had to perform a full reload due to a runtime error.
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+📊 AuthContext: Estado atual - User: false Loading: true
+ GET /_next/static/webpack/b266ddab19176b83.webpack.hot-update.json 404 in 7222ms
+ GET /_next/static/webpack/b266ddab19176b83.webpack.hot-update.json 404 in 7272ms
+ ⚠ Fast Refresh had to perform a full reload. Read more: https://nextjs.org/docs/messages/fast-refresh-reload
+📊 AuthContext: Estado atual - User: false Loading: true
+📊 AuthContext: Estado atual - User: false Loading: true
+📊 AuthContext: Estado atual - User: false Loading: true
+📊 AuthContext: Estado atual - User: false Loading: true
+📊 AuthContext: Estado atual - User: false Loading: true
+📊 AuthContext: Estado atual - User: false Loading: true
+ ⚠ Fast Refresh had to perform a full reload due to a runtime error.
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ GET /_next/static/webpack/b266ddab19176b83.webpack.hot-update.json 404 in 198ms
+ GET /whatsapp?vscodeBrowserReqId=1758835967766 200 in 211ms
+ GET / 200 in 213ms
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ GET /_next/static/webpack/b266ddab19176b83.webpack.hot-update.json 404 in 108ms
+📊 AuthContext: Estado atual - User: false Loading: true
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ GET /admin/biblicus-whatsapp 404 in 41ms
+📊 AuthContext: Estado atual - User: false Loading: true
+ GET /admin/biblicus-whatsapp 404 in 40ms
+📊 AuthContext: Estado atual - User: false Loading: true
+ ⚠ Fast Refresh had to perform a full reload. Read more: https://nextjs.org/docs/messages/fast-refresh-reload
+📊 AuthContext: Estado atual - User: false Loading: true
+ ⚠ Fast Refresh had to perform a full reload. Read more: https://nextjs.org/docs/messages/fast-refresh-reload
+ GET /whatsapp 200 in 40ms
+ GET /_next/static/webpack/b266ddab19176b83.webpack.hot-update.json 404 in 82ms
+📊 AuthContext: Estado atual - User: false Loading: true
+ GET /_next/static/webpack/b266ddab19176b83.webpack.hot-update.json 404 in 69ms
+📊 AuthContext: Estado atual - User: false Loading: true
+ GET /whatsapp 200 in 68ms
+📊 AuthContext: Estado atual - User: false Loading: true
+ GET /?vscodeBrowserReqId=1758836491495 200 in 22ms
+📊 AuthContext: Estado atual - User: false Loading: true
+ GET /whatsapp?vscodeBrowserReqId=1758836496812 200 in 27ms
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ GET /admin 200 in 33ms
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ GET /admin/categorias 200 in 35ms
+ ✓ Compiled in 4.6s (3189 modules)
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ GET /whatsapp?vscodeBrowserReqId=1758836496812 200 in 89ms
+ GET /whatsapp 200 in 215ms
+ GET /admin/categorias 200 in 218ms
+ ✓ Compiled /_not-found in 490ms (3193 modules)
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ GET /admin/biblicus-whatsapp 404 in 600ms
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ GET /whatsapp?vscodeBrowserReqId=1758836496812 200 in 83ms
+ GET /whatsapp 200 in 84ms
+ GET /admin/biblicus-whatsapp 404 in 36ms
+ GET /admin/categorias 200 in 60ms
+ GET /admin/biblicus-whatsapp 404 in 22ms
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+📊 AuthContext: Estado atual - User: false Loading: true
+ GET /admin/biblicus-whatsapp 404 in 132ms
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ GET /admin/biblicus-whatsapp 404 in 131ms
+📊 AuthContext: Estado atual - User: false Loading: true
+ GET /admin/biblicus-whatsapp 404 in 38ms
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ ○ Compiling /admin/biblicus-whatsapp ...
+ ✓ Compiled /admin/biblicus-whatsapp in 3.7s (3284 modules)
+ ⨯ [Error: The default export is not a React Component in "/admin/biblicus-whatsapp/page"] {
+  page: '/admin/biblicus-whatsapp'
+}
+ GET /whatsapp 200 in 3871ms
+ GET /whatsapp?vscodeBrowserReqId=1758836496812 200 in 3890ms
+ GET /admin/categorias 200 in 3862ms
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ GET /whatsapp 200 in 30ms
+ GET /whatsapp?vscodeBrowserReqId=1758836496812 200 in 33ms
+ GET /admin/categorias 200 in 21ms
+ GET /admin/biblicus-whatsapp 500 in 4065ms
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ ⨯ [Error: The default export is not a React Component in "/admin/biblicus-whatsapp/page"] {
+  page: '/admin/biblicus-whatsapp'
+}
+ GET /admin/biblicus-whatsapp 500 in 358ms
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ ⨯ [Error: The default export is not a React Component in "/admin/biblicus-whatsapp/page"] {
+  page: '/admin/biblicus-whatsapp'
+}
+ GET /admin/biblicus-whatsapp 500 in 373ms
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ ⨯ [Error: The default export is not a React Component in "/admin/biblicus-whatsapp/page"] {
+  page: '/admin/biblicus-whatsapp'
+}
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ ⨯ [Error: The default export is not a React Component in "/admin/biblicus-whatsapp/page"] {
+  page: '/admin/biblicus-whatsapp'
+}
+ GET /admin/biblicus-whatsapp 500 in 467ms
+ GET /admin/biblicus-whatsapp 500 in 387ms
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ ⨯ [Error: The default export is not a React Component in "/admin/biblicus-whatsapp/page"] {
+  page: '/admin/biblicus-whatsapp'
+}
+ GET /admin/biblicus-whatsapp 500 in 395ms
+ ✓ Compiled in 4s (3197 modules)
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ GET /whatsapp?vscodeBrowserReqId=1758836496812 200 in 64ms
+ GET /whatsapp 200 in 65ms
+ GET /admin/categorias 200 in 57ms
+ ✓ Compiled in 2.2s (3203 modules)
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ GET /whatsapp?vscodeBrowserReqId=1758836496812 200 in 42ms
+ GET /whatsapp 200 in 46ms
+ GET /admin/categorias 200 in 52ms
+ ✓ Compiled in 435ms (3203 modules)
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ GET /whatsapp?vscodeBrowserReqId=1758836496812 200 in 47ms
+ GET /whatsapp 200 in 51ms
+ GET /admin/categorias 200 in 60ms
+ ✓ Compiled in 2.9s (3203 modules)
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ GET /whatsapp 200 in 53ms
+ GET /whatsapp?vscodeBrowserReqId=1758836496812 200 in 54ms
+ GET /admin/categorias 200 in 63ms
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ GET /admin 200 in 50ms
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ GET /admin/categorias 200 in 9ms
+📊 AuthContext: Estado atual - User: false Loading: true
+ GET /whatsapp?vscodeBrowserReqId=1758836977712 200 in 199ms
+ ✓ Compiled in 2.5s (3199 modules)
+ ⚠ Fast Refresh had to perform a full reload due to a runtime error.
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ GET /whatsapp?vscodeBrowserReqId=1758836977712 200 in 103ms
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ GET /whatsapp 200 in 104ms
+ GET /admin/categorias 200 in 55ms
+📊 AuthContext: Estado atual - User: false Loading: true
+ GET /admin/biblicus-whatsapp 200 in 151ms
+ ✓ Compiled in 614ms (3199 modules)
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ GET /whatsapp 200 in 58ms
+ GET /whatsapp?vscodeBrowserReqId=1758836977712 200 in 70ms
+ GET /admin/biblicus-whatsapp 200 in 84ms
+ GET /admin/categorias 200 in 90ms
+ ✓ Compiled in 1306ms (3193 modules)
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ GET /whatsapp?vscodeBrowserReqId=1758836977712 200 in 67ms
+ GET /whatsapp 200 in 68ms
+ ⨯ [Error: The default export is not a React Component in "/admin/biblicus-whatsapp/page"] {
+  page: '/admin/biblicus-whatsapp'
+}
+ GET /admin/categorias 200 in 255ms
+ GET /admin/biblicus-whatsapp 500 in 456ms
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ ⨯ [Error: The default export is not a React Component in "/admin/biblicus-whatsapp/page"] {
+  page: '/admin/biblicus-whatsapp'
+}
+ GET /admin/biblicus-whatsapp 500 in 390ms
+ ⚠ Fast Refresh had to perform a full reload due to a runtime error.
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ ⚠ Fast Refresh had to perform a full reload due to a runtime error.
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ ✓ Compiled in 3.4s (3193 modules)
+ GET /admin/biblicus-whatsapp 200 in 111ms
+ ⨯ [Error: The default export is not a React Component in "/admin/biblicus-whatsapp/page"] {
+  page: '/admin/biblicus-whatsapp'
+}
+ ⨯ [Error: The default export is not a React Component in "/admin/biblicus-whatsapp/page"] {
+  page: '/admin/biblicus-whatsapp'
+}
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ GET /whatsapp?vscodeBrowserReqId=1758836977712 200 in 415ms
+ GET /whatsapp 200 in 416ms
+ ⨯ [Error: The default export is not a React Component in "/admin/biblicus-whatsapp/page"] {
+  page: '/admin/biblicus-whatsapp'
+}
+ GET /admin/categorias 200 in 215ms
+ GET /admin/biblicus-whatsapp 500 in 442ms
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ GET /admin 200 in 28ms
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ GET /admin/categorias 200 in 17ms
+ ○ Compiling /_not-found ...
+ ⚠ Fast Refresh had to perform a full reload due to a runtime error.
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ ✓ Compiled /_not-found in 5.4s (3197 modules)
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ ✓ Compiled in 0ms (816 modules)
+ ✓ Compiled in 504ms (3183 modules)
+ ⨯ [Error: The default export is not a React Component in "/admin/biblicus-whatsapp/page"] {
+  page: '/admin/biblicus-whatsapp'
+}
+ ⨯ [Error: The default export is not a React Component in "/admin/biblicus-whatsapp/page"] {
+  page: '/admin/biblicus-whatsapp'
+}
+📊 AuthContext: Estado atual - User: false Loading: true
+📊 AuthContext: Estado atual - User: false Loading: true
+ GET /admin/categorias 200 in 1355ms
+ GET /biblicus-whatsapp?vscodeBrowserReqId=1758837283881 404 in 3156ms
+ GET /whatsapp 200 in 1437ms
+ GET /admin/categorias 200 in 1411ms
+ GET /admin/biblicus-whatsapp 500 in 1582ms
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ ⨯ [Error: The default export is not a React Component in "/admin/biblicus-whatsapp/page"] {
+  page: '/admin/biblicus-whatsapp'
+}
+ GET /admin/biblicus-whatsapp?vscodeBrowserReqId=1758837292910 500 in 185ms
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ ⨯ [Error: The default export is not a React Component in "/admin/biblicus-whatsapp/page"] {
+  page: '/admin/biblicus-whatsapp'
+}
+ GET /admin/biblicus-whatsapp?vscodeBrowserReqId=1758837293032 500 in 387ms
+ ✓ Compiled in 5.6s (3193 modules)
+ ⚠ Fast Refresh had to perform a full reload due to a runtime error.
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ GET /whatsapp 200 in 85ms
+ GET /admin/categorias 200 in 90ms
+ ⨯ [Error: The default export is not a React Component in "/admin/biblicus-whatsapp/page"] {
+  page: '/admin/biblicus-whatsapp'
+}
+ GET /admin/biblicus-whatsapp?vscodeBrowserReqId=1758837293032 500 in 456ms
+ ✓ Compiled in 646ms (3193 modules)
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ ⚠ Fast Refresh had to perform a full reload due to a runtime error.
+ GET /whatsapp 200 in 77ms
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ ⨯ [Error: The default export is not a React Component in "/admin/biblicus-whatsapp/page"] {
+  page: '/admin/biblicus-whatsapp'
+}
+ GET /admin/categorias 200 in 264ms
+ ⨯ [Error: The default export is not a React Component in "/admin/biblicus-whatsapp/page"] {
+  page: '/admin/biblicus-whatsapp'
+}
+ GET /admin/biblicus-whatsapp?vscodeBrowserReqId=1758837293032 500 in 577ms
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ ⨯ [Error: The default export is not a React Component in "/admin/biblicus-whatsapp/page"] {
+  page: '/admin/biblicus-whatsapp'
+}
+ ✓ Compiled in 5.5s (3193 modules)
+ GET /admin/biblicus-whatsapp?vscodeBrowserReqId=1758889382332 500 in 2516ms
+ ⚠ Fast Refresh had to perform a full reload due to a runtime error.
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ ✓ Compiled in 5.5s (3200 modules)
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ ⨯ [Error: The default export is not a React Component in "/admin/biblicus-whatsapp/page"] {
+  page: '/admin/biblicus-whatsapp'
+}
+ ⨯ [Error: The default export is not a React Component in "/admin/biblicus-whatsapp/page"] {
+  page: '/admin/biblicus-whatsapp'
+}
+ GET /admin/biblicus-whatsapp?vscodeBrowserReqId=1758889382332 500 in 713ms
+ ✓ Compiled in 2.1s (3200 modules)
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ ⨯ [Error: The default export is not a React Component in "/admin/biblicus-whatsapp/page"] {
+  page: '/admin/biblicus-whatsapp'
+}
+ ⚠ Fast Refresh had to perform a full reload due to a runtime error.
+ GET /admin/biblicus-whatsapp?vscodeBrowserReqId=1758889382332 500 in 204ms
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ ⨯ [Error: The default export is not a React Component in "/admin/biblicus-whatsapp/page"] {
+  page: '/admin/biblicus-whatsapp'
+}
+ GET /admin/biblicus-whatsapp?vscodeBrowserReqId=1758889382332 500 in 368ms
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ ⚠ Fast Refresh had to perform a full reload due to a runtime error.
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ ⚠ Fast Refresh had to perform a full reload due to a runtime error.
+ ✓ Compiled in 1675ms (3301 modules)
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ ⨯ [Error: The default export is not a React Component in "/admin/biblicus-whatsapp/page"] {
+  page: '/admin/biblicus-whatsapp'
+}
+ ⨯ [Error: The default export is not a React Component in "/admin/biblicus-whatsapp/page"] {
+  page: '/admin/biblicus-whatsapp'
+}
+ ⨯ [Error: The default export is not a React Component in "/admin/biblicus-whatsapp/page"] {
+  page: '/admin/biblicus-whatsapp'
+}
+ GET /admin/biblicus-whatsapp?vscodeBrowserReqId=1758889382332 500 in 378ms
+ ✓ Compiled in 562ms (3200 modules)
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ ⚠ Fast Refresh had to perform a full reload due to a runtime error.
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ ⨯ [Error: The default export is not a React Component in "/admin/biblicus-whatsapp/page"] {
+  page: '/admin/biblicus-whatsapp'
+}
+ ⨯ [Error: The default export is not a React Component in "/admin/biblicus-whatsapp/page"] {
+  page: '/admin/biblicus-whatsapp'
+}
+ GET /admin/biblicus-whatsapp?vscodeBrowserReqId=1758889382332 500 in 568ms
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ ⨯ [Error: The default export is not a React Component in "/admin/biblicus-whatsapp/page"] {
+  page: '/admin/biblicus-whatsapp'
+}
+ GET /admin/biblicus-whatsapp?vscodeBrowserReqId=1758890292034 500 in 420ms
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ ⨯ [Error: The default export is not a React Component in "/admin/biblicus-whatsapp/page"] {
+  page: '/admin/biblicus-whatsapp'
+}
+ GET /admin/biblicus-whatsapp?vscodeBrowserReqId=1758891426523 500 in 412ms
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ ○ Compiling /admin/whatsIA ...
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ ✓ Compiled /admin/whatsIA in 5.8s (3214 modules)
+📊 AuthContext: Estado atual - User: false Loading: true
+📊 AuthContext: Estado atual - User: false Loading: true
+ ⚠ Fast Refresh had to perform a full reload due to a runtime error.
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+📊 AuthContext: Estado atual - User: false Loading: true
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ ⨯ [Error: The default export is not a React Component in "/admin/biblicus-whatsapp/page"] {
+  page: '/admin/biblicus-whatsapp'
+}
+ GET /admin/biblicus-whatsapp?vscodeBrowserReqId=1758891426523 500 in 378ms
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+📊 AuthContext: Estado atual - User: false Loading: true
+ GET /admin/whatsIA 200 in 27ms
+ ○ Compiling /login ...
+ ✓ Compiled /favicon.ico in 1733ms (842 modules)
+ ✓ Compiled (858 modules)
+ GET /login 200 in 3446ms
+ GET /favicon.ico 200 in 3065ms
+ GET /favicon.ico 200 in 206ms
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ GET /admin 200 in 19ms
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ ○ Compiling /admin/whatsapp ...
+ ✓ Compiled /admin/whatsapp in 820ms (866 modules)
+ GET /admin/whatsapp 200 in 882ms
+ ○ Compiling /api/whatsapp/setup-webhook ...
+ ✓ Compiled /api/whatsapp/setup-webhook in 847ms (868 modules)
+ GET /api/whatsapp/setup-webhook 200 in 985ms
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+📊 AuthContext: Estado atual - User: false Loading: true
+ GET /admin/whatsIA 200 in 129ms
+ ✓ Compiled in 2.8s (3167 modules)
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ ⚠ Fast Refresh had to perform a full reload due to a runtime error.
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ ✓ Compiled /admin/biblicus-whatsapp in 144ms (786 modules)
+ ⨯ [Error: The default export is not a React Component in "/admin/biblicus-whatsapp/page"] {
+  page: '/admin/biblicus-whatsapp'
+}
+ ⨯ [Error: The default export is not a React Component in "/admin/biblicus-whatsapp/page"] {
+  page: '/admin/biblicus-whatsapp'
+}
+ GET /admin/whatsIA 200 in 695ms
+ GET /admin/biblicus-whatsapp?vscodeBrowserReqId=1758891426523 500 in 901ms
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ ⚠ Fast Refresh had to perform a full reload due to a runtime error.
+ ○ Compiling /_not-found ...
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ ⚠ Fast Refresh had to perform a full reload due to a runtime error.
+ ✓ Compiled /_not-found in 3.1s (3258 modules)
+📊 AuthContext: Estado atual - User: false Loading: true
+📊 AuthContext: Estado atual - User: false Loading: true
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+📊 AuthContext: Estado atual - User: false Loading: true
+ GET /admin/whatsIA 200 in 2983ms
+ GET /admin/biblicus-whatsapp?vscodeBrowserReqId=1758891426523 404 in 25ms
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ GET /admin/whatsIA 200 in 9ms
+ ✓ Compiled in 291ms (2388 modules)
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ GET /admin/biblicus-whatsapp?vscodeBrowserReqId=1758891426523 404 in 19ms
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+📊 AuthContext: Estado atual - User: false Loading: true
+ GET /admin/whatsIA 200 in 45ms
+ GET /admin/biblicus-whatsapp?vscodeBrowserReqId=1758891426523 404 in 22ms
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+📊 AuthContext: Estado atual - User: false Loading: true
+ GET /admin/whatsIA?vscodeBrowserReqId=1758891679304 200 in 35ms
