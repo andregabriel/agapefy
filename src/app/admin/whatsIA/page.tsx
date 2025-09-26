@@ -13,6 +13,7 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 import { Plus, Pencil, Trash2, CheckCircle2, XCircle, Save, Wand2 } from "lucide-react";
+import { useAppSettings } from "@/hooks/useAppSettings";
 
 type BehaviorType =
   | "reply_text"
@@ -34,10 +35,12 @@ interface BWCommand {
 }
 
 export default function WhatsAppIAPage() {
+  const { settings, loading: settingsLoading, updateSetting } = useAppSettings();
   const [commands, setCommands] = useState<BWCommand[]>([]);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [editing, setEditing] = useState<BWCommand | null>(null);
+  const [welcome, setWelcome] = useState("");
 
   const emptyDraft: Partial<BWCommand> = useMemo(
     () => ({ command: "", description: "", behavior_type: "reply_text", behavior_payload: { text: "" }, is_active: true }),
@@ -48,6 +51,26 @@ export default function WhatsAppIAPage() {
   useEffect(() => {
     loadCommands();
   }, []);
+
+  useEffect(() => {
+    setWelcome(settings.whatsapp_welcome_message || "");
+  }, [settings.whatsapp_welcome_message]);
+
+  async function saveWelcome() {
+    try {
+      const value = welcome?.trim() || "";
+      const res = await updateSetting("whatsapp_welcome_message", value);
+      if (res.success) {
+        toast.success("Mensagem inicial atualizada");
+      } else {
+        toast.error(res.error || "Falha ao salvar mensagem inicial");
+      }
+    } catch (e) {
+      // eslint-disable-next-line no-console
+      console.warn(e);
+      toast.error("Erro ao salvar mensagem inicial");
+    }
+  }
 
   async function loadCommands() {
     setLoading(true);
@@ -237,6 +260,26 @@ export default function WhatsAppIAPage() {
           <p className="text-sm text-muted-foreground">Gerencie os comandos que o BW entende e o comportamento para cada um.</p>
         </div>
       </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Mensagem inicial (boas-vindas)</CardTitle>
+          <CardDescription>Texto enviado ao usuário quando ele inicia a conversa.</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <Textarea
+            value={welcome}
+            onChange={(e) => setWelcome(e.target.value)}
+            placeholder="Escreva a mensagem inicial enviada pelo BW"
+            className="min-h-[180px]"
+          />
+          <div className="flex items-center gap-3">
+            <Button onClick={saveWelcome} disabled={settingsLoading}>
+              <Save className="h-4 w-4 mr-2" /> Salvar mensagem
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader>

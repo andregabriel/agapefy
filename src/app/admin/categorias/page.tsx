@@ -91,6 +91,52 @@ export default function AdminCategoriasPage() {
   const [showSettingsDialog, setShowSettingsDialog] = useState(false);
   const [bannerLinks, setBannerLinks] = useState<Record<string, string>>({});
 
+  // Persistência do modal de Nova Categoria
+  const NEW_CAT_OPEN_KEY = 'admin.categories.new.open';
+  const NEW_CAT_FORM_KEY = 'admin.categories.new.form';
+
+  // Restaurar estado salvo do modal e do formulário ao montar
+  useEffect(() => {
+    try {
+      if (typeof window === 'undefined') return;
+      const openRaw = localStorage.getItem(NEW_CAT_OPEN_KEY);
+      const formRaw = localStorage.getItem(NEW_CAT_FORM_KEY);
+      const open = openRaw ? JSON.parse(openRaw) : false;
+      if (open) setShowNewCategoryDialog(true);
+      if (formRaw) {
+        const parsed = JSON.parse(formRaw);
+        setNewCategoryForm(prev => ({ ...prev, ...parsed }));
+      }
+    } catch (_) {
+      // ignore
+    }
+  }, []);
+
+  // Salvar estado de abertura do modal
+  useEffect(() => {
+    try {
+      if (typeof window === 'undefined') return;
+      localStorage.setItem(NEW_CAT_OPEN_KEY, JSON.stringify(showNewCategoryDialog));
+      if (!showNewCategoryDialog) {
+        // Ao fechar, não precisamos manter o formulário
+        localStorage.removeItem(NEW_CAT_FORM_KEY);
+      }
+    } catch (_) {
+      // ignore
+    }
+  }, [showNewCategoryDialog]);
+
+  // Salvar alterações do formulário enquanto o modal estiver aberto
+  useEffect(() => {
+    try {
+      if (typeof window === 'undefined') return;
+      if (!showNewCategoryDialog) return;
+      localStorage.setItem(NEW_CAT_FORM_KEY, JSON.stringify(newCategoryForm));
+    } catch (_) {
+      // ignore
+    }
+  }, [newCategoryForm, showNewCategoryDialog]);
+
   // Sincronizar configurações quando carregarem
   useEffect(() => {
     if (!settingsLoading) {
@@ -318,6 +364,15 @@ export default function AdminCategoriasPage() {
         banner_link: ''
       });
       setShowNewCategoryDialog(false);
+      // Limpar persistência após criar com sucesso
+      try {
+        if (typeof window !== 'undefined') {
+          localStorage.removeItem(NEW_CAT_FORM_KEY);
+          localStorage.removeItem(NEW_CAT_OPEN_KEY);
+        }
+      } catch (_) {
+        // ignore
+      }
       loadCategories();
     } catch (error: any) {
       // Log gentil mas informativo

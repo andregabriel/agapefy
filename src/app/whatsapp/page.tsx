@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/contexts/AuthContext";
+import { useAppSettings } from "@/hooks/useAppSettings";
 import { toast } from "sonner";
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -27,6 +28,7 @@ import {
 export default function WhatsAppSetupPage() {
   const { user, loading } = useAuth();
   const router = useRouter();
+  const { settings } = useAppSettings();
 
   const [phone, setPhone] = useState("");
   const [saving, setSaving] = useState(false);
@@ -77,6 +79,21 @@ export default function WhatsAppSetupPage() {
       );
       if (error) throw error;
       toast.success("Número salvo com sucesso. Envie /start no seu WhatsApp.");
+
+      // Enviar mensagem de boas-vindas configurável (se houver)
+      const welcome = settings.whatsapp_welcome_message?.trim();
+      if (welcome) {
+        try {
+          void fetch("/api/whatsapp/test-message", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ phone: clean, message: welcome })
+          });
+        } catch (e) {
+          // eslint-disable-next-line no-console
+          console.warn("Falha ao agendar envio de mensagem de boas-vindas", e);
+        }
+      }
     } catch (e) {
       console.warn(e);
       toast.error("Não foi possível salvar o número");
