@@ -30,9 +30,9 @@ export function getLayoutClasses(layoutType: string) {
   switch (layoutType) {
     case 'grid_3_rows':
       return {
-        containerClass: 'grid grid-rows-3 grid-flow-col auto-cols-fr gap-6 pb-4',
-        cardClass: 'w-full cursor-pointer group',
-        thumbnailClass: 'w-full aspect-square rounded-lg overflow-hidden bg-gray-800 shadow-lg flex items-center justify-center'
+        containerClass: 'grid grid-rows-3 grid-flow-col auto-cols-[12rem] gap-6 overflow-x-auto scrollbar-hide pb-4 scroll-smooth snap-x snap-mandatory md:px-16',
+        cardClass: 'flex-shrink-0 w-48 snap-start cursor-pointer group',
+        thumbnailClass: 'w-48 h-48 rounded-lg overflow-hidden bg-gray-800 shadow-lg flex items-center justify-center'
       };
     case 'full':
       return {

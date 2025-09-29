@@ -40,8 +40,9 @@ export function CategorySection({ category, index }: CategorySectionProps) {
   });
 
   // Obter classes de layout
-  const layoutClasses = getLayoutClasses(category.layout_type || 'spotify');
-  const isGridLayout = category.layout_type === 'grid_3_rows';
+  const layoutType = category.layout_type || 'spotify';
+  const layoutClasses = getLayoutClasses(layoutType);
+  const isScrollable = ['spotify', 'full', 'double_height', 'grid_3_rows'].includes(layoutType);
 
   // Função para scroll do carrossel
   const scrollCarousel = (direction: 'left' | 'right') => {
@@ -60,10 +61,10 @@ export function CategorySection({ category, index }: CategorySectionProps) {
     }
   };
 
-  // Detectar mudança de posição no carro
+  // Detectar mudança de posição no carrossel para indicadores (somente quando scrollable)
   useEffect(() => {
     const carousel = carouselRef.current;
-    if (!carousel || isGridLayout) return;
+    if (!carousel || !isScrollable) return;
 
     const handleScroll = () => {
       const scrollLeft = carousel.scrollLeft;
@@ -74,7 +75,7 @@ export function CategorySection({ category, index }: CategorySectionProps) {
 
     carousel.addEventListener('scroll', handleScroll);
     return () => carousel.removeEventListener('scroll', handleScroll);
-  }, [allContent.length, isGridLayout]);
+  }, [allContent.length, isScrollable]);
 
   return (
     <div key={category.id}>
@@ -90,7 +91,7 @@ export function CategorySection({ category, index }: CategorySectionProps) {
         
         <div className="relative">
           {/* Setas de navegação lateral - APENAS PARA LAYOUTS COM SCROLL */}
-          {!isGridLayout && (
+          {isScrollable && (
             <>
               <button
                 onClick={() => scrollCarousel('left')}
@@ -111,9 +112,9 @@ export function CategorySection({ category, index }: CategorySectionProps) {
           )}
 
           <div 
-            ref={!isGridLayout ? carouselRef : null}
+            ref={isScrollable ? carouselRef : null}
             className={layoutClasses.containerClass}
-            style={!isGridLayout ? { scrollbarWidth: 'none', msOverflowStyle: 'none' } : {}}
+            style={isScrollable ? { scrollbarWidth: 'none', msOverflowStyle: 'none' } : {}}
           >
             {allContent.map((item) => (
               <ContentCard
@@ -126,7 +127,7 @@ export function CategorySection({ category, index }: CategorySectionProps) {
           </div>
 
           {/* Indicadores de carrossel para mobile */}
-          {!isGridLayout && (
+          {isScrollable && (
             <CarouselIndicators
               totalItems={allContent.length}
               currentIndex={currentIndex}
