@@ -9,6 +9,10 @@ interface ContentCardProps {
   layoutClasses: {
     cardClass: string;
     thumbnailClass: string;
+    imageMarginClass?: string;
+    titleClass?: string;
+    subtitleClass?: string;
+    metaClass?: string;
   };
 }
 
@@ -51,7 +55,7 @@ export function ContentCard({ item, category, layoutClasses }: ContentCardProps)
       className={layoutClasses.cardClass}
     >
       {/* Thumbnail Container */}
-      <div className="relative mb-4">
+      <div className={"relative " + (layoutClasses.imageMarginClass || 'mb-4')}>
         <div className={layoutClasses.thumbnailClass}>
           {imageUrl ? (
             <img
@@ -93,22 +97,22 @@ export function ContentCard({ item, category, layoutClasses }: ContentCardProps)
       
       {/* Título, Sub-título e Duração/Contagem */}
       <div className="space-y-1">
-        <h3 className="font-bold text-white text-base leading-tight truncate group-hover:underline">
+        <h3 className={layoutClasses.titleClass || 'font-bold text-white text-base leading-tight truncate group-hover:underline'}>
           {item.title}
         </h3>
         
         {isPlaylist ? (
-          <p className="text-sm text-gray-400">
+          <p className={layoutClasses.metaClass || 'text-sm text-gray-400'}>
             {formatAudioCount((item as Playlist).audio_count)}
           </p>
         ) : (
           <>
             {(item as Audio).subtitle && (
-              <p className="text-sm text-gray-300 truncate">
+              <p className={layoutClasses.subtitleClass || 'text-sm text-gray-300 truncate'}>
                 {(item as Audio).subtitle}
               </p>
             )}
-            <p className="text-sm text-gray-400">
+            <p className={layoutClasses.metaClass || 'text-sm text-gray-400'}>
               {formatDuration((item as Audio).duration)}
             </p>
           </>

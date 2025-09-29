@@ -30,9 +30,13 @@ export function getLayoutClasses(layoutType: string) {
   switch (layoutType) {
     case 'grid_3_rows':
       return {
-        containerClass: 'grid grid-rows-3 grid-flow-col auto-cols-[12rem] gap-6 overflow-x-auto scrollbar-hide pb-4 scroll-smooth snap-x snap-mandatory md:px-16',
-        cardClass: 'flex-shrink-0 w-48 snap-start cursor-pointer group',
-        thumbnailClass: 'w-48 h-48 rounded-lg overflow-hidden bg-gray-800 shadow-lg flex items-center justify-center'
+        containerClass: 'grid grid-rows-3 grid-flow-col auto-cols-[6.5rem] gap-3 overflow-x-auto scrollbar-hide pb-3 scroll-smooth snap-x snap-mandatory md:auto-cols-[12rem] md:gap-6 md:pb-4 md:px-16',
+        cardClass: 'flex-shrink-0 w-24 snap-start cursor-pointer group md:w-48',
+        thumbnailClass: 'w-24 h-24 rounded-lg overflow-hidden bg-gray-800 shadow-lg flex items-center justify-center md:w-48 md:h-48',
+        imageMarginClass: 'mb-2 md:mb-4',
+        titleClass: 'font-semibold text-white text-[13px] leading-tight truncate group-hover:underline md:font-bold md:text-base',
+        subtitleClass: 'text-[11px] text-gray-300 truncate md:text-sm',
+        metaClass: 'text-[11px] text-gray-400 md:text-sm'
       };
     case 'full':
       return {

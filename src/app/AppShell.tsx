@@ -12,17 +12,23 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   const isLoginPage = pathname === '/login';
   const isBuscaPage = pathname === '/busca';
   const isBibliaPage = pathname === '/biblia';
+  const hideHeader = isLoginPage || isBuscaPage || isBibliaPage;
+  const hideBottomNav = isLoginPage;
 
   return (
     <AuthProvider>
       <PlayerProvider>
-        {!isLoginPage && !isBuscaPage && !isBibliaPage && <Header />}
+        <div className={hideHeader ? 'hidden' : ''}>
+          <Header />
+        </div>
 
-        <main className={`flex-1 ${!isLoginPage ? 'pb-20' : ''} ${!isLoginPage && !isBuscaPage && !isBibliaPage ? 'pt-16' : ''}`}>
+        <main className={`flex-1 ${!hideBottomNav ? 'pb-20' : ''} ${!hideHeader ? 'pt-16' : ''}`}>
           {children}
         </main>
 
-        {!isLoginPage && <BottomNavigation />}
+        <div className={hideBottomNav ? 'hidden' : ''}>
+          <BottomNavigation />
+        </div>
 
         <Toaster />
       </PlayerProvider>
