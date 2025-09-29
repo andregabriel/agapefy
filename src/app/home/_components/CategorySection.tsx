@@ -89,13 +89,13 @@ export function CategorySection({ category, index }: CategorySectionProps) {
           </div>
         )}
         
-        <div className="relative">
+        <div className="relative group">
           {/* Setas de navegação lateral - APENAS PARA LAYOUTS COM SCROLL */}
           {isScrollable && (
             <>
               <button
                 onClick={() => scrollCarousel('left')}
-                className="absolute left-0 top-1/2 -translate-y-1/2 z-20 bg-white/90 hover:bg-white text-gray-800 rounded-full w-12 h-12 hidden md:flex items-center justify-center shadow-lg hover:shadow-xl transition-all duration-200 border-2 border-gray-200"
+                className="absolute left-0 top-1/2 -translate-y-1/2 z-20 bg-white/90 hover:bg-white text-gray-800 rounded-full w-12 h-12 hidden md:flex items-center justify-center shadow-lg hover:shadow-xl transition-opacity duration-200 border-2 border-gray-200 md:opacity-0 md:group-hover:opacity-100 md:pointer-events-none md:group-hover:pointer-events-auto"
                 title="Rolar para a esquerda"
               >
                 <ChevronLeft size={24} />
@@ -103,7 +103,7 @@ export function CategorySection({ category, index }: CategorySectionProps) {
               
               <button
                 onClick={() => scrollCarousel('right')}
-                className="absolute right-0 top-1/2 -translate-y-1/2 z-20 bg-white/90 hover:bg-white text-gray-800 rounded-full w-12 h-12 hidden md:flex items-center justify-center shadow-lg hover:shadow-xl transition-all duration-200 border-2 border-gray-200"
+                className="absolute right-0 top-1/2 -translate-y-1/2 z-20 bg-white/90 hover:bg-white text-gray-800 rounded-full w-12 h-12 hidden md:flex items-center justify-center shadow-lg hover:shadow-xl transition-opacity duration-200 border-2 border-gray-200 md:opacity-0 md:group-hover:opacity-100 md:pointer-events-none md:group-hover:pointer-events-auto"
                 title="Rolar para a direita"
               >
                 <ChevronRight size={24} />
