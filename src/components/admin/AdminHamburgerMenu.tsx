@@ -9,55 +9,64 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { cn } from '@/lib/utils';
 
-// Organizando rotas em grupos lógicos
+// Organizando rotas em grupos e ordem visual conforme solicitação
 const adminRouteGroups = [
   {
-    title: 'Dashboard',
-    routes: adminRoutes.filter(route => route.href === '/admin')
-  },
-  {
-    title: 'Conteúdo',
-    routes: adminRoutes.filter(route => 
-      ['/admin/audios', '/admin/playlists', '/admin/categorias'].includes(route.href)
-    )
-  },
-  {
-    title: 'Usuários & Comunidade',
-    routes: adminRoutes.filter(route => 
-      ['/admin/usuarios', '/admin/community-analytics'].includes(route.href)
-    )
-  },
-  {
-    title: 'Geração por IA',
-    routes: adminRoutes.filter(route => 
-      ['/admin/gerar-conteudo', '/admin/gerar-lote', '/admin/gerar-serie'].includes(route.href)
-    )
-  },
-  {
-    title: 'Analytics & Dados',
-    routes: adminRoutes.filter(route => 
-      ['/admin/analytics', '/admin/nps'].includes(route.href)
-    )
-  },
-  {
-    title: 'Comunicação',
-    routes: adminRoutes.filter(route => 
-      ['/admin/whatsapp', '/admin/whatsIA', '/admin/webhook-test'].includes(route.href)
-    )
+    title: 'Principal',
+    routes: [
+      adminRoutes.find(r => r.href === '/admin'),
+      adminRoutes.find(r => r.href === '/admin/community-analytics'),
+      adminRoutes.find(r => r.href === '/admin/analytics'),
+      adminRoutes.find(r => r.href === '/admin/nps')
+    ].filter(Boolean)
   },
   {
     title: 'Sistema',
-    routes: adminRoutes.filter(route => 
-      ['/admin/configuracoes', '/admin/setup', '/admin/testes'].includes(route.href)
-    )
+    routes: [
+      adminRoutes.find(r => r.href === '/admin/usuarios'),
+      adminRoutes.find(r => r.href === '/admin/configuracoes')
+    ].filter(Boolean)
+  },
+  {
+    title: 'Conteúdo',
+    routes: [
+      adminRoutes.find(r => r.href === '/admin/audios'),
+      adminRoutes.find(r => r.href === '/admin/categorias'),
+      adminRoutes.find(r => r.href === '/admin/playlists')
+    ].filter(Boolean)
+  },
+  {
+    title: 'Geração por IA',
+    routes: [
+      adminRoutes.find(r => r.href === '/admin/gerar-conteudo'),
+      adminRoutes.find(r => r.href === '/admin/gerar-lote'),
+      adminRoutes.find(r => r.href === '/admin/gerar-serie')
+    ].filter(Boolean)
+  },
+  {
+    title: 'Whatsapp',
+    routes: [
+      adminRoutes.find(r => r.href === '/admin/whatsapp'),
+      adminRoutes.find(r => r.href === '/admin/whatsIA'),
+      adminRoutes.find(r => r.href === '/admin/setup'),
+      adminRoutes.find(r => r.href === '/admin/testes'),
+      adminRoutes.find(r => r.href === '/admin/webhook-test')
+    ].filter(Boolean)
   },
   {
     title: 'Legal',
-    routes: adminRoutes.filter(route => 
-      ['/admin/documentos-legais'].includes(route.href)
-    )
+    routes: [
+      adminRoutes.find(r => r.href === '/admin/documentos-legais')
+    ].filter(Boolean)
   }
 ];
+
+// Renomear rótulos apenas para o menu hamburguer
+const labelOverrides: Record<string, string> = {
+  '/admin/whatsapp': 'Gerenciador da IA',
+  '/admin/whatsIA': 'Comandos da IA',
+  '/admin/webhook-test': 'Webhook Testes'
+};
 
 export default function AdminHamburgerMenu() {
   const [isOpen, setIsOpen] = useState(false);
@@ -109,7 +118,7 @@ export default function AdminHamburgerMenu() {
                     >
                       <div className="flex items-center flex-1">
                         <route.icon className={cn('h-4 w-4 mr-3', route.color)} />
-                        {route.label}
+                        {labelOverrides[route.href] ?? route.label}
                       </div>
                     </Link>
                   ))}
