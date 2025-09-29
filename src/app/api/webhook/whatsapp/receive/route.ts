@@ -99,7 +99,7 @@ async function generateIntelligentResponse(message: string, userName: string, us
     }
 
     // Detectar intenção da mensagem
-    const intention = detectIntention(message);
+    let intention = detectIntention(message);
     console.log(`🎯 Intenção detectada: ${intention}`);
     
     // Buscar histórico de conversas recentes
@@ -110,8 +110,16 @@ async function generateIntelligentResponse(message: string, userName: string, us
       .order('created_at', { ascending: false })
       .limit(3);
 
-    // Definir prompt do sistema baseado na intenção
-    let systemPrompt = getSystemPrompt(intention);
+    // Ler configuração por intenção do app_settings (se existir)
+    const intentsConfig = await loadIntentsConfig();
+    const currentIntentCfg = intentsConfig[intention];
+    if (currentIntentCfg && currentIntentCfg.enabled === false) {
+      // Intenção desativada: cair para conversa geral
+      intention = 'general_conversation';
+    }
+
+    // Definir prompt do sistema baseado na intenção (considerando override do admin)
+    let systemPrompt = currentIntentCfg?.prompt?.trim() || getSystemPrompt(intention);
     let responsePrefix = getResponsePrefix(intention);
 
     // Se for versículo do dia, retornar diretamente
@@ -230,6 +238,22 @@ function getSystemPrompt(intention: string): string {
   };
 
   return prompts[intention as keyof typeof prompts] || prompts.general_conversation;
+}
+
+async function loadIntentsConfig(): Promise<Record<string, { enabled?: boolean; prompt?: string }>> {
+  try {
+    const { data, error } = await supabase
+      .from('app_settings')
+      .select('key, value')
+      .eq('key', 'bw_intents_config')
+      .maybeSingle();
+    if (error || !data?.value) return {};
+    const parsed = JSON.parse(data.value);
+    if (parsed && typeof parsed === 'object') return parsed as Record<string, { enabled?: boolean; prompt?: string }>;
+    return {};
+  } catch {
+    return {};
+  }
 }
 
 function getResponsePrefix(intention: string): string {

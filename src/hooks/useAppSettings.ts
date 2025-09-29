@@ -19,6 +19,8 @@ interface AppSettings {
   // WhatsApp (Biblicus)
   whatsapp_biblicus_number?: string; // número destino para CTA (somente dígitos, ex: 5569920018597)
   whatsapp_welcome_message?: string; // mensagem de boas-vindas enviada pelo BW
+  // Config per-intenção do BW
+  bw_intents_config?: string; // JSON string: { [intention]: { enabled: boolean, prompt?: string } }
   // Novos campos para controle da frase bíblica
   prayer_quote_position?: string; // índice 0-based (string para compatibilidade com app_settings)
   prayer_quote_auto_enabled?: string; // 'true' | 'false'
@@ -38,6 +40,15 @@ const DEFAULT_SETTINGS: AppSettings = {
   // WhatsApp (default de produção informado pelo admin)
   whatsapp_biblicus_number: '5569920018597',
   whatsapp_welcome_message: '📖 Olá! Eu sou o Biblicus\n\nUm assistente virtual da Agapefy para te acompanhar na sua jornada espiritual. ✨\n\n🙌 O que posso fazer:\n\n• Obter respostas baseadas na Bíblia\n• Enviar versículos diariamente\n• Lembrar você dos horários de oração\n• Montar orações personalizadas para você\n\n💬 Comandos disponíveis:\n\n• **/conversa** – Tire dúvidas e converse sobre a Bíblia\n• **/versículos** – Receba mensagens com passagens todos os dias\n• **/lembretes** – Ative lembretes nos horários de oração\n• **/oração** – Tenha uma oração feita especialmente para você\n\n✨ Como usar:\nCadastre seu número de WhatsApp e comece a conversar comigo. Você poderá enviar mensagens e receber respostas, versículos, lembretes e orações diretamente no seu celular.\n\n🚀 Pronto para começar?',
+  // Intents config padrão (string JSON)
+  bw_intents_config: JSON.stringify({
+    greeting: { enabled: true },
+    prayer_request: { enabled: true },
+    bible_question: { enabled: true },
+    daily_verse: { enabled: true },
+    spiritual_guidance: { enabled: true },
+    general_conversation: { enabled: true },
+  }),
   // Defaults novos
   prayer_quote_position: '0',
   prayer_quote_auto_enabled: 'true',

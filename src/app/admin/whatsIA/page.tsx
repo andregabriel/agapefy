@@ -13,6 +13,7 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 import { Plus, Pencil, Trash2, CheckCircle2, XCircle, Save, Wand2 } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
 import { useAppSettings } from "@/hooks/useAppSettings";
 
 type BehaviorType =
@@ -41,6 +42,7 @@ export default function WhatsAppIAPage() {
   const [saving, setSaving] = useState(false);
   const [editing, setEditing] = useState<BWCommand | null>(null);
   const [welcome, setWelcome] = useState("");
+  const [intentsConfig, setIntentsConfig] = useState<Record<string, { enabled: boolean; prompt?: string }>>({});
 
   const emptyDraft: Partial<BWCommand> = useMemo(
     () => ({ command: "", description: "", behavior_type: "reply_text", behavior_payload: { text: "" }, is_active: true }),
@@ -54,6 +56,13 @@ export default function WhatsAppIAPage() {
 
   useEffect(() => {
     setWelcome(settings.whatsapp_welcome_message || "");
+    // Parse intents config
+    try {
+      const parsed = settings.bw_intents_config ? JSON.parse(settings.bw_intents_config) : {};
+      setIntentsConfig(parsed || {});
+    } catch {
+      setIntentsConfig({});
+    }
   }, [settings.whatsapp_welcome_message]);
 
   async function saveWelcome() {
@@ -69,6 +78,21 @@ export default function WhatsAppIAPage() {
       // eslint-disable-next-line no-console
       console.warn(e);
       toast.error("Erro ao salvar mensagem inicial");
+    }
+  }
+
+  async function saveIntents() {
+    try {
+      const value = JSON.stringify(intentsConfig ?? {});
+      const res = await updateSetting("bw_intents_config", value);
+      if (res.success) {
+        toast.success("Comportamentos por intenção atualizados");
+      } else {
+        toast.error(res.error || "Falha ao salvar comportamentos");
+      }
+    } catch (e) {
+      console.warn(e);
+      toast.error("Erro ao salvar comportamentos");
     }
   }
 
@@ -276,6 +300,48 @@ export default function WhatsAppIAPage() {
           <div className="flex items-center gap-3">
             <Button onClick={saveWelcome} disabled={settingsLoading}>
               <Save className="h-4 w-4 mr-2" /> Salvar mensagem
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Comportamento por intenção</CardTitle>
+          <CardDescription>Ative/desative intenções e personalize prompts enviados à IA.</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {Object.entries(intentsConfig).length === 0 && (
+            <div className="text-sm text-muted-foreground">Nenhuma configuração encontrada. Usando padrões do sistema.</div>
+          )}
+          <div className="space-y-3">
+            {Object.entries(intentsConfig).map(([key, cfg]) => (
+              <div key={key} className="border rounded-md p-3 space-y-2">
+                <div className="flex items-center justify-between">
+                  <div className="font-medium">{key}</div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-muted-foreground">Ativo</span>
+                    <Switch
+                      checked={!!cfg.enabled}
+                      onCheckedChange={(v) => setIntentsConfig((prev) => ({ ...prev, [key]: { ...prev[key], enabled: !!v } }))}
+                    />
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label>Prompt (opcional)</Label>
+                  <Textarea
+                    value={cfg.prompt || ""}
+                    onChange={(e) => setIntentsConfig((prev) => ({ ...prev, [key]: { ...prev[key], prompt: e.target.value } }))}
+                    placeholder="Substitui o prompt padrão desta intenção"
+                  />
+                  <p className="text-xs text-muted-foreground">Deixe em branco para usar o prompt padrão.</p>
+                </div>
+              </div>
+            ))}
+          </div>
+          <div className="flex items-center gap-3">
+            <Button onClick={saveIntents} disabled={settingsLoading}>
+              <Save className="h-4 w-4 mr-2" /> Salvar comportamentos
             </Button>
           </div>
         </CardContent>

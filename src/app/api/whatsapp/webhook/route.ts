@@ -90,7 +90,7 @@ async function generateIntelligentResponse(message: string, userName: string, us
     }
 
     // Detectar intenção
-    const intention = detectIntention(message);
+    let intention = detectIntention(message);
     console.log(`🎯 Intenção detectada: ${intention}`);
     
     // Buscar histórico de conversas
@@ -101,36 +101,19 @@ async function generateIntelligentResponse(message: string, userName: string, us
       .order('created_at', { ascending: false })
       .limit(3);
 
-    let systemPrompt = '';
-    let responsePrefix = '';
+    // Ler configuração por intenção do app_settings (se existir)
+    const intentsConfig = await loadIntentsConfig();
+    const currentIntentCfg = intentsConfig[intention];
+    if (currentIntentCfg && currentIntentCfg.enabled === false) {
+      intention = 'general_conversation';
+    }
 
-    switch (intention) {
-      case 'greeting':
-        systemPrompt = `Você é Agape, um assistente espiritual cristão carinhoso. O usuário está cumprimentando você. Responda de forma calorosa e acolhedora, perguntando como ele está.`;
-        responsePrefix = '😊 ';
-        break;
-        
-      case 'prayer_request':
-        systemPrompt = `Você é Agape, um assistente espiritual cristão. O usuário precisa de oração. Crie uma oração personalizada e reconfortante para a situação dele. Use linguagem acolhedora.`;
-        responsePrefix = '🙏 ';
-        break;
-        
-      case 'bible_question':
-        systemPrompt = `Você é Agape, especialista da Bíblia. Responda perguntas bíblicas com conhecimento teológico e referências bíblicas. Seja didático e acessível.`;
-        responsePrefix = '📖 ';
-        break;
-        
-      case 'daily_verse':
-        return await getDailyVerse();
-        
-      case 'spiritual_guidance':
-        systemPrompt = `Você é Agape, conselheiro espiritual cristão. Ofereça orientação baseada nos ensinamentos bíblicos com empatia e sabedoria.`;
-        responsePrefix = '✨ ';
-        break;
-        
-      default:
-        systemPrompt = `Você é Agape, companheiro espiritual cristão inteligente e carinhoso. Responda naturalmente com empatia e sabedoria cristã.`;
-        responsePrefix = '💙 ';
+    // Prompt e prefixo considerando overrides
+    let systemPrompt = currentIntentCfg?.prompt?.trim() || getSystemPrompt(intention);
+    let responsePrefix = getResponsePrefix(intention);
+
+    if (intention === 'daily_verse') {
+      return await getDailyVerse();
     }
 
     // Construir contexto da conversa
@@ -230,6 +213,46 @@ function detectIntention(message: string): string {
   }
   
   return 'general_conversation';
+}
+
+function getSystemPrompt(intention: string): string {
+  const prompts = {
+    greeting: `Você é Agape, um assistente espiritual cristão carinhoso. O usuário está cumprimentando você. Responda de forma calorosa e acolhedora, perguntando como ele está.`,
+    prayer_request: `Você é Agape, um assistente espiritual cristão. O usuário precisa de oração. Crie uma oração personalizada e reconfortante para a situação dele. Use linguagem acolhedora.`,
+    bible_question: `Você é Agape, especialista da Bíblia. Responda perguntas bíblicas com conhecimento teológico e referências bíblicas. Seja didático e acessível.`,
+    spiritual_guidance: `Você é Agape, conselheiro espiritual cristão. Ofereça orientação baseada nos ensinamentos bíblicos com empatia e sabedoria.`,
+    general_conversation: `Você é Agape, companheiro espiritual cristão inteligente e carinhoso. Responda naturalmente com empatia e sabedoria cristã.`,
+    daily_verse: ''
+  } as const;
+  return (prompts as any)[intention] || prompts.general_conversation;
+}
+
+function getResponsePrefix(intention: string): string {
+  const prefixes = {
+    greeting: '😊 ',
+    prayer_request: '🙏 ',
+    bible_question: '📖 ',
+    spiritual_guidance: '✨ ',
+    general_conversation: '💙 ',
+    daily_verse: ''
+  } as const;
+  return (prefixes as any)[intention] || '💙 ';
+}
+
+async function loadIntentsConfig(): Promise<Record<string, { enabled?: boolean; prompt?: string }>> {
+  try {
+    const { data, error } = await supabase
+      .from('app_settings')
+      .select('key, value')
+      .eq('key', 'bw_intents_config')
+      .maybeSingle();
+    if (error || !data?.value) return {};
+    const parsed = JSON.parse(data.value);
+    if (parsed && typeof parsed === 'object') return parsed as Record<string, { enabled?: boolean; prompt?: string }>;
+    return {};
+  } catch {
+    return {};
+  }
 }
 
 async function getDailyVerse(): Promise<string> {
