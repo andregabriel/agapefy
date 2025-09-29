@@ -11,15 +11,25 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     console.log('🔔 Webhook recebido:', JSON.stringify(body, null, 2));
 
+    // Normalizar payload (produção Z-API pode enviar em body.text.message)
+    const userPhoneRaw = body.phone || body.remoteJid || body.chatId || '';
+    const userPhone = typeof userPhoneRaw === 'string' ? userPhoneRaw.replace(/\D/g, '') : '';
+    const messageContent = (
+      body.message?.conversation ||
+      body.message?.text ||
+      body.message?.extendedTextMessage?.text ||
+      body.message?.imageMessage?.caption ||
+      body.text?.message ||
+      (typeof body.text === 'string' ? body.text : '') ||
+      ''
+    ) as string;
+    const userName = body.senderName || body.pushName || body.chatName || 'Irmão(ã)';
+
     // Validar se é uma mensagem válida
-    if (!body.phone || !body.message || body.fromMe) {
+    if (!userPhone || !messageContent || body.fromMe) {
       console.log('❌ Mensagem ignorada - critérios não atendidos');
       return NextResponse.json({ status: 'ignored', reason: 'invalid_message' });
     }
-
-    const userPhone = body.phone.replace(/\D/g, '');
-    const messageContent = body.message.conversation || body.message.text || body.message.extendedTextMessage?.text || '';
-    const userName = body.senderName || body.pushName || 'Irmão(ã)';
 
     console.log(`📱 Processando mensagem de ${userName} (${userPhone}): "${messageContent}"`);
 
