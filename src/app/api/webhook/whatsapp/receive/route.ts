@@ -100,6 +100,12 @@ async function generateIntelligentResponse(message: string, userName: string, us
 
     // Detectar intenção da mensagem
     let intention = detectIntention(message);
+    // Tentar aplicar atalhos configurados pelo admin
+    const sc = await loadShortCommands();
+    const matched = matchShortCommand(sc, message);
+    if (matched) {
+      intention = matched;
+    }
     console.log(`🎯 Intenção detectada: ${intention}`);
     
     // Buscar histórico de conversas recentes
@@ -191,6 +197,8 @@ Nome do usuário: ${userName}`
 
 function detectIntention(message: string): string {
   const lowerMessage = message.toLowerCase();
+  // Short commands override from app settings
+  // We load synchronously above in generateIntelligentResponse; for pure function fallback keep defaults here.
   
   // Detectar cumprimentos
   if (lowerMessage.includes('olá') || lowerMessage.includes('oi') || lowerMessage.includes('ola') || 
@@ -254,6 +262,32 @@ async function loadIntentsConfig(): Promise<Record<string, { enabled?: boolean; 
   } catch {
     return {};
   }
+}
+
+async function loadShortCommands(): Promise<Record<string, string[]>> {
+  try {
+    const { data, error } = await supabase
+      .from('app_settings')
+      .select('key, value')
+      .eq('key', 'bw_short_commands')
+      .maybeSingle();
+    if (error || !data?.value) return {};
+    const parsed = JSON.parse(data.value);
+    if (parsed && typeof parsed === 'object') return parsed as Record<string, string[]>;
+    return {};
+  } catch {
+    return {};
+  }
+}
+
+function matchShortCommand(shortCommands: Record<string, string[]>, message: string): string | null {
+  const text = message.toLowerCase();
+  for (const [intent, cmds] of Object.entries(shortCommands)) {
+    for (const cmd of cmds || []) {
+      if (cmd && text.includes(cmd.toLowerCase())) return intent;
+    }
+  }
+  return null;
 }
 
 function getResponsePrefix(intention: string): string {

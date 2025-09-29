@@ -91,6 +91,12 @@ async function generateIntelligentResponse(message: string, userName: string, us
 
     // Detectar intenção
     let intention = detectIntention(message);
+    // Aplicar atalhos configurados pelo admin
+    const sc = await loadShortCommands();
+    const matched = matchShortCommand(sc, message);
+    if (matched) {
+      intention = matched;
+    }
     console.log(`🎯 Intenção detectada: ${intention}`);
     
     // Buscar histórico de conversas
@@ -213,6 +219,56 @@ function detectIntention(message: string): string {
   }
   
   return 'general_conversation';
+}
+
+function getSystemPrompt(intention: string): string {
+  const prompts = {
+    greeting: `Você é Agape, um assistente espiritual cristão carinhoso. O usuário está cumprimentando você. Responda de forma calorosa e acolhedora, perguntando como ele está.`,
+    prayer_request: `Você é Agape, um assistente espiritual cristão. O usuário precisa de oração. Crie uma oração personalizada e reconfortante para a situação dele. Use linguagem acolhedora.`,
+    bible_question: `Você é Agape, especialista da Bíblia. Responda perguntas bíblicas com conhecimento teológico e referências bíblicas. Seja didático e acessível.`,
+    spiritual_guidance: `Você é Agape, conselheiro espiritual cristão. Ofereça orientação baseada nos ensinamentos bíblicos com empatia e sabedoria.`,
+    general_conversation: `Você é Agape, companheiro espiritual cristão inteligente e carinhoso. Responda naturalmente com empatia e sabedoria cristã.`,
+    daily_verse: ''
+  } as const;
+  return (prompts as any)[intention] || prompts.general_conversation;
+}
+
+function getResponsePrefix(intention: string): string {
+  const prefixes = {
+    greeting: '😊 ',
+    prayer_request: '🙏 ',
+    bible_question: '📖 ',
+    spiritual_guidance: '✨ ',
+    general_conversation: '💙 ',
+    daily_verse: ''
+  } as const;
+  return (prefixes as any)[intention] || '💙 ';
+}
+
+async function loadShortCommands(): Promise<Record<string, string[]>> {
+  try {
+    const { data, error } = await supabase
+      .from('app_settings')
+      .select('key, value')
+      .eq('key', 'bw_short_commands')
+      .maybeSingle();
+    if (error || !data?.value) return {};
+    const parsed = JSON.parse(data.value);
+    if (parsed && typeof parsed === 'object') return parsed as Record<string, string[]>;
+    return {};
+  } catch {
+    return {};
+  }
+}
+
+function matchShortCommand(shortCommands: Record<string, string[]>, message: string): string | null {
+  const text = message.toLowerCase();
+  for (const [intent, cmds] of Object.entries(shortCommands)) {
+    for (const cmd of cmds || []) {
+      if (cmd && text.includes(cmd.toLowerCase())) return intent;
+    }
+  }
+  return null;
 }
 
 function getSystemPrompt(intention: string): string {

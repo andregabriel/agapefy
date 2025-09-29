@@ -43,12 +43,25 @@ export default function WhatsAppIAPage() {
   const [editing, setEditing] = useState<BWCommand | null>(null);
   const [welcome, setWelcome] = useState("");
   const [intentsConfig, setIntentsConfig] = useState<Record<string, { enabled: boolean; prompt?: string }>>({});
+  const [shortCommands, setShortCommands] = useState<Record<string, string[]>>({});
 
   const emptyDraft: Partial<BWCommand> = useMemo(
     () => ({ command: "", description: "", behavior_type: "reply_text", behavior_payload: { text: "" }, is_active: true }),
     []
   );
   const [draft, setDraft] = useState<Partial<BWCommand>>(emptyDraft);
+
+  function getDefaultPromptForIntent(key: string): string {
+    const prompts: Record<string, string> = {
+      greeting: `Você é Agape, um assistente espiritual cristão carinhoso. O usuário está cumprimentando você. Responda de forma calorosa e acolhedora, perguntando como ele está.`,
+      prayer_request: `Você é Agape, um assistente espiritual cristão. O usuário precisa de oração. Crie uma oração personalizada e reconfortante para a situação dele. Use linguagem acolhedora.`,
+      bible_question: `Você é Agape, especialista da Bíblia. Responda perguntas bíblicas com conhecimento teológico e referências bíblicas. Seja didático e acessível.`,
+      spiritual_guidance: `Você é Agape, conselheiro espiritual cristão. Ofereça orientação baseada nos ensinamentos bíblicos com empatia e sabedoria.`,
+      general_conversation: `Você é Agape, companheiro espiritual cristão inteligente e carinhoso. Responda naturalmente com empatia e sabedoria cristã.`,
+      daily_verse: ''
+    };
+    return prompts[key] ?? prompts.general_conversation;
+  }
 
   useEffect(() => {
     loadCommands();
@@ -62,6 +75,12 @@ export default function WhatsAppIAPage() {
       setIntentsConfig(parsed || {});
     } catch {
       setIntentsConfig({});
+    }
+    try {
+      const scParsed = settings.bw_short_commands ? JSON.parse(settings.bw_short_commands) : {};
+      setShortCommands(scParsed || {});
+    } catch {
+      setShortCommands({});
     }
   }, [settings.whatsapp_welcome_message]);
 
@@ -93,6 +112,21 @@ export default function WhatsAppIAPage() {
     } catch (e) {
       console.warn(e);
       toast.error("Erro ao salvar comportamentos");
+    }
+  }
+
+  async function saveShortCommands() {
+    try {
+      const value = JSON.stringify(shortCommands ?? {});
+      const res = await updateSetting("bw_short_commands", value);
+      if (res.success) {
+        toast.success("Comandos curtos atualizados");
+      } else {
+        toast.error(res.error || "Falha ao salvar comandos curtos");
+      }
+    } catch (e) {
+      console.warn(e);
+      toast.error("Erro ao salvar comandos curtos");
     }
   }
 
@@ -336,6 +370,13 @@ export default function WhatsAppIAPage() {
                   />
                   <p className="text-xs text-muted-foreground">Deixe em branco para usar o prompt padrão.</p>
                 </div>
+                <div className="space-y-2">
+                  <Label>Prompt padrão vigente (somente leitura)</Label>
+                  <Textarea
+                    value={getDefaultPromptForIntent(key)}
+                    readOnly
+                  />
+                </div>
               </div>
             ))}
           </div>
@@ -349,100 +390,32 @@ export default function WhatsAppIAPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Novo comando</CardTitle>
-          <CardDescription>Crie ou edite um comando que o BW processará.</CardDescription>
+          <CardTitle>Comandos curtos (atalhos para power users)</CardTitle>
+          <CardDescription>Defina palavras/atalhos que acionam cada intenção. O uso é opcional.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label>Comando</Label>
+          {Object.entries(intentsConfig).map(([key]) => (
+            <div key={key} className="border rounded-md p-3 space-y-2">
+              <div className="font-medium">{key}</div>
+              <Label>Palavras/atalhos (separadas por vírgula)</Label>
               <Input
-                value={draft.command || ""}
-                onChange={(e) => setDraft((d) => ({ ...d, command: e.target.value }))}
-                placeholder="Ex.: /conversa, /versículos, /oração"
+                value={(shortCommands[key] || []).join(', ')}
+                onChange={(e) => {
+                  const items = e.target.value
+                    .split(',')
+                    .map((s) => s.trim())
+                    .filter(Boolean);
+                  setShortCommands((prev) => ({ ...prev, [key]: items }));
+                }}
+                placeholder="Ex.: /versiculo, versículo do dia"
               />
-              <p className="text-xs text-muted-foreground">Inclua a barra inicial. O BW fará match exato por prefixo.</p>
+              <p className="text-xs text-muted-foreground">Ajuda na detecção; o usuário também pode escrever em linguagem natural.</p>
             </div>
-            <div className="space-y-2">
-              <Label>Tipo de comportamento</Label>
-              <Select
-                value={draft.behavior_type as string}
-                onValueChange={(v) => setDraft((d) => ({ ...d, behavior_type: v as BehaviorType }))}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecione o tipo" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="reply_text">Responder com texto fixo</SelectItem>
-                  <SelectItem value="reply_bible_answer">Responder com resposta bíblica (IA)</SelectItem>
-                  <SelectItem value="reply_prayer">Responder com oração personalizada (IA)</SelectItem>
-                  <SelectItem value="toggle_daily_verse">Ativar/Desativar versículo diário</SelectItem>
-                  <SelectItem value="toggle_prayer_reminders">Ativar/Desativar lembretes de oração</SelectItem>
-                  <SelectItem value="custom">Customizado (payload JSON)</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-
-          <div className="space-y-2">
-            <Label>Descrição</Label>
-            <Textarea
-              value={draft.description || ""}
-              onChange={(e) => setDraft((d) => ({ ...d, description: e.target.value }))}
-              placeholder="Descrição breve do propósito do comando"
-            />
-          </div>
-
-          {behaviorFields()}
-
+          ))}
           <div className="flex items-center gap-3">
-            <Button onClick={saveCommand} disabled={saving}>
-              <Save className="h-4 w-4 mr-2" /> {editing ? "Salvar alterações" : "Criar comando"}
+            <Button onClick={saveShortCommands} disabled={settingsLoading}>
+              <Save className="h-4 w-4 mr-2" /> Salvar comandos curtos
             </Button>
-            {editing && (
-              <Button variant="secondary" onClick={resetForm}>
-                <XCircle className="h-4 w-4 mr-2" /> Cancelar
-              </Button>
-            )}
-          </div>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Comandos cadastrados</CardTitle>
-          <CardDescription>Gerencie comandos existentes</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-3">
-            {loading && <div className="text-sm text-muted-foreground">Carregando...</div>}
-            {!loading && commands.length === 0 && (
-              <div className="text-sm text-muted-foreground">Nenhum comando cadastrado ainda.</div>
-            )}
-            {!loading && commands.map((cmd) => (
-              <div key={cmd.id} className="flex items-start justify-between gap-4 border rounded-md p-3">
-                <div className="space-y-1">
-                  <div className="flex items-center gap-2">
-                    <Badge variant="secondary">{cmd.command}</Badge>
-                    {cmd.is_active ? (
-                      <span className="inline-flex items-center text-xs text-emerald-500"><CheckCircle2 className="h-3 w-3 mr-1" /> Ativo</span>
-                    ) : (
-                      <span className="inline-flex items-center text-xs text-rose-500"><XCircle className="h-3 w-3 mr-1" /> Inativo</span>
-                    )}
-                  </div>
-                  <div className="text-sm font-medium">{cmd.description || "Sem descrição"}</div>
-                  <div className="text-xs text-muted-foreground">Tipo: {cmd.behavior_type}</div>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Button variant="secondary" size="sm" onClick={() => editCommand(cmd)}>
-                    <Pencil className="h-4 w-4 mr-1" /> Editar
-                  </Button>
-                  <Button variant="destructive" size="sm" onClick={() => deleteCommand(cmd.id)}>
-                    <Trash2 className="h-4 w-4 mr-1" /> Remover
-                  </Button>
-                </div>
-              </div>
-            ))}
           </div>
         </CardContent>
       </Card>

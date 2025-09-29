@@ -21,6 +21,8 @@ interface AppSettings {
   whatsapp_welcome_message?: string; // mensagem de boas-vindas enviada pelo BW
   // Config per-intenção do BW
   bw_intents_config?: string; // JSON string: { [intention]: { enabled: boolean, prompt?: string } }
+  // Comandos curtos por intenção (atalhos)
+  bw_short_commands?: string; // JSON string: { [intention]: string[] }
   // Novos campos para controle da frase bíblica
   prayer_quote_position?: string; // índice 0-based (string para compatibilidade com app_settings)
   prayer_quote_auto_enabled?: string; // 'true' | 'false'
@@ -48,6 +50,14 @@ const DEFAULT_SETTINGS: AppSettings = {
     daily_verse: { enabled: true },
     spiritual_guidance: { enabled: true },
     general_conversation: { enabled: true },
+  }),
+  bw_short_commands: JSON.stringify({
+    greeting: ["olá", "oi"],
+    prayer_request: ["/oração"],
+    bible_question: ["/conversa"],
+    daily_verse: ["/versiculo", "versículo do dia"],
+    spiritual_guidance: ["/conselho"],
+    general_conversation: []
   }),
   // Defaults novos
   prayer_quote_position: '0',
