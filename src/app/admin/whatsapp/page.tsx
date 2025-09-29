@@ -498,9 +498,9 @@ export default function WhatsAppAdminPage() {
           <Card>
             <CardHeader>
               <CardTitle>Teste de Mensagem</CardTitle>
-              <CardDescription>
-                Envie uma mensagem de teste via WhatsApp
-              </CardDescription>
+            <CardDescription>
+              Envie uma mensagem de teste via WhatsApp (envio manual de teste, não é o webhook automático)
+            </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-2">

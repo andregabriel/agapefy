@@ -436,7 +436,7 @@ export default function TestesPage() {
               </div>
               <div>
                 <CardTitle className="text-green-800">Teste de Envio WhatsApp</CardTitle>
-                <CardDescription>Envie uma mensagem de teste via Z-API</CardDescription>
+                <CardDescription>Envie uma mensagem de teste via Z-API (envio manual de teste, não é o webhook automático)</CardDescription>
               </div>
             </div>
           </CardHeader>

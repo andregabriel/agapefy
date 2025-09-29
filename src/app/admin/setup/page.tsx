@@ -56,7 +56,7 @@ export default function SetupPage() {
     {
       id: 'test-whatsapp',
       title: 'Testar WhatsApp',
-      description: 'Enviar mensagem de teste via WhatsApp',
+      description: 'Enviar mensagem de teste via WhatsApp (envio manual de teste, não é o webhook automático)',
       status: 'pending'
     }
   ]);

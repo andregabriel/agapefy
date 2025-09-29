@@ -191,6 +191,10 @@ export default function WhatsAppSetupPage() {
             </Button>
           </div>
 
+          <p className="text-xs text-muted-foreground">
+            Dica: os botões acima realizam um envio manual de teste (não é o webhook automático).
+          </p>
+
           {status && (
             <Alert className="mt-2">
               {status.ok ? (

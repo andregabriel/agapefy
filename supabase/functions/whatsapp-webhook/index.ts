@@ -6,9 +6,9 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type'
 }
 
-const ZAPI_TOKEN = "9F677316F38A3D2FA08EEB09"
-const ZAPI_CLIENT_TOKEN = "F3adb78efb3ba40888e8c090e6b90aea4S"
-const ZAPI_INSTANCE_NAME = "3E60EE9AC55FD0C647E46EB3E4757B57"
+const ZAPI_INSTANCE_NAME = Deno.env.get('ZAPI_INSTANCE_NAME') || "3E60EE9AC55FD0C647E46EB3E4757B57"
+const ZAPI_TOKEN = Deno.env.get('ZAPI_TOKEN') || "9F677316F38A3D2FA08EEB09"
+const ZAPI_CLIENT_TOKEN = Deno.env.get('ZAPI_CLIENT_TOKEN') || "F3adb78efb3ba40888e8c090e6b90aea4S"
 const ZAPI_BASE_URL = `https://api.z-api.io/instances/${ZAPI_INSTANCE_NAME}/token/${ZAPI_TOKEN}`
 
 serve(async (req: Request) => {
