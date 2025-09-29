@@ -44,6 +44,7 @@ export default function WhatsAppIAPage() {
   const [welcome, setWelcome] = useState("");
   const [intentsConfig, setIntentsConfig] = useState<Record<string, { enabled: boolean; prompt?: string }>>({});
   const [shortCommands, setShortCommands] = useState<Record<string, string[]>>({});
+  const [newIntentName, setNewIntentName] = useState("");
 
   const emptyDraft: Partial<BWCommand> = useMemo(
     () => ({ command: "", description: "", behavior_type: "reply_text", behavior_payload: { text: "" }, is_active: true }),
@@ -82,7 +83,7 @@ export default function WhatsAppIAPage() {
     } catch {
       setShortCommands({});
     }
-  }, [settings.whatsapp_welcome_message]);
+  }, [settings.whatsapp_welcome_message, settings.bw_intents_config, settings.bw_short_commands]);
 
   async function saveWelcome() {
     try {
@@ -128,6 +129,37 @@ export default function WhatsAppIAPage() {
       console.warn(e);
       toast.error("Erro ao salvar comandos curtos");
     }
+  }
+
+  function normalizeIntentName(name: string): string {
+    return name.trim().toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '');
+  }
+
+  function handleAddIntent() {
+    const key = normalizeIntentName(newIntentName);
+    if (!key) {
+      toast.error("Informe um nome válido para a intenção");
+      return;
+    }
+    if (intentsConfig[key]) {
+      toast.error("Esta intenção já existe");
+      return;
+    }
+    setIntentsConfig((prev) => ({ ...prev, [key]: { enabled: true } }));
+    setShortCommands((prev) => ({ ...prev, [key]: [] }));
+    setNewIntentName("");
+  }
+
+  function handleRemoveIntent(key: string) {
+    if (!confirm("Tem certeza que deseja remover esta intenção?")) return;
+    setIntentsConfig((prev) => {
+      const { [key]: _omit, ...rest } = prev as any;
+      return rest as typeof prev;
+    });
+    setShortCommands((prev) => {
+      const { [key]: _omit, ...rest } = prev as any;
+      return rest as typeof prev;
+    });
   }
 
   async function loadCommands() {
@@ -342,12 +374,22 @@ export default function WhatsAppIAPage() {
       <Card>
         <CardHeader>
           <CardTitle>Comportamento por intenção</CardTitle>
-          <CardDescription>Ative/desative intenções e personalize prompts enviados à IA.</CardDescription>
+          <CardDescription>Ative/desative intenções, personalize prompts e defina atalhos.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           {Object.entries(intentsConfig).length === 0 && (
             <div className="text-sm text-muted-foreground">Nenhuma configuração encontrada. Usando padrões do sistema.</div>
           )}
+          <div className="flex items-center gap-2">
+            <Input
+              placeholder="Nova intenção (ex.: gratitude)"
+              value={newIntentName}
+              onChange={(e) => setNewIntentName(e.target.value)}
+            />
+            <Button variant="secondary" onClick={handleAddIntent} disabled={!newIntentName.trim()}>
+              <Plus className="h-4 w-4 mr-2" /> Adicionar intenção
+            </Button>
+          </div>
           <div className="space-y-3">
             {Object.entries(intentsConfig).map(([key, cfg]) => (
               <div key={key} className="border rounded-md p-3 space-y-2">
@@ -359,6 +401,9 @@ export default function WhatsAppIAPage() {
                       checked={!!cfg.enabled}
                       onCheckedChange={(v) => setIntentsConfig((prev) => ({ ...prev, [key]: { ...prev[key], enabled: !!v } }))}
                     />
+                    <Button variant="ghost" size="icon" onClick={() => handleRemoveIntent(key)} title="Remover intenção">
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
                   </div>
                 </div>
                 <div className="space-y-2">
@@ -369,6 +414,21 @@ export default function WhatsAppIAPage() {
                     placeholder="Substitui o prompt padrão desta intenção"
                   />
                   <p className="text-xs text-muted-foreground">Deixe em branco para usar o prompt padrão.</p>
+                </div>
+                <div className="space-y-2">
+                  <Label>Comandos curtos (atalhos)</Label>
+                  <Input
+                    value={(shortCommands[key] || []).join(', ')}
+                    onChange={(e) => {
+                      const items = e.target.value
+                        .split(',')
+                        .map((s) => s.trim())
+                        .filter(Boolean);
+                      setShortCommands((prev) => ({ ...prev, [key]: items }));
+                    }}
+                    placeholder="Ex.: /versiculo, versículo do dia"
+                  />
+                  <p className="text-xs text-muted-foreground">Para persistir, use "Salvar comandos curtos" abaixo.</p>
                 </div>
                 <div className="space-y-2">
                   <Label>Prompt padrão vigente (somente leitura)</Label>
@@ -384,41 +444,13 @@ export default function WhatsAppIAPage() {
             <Button onClick={saveIntents} disabled={settingsLoading}>
               <Save className="h-4 w-4 mr-2" /> Salvar comportamentos
             </Button>
-          </div>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Comandos curtos (atalhos para power users)</CardTitle>
-          <CardDescription>Defina palavras/atalhos que acionam cada intenção. O uso é opcional.</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {Object.entries(intentsConfig).map(([key]) => (
-            <div key={key} className="border rounded-md p-3 space-y-2">
-              <div className="font-medium">{key}</div>
-              <Label>Palavras/atalhos (separadas por vírgula)</Label>
-              <Input
-                value={(shortCommands[key] || []).join(', ')}
-                onChange={(e) => {
-                  const items = e.target.value
-                    .split(',')
-                    .map((s) => s.trim())
-                    .filter(Boolean);
-                  setShortCommands((prev) => ({ ...prev, [key]: items }));
-                }}
-                placeholder="Ex.: /versiculo, versículo do dia"
-              />
-              <p className="text-xs text-muted-foreground">Ajuda na detecção; o usuário também pode escrever em linguagem natural.</p>
-            </div>
-          ))}
-          <div className="flex items-center gap-3">
-            <Button onClick={saveShortCommands} disabled={settingsLoading}>
+            <Button onClick={saveShortCommands} variant="outline" disabled={settingsLoading}>
               <Save className="h-4 w-4 mr-2" /> Salvar comandos curtos
             </Button>
           </div>
         </CardContent>
       </Card>
+
     </div>
   );
 }
