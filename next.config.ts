@@ -20,15 +20,16 @@ const nextConfig: NextConfig = {
     ],
   },
 
-  // Configurações experimentais estáveis
+  // Configurações estáveis
   experimental: {
     typedRoutes: false, // Desabilitado para evitar conflitos
-    serverComponentsExternalPackages: ["@supabase/supabase-js"],
   },
+  // Indicar pacotes externos para o servidor
+  serverExternalPackages: ["@supabase/supabase-js"],
 
   // Configurações de webpack para resolver problemas comuns
   webpack: (config, { isServer }) => {
-    // Resolver problemas com módulos Node.js
+    // Resolver problemas com módulos Node.js apenas no cliente
     if (!isServer) {
       config.resolve.fallback = {
         ...config.resolve.fallback,
@@ -39,15 +40,7 @@ const nextConfig: NextConfig = {
       };
     }
 
-    // Otimizações de bundle
-    config.optimization = {
-      ...config.optimization,
-      splitChunks: {
-        ...config.optimization.splitChunks,
-        chunks: "all",
-      },
-    };
-
+    // Não customizar optimization/splitChunks; deixar Next gerenciar
     return config;
   },
 
@@ -83,8 +76,7 @@ const nextConfig: NextConfig = {
     ignoreBuildErrors: true, // Ignorar erros TypeScript durante build
   },
 
-  // Configurações de compilação
-  swcMinify: true,
+  // Configurações de compilação (usar padrão do Next)
 
   // Configurações de ambiente otimizadas para Lasy
   env: {

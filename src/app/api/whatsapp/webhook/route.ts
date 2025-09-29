@@ -271,29 +271,7 @@ function matchShortCommand(shortCommands: Record<string, string[]>, message: str
   return null;
 }
 
-function getSystemPrompt(intention: string): string {
-  const prompts = {
-    greeting: `Você é Agape, um assistente espiritual cristão carinhoso. O usuário está cumprimentando você. Responda de forma calorosa e acolhedora, perguntando como ele está.`,
-    prayer_request: `Você é Agape, um assistente espiritual cristão. O usuário precisa de oração. Crie uma oração personalizada e reconfortante para a situação dele. Use linguagem acolhedora.`,
-    bible_question: `Você é Agape, especialista da Bíblia. Responda perguntas bíblicas com conhecimento teológico e referências bíblicas. Seja didático e acessível.`,
-    spiritual_guidance: `Você é Agape, conselheiro espiritual cristão. Ofereça orientação baseada nos ensinamentos bíblicos com empatia e sabedoria.`,
-    general_conversation: `Você é Agape, companheiro espiritual cristão inteligente e carinhoso. Responda naturalmente com empatia e sabedoria cristã.`,
-    daily_verse: ''
-  } as const;
-  return (prompts as any)[intention] || prompts.general_conversation;
-}
-
-function getResponsePrefix(intention: string): string {
-  const prefixes = {
-    greeting: '😊 ',
-    prayer_request: '🙏 ',
-    bible_question: '📖 ',
-    spiritual_guidance: '✨ ',
-    general_conversation: '💙 ',
-    daily_verse: ''
-  } as const;
-  return (prefixes as any)[intention] || '💙 ';
-}
+// removed duplicate getSystemPrompt and getResponsePrefix declarations
 
 async function loadIntentsConfig(): Promise<Record<string, { enabled?: boolean; prompt?: string }>> {
   try {
