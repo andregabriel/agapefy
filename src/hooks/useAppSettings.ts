@@ -25,6 +25,8 @@ interface AppSettings {
   bw_intents_config?: string; // JSON string: { [intention]: { enabled: boolean, prompt?: string } }
   // Comandos curtos por intenção (atalhos)
   bw_short_commands?: string; // JSON string: { [intention]: string[] }
+  // Mensagem de espera para conversa geral
+  bw_waiting_message?: string; // Texto enviado imediatamente na intenção general_conversation
   // Novos campos para controle da frase bíblica
   prayer_quote_position?: string; // índice 0-based (string para compatibilidade com app_settings)
   prayer_quote_auto_enabled?: string; // 'true' | 'false'
@@ -57,6 +59,7 @@ const DEFAULT_SETTINGS: AppSettings = {
     daily_verse: ["versículo", "/versiculo", "versículo do dia"],
     prayer_request: ["buscar", "oração", "oracao"]
   }),
+  bw_waiting_message: ' Buscando a resposta na Bíblia, aguarde alguns segundos… ',
   // Defaults novos
   prayer_quote_position: '0',
   prayer_quote_auto_enabled: 'true',

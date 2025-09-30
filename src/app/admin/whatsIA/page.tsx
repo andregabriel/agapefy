@@ -47,6 +47,7 @@ export default function WhatsAppIAPage() {
   const [intentsConfig, setIntentsConfig] = useState<Record<string, { enabled: boolean; prompt?: string }>>({});
   const [shortCommands, setShortCommands] = useState<Record<string, string[]>>({});
   const [newIntentName, setNewIntentName] = useState("");
+  const [waitingMessage, setWaitingMessage] = useState<string>("");
 
   const emptyDraft: Partial<BWCommand> = useMemo(
     () => ({ command: "", description: "", behavior_type: "reply_text", behavior_payload: { text: "" }, is_active: true }),
@@ -74,6 +75,7 @@ export default function WhatsAppIAPage() {
     setWelcome(settings.whatsapp_welcome_message || "");
     setSendWelcome((settings.whatsapp_send_welcome_enabled ?? 'true') === 'true');
     setMenuMessage(settings.whatsapp_menu_message || '');
+    setWaitingMessage(settings.bw_waiting_message || ' Buscando a resposta na Bíblia, aguarde alguns segundos… ');
     // Parse intents config
     try {
       const parsed = settings.bw_intents_config ? JSON.parse(settings.bw_intents_config) : {};
@@ -88,6 +90,21 @@ export default function WhatsAppIAPage() {
       setShortCommands({});
     }
   }, [settings.whatsapp_welcome_message, settings.whatsapp_send_welcome_enabled, settings.whatsapp_menu_message, settings.bw_intents_config, settings.bw_short_commands]);
+
+  async function saveWaitingMessage() {
+    try {
+      const value = waitingMessage?.trim() || '';
+      const res = await updateSetting("bw_waiting_message", value);
+      if (res.success) {
+        toast.success("Mensagem de espera atualizada");
+      } else {
+        toast.error(res.error || "Falha ao salvar mensagem de espera");
+      }
+    } catch (e) {
+      console.warn(e);
+      toast.error("Erro ao salvar mensagem de espera");
+    }
+  }
 
   async function saveWelcome() {
     try {
@@ -474,6 +491,20 @@ export default function WhatsAppIAPage() {
                       </SelectContent>
                     </Select>
                     <p className="text-xs text-muted-foreground">Quando usa assistente, o prompt abaixo é opcional e não é enviado.</p>
+                    <div className="space-y-2 pt-2">
+                      <Label>Mensagem de espera (enviada imediatamente)</Label>
+                      <Input
+                        value={waitingMessage}
+                        onChange={(e) => setWaitingMessage(e.target.value)}
+                        placeholder={' Buscando a resposta na Bíblia, aguarde alguns segundos… '}
+                      />
+                      <div className="flex items-center gap-2">
+                        <Button variant="outline" onClick={saveWaitingMessage} disabled={settingsLoading}>
+                          <Save className="h-4 w-4 mr-2" /> Salvar mensagem de espera
+                        </Button>
+                      </div>
+                      <p className="text-xs text-muted-foreground">Enviada quando a intenção é conversa geral. Não altera o conteúdo final da resposta.</p>
+                    </div>
                   </div>
                 )}
                 {!(key === 'general_conversation' && ((cfg as any).engine || 'assistant') === 'assistant') && (

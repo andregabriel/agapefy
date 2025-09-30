@@ -54,7 +54,8 @@ export async function POST(request: NextRequest) {
       'whatsapp_welcome_message',
       'whatsapp_menu_message',
       'bw_intents_config',
-      'bw_short_commands'
+      'bw_short_commands',
+      'bw_waiting_message'
     ]);
     const settingsMap: Record<string, string> = {};
     for (const r of settingsRows.data || []) settingsMap[r.key] = r.value as string;
@@ -64,6 +65,28 @@ export async function POST(request: NextRequest) {
       .from('whatsapp_conversations')
       .select('*', { count: 'exact', head: true })
       .eq('user_phone', userPhone);
+
+    // Detectar rapidamente a intenção para possível ack imediato
+    const quickTriggers: Record<string, string[]> = (() => {
+      if (settingsMap && typeof settingsMap['bw_short_commands'] === 'string') {
+        try { return JSON.parse(settingsMap['bw_short_commands']); } catch { return {}; }
+      }
+      return {};
+    })();
+    let quickIntent = detectIntention(messageContent, quickTriggers);
+    const intentsCfgQuick = settingsMap && settingsMap['bw_intents_config']
+      ? (() => { try { return JSON.parse(settingsMap['bw_intents_config']); } catch { return {}; } })()
+      : {};
+    const quickCfg = intentsCfgQuick[quickIntent] || {};
+    if (quickCfg && quickCfg.enabled === false) quickIntent = 'general_conversation';
+
+    // Enviar ack imediato para conversa geral
+    if (quickIntent === 'general_conversation') {
+      const waiting = (settingsMap['bw_waiting_message'] || ' Buscando a resposta na Bíblia, aguarde alguns segundos… ').trim();
+      if (waiting) {
+        await sendWhatsAppMessage(userPhone, waiting);
+      }
+    }
 
     // Gerar resposta inteligente com IA
     console.log('🤖 Gerando resposta inteligente...');

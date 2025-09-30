@@ -50,9 +50,29 @@ export async function POST(request: NextRequest) {
     const settingsRows = await supabase
       .from('app_settings')
       .select('key,value')
-      .in('key', ['bw_intents_config','bw_short_commands']);
+      .in('key', ['bw_intents_config','bw_short_commands','bw_waiting_message']);
     const settingsMap: Record<string, string> = {};
     for (const r of settingsRows.data || []) settingsMap[r.key] = r.value as string;
+
+    // Ack imediato se conversa geral
+    const quickTriggers: Record<string, string[]> = (() => {
+      if (settingsMap && typeof settingsMap['bw_short_commands'] === 'string') {
+        try { return JSON.parse(settingsMap['bw_short_commands']); } catch { return {}; }
+      }
+      return {};
+    })();
+    let quickIntent = detectIntention(messageContent, quickTriggers);
+    const intentsCfgQuick = settingsMap && settingsMap['bw_intents_config']
+      ? (() => { try { return JSON.parse(settingsMap['bw_intents_config']); } catch { return {}; } })()
+      : {};
+    const quickCfg = intentsCfgQuick[quickIntent] || {};
+    if (quickCfg && quickCfg.enabled === false) quickIntent = 'general_conversation';
+    if (quickIntent === 'general_conversation') {
+      const waiting = (settingsMap['bw_waiting_message'] || ' Buscando a resposta na Bíblia, aguarde alguns segundos… ').trim();
+      if (waiting) {
+        await sendWhatsAppMessage(userPhone, waiting);
+      }
+    }
 
     // Gerar resposta inteligente
     console.log('🤖 Gerando resposta inteligente...');
