@@ -42,6 +42,8 @@ export default function WhatsAppIAPage() {
   const [saving, setSaving] = useState(false);
   const [editing, setEditing] = useState<BWCommand | null>(null);
   const [welcome, setWelcome] = useState("");
+  const [sendWelcome, setSendWelcome] = useState<boolean>(true);
+  const [menuMessage, setMenuMessage] = useState<string>("");
   const [intentsConfig, setIntentsConfig] = useState<Record<string, { enabled: boolean; prompt?: string }>>({});
   const [shortCommands, setShortCommands] = useState<Record<string, string[]>>({});
   const [newIntentName, setNewIntentName] = useState("");
@@ -70,6 +72,8 @@ export default function WhatsAppIAPage() {
 
   useEffect(() => {
     setWelcome(settings.whatsapp_welcome_message || "");
+    setSendWelcome((settings.whatsapp_send_welcome_enabled ?? 'true') === 'true');
+    setMenuMessage(settings.whatsapp_menu_message || '');
     // Parse intents config
     try {
       const parsed = settings.bw_intents_config ? JSON.parse(settings.bw_intents_config) : {};
@@ -83,7 +87,7 @@ export default function WhatsAppIAPage() {
     } catch {
       setShortCommands({});
     }
-  }, [settings.whatsapp_welcome_message, settings.bw_intents_config, settings.bw_short_commands]);
+  }, [settings.whatsapp_welcome_message, settings.whatsapp_send_welcome_enabled, settings.whatsapp_menu_message, settings.bw_intents_config, settings.bw_short_commands]);
 
   async function saveWelcome() {
     try {
@@ -98,6 +102,28 @@ export default function WhatsAppIAPage() {
       // eslint-disable-next-line no-console
       console.warn(e);
       toast.error("Erro ao salvar mensagem inicial");
+    }
+  }
+
+  async function saveWelcomeSwitch() {
+    try {
+      const res = await updateSetting("whatsapp_send_welcome_enabled", sendWelcome ? 'true' : 'false');
+      if (!res.success) toast.error(res.error || "Falha ao salvar");
+      else toast.success("Preferência de boas-vindas atualizada");
+    } catch (e) {
+      console.warn(e);
+      toast.error("Erro ao salvar");
+    }
+  }
+
+  async function saveMenuMessage() {
+    try {
+      const res = await updateSetting("whatsapp_menu_message", menuMessage || "");
+      if (!res.success) toast.error(res.error || "Falha ao salvar menu");
+      else toast.success("Menu inicial atualizado");
+    } catch (e) {
+      console.warn(e);
+      toast.error("Erro ao salvar menu");
     }
   }
 
@@ -353,14 +379,26 @@ export default function WhatsAppIAPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Mensagem inicial (boas-vindas)</CardTitle>
-          <CardDescription>Texto enviado ao usuário quando ele inicia a conversa.</CardDescription>
+          <CardTitle>Básico — Mensagens iniciais</CardTitle>
+          <CardDescription>Controle de boas-vindas e menu com opções.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">
+          <div className="flex items-center justify-between">
+            <div>
+              <Label className="block mb-1">Enviar mensagem de boas-vindas</Label>
+              <p className="text-xs text-muted-foreground">Envia apenas no primeiro contato de cada usuário.</p>
+            </div>
+            <Switch checked={sendWelcome} onCheckedChange={setSendWelcome} />
+          </div>
+          <div className="flex items-center gap-3">
+            <Button onClick={saveWelcomeSwitch} variant="outline" disabled={settingsLoading}>
+              <Save className="h-4 w-4 mr-2" /> Salvar preferência
+            </Button>
+          </div>
           <Textarea
             value={welcome}
             onChange={(e) => setWelcome(e.target.value)}
-            placeholder="Escreva a mensagem inicial enviada pelo BW"
+            placeholder="Escreva a mensagem de boas-vindas"
             className="min-h-[180px]"
           />
           <div className="flex items-center gap-3">
@@ -368,13 +406,27 @@ export default function WhatsAppIAPage() {
               <Save className="h-4 w-4 mr-2" /> Salvar mensagem
             </Button>
           </div>
+          <div className="pt-2">
+            <Label>Menu inicial (também usado nos lembretes)</Label>
+            <Textarea
+              value={menuMessage}
+              onChange={(e) => setMenuMessage(e.target.value)}
+              placeholder={"1️⃣ Respostas baseadas na Bíblia (envie: biblia)\n2️⃣ Receber Versículo diariamente (envie: versículo)\n3️⃣ Buscar orações no app Agapefy (envie: buscar)"}
+              className="min-h-[140px]"
+            />
+            <div className="flex items-center gap-3 mt-2">
+              <Button onClick={saveMenuMessage} variant="outline" disabled={settingsLoading}>
+                <Save className="h-4 w-4 mr-2" /> Salvar menu inicial
+              </Button>
+            </div>
+          </div>
         </CardContent>
       </Card>
 
       <Card>
         <CardHeader>
-          <CardTitle>Comportamento por intenção</CardTitle>
-          <CardDescription>Ative/desative intenções, personalize prompts e defina atalhos.</CardDescription>
+          <CardTitle>Básico — Comportamento por intenção</CardTitle>
+          <CardDescription>Ative/desative intenções e personalize prompts. Para configurações avançadas, use os campos abaixo.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           {Object.entries(intentsConfig).length === 0 && (
@@ -391,7 +443,9 @@ export default function WhatsAppIAPage() {
             </Button>
           </div>
           <div className="space-y-3">
-            {Object.entries(intentsConfig).map(([key, cfg]) => (
+            {Object.entries(intentsConfig)
+              .filter(([key]) => ['general_conversation','daily_verse','prayer_request'].includes(key))
+              .map(([key, cfg]) => (
               <div key={key} className="border rounded-md p-3 space-y-2">
                 <div className="flex items-center justify-between">
                   <div className="font-medium">{key}</div>
@@ -406,17 +460,35 @@ export default function WhatsAppIAPage() {
                     </Button>
                   </div>
                 </div>
+                {key === 'general_conversation' && (
+                  <div className="space-y-2">
+                    <Label>Motor</Label>
+                    <Select
+                      value={(cfg as any).engine || 'assistant'}
+                      onValueChange={(v) => setIntentsConfig((prev) => ({ ...prev, [key]: { ...prev[key], engine: v as any } }))}
+                    >
+                      <SelectTrigger><SelectValue placeholder="Escolha" /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="assistant">Usar Assistente Biblicus OpenAI (recomendado)</SelectItem>
+                        <SelectItem value="prompt">Usar prompt personalizado</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <p className="text-xs text-muted-foreground">Quando usa assistente, o prompt abaixo é opcional e não é enviado.</p>
+                  </div>
+                )}
+                {!(key === 'general_conversation' && ((cfg as any).engine || 'assistant') === 'assistant') && (
+                  <div className="space-y-2">
+                    <Label>Prompt (opcional)</Label>
+                    <Textarea
+                      value={cfg.prompt || ""}
+                      onChange={(e) => setIntentsConfig((prev) => ({ ...prev, [key]: { ...prev[key], prompt: e.target.value } }))}
+                      placeholder="Substitui o prompt padrão desta intenção"
+                    />
+                    <p className="text-xs text-muted-foreground">Deixe em branco para usar o prompt padrão.</p>
+                  </div>
+                )}
                 <div className="space-y-2">
-                  <Label>Prompt (opcional)</Label>
-                  <Textarea
-                    value={cfg.prompt || ""}
-                    onChange={(e) => setIntentsConfig((prev) => ({ ...prev, [key]: { ...prev[key], prompt: e.target.value } }))}
-                    placeholder="Substitui o prompt padrão desta intenção"
-                  />
-                  <p className="text-xs text-muted-foreground">Deixe em branco para usar o prompt padrão.</p>
-                </div>
-                <div className="space-y-2">
-                  <Label>Comandos curtos (atalhos)</Label>
+                  <Label>Gatilhos (palavras e comandos curtos)</Label>
                   <Input
                     value={(shortCommands[key] || []).join(', ')}
                     onChange={(e) => {
@@ -426,17 +498,68 @@ export default function WhatsAppIAPage() {
                         .filter(Boolean);
                       setShortCommands((prev) => ({ ...prev, [key]: items }));
                     }}
-                    placeholder="Ex.: /versiculo, versículo do dia"
+                    placeholder="Ex.: biblia, /versiculo, versículo do dia, buscar, oração"
                   />
                   <p className="text-xs text-muted-foreground">Para persistir, use "Salvar comandos curtos" abaixo.</p>
                 </div>
-                <div className="space-y-2">
-                  <Label>Prompt padrão vigente (somente leitura)</Label>
-                  <Textarea
-                    value={getDefaultPromptForIntent(key)}
-                    readOnly
-                  />
-                </div>
+                {!(key === 'daily_verse' || key === 'prayer_request' || (key === 'general_conversation' && (((cfg as any).engine || 'assistant') === 'assistant'))) && (
+                  <div className="space-y-2">
+                    <Label>Prompt padrão vigente (somente leitura)</Label>
+                    <Textarea
+                      value={getDefaultPromptForIntent(key)}
+                      readOnly
+                    />
+                  </div>
+                )}
+                {key === 'daily_verse' && (
+                  <div className="space-y-2 text-sm text-muted-foreground">
+                    <div className="font-medium text-foreground">Como funciona</div>
+                    <p>Usuário envia gatilhos como “ativar versículo diário” ou “parar versículo diário”. O app liga/desliga o recebimento e envia a confirmação abaixo.</p>
+                    <Label className="text-foreground">Mensagem de confirmação (ativado)</Label>
+                    <Input
+                      value={(cfg as any).messages?.confirm_on || ''}
+                      onChange={(e) => setIntentsConfig((prev) => ({ ...prev, [key]: { ...prev[key], messages: { ...(prev[key] as any)?.messages, confirm_on: e.target.value } } }))}
+                      placeholder="✅ Versículo diário ativado..."
+                    />
+                    <Label className="text-foreground">Mensagem de confirmação (desativado)</Label>
+                    <Input
+                      value={(cfg as any).messages?.confirm_off || ''}
+                      onChange={(e) => setIntentsConfig((prev) => ({ ...prev, [key]: { ...prev[key], messages: { ...(prev[key] as any)?.messages, confirm_off: e.target.value } } }))}
+                      placeholder="❌ Versículo diário desativado..."
+                    />
+                    <Label className="text-foreground">Mensagem de ajuda (quando não entende)</Label>
+                    <Input
+                      value={(cfg as any).messages?.help || ''}
+                      onChange={(e) => setIntentsConfig((prev) => ({ ...prev, [key]: { ...prev[key], messages: { ...(prev[key] as any)?.messages, help: e.target.value } } }))}
+                      placeholder="Para receber, envie: ativar versículo diário..."
+                    />
+                    <p>O envio diário usa a Frase Bíblica configurada na Home e é disparado pela automação.</p>
+                  </div>
+                )}
+                {key === 'prayer_request' && (
+                  <div className="space-y-2 text-sm text-muted-foreground">
+                    <div className="font-medium text-foreground">Como funciona</div>
+                    <p>O app busca orações no Agapefy e envia os links. Não usa OpenAI.</p>
+                    <Label className="text-foreground">Máximo de resultados</Label>
+                    <Input
+                      value={String((cfg as any).max_results || 3)}
+                      onChange={(e) => setIntentsConfig((prev) => ({ ...prev, [key]: { ...prev[key], max_results: Number(e.target.value || '3') } }))}
+                      placeholder="3"
+                    />
+                    <Label className="text-foreground">Texto do cabeçalho</Label>
+                    <Input
+                      value={(cfg as any).messages?.header || ''}
+                      onChange={(e) => setIntentsConfig((prev) => ({ ...prev, [key]: { ...prev[key], messages: { ...(prev[key] as any)?.messages, header: e.target.value } } }))}
+                      placeholder="Encontrei estas orações no app:"
+                    />
+                    <Label className="text-foreground">Texto quando não há resultados</Label>
+                    <Input
+                      value={(cfg as any).messages?.no_results || ''}
+                      onChange={(e) => setIntentsConfig((prev) => ({ ...prev, [key]: { ...prev[key], messages: { ...(prev[key] as any)?.messages, no_results: e.target.value } } }))}
+                      placeholder="Não encontrei orações para esse tema..."
+                    />
+                  </div>
+                )}
               </div>
             ))}
           </div>

@@ -19,16 +19,26 @@ serve(async (req: Request) => {
   try {
     console.log('Iniciando envio de versículo diário...')
 
-    // Buscar versículo aleatório
-    const verse = await getRandomVerse()
-    if (!verse) {
-      return new Response(JSON.stringify({ error: 'Nenhum versículo encontrado' }), {
-        status: 404,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-      })
-    }
+    // Preferir frase diária de app_settings (usada na Home) para manter consistência
+    const daily = await getDailyQuoteFromSettings()
+    const verseMessage = daily
+      ? `🌅 *Bom dia! Versículo do Dia*\n\n"${daily.text}"\n\n📍 ${daily.reference}\n\n🙏 Que este versículo abençoe seu dia!\n\n_Agape - Seu companheiro espiritual_ ✨`
+      : (() => {
+          // Fallback: buscar versículo aleatório
+          return ' ' // placeholder substituído logo abaixo
+        })()
 
-    const verseMessage = `🌅 *Bom dia! Versículo do Dia*\n\n"${verse.verse_text}"\n\n📍 ${verse.book} ${verse.chapter}:${verse.start_verse}\n\n🙏 Que este versículo abençoe seu dia!\n\n_Agape - Seu companheiro espiritual_ ✨`
+    let finalMessage = verseMessage
+    if (!daily) {
+      const v = await getRandomVerse()
+      if (!v) {
+        return new Response(JSON.stringify({ error: 'Nenhum versículo encontrado' }), {
+          status: 404,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        })
+      }
+      finalMessage = `🌅 *Bom dia! Versículo do Dia*\n\n"${v.verse_text}"\n\n📍 ${v.book} ${v.chapter}:${v.start_verse}\n\n🙏 Que este versículo abençoe seu dia!\n\n_Agape - Seu companheiro espiritual_ ✨`
+    }
 
     // Buscar usuários ativos
     const users = await getActiveUsers()
@@ -55,7 +65,7 @@ serve(async (req: Request) => {
           },
           body: JSON.stringify({
             phone: user.phone_number,
-            message: verseMessage
+            message: finalMessage
           })
         })
 
@@ -103,6 +113,28 @@ async function getRandomVerse() {
     return verses?.[0] || null
   } catch (error) {
     console.error('Erro ao buscar versículo:', error)
+    return null
+  }
+}
+
+async function getDailyQuoteFromSettings(): Promise<{ text: string; reference: string } | null> {
+  try {
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')
+    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
+    const response = await fetch(`${supabaseUrl}/rest/v1/app_settings?select=key,value&key=in.(prayer_quote_text,prayer_quote_reference)`, {
+      headers: {
+        'apikey': supabaseKey!,
+        'Authorization': `Bearer ${supabaseKey}`
+      }
+    })
+    const rows = await response.json()
+    const map: Record<string, string> = {}
+    for (const r of rows || []) map[r.key] = r.value
+    const text = (map['prayer_quote_text'] || '').trim()
+    const reference = (map['prayer_quote_reference'] || '').trim()
+    if (text && reference) return { text, reference }
+    return null
+  } catch {
     return null
   }
 }

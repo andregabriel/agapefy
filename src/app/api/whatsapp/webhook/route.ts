@@ -46,9 +46,17 @@ export async function POST(request: NextRequest) {
       updated_at: new Date().toISOString()
     }, { onConflict: 'phone_number' });
 
+    // Carregar configurações úteis (short-commands, intents)
+    const settingsRows = await supabase
+      .from('app_settings')
+      .select('key,value')
+      .in('key', ['bw_intents_config','bw_short_commands']);
+    const settingsMap: Record<string, string> = {};
+    for (const r of settingsRows.data || []) settingsMap[r.key] = r.value as string;
+
     // Gerar resposta inteligente
     console.log('🤖 Gerando resposta inteligente...');
-    const response = await generateIntelligentResponse(messageContent, userName, userPhone);
+    const response = await generateIntelligentResponse(request, messageContent, userName, userPhone, settingsMap);
     console.log(`💬 Resposta gerada: "${response}"`);
 
     // Salvar conversa
@@ -88,7 +96,7 @@ export async function POST(request: NextRequest) {
   }
 }
 
-async function generateIntelligentResponse(message: string, userName: string, userPhone: string): Promise<string> {
+async function generateIntelligentResponse(request: NextRequest, message: string, userName: string, userPhone: string, settingsMap?: Record<string,string>): Promise<string> {
   try {
     console.log('🧠 Iniciando geração de resposta IA...');
     
@@ -99,11 +107,23 @@ async function generateIntelligentResponse(message: string, userName: string, us
       return `🤗 Olá ${userName}! Sou o Agape, seu companheiro espiritual. Como posso te ajudar hoje? 😊`;
     }
 
-    // Detectar intenção
-    let intention = detectIntention(message);
-    // Aplicar atalhos configurados pelo admin
-    const sc = await loadShortCommands();
-    const matched = matchShortCommand(sc, message);
+    // Detectar intenção com triggers de config (se houver)
+    const triggersMap: Record<string, string[]> = (() => {
+      if (settingsMap && typeof settingsMap['bw_short_commands'] === 'string') {
+        try { return JSON.parse(settingsMap['bw_short_commands']); } catch { return {}; }
+      }
+      return {};
+    })();
+    let intention = detectIntention(message, triggersMap);
+    // Aplicar atalhos configurados pelo admin (fallback para leitura direta)
+    const sc = (settingsMap && settingsMap['bw_short_commands']) ? {} as any : await loadShortCommands();
+    const shortCommands = (() => {
+      if (settingsMap && typeof settingsMap['bw_short_commands'] === 'string') {
+        try { return JSON.parse(settingsMap['bw_short_commands']); } catch { return {}; }
+      }
+      return sc;
+    })();
+    const matched = matchShortCommand(shortCommands, message);
     if (matched) {
       intention = matched;
     }
@@ -118,10 +138,31 @@ async function generateIntelligentResponse(message: string, userName: string, us
       .limit(3);
 
     // Ler configuração por intenção do app_settings (se existir)
-    const intentsConfig = await loadIntentsConfig();
+    const intentsConfig = settingsMap && settingsMap['bw_intents_config']
+      ? (() => { try { return JSON.parse(settingsMap['bw_intents_config']); } catch { return {}; } })()
+      : await loadIntentsConfig();
     const currentIntentCfg = intentsConfig[intention];
     if (currentIntentCfg && currentIntentCfg.enabled === false) {
       intention = 'general_conversation';
+    }
+
+    // 3) Conversa geral: usar Assistente Biblicus quando configurado
+    const useAssistant = intention === 'general_conversation' && (currentIntentCfg?.engine || 'assistant') === 'assistant';
+    if (useAssistant) {
+      const base = request.nextUrl.origin;
+      try {
+        const chatRes = await fetch(`${base}/api/biblicus/chat`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ message })
+        });
+        if (chatRes.ok) {
+          const data = await chatRes.json();
+          const reply = (data && (data.reply || data?.reply === '' ? data.reply : data?.response)) || '';
+          if (reply) return reply;
+        }
+      } catch {}
+      // fallback se Assistente falhar: segue fluxo de prompt abaixo
     }
 
     // Prompt e prefixo considerando overrides
@@ -201,8 +242,32 @@ Nome do usuário: ${userName}`
   }
 }
 
-function detectIntention(message: string): string {
-  const lowerMessage = message.toLowerCase();
+function normalizeText(text: string): string {
+  try {
+    return text
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '');
+  } catch {
+    return text.toLowerCase();
+  }
+}
+
+function detectIntention(message: string, triggers?: Record<string, string[]>): string {
+  const lowerMessage = normalizeText(message);
+  // 1) Triggers por intenção (Gatilhos)
+  if (triggers) {
+    for (const [intent, list] of Object.entries(triggers)) {
+      for (const token of list || []) {
+        const tkn = normalizeText(token || '');
+        if (tkn && lowerMessage.includes(tkn)) {
+          if (intent === 'daily_verse') return 'daily_verse';
+          if (intent === 'prayer_request') return 'prayer_request';
+          return 'general_conversation';
+        }
+      }
+    }
+  }
   
   // Detectar cumprimentos
   if (lowerMessage.includes('olá') || lowerMessage.includes('oi') || lowerMessage.includes('ola') || 
@@ -210,17 +275,17 @@ function detectIntention(message: string): string {
     return 'greeting';
   }
   
-  if (lowerMessage.includes('oração') || lowerMessage.includes('ore') || lowerMessage.includes('dificuldade') || 
+  if (lowerMessage.includes('oracao') || lowerMessage.includes('ore') || lowerMessage.includes('dificuldade') || 
       lowerMessage.includes('problema') || lowerMessage.includes('triste') || lowerMessage.includes('ansioso')) {
     return 'prayer_request';
   }
   
-  if (lowerMessage.includes('bíblia') || lowerMessage.includes('versículo') || lowerMessage.includes('jesus') ||
-      lowerMessage.includes('deus') || lowerMessage.includes('parábola')) {
+  if (lowerMessage.includes('biblia') || lowerMessage.includes('versiculo') || lowerMessage.includes('jesus') ||
+      lowerMessage.includes('deus') || lowerMessage.includes('parabola')) {
     return 'bible_question';
   }
   
-  if (lowerMessage.includes('versículo do dia') || lowerMessage.includes('/versiculo')) {
+  if (lowerMessage.includes('versiculo do dia') || lowerMessage.includes('/versiculo')) {
     return 'daily_verse';
   }
   
@@ -272,10 +337,11 @@ async function loadShortCommands(): Promise<Record<string, string[]>> {
 }
 
 function matchShortCommand(shortCommands: Record<string, string[]>, message: string): string | null {
-  const text = message.toLowerCase();
+  const text = normalizeText(message);
   for (const [intent, cmds] of Object.entries(shortCommands)) {
     for (const cmd of cmds || []) {
-      if (cmd && text.includes(cmd.toLowerCase())) return intent;
+      const token = normalizeText(cmd || '');
+      if (token && text.includes(token)) return intent;
     }
   }
   return null;

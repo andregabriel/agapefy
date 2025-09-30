@@ -48,9 +48,26 @@ export async function POST(request: NextRequest) {
       updated_at: new Date().toISOString()
     }, { onConflict: 'phone_number' });
 
+    // Carregar configurações úteis (boas-vindas, menu)
+    const settingsRows = await supabase.from('app_settings').select('key,value').in('key', [
+      'whatsapp_send_welcome_enabled',
+      'whatsapp_welcome_message',
+      'whatsapp_menu_message',
+      'bw_intents_config',
+      'bw_short_commands'
+    ]);
+    const settingsMap: Record<string, string> = {};
+    for (const r of settingsRows.data || []) settingsMap[r.key] = r.value as string;
+
+    // Verificar primeiro contato
+    const { count: prevCount } = await supabase
+      .from('whatsapp_conversations')
+      .select('*', { count: 'exact', head: true })
+      .eq('user_phone', userPhone);
+
     // Gerar resposta inteligente com IA
     console.log('🤖 Gerando resposta inteligente...');
-    const response = await generateIntelligentResponse(messageContent, userName, userPhone);
+    const response = await generateIntelligentResponse(request, messageContent, userName, userPhone, settingsMap);
     console.log(`💬 Resposta gerada: "${response}"`);
 
     // Salvar conversa no banco
@@ -63,7 +80,7 @@ export async function POST(request: NextRequest) {
       message_type: 'text'
     });
 
-    // Enviar resposta via Z-API
+    // Enviar resposta principal via Z-API
     console.log('📤 Enviando resposta via Z-API...');
     const sendResult = await sendWhatsAppMessage(userPhone, response);
     
@@ -71,6 +88,26 @@ export async function POST(request: NextRequest) {
       console.log('✅ Mensagem enviada com sucesso!');
     } else {
       console.error('❌ Erro ao enviar mensagem:', sendResult.error);
+    }
+
+    // Se for primeiro contato e boas-vindas estiver ativada, enviar a mensagem de boas-vindas + menu
+    const sendWelcome = (settingsMap['whatsapp_send_welcome_enabled'] ?? 'true') === 'true';
+    const welcomeText = settingsMap['whatsapp_welcome_message'] || '';
+    const menuText = settingsMap['whatsapp_menu_message'] || '';
+    if ((prevCount || 0) === 0 && sendWelcome) {
+      const welcomeMsg = [welcomeText, menuText].filter(Boolean).join('\n\n');
+      if (welcomeMsg.trim()) {
+        await sendWhatsAppMessage(userPhone, welcomeMsg);
+      }
+    }
+
+    // Lembrete a cada 5 mensagens do usuário
+    const { count: convCount } = await supabase
+      .from('whatsapp_conversations')
+      .select('*', { count: 'exact', head: true })
+      .eq('user_phone', userPhone);
+    if ((convCount || 0) > 0 && (convCount as number) % 5 === 0 && menuText) {
+      await sendWhatsAppMessage(userPhone, menuText);
     }
 
     return NextResponse.json({ 
@@ -93,7 +130,7 @@ export async function POST(request: NextRequest) {
   }
 }
 
-async function generateIntelligentResponse(message: string, userName: string, userPhone: string): Promise<string> {
+async function generateIntelligentResponse(request: NextRequest, message: string, userName: string, userPhone: string, settingsMap?: Record<string,string>): Promise<string> {
   try {
     console.log('🧠 Iniciando geração de resposta IA...');
     
@@ -105,10 +142,24 @@ async function generateIntelligentResponse(message: string, userName: string, us
     }
 
     // Detectar intenção da mensagem
-    let intention = detectIntention(message);
+    // Build triggers from config/short-commands
+    const triggersMap: Record<string, string[]> = (() => {
+      if (settingsMap && typeof settingsMap['bw_short_commands'] === 'string') {
+        try { return JSON.parse(settingsMap['bw_short_commands']); } catch { return {}; }
+      }
+      return {};
+    })();
+    let intention = detectIntention(message, triggersMap);
     // Tentar aplicar atalhos configurados pelo admin
-    const sc = await loadShortCommands();
-    const matched = matchShortCommand(sc, message);
+    const sc = (settingsMap && settingsMap['bw_short_commands']) ? {} as any : await loadShortCommands();
+    // Preferir mapa vindo do carregamento inicial (se fornecido)
+    const shortCommands = (() => {
+      if (settingsMap && typeof settingsMap['bw_short_commands'] === 'string') {
+        try { return JSON.parse(settingsMap['bw_short_commands']); } catch { return {}; }
+      }
+      return sc;
+    })();
+    const matched = matchShortCommand(shortCommands, message);
     if (matched) {
       intention = matched;
     }
@@ -123,11 +174,63 @@ async function generateIntelligentResponse(message: string, userName: string, us
       .limit(3);
 
     // Ler configuração por intenção do app_settings (se existir)
-    const intentsConfig = await loadIntentsConfig();
-    const currentIntentCfg = intentsConfig[intention];
+    const intentsConfig = settingsMap && settingsMap['bw_intents_config']
+      ? (() => { try { return JSON.parse(settingsMap['bw_intents_config']); } catch { return {}; } })()
+      : await loadIntentsConfig();
+    const currentIntentCfg = intentsConfig[intention] || {};
     if (currentIntentCfg && currentIntentCfg.enabled === false) {
       // Intenção desativada: cair para conversa geral
       intention = 'general_conversation';
+    }
+
+    // Fluxos especiais
+    // 1) Toggle de versículo diário
+    if (intention === 'daily_verse') {
+      const lower = message.toLowerCase();
+      const enable = /(ativar|ligar|começar|inscrever|quero receber)/.test(lower);
+      const disable = /(parar|desativar|cancelar|remover|não quero|nao quero)/.test(lower);
+      if (enable || disable) {
+        await supabase
+          .from('whatsapp_users')
+          .update({ receives_daily_verse: enable, updated_at: new Date().toISOString() })
+          .eq('phone_number', userPhone);
+        const onMsg = (currentIntentCfg.messages?.confirm_on as string) || '✅ Versículo diário ativado. Você começará a receber todos os dias.';
+        const offMsg = (currentIntentCfg.messages?.confirm_off as string) || '❌ Versículo diário desativado. Você pode ativar quando quiser.';
+        return enable ? onMsg : offMsg;
+      }
+      // Nenhuma ação explícita: instruir
+      return (currentIntentCfg.messages?.help as string) || 'Para receber o versículo do dia, envie: "ativar versículo diário". Para parar, envie: "parar versículo diário".';
+    }
+
+    // 2) Busca de orações (links do app)
+    if (intention === 'prayer_request') {
+      const query = extractPrayerQuery(message);
+      const limit = Number(currentIntentCfg.max_results || 3) || 3;
+      const results = await searchPrayers(query);
+      const header = (currentIntentCfg.messages?.header as string) || 'Encontrei estas orações no app:';
+      const none = (currentIntentCfg.messages?.no_results as string) || 'Não encontrei orações para esse tema. Tente outra palavra, como "fé", "família" ou "gratidão".';
+      if (results.length === 0) {
+        return none;
+      }
+      const lines = results.slice(0, limit).map((r, i) => `${i+1}. ${r.title} – https://agapefy.com/player/audio/${r.id}`);
+      return `${header}\n\n${lines.join('\n')}`;
+    }
+
+    // 3) Conversa geral: usar Assistente Biblicus quando configurado
+    const useAssistant = intention === 'general_conversation' && (currentIntentCfg?.engine || 'assistant') === 'assistant';
+    if (useAssistant) {
+      const base = request.nextUrl.origin;
+      const chatRes = await fetch(`${base}/api/biblicus/chat`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message })
+      });
+      if (chatRes.ok) {
+        const data = await chatRes.json();
+        const reply = (data && (data.reply || data?.reply === '' ? data.reply : data?.response)) || '';
+        if (reply) return reply;
+      }
+      // fallback se Assistente falhar: cai para prompt padrão abaixo
     }
 
     // Definir prompt do sistema baseado na intenção (considerando override do admin)
@@ -201,44 +304,37 @@ Nome do usuário: ${userName}`
   }
 }
 
-function detectIntention(message: string): string {
-  const lowerMessage = message.toLowerCase();
-  // Short commands override from app settings
-  // We load synchronously above in generateIntelligentResponse; for pure function fallback keep defaults here.
-  
-  // Detectar cumprimentos
-  if (lowerMessage.includes('olá') || lowerMessage.includes('oi') || lowerMessage.includes('ola') || 
-      lowerMessage.includes('bom dia') || lowerMessage.includes('boa tarde') || lowerMessage.includes('boa noite') ||
-      lowerMessage.includes('hey') || lowerMessage.includes('e aí')) {
-    return 'greeting';
+function normalizeText(text: string): string {
+  try {
+    return text
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '');
+  } catch {
+    return text.toLowerCase();
   }
-  
-  // Detectar pedidos de oração
-  if (lowerMessage.includes('oração') || lowerMessage.includes('ore') || lowerMessage.includes('dificuldade') || 
-      lowerMessage.includes('problema') || lowerMessage.includes('triste') || lowerMessage.includes('ansioso') ||
-      lowerMessage.includes('preocupado') || lowerMessage.includes('ajuda')) {
-    return 'prayer_request';
+}
+
+function detectIntention(message: string, triggers?: Record<string, string[]>): string {
+  const lower = normalizeText(message);
+  // 1) Triggers por intenção (Gatilhos)
+  if (triggers) {
+    for (const [intent, list] of Object.entries(triggers)) {
+      for (const token of list || []) {
+        const tkn = normalizeText(token || '');
+        if (tkn && lower.includes(tkn)) {
+          // Normalizamos intents antigas para as três atuais
+          if (intent === 'daily_verse') return 'daily_verse';
+          if (intent === 'prayer_request') return 'prayer_request';
+          return 'general_conversation';
+        }
+      }
+    }
   }
-  
-  // Detectar perguntas bíblicas
-  if (lowerMessage.includes('bíblia') || lowerMessage.includes('versículo') || lowerMessage.includes('jesus') ||
-      lowerMessage.includes('deus') || lowerMessage.includes('parábola') || lowerMessage.includes('joão') ||
-      lowerMessage.includes('salmo') || lowerMessage.includes('provérbio') || lowerMessage.includes('evangelho')) {
-    return 'bible_question';
-  }
-  
-  // Detectar pedido de versículo do dia
-  if (lowerMessage.includes('versículo do dia') || lowerMessage.includes('/versiculo') || 
-      lowerMessage.includes('verso do dia')) {
-    return 'daily_verse';
-  }
-  
-  // Detectar pedido de orientação espiritual
-  if (lowerMessage.includes('conselho') || lowerMessage.includes('orientação') || lowerMessage.includes('direção') ||
-      lowerMessage.includes('guia') || lowerMessage.includes('caminho')) {
-    return 'spiritual_guidance';
-  }
-  
+  // 2) Heurística mínima
+  if (/(versiculo|\/versiculo|verso do dia)/.test(lower)) return 'daily_verse';
+  if (/(buscar|busca|oracao|oração)/.test(lower)) return 'prayer_request';
+  // 3) Fallback
   return 'general_conversation';
 }
 
@@ -287,10 +383,11 @@ async function loadShortCommands(): Promise<Record<string, string[]>> {
 }
 
 function matchShortCommand(shortCommands: Record<string, string[]>, message: string): string | null {
-  const text = message.toLowerCase();
+  const text = normalizeText(message);
   for (const [intent, cmds] of Object.entries(shortCommands)) {
     for (const cmd of cmds || []) {
-      if (cmd && text.includes(cmd.toLowerCase())) return intent;
+      const token = normalizeText(cmd || '');
+      if (token && text.includes(token)) return intent;
     }
   }
   return null;
@@ -311,15 +408,11 @@ function getResponsePrefix(intention: string): string {
 function detectConversationType(message: string): string {
   const intention = detectIntention(message);
   const types = {
-    greeting: 'intelligent_chat',
     prayer_request: 'prayer',
-    bible_question: 'bible_expert',
     daily_verse: 'daily_verse',
-    spiritual_guidance: 'brother',
     general_conversation: 'intelligent_chat'
-  };
-
-  return types[intention as keyof typeof types] || 'intelligent_chat';
+  } as const;
+  return (types as any)[intention] || 'intelligent_chat';
 }
 
 function getDefaultResponse(message: string, userName: string): string {
@@ -337,6 +430,38 @@ function getDefaultResponse(message: string, userName: string): string {
   
   // Resposta padrão
   return `🤗 Olá ${userName}! Sou o Agape, seu companheiro espiritual. Como posso te ajudar hoje? 😊`;
+}
+
+// ===== Busca de orações =====
+type PrayerSearchItem = { id: string; title: string };
+
+async function searchPrayers(termRaw: string): Promise<PrayerSearchItem[]> {
+  const term = (termRaw || '').trim();
+  if (!term) return [];
+  try {
+    const { data, error } = await supabase
+      .from('audios')
+      .select('id, title')
+      .ilike('title', `%${term}%`)
+      .limit(3);
+    if (error) return [];
+    return (data || []).map((r: any) => ({ id: r.id as string, title: r.title as string }));
+  } catch {
+    return [];
+  }
+}
+
+function extractPrayerQuery(message: string): string {
+  const m = message.toLowerCase();
+  const cleaned = m
+    .replace(/^buscar\s+/, '')
+    .replace(/^procure\s+/, '')
+    .replace(/^oração\s+(sobre|de)\s+/, '')
+    .replace(/^oracao\s+(sobre|de)\s+/, '')
+    .replace(/^oração\s+/, '')
+    .replace(/^oracao\s+/, '')
+    .trim();
+  return cleaned || message;
 }
 
 async function getDailyVerse(): Promise<string> {
