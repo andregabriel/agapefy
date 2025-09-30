@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
 import { getBookName } from '@/lib/search';
+import { adminSupabase } from '@/lib/supabase-admin';
 
 type HistoryItem = { verse_id: string; date: string };
 
@@ -55,7 +56,8 @@ async function getSettingsMap(): Promise<Record<string, string>> {
 }
 
 async function setSetting(key: string, value: string) {
-  await supabase.from('app_settings').upsert({ key, value, type: 'text' }, { onConflict: 'key' });
+  const { error } = await adminSupabase.from('app_settings').upsert({ key, value, type: 'text' }, { onConflict: 'key' });
+  if (error) throw error;
 }
 
 export async function POST(req: NextRequest) {
