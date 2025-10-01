@@ -76,13 +76,10 @@ export async function POST(req: NextRequest) {
     })().filter(h => within30Days(h.date));
     
     // 1) Modo Frases (tabela phrases) – prioridade para automação diária
-    //    Avança 1 registro/dia e faz wrap para o primeiro ao final
-    const usePhrases = true; // ativado por padrão para automação baseada no banco
+    const usePhrases = true;
     if (usePhrases) {
-      // Cursor salvo nas configurações (começa em 1)
       const cursor = Number.parseInt(settings.phrases_cursor || '1', 10) || 1;
 
-      // Buscar registro atual (>= cursor)
       const { data: currentRows, error: currentErr } = await supabase
         .from('phrases')
         .select('id, livro, capitulo, versiculo, texto')
@@ -91,19 +88,9 @@ export async function POST(req: NextRequest) {
         .limit(1);
 
       if (!currentErr) {
-        // Buscar também o primeiro registro para wrap e o próximo após o atual
         const [{ data: firstRows }, { data: nextRows }] = await Promise.all([
-          supabase
-            .from('phrases')
-            .select('id')
-            .order('id', { ascending: true })
-            .limit(1),
-          supabase
-            .from('phrases')
-            .select('id')
-            .gt('id', cursor)
-            .order('id', { ascending: true })
-            .limit(1)
+          supabase.from('phrases').select('id').order('id', { ascending: true }).limit(1),
+          supabase.from('phrases').select('id').gt('id', cursor).order('id', { ascending: true }).limit(1)
         ]);
 
         const current = (currentRows && currentRows[0]) || null;
@@ -118,13 +105,15 @@ export async function POST(req: NextRequest) {
             setSetting('prayer_quote_text', text),
             setSetting('prayer_quote_reference', reference),
             setSetting('prayer_quote_last_updated_at', new Date().toISOString()),
-            setSetting('phrases_cursor', String(nextId || firstId || current.id))
+            setSetting('phrases_cursor', String(nextId || firstId || current.id)),
+            setSetting('prayer_quote_last_mode', 'phrases'),
+            setSetting('prayer_quote_last_phrase_id', String(current.id)),
+            setSetting('prayer_quote_last_verse_id', '')
           ]);
 
           return NextResponse.json({ text, reference, mode: 'phrases', phrase_id: current.id });
         }
       }
-      // Se a tabela não existir ou falhar, segue para IA/heurística
     }
 
     // 2) Modo IA (OpenAI) se habilitado
@@ -167,7 +156,6 @@ export async function POST(req: NextRequest) {
             const book = parsed.book_code;
             const chapter = String(parsed.chapter);
             const verseNum = String(parsed.verse);
-            // Validar no Supabase
             const { data: verses } = await supabase
               .from('verses')
               .select('verse_id, verse_text, book, chapter, start_verse')
@@ -179,14 +167,12 @@ export async function POST(req: NextRequest) {
               chosen = verses[0];
               await setSetting('prayer_quote_ai_rationale', parsed.rationale_pt || '');
             }
-          } catch { /* parse fail -> fallback abaixo */ }
+          } catch {}
         }
-      } catch (e) {
-        // Em qualquer erro, seguimos para fallback heurístico
-      }
+      } catch (e) {}
     }
 
-    // Fallback heurístico (ou se IA desabilitada)
+    // Fallback heurístico
     if (!chosen) {
       for (let attempt = 0; attempt < 12 && !chosen; attempt++) {
         const b = pick(BOOKS);
@@ -214,6 +200,8 @@ export async function POST(req: NextRequest) {
       setSetting('prayer_quote_text', text),
       setSetting('prayer_quote_reference', reference),
       setSetting('prayer_quote_last_verse_id', chosen.verse_id),
+      setSetting('prayer_quote_last_phrase_id', ''),
+      setSetting('prayer_quote_last_mode', 'verse'),
       setSetting('prayer_quote_last_updated_at', new Date().toISOString()),
       setSetting('prayer_quote_history', JSON.stringify(
         [{ verse_id: chosen.verse_id, date: new Date().toISOString() }, ...history].slice(0, 60)

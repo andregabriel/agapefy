@@ -18,38 +18,40 @@ export async function GET(req: NextRequest) {
     const settings: Record<string, string> = {};
     for (const row of rows || []) settings[row.key] = row.value;
 
-    const autoEnabled = (settings.prayer_quote_auto_enabled ?? 'true') === 'true';
-    if (!autoEnabled) {
-      return NextResponse.json({ ok: true, cron: true, skipped: true, reason: 'auto_disabled' });
-    }
+    const enabled = (settings.send_daily_verse_whatsapp ?? 'false') === 'true';
+    if (!enabled) return NextResponse.json({ ok: true, cron: true, skipped: true, reason: 'disabled' });
 
-    const time = (settings.prayer_quote_auto_time || '07:00').match(/^([01]?\d|2[0-3]):([0-5]\d)$/)
-      ? settings.prayer_quote_auto_time
-      : '07:00';
+    const time = (settings.daily_verse_send_time || '09:00').match(/^([01]?\d|2[0-3]):([0-5]\d)$/)
+      ? settings.daily_verse_send_time
+      : '09:00';
     const [hStr, mStr] = time.split(':');
-    const TZ = 'America/Sao_Paulo';
 
+    const TZ = 'America/Sao_Paulo';
     const now = new Date();
     const nowSpTime = new Intl.DateTimeFormat('en-GB', { timeZone: TZ, hour: '2-digit', minute: '2-digit', hour12: false }).format(now);
     const dateFormatter = new Intl.DateTimeFormat('en-CA', { timeZone: TZ, year: 'numeric', month: '2-digit', day: '2-digit' });
     const todaySp = dateFormatter.format(now);
 
-    const lastISO = settings.prayer_quote_last_updated_at || '';
+    const lastISO = settings.daily_verse_last_sent_at || '';
     const last = lastISO ? new Date(lastISO) : null;
     const lastSp = last ? dateFormatter.format(last) : '';
     const hasRunToday = !!last && lastSp === todaySp;
 
     if (nowSpTime >= `${hStr.padStart(2, '0')}:${mStr.padStart(2, '0')}` && !hasRunToday) {
-      const targetUrl = new URL('/api/daily-quote', req.nextUrl);
-      const res = await fetch(targetUrl.toString(), { method: 'POST' });
-      const data = await res.json().catch(() => ({}));
-      return NextResponse.json({ ok: res.ok, status: res.status, cron: true, triggered: true, tz: TZ, scheduledFor: time, todaySp, ...data }, { status: res.ok ? 200 : res.status });
+      const senderUrl = process.env.SUPABASE_FUNCTIONS_URL || `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1`;
+      const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
+
+      const endpoint = `${senderUrl}/daily-verse-sender`;
+      const senderRes = await fetch(endpoint, { headers: { Authorization: `Bearer ${serviceKey}` } });
+
+      // registrar última execução
+      await supabase.from('app_settings').upsert({ key: 'daily_verse_last_sent_at', value: new Date().toISOString(), type: 'text' }, { onConflict: 'key' });
+
+      return NextResponse.json({ ok: senderRes.ok, status: senderRes.status, cron: true, triggered: true, tz: TZ, scheduledFor: time });
     }
 
-    return NextResponse.json({ ok: true, cron: true, triggered: false, tz: TZ, now: now.toISOString(), nowSpTime, scheduledFor: time });
+    return NextResponse.json({ ok: true, cron: true, triggered: false, tz: TZ, scheduledFor: time });
   } catch (e: any) {
     return NextResponse.json({ ok: false, error: e?.message || 'cron error' }, { status: 500 });
   }
 }
-
-
