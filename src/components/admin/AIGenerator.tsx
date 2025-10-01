@@ -66,7 +66,14 @@ const ELEVENLABS_VOICES = [
 
 export default function AIGenerator({ onAudioGenerated }: AIGeneratorProps) {
   const [prompt, setPrompt] = useState('');
-  const [prayerData, setPrayerData] = useState<PrayerData | null>(null);
+  const defaultPrayerData: PrayerData = {
+    title: '',
+    subtitle: '',
+    prayer_text: '',
+    image_prompt: '',
+    audio_description: ''
+  };
+  const [prayerData, setPrayerData] = useState<PrayerData | null>(defaultPrayerData);
   const [audioUrl, setAudioUrl] = useState('');
   const [audioDuration, setAudioDuration] = useState<number | null>(null); // Nova state para duração
   const [imageUrl, setImageUrl] = useState('');
@@ -516,7 +523,7 @@ export default function AIGenerator({ onAudioGenerated }: AIGeneratorProps) {
   };
 
   const handleSaveToDatabase = async () => {
-    if (!prayerData || !audioUrl) {
+    if (!audioUrl) {
       toast.error('É necessário ter oração completa e áudio gerados para salvar');
       return;
     }
@@ -596,7 +603,7 @@ export default function AIGenerator({ onAudioGenerated }: AIGeneratorProps) {
       
       // Limpar formulário após salvar
       setPrompt('');
-      setPrayerData(null);
+      setPrayerData(defaultPrayerData);
       setAudioUrl('');
       setAudioDuration(null);
       setImageUrl('');
@@ -734,7 +741,7 @@ export default function AIGenerator({ onAudioGenerated }: AIGeneratorProps) {
               {/* Botão para gerar imagem */}
               <Button 
                 onClick={handleGenerateImage}
-                disabled={isGeneratingImage || !prayerData.image_prompt?.trim() || prayerData.image_prompt.trim().length < 20}
+                disabled={isGeneratingImage || !prayerData.image_prompt.trim() || prayerData.image_prompt.trim().length < 20}
                 variant="outline"
                 className="w-full"
               >

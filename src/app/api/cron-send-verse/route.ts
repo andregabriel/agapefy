@@ -1,5 +1,73 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
+import { adminSupabase } from '@/lib/supabase-admin';
+
+function getFunctionsBaseUrl(): string {
+  const explicit = process.env.SUPABASE_FUNCTIONS_URL;
+  if (explicit) return explicit.replace(/\/$/, '');
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
+  try {
+    const u = new URL(supabaseUrl);
+    const ref = u.host.split('.')[0];
+    return `https://${ref}.functions.supabase.co`;
+  } catch {
+    return '';
+  }
+}
+
+async function inlineSend(test: boolean, limit?: number) {
+  // Ler frase do dia
+  const { data: settingsRows } = await adminSupabase.from('app_settings').select('key,value').in('key', ['prayer_quote_text','prayer_quote_reference','prayer_quote_last_verse_id']);
+  const map: Record<string,string> = {};
+  for (const r of settingsRows || []) map[r.key] = r.value as string;
+  const text = (map['prayer_quote_text'] || '').trim();
+  const reference = (map['prayer_quote_reference'] || '').trim();
+  const verseId = (map['prayer_quote_last_verse_id'] || '').trim();
+  if (!text || !reference) return { ok: false, reason: 'missing_quote' } as const;
+  const message = `🌅 *Bom dia! Versículo do Dia*\n\n"${text}"\n\n📍 ${reference}\n\n🙏 Que este versículo abençoe seu dia!\n\n_Agape - Seu companheiro espiritual_ ✨`;
+
+  // Buscar usuários
+  let { data: users } = await adminSupabase.from('whatsapp_users').select('phone_number').eq('is_active', true).eq('receives_daily_verse', true);
+  users = users || [];
+  if (limit && users.length > limit) users = users.slice(0, limit);
+  if (users.length === 0) return { ok: true, sent: 0, total: 0 } as const;
+
+  const ZAPI_INSTANCE_NAME = process.env.ZAPI_INSTANCE_NAME || '';
+  const ZAPI_TOKEN = process.env.ZAPI_TOKEN || '';
+  const ZAPI_CLIENT_TOKEN = process.env.ZAPI_CLIENT_TOKEN || '';
+  const ZAPI_BASE_URL = `https://api.z-api.io/instances/${ZAPI_INSTANCE_NAME}/token/${ZAPI_TOKEN}`;
+
+  let sent = 0;
+  for (const u of users) {
+    const phone = (u as any).phone_number as string;
+    // idempotência
+    const today = new Date().toISOString().split('T')[0];
+    const { data: already } = await adminSupabase
+      .from('daily_verse_log')
+      .select('id')
+      .eq('user_phone', phone)
+      .gte('sent_at', `${today}T00:00:00.000Z`)
+      .limit(1);
+    if (already && already.length > 0 && !test) continue;
+
+    if (!test) {
+      const res = await fetch(`${ZAPI_BASE_URL}/send-text`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Client-Token': ZAPI_CLIENT_TOKEN },
+        body: JSON.stringify({ phone, message })
+      });
+      if (res.ok) {
+        sent++;
+        await adminSupabase.from('daily_verse_log').insert({ user_phone: phone, verse_id: verseId || null, delivery_status: 'sent' });
+      } else {
+        const errTxt = await res.text().catch(()=> '');
+        await adminSupabase.from('daily_verse_log').insert({ user_phone: phone, verse_id: verseId || null, delivery_status: 'failed', error_msg: errTxt.slice(0,500) });
+      }
+      await new Promise(r => setTimeout(r, 800));
+    }
+  }
+  return { ok: true, sent, total: users.length } as const;
+}
 
 export async function GET(req: NextRequest) {
   try {
@@ -13,6 +81,10 @@ export async function GET(req: NextRequest) {
     if (!isDev && !isVercelCron && !hasValidSecret) {
       return new NextResponse('Unauthorized', { status: 401 });
     }
+
+    const url = new URL(req.url);
+    const test = url.searchParams.get('test') === 'true';
+    const limit = parseInt(url.searchParams.get('limit') || '0') || undefined;
 
     const { data: rows } = await supabase.from('app_settings').select('*');
     const settings: Record<string, string> = {};
@@ -38,16 +110,37 @@ export async function GET(req: NextRequest) {
     const hasRunToday = !!last && lastSp === todaySp;
 
     if (nowSpTime >= `${hStr.padStart(2, '0')}:${mStr.padStart(2, '0')}` && !hasRunToday) {
-      const senderUrl = process.env.SUPABASE_FUNCTIONS_URL || `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1`;
+      // 1) Tentar Edge Function
+      const functionsBase = getFunctionsBaseUrl();
       const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
+      let senderOk = false;
+      let senderStatus = 0;
+      let senderError: any = null;
 
-      const endpoint = `${senderUrl}/daily-verse-sender`;
-      const senderRes = await fetch(endpoint, { headers: { Authorization: `Bearer ${serviceKey}` } });
+      if (functionsBase) {
+        try {
+          const endpoint = `${functionsBase}/daily-verse-sender${test ? `?test=true${limit?`&limit=${limit}`:''}`: ''}`;
+          const senderRes = await fetch(endpoint, {
+            headers: { Authorization: `Bearer ${serviceKey}`, apikey: serviceKey, 'Content-Type': 'application/json' }
+          });
+          senderOk = senderRes.ok;
+          senderStatus = senderRes.status;
+          if (!senderRes.ok) senderError = await senderRes.text().catch(()=> '');
+        } catch (e: any) {
+          senderOk = false;
+          senderError = e?.message || 'call_failed';
+        }
+      }
 
-      // registrar última execução
+      // 2) Fallback inline
+      let inlineResult: any = null;
+      if (!senderOk) {
+        inlineResult = await inlineSend(test, limit);
+      }
+
       await supabase.from('app_settings').upsert({ key: 'daily_verse_last_sent_at', value: new Date().toISOString(), type: 'text' }, { onConflict: 'key' });
 
-      return NextResponse.json({ ok: senderRes.ok, status: senderRes.status, cron: true, triggered: true, tz: TZ, scheduledFor: time });
+      return NextResponse.json({ ok: senderOk || inlineResult?.ok, status: senderStatus || 200, cron: true, triggered: true, tz: TZ, scheduledFor: time, senderOk, senderStatus, senderError, inlineResult });
     }
 
     return NextResponse.json({ ok: true, cron: true, triggered: false, tz: TZ, scheduledFor: time });
