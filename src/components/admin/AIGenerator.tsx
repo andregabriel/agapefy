@@ -87,6 +87,60 @@ export default function AIGenerator({ onAudioGenerated }: AIGeneratorProps) {
   const [showDebug, setShowDebug] = useState(false);
   const [debugLogs, setDebugLogs] = useState<DebugInfo[]>([]);
 
+  // Persistência leve de rascunho para evitar perda ao trocar de aba/alt-tab
+  const DRAFT_KEY = 'admin.aiGenerator.draft.v1';
+
+  // Restaurar rascunho ao montar
+  useEffect(() => {
+    try {
+      if (typeof window === 'undefined') return;
+      const raw = localStorage.getItem(DRAFT_KEY);
+      if (!raw) return;
+      const draft = JSON.parse(raw);
+      if (typeof draft.prompt === 'string') setPrompt(draft.prompt);
+      if (draft.prayerData && typeof draft.prayerData === 'object') {
+        setPrayerData(prev => ({ ...(prev || defaultPrayerData), ...draft.prayerData }));
+      }
+      if (typeof draft.selectedVoice === 'string') setSelectedVoice(draft.selectedVoice);
+      if (typeof draft.selectedCategory === 'string') setSelectedCategory(draft.selectedCategory);
+      if (typeof draft.imageUrl === 'string') setImageUrl(draft.imageUrl);
+      if (typeof draft.audioUrl === 'string') setAudioUrl(draft.audioUrl);
+      if (typeof draft.audioDuration === 'number') setAudioDuration(draft.audioDuration);
+    } catch (_) {
+      // ignore
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Salvar rascunho ao alterar qualquer campo relevante
+  useEffect(() => {
+    try {
+      if (typeof window === 'undefined') return;
+      const payload = {
+        prompt,
+        prayerData,
+        selectedVoice,
+        selectedCategory,
+        imageUrl,
+        audioUrl,
+        audioDuration,
+        ts: Date.now()
+      };
+      localStorage.setItem(DRAFT_KEY, JSON.stringify(payload));
+    } catch (_) {
+      // ignore
+    }
+  }, [prompt, prayerData, selectedVoice, selectedCategory, imageUrl, audioUrl, audioDuration]);
+
+  const clearDraft = () => {
+    try {
+      if (typeof window === 'undefined') return;
+      localStorage.removeItem(DRAFT_KEY);
+    } catch (_) {
+      // ignore
+    }
+  };
+
   // Função para obter duração real do áudio
   const getAudioDuration = (audioDataUrl: string): Promise<number> => {
     return new Promise((resolve, reject) => {
@@ -608,6 +662,7 @@ export default function AIGenerator({ onAudioGenerated }: AIGeneratorProps) {
       setAudioDuration(null);
       setImageUrl('');
       setSelectedCategory('');
+      clearDraft();
       
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido';

@@ -24,6 +24,13 @@ export default function PlaylistModal({ playlist, isOpen, onClose, onSave }: Pla
   const [selectedAudios, setSelectedAudios] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
 
+  // Helpers para draft persistence
+  const getDraftKey = () => {
+    const base = 'admin.draft.playlist';
+    if (playlist?.id) return `${base}.edit.${playlist.id}`;
+    return `${base}.new`;
+  };
+
   useEffect(() => {
     fetchCategories();
     fetchAudios();
@@ -50,6 +57,48 @@ export default function PlaylistModal({ playlist, isOpen, onClose, onSave }: Pla
       setSelectedAudios([]);
     }
   }, [playlist]);
+
+  // Restaurar draft ao abrir modal
+  useEffect(() => {
+    if (!isOpen) return;
+    try {
+      if (typeof window === 'undefined') return;
+      const key = getDraftKey();
+      const raw = localStorage.getItem(key);
+      if (raw) {
+        const draft = JSON.parse(raw);
+        if (draft.formData) setFormData((prev: any) => ({ ...prev, ...draft.formData }));
+        if (Array.isArray(draft.selectedAudios)) setSelectedAudios(draft.selectedAudios);
+      }
+    } catch (_) {
+      // ignore
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen, playlist?.id]);
+
+  // Salvar draft quando editar campos com modal aberto
+  useEffect(() => {
+    if (!isOpen) return;
+    try {
+      if (typeof window === 'undefined') return;
+      const key = getDraftKey();
+      localStorage.setItem(key, JSON.stringify({ formData, selectedAudios }));
+    } catch (_) {
+      // ignore
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [formData, selectedAudios, isOpen, playlist?.id]);
+
+  // Limpar draft ao fechar/salvar
+  const clearDraft = () => {
+    try {
+      if (typeof window === 'undefined') return;
+      const key = getDraftKey();
+      localStorage.removeItem(key);
+    } catch (_) {
+      // ignore
+    }
+  };
 
   const fetchCategories = async () => {
     try {
@@ -318,6 +367,7 @@ export default function PlaylistModal({ playlist, isOpen, onClose, onSave }: Pla
 
       console.log('🎉 Playlist salva com sucesso!');
       onSave();
+      clearDraft();
     } catch (error: any) {
       console.error('❌ ERRO GERAL ao salvar playlist:', error);
       console.error('❌ Tipo do erro:', typeof error);
@@ -354,7 +404,10 @@ export default function PlaylistModal({ playlist, isOpen, onClose, onSave }: Pla
             {playlist ? 'Editar Playlist' : 'Nova Playlist'}
           </h2>
           <button 
-            onClick={onClose} 
+            onClick={() => {
+              clearDraft();
+              onClose();
+            }} 
             className="text-gray-400 hover:text-gray-600 p-1 rounded transition-colors"
           >
             <X className="h-6 w-6" />
@@ -529,7 +582,10 @@ export default function PlaylistModal({ playlist, isOpen, onClose, onSave }: Pla
           <div className="flex flex-col sm:flex-row justify-end space-y-3 sm:space-y-0 sm:space-x-3 pt-4 border-t">
             <button
               type="button"
-              onClick={onClose}
+              onClick={() => {
+                clearDraft();
+                onClose();
+              }}
               className="px-4 py-2 text-gray-700 border rounded-lg hover:bg-gray-50 transition-colors order-2 sm:order-1"
             >
               Cancelar

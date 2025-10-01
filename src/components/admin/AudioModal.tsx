@@ -25,6 +25,13 @@ export default function AudioModal({ audio, isOpen, onClose, onSave }: AudioModa
   const [categories, setCategories] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
 
+  // Helpers para draft persistence
+  const getDraftKey = () => {
+    const base = 'admin.draft.audio';
+    if (audio?.id) return `${base}.edit.${audio.id}`;
+    return `${base}.new`;
+  };
+
   useEffect(() => {
     fetchCategories();
   }, []);
@@ -54,6 +61,46 @@ export default function AudioModal({ audio, isOpen, onClose, onSave }: AudioModa
       });
     }
   }, [audio]);
+
+  // Restaurar draft ao abrir modal
+  useEffect(() => {
+    if (!isOpen) return;
+    try {
+      if (typeof window === 'undefined') return;
+      const key = getDraftKey();
+      const raw = localStorage.getItem(key);
+      if (raw) {
+        const draft = JSON.parse(raw);
+        setFormData(prev => ({ ...prev, ...draft }));
+      }
+    } catch (_) {
+      // ignore
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen, audio?.id]);
+
+  // Salvar draft quando editar campos com modal aberto
+  useEffect(() => {
+    if (!isOpen) return;
+    try {
+      if (typeof window === 'undefined') return;
+      const key = getDraftKey();
+      localStorage.setItem(key, JSON.stringify(formData));
+    } catch (_) {
+      // ignore
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [formData, isOpen, audio?.id]);
+
+  const clearDraft = () => {
+    try {
+      if (typeof window === 'undefined') return;
+      const key = getDraftKey();
+      localStorage.removeItem(key);
+    } catch (_) {
+      // ignore
+    }
+  };
 
   const fetchCategories = async () => {
     try {
@@ -164,6 +211,7 @@ export default function AudioModal({ audio, isOpen, onClose, onSave }: AudioModa
 
       console.log('🎉 Áudio salvo com sucesso!');
       onSave();
+      clearDraft();
     } catch (error: any) {
       console.error('❌ ERRO GERAL ao salvar áudio:', error);
       console.error('❌ Tipo do erro:', typeof error);
@@ -200,7 +248,10 @@ export default function AudioModal({ audio, isOpen, onClose, onSave }: AudioModa
             {audio ? 'Editar Áudio' : 'Novo Áudio'}
           </h2>
           <button 
-            onClick={onClose} 
+            onClick={() => {
+              clearDraft();
+              onClose();
+            }} 
             className="text-gray-400 hover:text-gray-600 p-1 rounded transition-colors"
           >
             <X className="h-6 w-6" />
@@ -328,7 +379,10 @@ export default function AudioModal({ audio, isOpen, onClose, onSave }: AudioModa
           <div className="flex flex-col sm:flex-row justify-end space-y-3 sm:space-y-0 sm:space-x-3 pt-4 border-t">
             <button
               type="button"
-              onClick={onClose}
+              onClick={() => {
+                clearDraft();
+                onClose();
+              }}
               className="px-4 py-2 text-gray-700 border rounded-lg hover:bg-gray-50 transition-colors order-2 sm:order-1"
             >
               Cancelar

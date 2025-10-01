@@ -154,16 +154,9 @@ export default function HomePage() {
             }
           });
           
-          // Atualizar UI progressivamente para melhor UX
-          if (i === 0 && categoriesWithContentData.length > 0) {
-            const categoriesWithActualContent = categoriesWithContentData.filter(
-              cat => cat.audios.length > 0 || cat.playlists.length > 0
-            );
-            if (mountedRef.current) {
-              setCategoriesWithContent(categoriesWithActualContent);
-              setLoading(false); // Mostrar primeiro lote rapidamente
-            }
-          }
+          // Não atualizamos a UI por lote para evitar render em 2 etapas.
+          // Mantemos o carregamento até que todos os lotes estejam concluídos,
+          // garantindo que as categorias apareçam de uma vez só.
           
         } catch (batchError) {
           console.warn(`⚠️ Erro no lote ${Math.floor(i/batchSize) + 1}:`, batchError);

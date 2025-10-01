@@ -48,6 +48,13 @@ export default function CategoryModal({ category, isOpen, onClose, onSave }: Cat
   });
   const [loading, setLoading] = useState(false);
 
+  // Helpers para draft persistence
+  const getDraftKey = () => {
+    const base = 'admin.draft.category';
+    if (category?.id) return `${base}.edit.${category.id}`;
+    return `${base}.new`;
+  };
+
   useEffect(() => {
     if (category) {
       setFormData({
@@ -65,6 +72,47 @@ export default function CategoryModal({ category, isOpen, onClose, onSave }: Cat
       });
     }
   }, [category]);
+
+  // Restaurar draft ao abrir modal
+  useEffect(() => {
+    if (!isOpen) return;
+    try {
+      if (typeof window === 'undefined') return;
+      const key = getDraftKey();
+      const raw = localStorage.getItem(key);
+      if (raw) {
+        const draft = JSON.parse(raw);
+        setFormData(prev => ({ ...prev, ...draft }));
+      }
+    } catch (_) {
+      // ignore
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen, category?.id]);
+
+  // Salvar draft quando editar campos com modal aberto
+  useEffect(() => {
+    if (!isOpen) return;
+    try {
+      if (typeof window === 'undefined') return;
+      const key = getDraftKey();
+      localStorage.setItem(key, JSON.stringify(formData));
+    } catch (_) {
+      // ignore
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [formData, isOpen, category?.id]);
+
+  // Limpar draft ao fechar modal
+  const clearDraft = () => {
+    try {
+      if (typeof window === 'undefined') return;
+      const key = getDraftKey();
+      localStorage.removeItem(key);
+    } catch (_) {
+      // ignore
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -127,6 +175,7 @@ export default function CategoryModal({ category, isOpen, onClose, onSave }: Cat
       }
 
       onSave();
+      clearDraft();
       onClose();
     } catch (error: any) {
       console.error('❌ Erro detalhado ao salvar categoria:', {
@@ -164,7 +213,10 @@ export default function CategoryModal({ category, isOpen, onClose, onSave }: Cat
             {category ? 'Editar Categoria' : 'Nova Categoria'}
           </h2>
           <button 
-            onClick={onClose} 
+            onClick={() => {
+              clearDraft();
+              onClose();
+            }} 
             className="text-gray-400 hover:text-gray-600 p-1 rounded transition-colors"
           >
             <X className="h-6 w-6" />

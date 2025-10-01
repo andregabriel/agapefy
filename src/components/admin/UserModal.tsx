@@ -20,6 +20,13 @@ export default function UserModal({ user, isOpen, onClose, onSave }: UserModalPr
   });
   const [loading, setLoading] = useState(false);
 
+  // Helpers para draft persistence
+  const getDraftKey = () => {
+    const base = 'admin.draft.user';
+    if (user?.id) return `${base}.edit.${user.id}`;
+    return `${base}.new`;
+  };
+
   useEffect(() => {
     if (user) {
       setFormData({
@@ -37,6 +44,46 @@ export default function UserModal({ user, isOpen, onClose, onSave }: UserModalPr
       });
     }
   }, [user]);
+
+  // Restaurar draft ao abrir modal
+  useEffect(() => {
+    if (!isOpen) return;
+    try {
+      if (typeof window === 'undefined') return;
+      const key = getDraftKey();
+      const raw = localStorage.getItem(key);
+      if (raw) {
+        const draft = JSON.parse(raw);
+        setFormData(prev => ({ ...prev, ...draft }));
+      }
+    } catch (_) {
+      // ignore
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen, user?.id]);
+
+  // Salvar draft quando editar campos com modal aberto
+  useEffect(() => {
+    if (!isOpen) return;
+    try {
+      if (typeof window === 'undefined') return;
+      const key = getDraftKey();
+      localStorage.setItem(key, JSON.stringify(formData));
+    } catch (_) {
+      // ignore
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [formData, isOpen, user?.id]);
+
+  const clearDraft = () => {
+    try {
+      if (typeof window === 'undefined') return;
+      const key = getDraftKey();
+      localStorage.removeItem(key);
+    } catch (_) {
+      // ignore
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -65,6 +112,7 @@ export default function UserModal({ user, isOpen, onClose, onSave }: UserModalPr
       }
 
       onSave();
+      clearDraft();
     } catch (error) {
       console.error('Erro ao salvar usuário:', error);
       alert('Erro ao salvar usuário');
@@ -82,7 +130,7 @@ export default function UserModal({ user, isOpen, onClose, onSave }: UserModalPr
           <h2 className="text-xl font-bold text-gray-900">
             {user ? 'Editar Usuário' : 'Novo Usuário'}
           </h2>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
+          <button onClick={() => { clearDraft(); onClose(); }} className="text-gray-400 hover:text-gray-600">
             <X className="h-6 w-6" />
           </button>
         </div>
@@ -143,7 +191,7 @@ export default function UserModal({ user, isOpen, onClose, onSave }: UserModalPr
           <div className="flex justify-end space-x-3 pt-4">
             <button
               type="button"
-              onClick={onClose}
+              onClick={() => { clearDraft(); onClose(); }}
               className="px-4 py-2 text-gray-700 border rounded-lg hover:bg-gray-50"
             >
               Cancelar
