@@ -38,12 +38,14 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
         // Cache de role na sessão para evitar revalidação custosa em foco de aba
         const cacheKey = `admin:role:${user.id}`;
         const cachedRaw = typeof window !== 'undefined' ? sessionStorage.getItem(cacheKey) : null;
+        let useOptimisticAdmin = false;
         if (cachedRaw) {
           try {
             const cached = JSON.parse(cachedRaw) as { role: string; ts: number };
             // TTL curto de 5 minutos para equilíbrio entre UX e frescor
             const fiveMinutes = 5 * 60 * 1000;
-            if (Date.now() - cached.ts < fiveMinutes) {
+            const isStale = Date.now() - cached.ts >= fiveMinutes;
+            if (!isStale) {
               console.log('💾 AdminLayout: Usando role em cache');
               setUserRole(cached.role);
               setRoleLoading(false);
@@ -52,13 +54,21 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
                 setTimeout(() => router.push('/'), 2000);
               }
               return;
+            } else if (cached.role === 'admin') {
+              // Otimismo: se o cache expirou mas o usuário era admin, renderizar imediatamente e atualizar em background
+              console.log('💡 AdminLayout: Role em cache expirada será usada de forma otimista');
+              setUserRole('admin');
+              setRoleLoading(false);
+              useOptimisticAdmin = true;
             }
           } catch (_e) {
             // ignore cache parse errors
           }
         }
 
-        setRoleLoading(true);
+        if (!useOptimisticAdmin) {
+          setRoleLoading(true);
+        }
         console.log('🔍 AdminLayout: Buscando role do usuário:', user.email);
         
         const { data: profile, error } = await supabase
