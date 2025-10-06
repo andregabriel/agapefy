@@ -46,6 +46,12 @@ const ELEVENLABS_VOICES = [
     description: 'Voz masculina solene e respeitosa'
   },
   {
+    id: 'wBXNqKUATyqu0RtYt25i', // Adam - alternativa
+    name: 'Adam',
+    gender: 'Masculina',
+    description: 'Voz masculina clara e natural (ElevenLabs Adam)'
+  },
+  {
     id: 'VR6AewLTigWG4xSOukaG', // Arnold - Voz masculina madura
     name: 'Padre Miguel',
     gender: 'Masculina', 
@@ -500,21 +506,25 @@ export default function AIGenerator({ onAudioGenerated }: AIGeneratorProps) {
 
       if (data?.audio_url) {
         setAudioUrl(data.audio_url);
-        
-        // 🎵 NOVO: Obter duração real do áudio
-        try {
-          console.log('🕐 Iniciando análise de duração do áudio...');
-          const duration = await getAudioDuration(data.audio_url);
-          setAudioDuration(duration);
-          console.log('✅ Duração obtida e salva:', duration, 'segundos');
-          
-          toast.success(`🎵 Áudio gerado com ${selectedVoiceInfo?.name}! Duração: ${formatDuration(duration)}`);
-        } catch (durationError) {
-          console.error('❌ Erro ao obter duração do áudio:', durationError);
-          setAudioDuration(null);
-          toast.success(`🎵 Áudio gerado com ${selectedVoiceInfo?.name}! (Duração não detectada)`);
-        }
-        
+
+        // 🎵 Obter duração do áudio de forma assíncrona para não bloquear o estado de carregamento do botão
+        (async () => {
+          try {
+            console.log('🕐 Iniciando análise de duração do áudio...');
+            const duration = await Promise.race([
+              getAudioDuration(data.audio_url),
+              new Promise<number>((_, reject) => setTimeout(() => reject(new Error('timeout')), 7000))
+            ]);
+            setAudioDuration(duration);
+            console.log('✅ Duração obtida e salva:', duration, 'segundos');
+            toast.success(`🎵 Áudio gerado com ${selectedVoiceInfo?.name}! Duração: ${formatDuration(duration)}`);
+          } catch (durationError) {
+            console.warn('⚠️ Duração do áudio indisponível:', durationError);
+            setAudioDuration(null);
+            toast.success(`🎵 Áudio gerado com ${selectedVoiceInfo?.name}!`);
+          }
+        })();
+
         const voiceUsed = data.voice_id_used || selectedVoice;
         const voiceUsedInfo = ELEVENLABS_VOICES.find(v => v.id === voiceUsed);
         
@@ -809,23 +819,25 @@ export default function AIGenerator({ onAudioGenerated }: AIGeneratorProps) {
           </div>
 
           {/* Botão para gerar oração completa */}
-          <Button 
-            onClick={handleGeneratePrayer}
-            disabled={isGeneratingPrayer || !prompt.trim()}
-            className="w-full"
-          >
-            {isGeneratingPrayer ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Gerando oração completa...
-              </>
-            ) : (
-              <>
-                <Wand2 className="mr-2 h-4 w-4" />
-                Gerar Oração Completa
-              </>
-            )}
-          </Button>
+          <div className="flex sm:justify-end">
+            <Button 
+              onClick={handleGeneratePrayer}
+              disabled={isGeneratingPrayer || !prompt.trim()}
+              className="w-full sm:w-auto"
+            >
+              {isGeneratingPrayer ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Gerando oração completa...
+                </>
+              ) : (
+                <>
+                  <Wand2 className="mr-2 h-4 w-4" />
+                  Gerar Oração Completa
+                </>
+              )}
+            </Button>
+          </div>
 
           {/* Dados da oração gerada */}
           {prayerData && (
@@ -900,34 +912,36 @@ export default function AIGenerator({ onAudioGenerated }: AIGeneratorProps) {
               </div>
 
               {/* Botão para gerar imagem */}
-              <Button 
-                onClick={handleGenerateImage}
-                disabled={isGeneratingImage || !prayerData.image_prompt.trim() || prayerData.image_prompt.trim().length < 20}
-                variant="outline"
-                className="w-full"
-              >
-                {isGeneratingImage ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Gerando imagem com DALL-E 3...
-                  </>
-                ) : imageUrl ? (
-                  <>
-                    <RefreshCw className="mr-2 h-4 w-4" />
-                    Regenerar Imagem (DALL-E 3)
-                  </>
-                ) : (
-                  <>
-                    <Image className="mr-2 h-4 w-4" />
-                    Gerar Imagem (DALL-E 3)
-                    {prayerData.image_prompt?.trim() && prayerData.image_prompt.trim().length < 20 && (
-                      <span className="ml-2 text-xs text-muted-foreground">
-                        (mín. 20 chars)
-                      </span>
-                    )}
-                  </>
-                )}
-              </Button>
+              <div className="flex sm:justify-end">
+                <Button 
+                  onClick={handleGenerateImage}
+                  disabled={isGeneratingImage || !prayerData.image_prompt.trim() || prayerData.image_prompt.trim().length < 20}
+                  variant="outline"
+                  className="w-full sm:w-auto"
+                >
+                  {isGeneratingImage ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Gerando imagem com DALL-E 3...
+                    </>
+                  ) : imageUrl ? (
+                    <>
+                      <RefreshCw className="mr-2 h-4 w-4" />
+                      Regenerar Imagem (DALL-E 3)
+                    </>
+                  ) : (
+                    <>
+                      <Image className="mr-2 h-4 w-4" />
+                      Gerar Imagem (DALL-E 3)
+                      {prayerData.image_prompt?.trim() && prayerData.image_prompt.trim().length < 20 && (
+                        <span className="ml-2 text-xs text-muted-foreground">
+                          (mín. 20 chars)
+                        </span>
+                      )}
+                    </>
+                  )}
+                </Button>
+              </div>
 
               {/* Imagem gerada */}
               {imageUrl && (
@@ -1081,29 +1095,31 @@ export default function AIGenerator({ onAudioGenerated }: AIGeneratorProps) {
                 </div>
 
                 {/* Botão para gerar áudio */}
-                <Button 
-                  onClick={handleGenerateAudio}
-                  disabled={isGeneratingAudio || !selectedVoice}
-                  variant="outline"
-                  className="w-full"
-                >
-                  {isGeneratingAudio ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Gerando áudio com {selectedVoiceInfo?.name}...
-                    </>
-                  ) : audioUrl ? (
-                    <>
-                      <RefreshCw className="mr-2 h-4 w-4" />
-                      Regenerar Áudio com {selectedVoiceInfo?.name}
-                    </>
-                  ) : (
-                    <>
-                      <Volume2 className="mr-2 h-4 w-4" />
-                      Gerar Áudio com {selectedVoiceInfo?.name}
-                    </>
-                  )}
-                </Button>
+                <div className="flex sm:justify-end">
+                  <Button 
+                    onClick={handleGenerateAudio}
+                    disabled={isGeneratingAudio || !selectedVoice}
+                    variant="outline"
+                    className="w-full sm:w-auto"
+                  >
+                    {isGeneratingAudio ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Gerando áudio com {selectedVoiceInfo?.name}...
+                      </>
+                    ) : audioUrl ? (
+                      <>
+                        <RefreshCw className="mr-2 h-4 w-4" />
+                        Regenerar Áudio com {selectedVoiceInfo?.name}
+                      </>
+                    ) : (
+                      <>
+                        <Volume2 className="mr-2 h-4 w-4" />
+                        Gerar Áudio com {selectedVoiceInfo?.name}
+                      </>
+                    )}
+                  </Button>
+                </div>
               </div>
 
               {/* Player de áudio */}
@@ -1144,29 +1160,31 @@ export default function AIGenerator({ onAudioGenerated }: AIGeneratorProps) {
 
           {/* Botão para salvar no banco */}
           {prayerData && audioUrl && (
-            <Button 
-              onClick={handleSaveToDatabase}
-              disabled={isSaving || !selectedCategory}
-              className="w-full"
-              variant="default"
-            >
-              {isSaving ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Salvando...
-                </>
-              ) : (
-                <>
-                  <Save className="mr-2 h-4 w-4" />
-                  Salvar Oração Completa no Banco
-                  {audioDuration && (
-                    <span className="ml-2 text-xs opacity-75">
-                      (com duração: {formatDuration(audioDuration)})
-                    </span>
-                  )}
-                </>
-              )}
-            </Button>
+            <div className="flex sm:justify-end">
+              <Button 
+                onClick={handleSaveToDatabase}
+                disabled={isSaving || !selectedCategory}
+                className="w-full sm:w-auto"
+                variant="default"
+              >
+                {isSaving ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Salvando...
+                  </>
+                ) : (
+                  <>
+                    <Save className="mr-2 h-4 w-4" />
+                    Salvar Oração Completa no Banco
+                    {audioDuration && (
+                      <span className="ml-2 text-xs opacity-75">
+                        (com duração: {formatDuration(audioDuration)})
+                      </span>
+                    )}
+                  </>
+                )}
+              </Button>
+            </div>
           )}
         </CardContent>
       </Card>

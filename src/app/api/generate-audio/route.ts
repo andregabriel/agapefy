@@ -4,7 +4,7 @@ export async function POST(request: NextRequest) {
   try {
     console.log('🎵 API generate-audio: Iniciando processamento...');
     
-    const { text, voice_id = 'pNInz6obpgDQGcFmaJgB' } = await request.json();
+    const { text, voice_id = 'pNInz6obpgDQGcFmaJgB', voice_settings } = await request.json();
 
     if (!text) {
       console.error('❌ API generate-audio: Texto não fornecido');
@@ -44,15 +44,10 @@ export async function POST(request: NextRequest) {
     const finalVoiceId = voice_id || 'pNInz6obpgDQGcFmaJgB';
     console.log('🎯 API generate-audio: Voice ID final usado:', finalVoiceId);
 
-    const requestBody = {
+    const requestBody: Record<string, unknown> = {
       text: text,
       model_id: 'eleven_multilingual_v2',
-      voice_settings: {
-        stability: 0.5,
-        similarity_boost: 0.5,
-        style: 0.0,
-        use_speaker_boost: true
-      }
+      ...(voice_settings ? { voice_settings } : {})
     };
 
     console.log('📡 API generate-audio: Enviando requisição para ElevenLabs...');

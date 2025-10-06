@@ -11,7 +11,7 @@ serve(async (req) => {
   }
 
   try {
-    const { text, voice_id = 'pNInz6obpgDQGcFmaJgB' } = await req.json() // Voice ID padrão da ElevenLabs
+    const { text, voice_id = 'pNInz6obpgDQGcFmaJgB', voice_settings } = await req.json() // Voice ID padrão da ElevenLabs
 
     if (!text) {
       return new Response(
@@ -47,12 +47,7 @@ serve(async (req) => {
       body: JSON.stringify({
         text: text,
         model_id: 'eleven_multilingual_v2',
-        voice_settings: {
-          stability: 0.5,
-          similarity_boost: 0.5,
-          style: 0.0,
-          use_speaker_boost: true
-        }
+        ...(voice_settings ? { voice_settings } : {})
       }),
     })
 

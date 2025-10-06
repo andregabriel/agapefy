@@ -53,6 +53,12 @@ const ELEVENLABS_VOICES = [
     description: 'Voz masculina solene e respeitosa'
   },
   {
+    id: 'wBXNqKUATyqu0RtYt25i',
+    name: 'Adam',
+    gender: 'Masculina',
+    description: 'Voz masculina clara e natural (ElevenLabs Adam)'
+  },
+  {
     id: 'VR6AewLTigWG4xSOukaG',
     name: 'Padre Miguel',
     gender: 'Masculina', 
