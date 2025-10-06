@@ -110,6 +110,17 @@ export async function GET(req: NextRequest) {
     const hasRunToday = !!last && lastSp === todaySp;
 
     if (nowSpTime >= `${hStr.padStart(2, '0')}:${mStr.padStart(2, '0')}` && !hasRunToday) {
+      // Concurrency guard: acquire a per-day lock before sending to avoid duplicate runs.
+      // We use a unique row per date so that only one insert succeeds under race.
+      if (!test) {
+        const lockKey = `daily_verse_lock_${todaySp}`;
+        const { error: lockError } = await supabase
+          .from('app_settings')
+          .insert({ key: lockKey, value: new Date().toISOString(), type: 'text' });
+        if (lockError) {
+          return NextResponse.json({ ok: true, cron: true, triggered: false, tz: TZ, scheduledFor: time, skipped: true, reason: 'concurrent_or_locked' });
+        }
+      }
       // 1) Tentar Edge Function
       const functionsBase = getFunctionsBaseUrl();
       const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
