@@ -10,6 +10,7 @@ import { Loader2, Wand2, Volume2, Mic, RefreshCw, Image, Save, ChevronDown, Chev
 import { toast } from 'sonner';
 import { supabase } from '@/lib/supabase';
 import { getCategories } from '@/lib/supabase-queries';
+import { useAppSettings } from '@/hooks/useAppSettings';
 
 interface AIGeneratorProps {
   onAudioGenerated?: (audioData: { text: string; audio_url: string }) => void;
@@ -80,6 +81,14 @@ export default function AIGenerator({ onAudioGenerated }: AIGeneratorProps) {
   const [selectedVoice, setSelectedVoice] = useState(ELEVENLABS_VOICES[0].id);
   const [selectedCategory, setSelectedCategory] = useState('');
   const [categories, setCategories] = useState<Category[]>([]);
+  // Novos estados: Momento do dia e Objetivo espiritual
+  const DAYPARTS = ['Wakeup', 'Lunch', 'Dinner', 'Sleep', 'Any'];
+  const [dayPart, setDayPart] = useState<string>('Any');
+  const [spiritualGoal, setSpiritualGoal] = useState<string>('');
+  const { settings, updateSetting } = useAppSettings();
+  const [spiritualGoals, setSpiritualGoals] = useState<string[]>([]);
+  const [newGoalName, setNewGoalName] = useState<string>('');
+  const [editingGoalName, setEditingGoalName] = useState<string>('');
   const [isGeneratingPrayer, setIsGeneratingPrayer] = useState(false);
   const [isGeneratingAudio, setIsGeneratingAudio] = useState(false);
   const [isGeneratingImage, setIsGeneratingImage] = useState(false);
@@ -106,6 +115,9 @@ export default function AIGenerator({ onAudioGenerated }: AIGeneratorProps) {
       if (typeof draft.imageUrl === 'string') setImageUrl(draft.imageUrl);
       if (typeof draft.audioUrl === 'string') setAudioUrl(draft.audioUrl);
       if (typeof draft.audioDuration === 'number') setAudioDuration(draft.audioDuration);
+      if (typeof draft.dayPart === 'string') setDayPart(draft.dayPart);
+      if (typeof draft.spiritualGoal === 'string') setSpiritualGoal(draft.spiritualGoal);
+      if (Array.isArray(draft.spiritualGoals)) setSpiritualGoals(draft.spiritualGoals);
     } catch (_) {
       // ignore
     }
@@ -124,13 +136,16 @@ export default function AIGenerator({ onAudioGenerated }: AIGeneratorProps) {
         imageUrl,
         audioUrl,
         audioDuration,
+        dayPart,
+        spiritualGoal,
+        spiritualGoals,
         ts: Date.now()
       };
       localStorage.setItem(DRAFT_KEY, JSON.stringify(payload));
     } catch (_) {
       // ignore
     }
-  }, [prompt, prayerData, selectedVoice, selectedCategory, imageUrl, audioUrl, audioDuration]);
+  }, [prompt, prayerData, selectedVoice, selectedCategory, imageUrl, audioUrl, audioDuration, dayPart, spiritualGoal, spiritualGoals]);
 
   const clearDraft = () => {
     try {
@@ -284,6 +299,63 @@ export default function AIGenerator({ onAudioGenerated }: AIGeneratorProps) {
     };
     loadCategories();
   }, []);
+
+  // Carregar objetivos espirituais do app_settings
+  useEffect(() => {
+    try {
+      const raw = settings?.spiritual_goals;
+      if (typeof raw === 'string' && raw.trim()) {
+        const list = JSON.parse(raw);
+        if (Array.isArray(list)) {
+          setSpiritualGoals(list.filter((g) => typeof g === 'string'));
+        }
+      }
+    } catch (e) {
+      console.warn('Falha ao parsear spiritual_goals do app_settings');
+    }
+  }, [settings?.spiritual_goals]);
+
+  // Helpers para gerenciar objetivos espirituais
+  const persistGoals = async (list: string[]) => {
+    setSpiritualGoals(list);
+    await updateSetting('spiritual_goals', JSON.stringify(list));
+  };
+
+  const handleAddGoal = async () => {
+    const name = newGoalName.trim();
+    if (!name) return;
+    if (spiritualGoals.includes(name)) {
+      toast.error('Já existe um objetivo com esse nome');
+      return;
+    }
+    const next = [...spiritualGoals, name];
+    await persistGoals(next);
+    setSpiritualGoal(name);
+    setNewGoalName('');
+    toast.success('Objetivo espiritual adicionado');
+  };
+
+  const handleRenameSelectedGoal = async () => {
+    const selected = spiritualGoal?.trim();
+    const nextName = editingGoalName.trim();
+    if (!selected) {
+      toast.error('Selecione um objetivo para renomear');
+      return;
+    }
+    if (!nextName) return;
+    const idx = spiritualGoals.findIndex((g) => g === selected);
+    if (idx === -1) return;
+    if (spiritualGoals.includes(nextName)) {
+      toast.error('Já existe um objetivo com esse nome');
+      return;
+    }
+    const next = [...spiritualGoals];
+    next[idx] = nextName;
+    await persistGoals(next);
+    setSpiritualGoal(nextName);
+    setEditingGoalName('');
+    toast.success('Objetivo espiritual renomeado');
+  };
 
   const handleGeneratePrayer = async () => {
     if (!prompt.trim()) {
@@ -647,6 +719,38 @@ export default function AIGenerator({ onAudioGenerated }: AIGeneratorProps) {
       }
 
       console.log('✅ Áudio salvo com sucesso:', audioData);
+
+      // Tentar salvar diretamente nas colunas da tabela audios
+      let savedDirectlyInTable = false;
+      try {
+        const { error: updateError } = await supabase
+          .from('audios')
+          .update({ time_of_day: dayPart || 'Any', spiritual_goal: spiritualGoal || null })
+          .eq('id', audioData.id);
+        if (!updateError) {
+          savedDirectlyInTable = true;
+        } else {
+          console.warn('⚠️ Erro ao atualizar colunas novas em audios:', updateError);
+        }
+      } catch (e) {
+        console.warn('⚠️ Falha inesperada ao atualizar colunas novas em audios');
+      }
+
+      // Fallback: salvar metadados no app_settings caso as colunas não existam
+      if (!savedDirectlyInTable) {
+        try {
+          const metaKey = `audio_meta:${audioData.id}`;
+          const metaValue = JSON.stringify({ time_of_day: dayPart || 'Any', spiritual_goal: spiritualGoal || '' });
+          const { error: metaError } = await supabase
+            .from('app_settings')
+            .upsert({ key: metaKey, value: metaValue, type: 'text' }, { onConflict: 'key' });
+          if (metaError) {
+            console.warn('⚠️ Erro ao salvar metadados do áudio (fallback):', metaError);
+          }
+        } catch (e) {
+          console.warn('⚠️ Falha inesperada ao salvar metadados do áudio (fallback)');
+        }
+      }
       
       let successMessage = '✅ Oração salva no banco de dados com sucesso!';
       if (audioDuration) {
@@ -662,6 +766,8 @@ export default function AIGenerator({ onAudioGenerated }: AIGeneratorProps) {
       setAudioDuration(null);
       setImageUrl('');
       setSelectedCategory('');
+      setDayPart('Any');
+      setSpiritualGoal('');
       clearDraft();
       
     } catch (error) {
@@ -888,6 +994,55 @@ export default function AIGenerator({ onAudioGenerated }: AIGeneratorProps) {
                   </SelectContent>
                 </Select>
               </div>
+
+      {/* Momento do dia */}
+      <div>
+        <label className="block text-sm font-medium mb-2">Momento do dia</label>
+        <Select value={dayPart} onValueChange={setDayPart}>
+          <SelectTrigger className="w-full">
+            <SelectValue placeholder="Selecione o momento" />
+          </SelectTrigger>
+          <SelectContent>
+            {DAYPARTS.map((p) => (
+              <SelectItem key={p} value={p}>{p}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
+      {/* Objetivo espiritual */}
+      <div className="space-y-2">
+        <label className="block text-sm font-medium">Objetivo espiritual</label>
+        <Select value={spiritualGoal} onValueChange={setSpiritualGoal}>
+          <SelectTrigger className="w-full">
+            <SelectValue placeholder="Selecione um objetivo espiritual" />
+          </SelectTrigger>
+          <SelectContent>
+            {spiritualGoals.map((g) => (
+              <SelectItem key={g} value={g}>{g}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+          <div className="flex items-center gap-2">
+            <Input
+              placeholder="Novo objetivo"
+              value={newGoalName}
+              onChange={(e) => setNewGoalName(e.target.value)}
+            />
+            <Button variant="outline" onClick={handleAddGoal}>Adicionar</Button>
+          </div>
+          <div className="flex items-center gap-2">
+            <Input
+              placeholder="Renomear selecionado"
+              value={editingGoalName}
+              onChange={(e) => setEditingGoalName(e.target.value)}
+            />
+            <Button variant="outline" onClick={handleRenameSelectedGoal}>Renomear</Button>
+          </div>
+        </div>
+        <p className="text-xs text-muted-foreground">Você pode selecionar, criar ou renomear objetivos aqui.</p>
+      </div>
 
               {/* Seletor de voz e botão para gerar áudio */}
               <div className="space-y-3">

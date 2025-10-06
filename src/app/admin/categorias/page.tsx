@@ -28,9 +28,7 @@ import {
 import { toast } from 'sonner';
 import { 
   getCategories, 
-  getCategoryContent,
-  getCategoryContentFast,
-  getPlaylistsByCategory,
+  getCategoriesContentFastBulk,
   getCategoryBannerLinks,
   upsertCategoryBannerLink,
   type Category, 
@@ -151,27 +149,23 @@ export default function AdminCategoriasPage() {
   // Carregar categorias
   const loadCategories = async () => {
     try {
-      setLoading(true);
+      // Evitar bloquear a UI se já temos dados renderizados
+      const shouldBlock = categories.length === 0;
+      if (shouldBlock) setLoading(true);
       const categoriesData = await getCategories();
       
-      // Carregar conteúdo para cada categoria
-      const categoriesWithContent = await Promise.all(
-        categoriesData.map(async (category) => {
-          if (isRecentesCategoryName(category.name)) {
-            const activityAudios = (activities || []).map((a: any) => a.audio);
-            const recentPlaylists = await getPlaylistsByCategory(category.id);
-            return { ...category, audios: activityAudios, playlists: recentPlaylists } as any;
-          }
+      // Carregar conteúdo de todas as categorias em lote (fast, 2 queries totais)
+      const categoryIds = categoriesData.map((c) => c.id);
+      const contentMap = await getCategoriesContentFastBulk(categoryIds);
 
-          // Uso rápido sem estatísticas pesadas para carregamento inicial
-          const { audios, playlists } = await getCategoryContentFast(category.id);
-          return {
-            ...category,
-            audios: audios || [],
-            playlists: playlists || []
-          };
-        })
-      );
+      const categoriesWithContent = categoriesData.map((category) => {
+        const content = contentMap[category.id] || { audios: [], playlists: [] };
+        return {
+          ...category,
+          audios: content.audios || [],
+          playlists: content.playlists || []
+        } as any;
+      });
       
       setCategories(categoriesWithContent);
       console.log('✅ Categorias carregadas:', categoriesWithContent.length);
@@ -195,12 +189,24 @@ export default function AdminCategoriasPage() {
     })();
   }, []);
 
-  // Carregar categorias após atividades estarem disponíveis (evita recarga duplicada)
+  // Primeiro load no mount (conteúdo leve)
   useEffect(() => {
-    if (!activitiesLoading) {
-      loadCategories();
-    }
-  }, [activitiesLoading]);
+    loadCategories();
+  }, []);
+
+  // Atualizar somente a categoria "Recentes" quando activities estiverem prontas
+  useEffect(() => {
+    if (activitiesLoading) return;
+    setCategories((prev) => {
+      const activityAudios = (activities || []).map((a: any) => a.audio);
+      return prev.map((cat) => {
+        if (isRecentesCategoryName(cat.name)) {
+          return { ...cat, audios: activityAudios } as any;
+        }
+        return cat;
+      });
+    });
+  }, [activitiesLoading, activities]);
 
   // Upload helper: envia imagem ao Supabase e retorna URL pública
   const uploadImageToSupabase = async (file: File): Promise<string> => {
@@ -1044,7 +1050,7 @@ export default function AdminCategoriasPage() {
                                     </p>
                                   </div>
                                   <div className="flex items-center space-x-2">
-                                    <Button size="sm" variant="outline" onClick={() => handleEditPlaylist(playlist)}>
+                                    <Button size="sm" variant="outline" onClick={() => setEditingPlaylist(playlist)}>
                                       <Edit size={16} />
                                     </Button>
                                     <Button size="sm" variant="outline" onClick={() => handleDeletePlaylist(playlist.id)}>

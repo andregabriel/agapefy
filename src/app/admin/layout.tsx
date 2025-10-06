@@ -35,6 +35,29 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
       }
 
       try {
+        // Cache de role na sessão para evitar revalidação custosa em foco de aba
+        const cacheKey = `admin:role:${user.id}`;
+        const cachedRaw = typeof window !== 'undefined' ? sessionStorage.getItem(cacheKey) : null;
+        if (cachedRaw) {
+          try {
+            const cached = JSON.parse(cachedRaw) as { role: string; ts: number };
+            // TTL curto de 5 minutos para equilíbrio entre UX e frescor
+            const fiveMinutes = 5 * 60 * 1000;
+            if (Date.now() - cached.ts < fiveMinutes) {
+              console.log('💾 AdminLayout: Usando role em cache');
+              setUserRole(cached.role);
+              setRoleLoading(false);
+              if (cached.role !== 'admin') {
+                setAccessDenied(true);
+                setTimeout(() => router.push('/'), 2000);
+              }
+              return;
+            }
+          } catch (_e) {
+            // ignore cache parse errors
+          }
+        }
+
         setRoleLoading(true);
         console.log('🔍 AdminLayout: Buscando role do usuário:', user.email);
         
@@ -53,6 +76,14 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
         const role = profile?.role || 'user';
         console.log('✅ AdminLayout: Role encontrado:', role);
         setUserRole(role);
+        // Atualizar cache da role
+        try {
+          if (typeof window !== 'undefined') {
+            sessionStorage.setItem(cacheKey, JSON.stringify({ role, ts: Date.now() }));
+          }
+        } catch (_e) {
+          // ignore
+        }
 
         // Se não é admin, negar acesso
         if (role !== 'admin') {

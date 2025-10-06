@@ -3,8 +3,7 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { 
   getCategories, 
-  getCategoryContent,
-  getPlaylistsByCategory,
+  getCategoriesContentFastBulk,
   getCategoryBannerLinks,
   type Category, 
   type Playlist, 
@@ -101,74 +100,29 @@ export default function HomePage() {
         return;
       }
       
-      // Processar categorias em lotes menores para evitar sobrecarga
-      const batchSize = 3;
-      const categoriesWithContentData: CategoryWithContent[] = [];
+      // Buscar conteúdo em lote e leve (2 queries totais)
+      const ids = categories.map(c => c.id);
+      const contentMap = await getCategoriesContentFastBulk(ids);
+
       const resolvedBannerLinks = await bannerLinksPromise;
       setBannerLinks(resolvedBannerLinks);
-      
-      for (let i = 0; i < categories.length; i += batchSize) {
-        if (!mountedRef.current) return; // Verificar se ainda está montado
-        
-        const batch = categories.slice(i, i + batchSize);
-        console.log(`🔄 Processando lote ${Math.floor(i/batchSize) + 1}/${Math.ceil(categories.length/batchSize)}`);
-        
-        try {
-          const batchResults = await Promise.allSettled(
-            batch.map(async (category) => {
-              try {
-                // Conteúdo padrão
-                let audios: Audio[] = [];
-                let playlists: Playlist[] = [];
 
-                if (isRecentesCategoryName(category.name)) {
-                  // Replicar lógica de /eu: usar atividades do usuário para áudios
-                  const activityAudios = (activities || []).map((a: any) => a.audio);
-                  // Carregar playlists vinculadas à categoria "Recentes"
-                  const recentPlaylists = await getPlaylistsByCategory(category.id);
-                  audios = activityAudios;
-                  playlists = recentPlaylists;
-                } else if (category.layout_type === 'banner') {
-                  // Banner não carrega conteúdo; apenas mantém arrays vazios
-                  audios = [];
-                  playlists = [];
-                } else {
-                  const content = await getCategoryContent(category.id);
-                  audios = content.audios || [];
-                  playlists = content.playlists || [];
-                }
-
-                console.log(`🎵 Categoria "${category.name}": ${audios.length} áudios + ${playlists.length} playlists`);
-                return { ...category, audios, playlists };
-              } catch (error) {
-                console.warn(`⚠️ Erro ao carregar conteúdo da categoria "${category.name}":`, error);
-                return { ...category, audios: [], playlists: [] };
-              }
-            })
-          );
-          
-          // Processar resultados do lote
-          batchResults.forEach((result) => {
-            if (result.status === 'fulfilled') {
-              categoriesWithContentData.push(result.value);
-            }
-          });
-          
-          // Não atualizamos a UI por lote para evitar render em 2 etapas.
-          // Mantemos o carregamento até que todos os lotes estejam concluídos,
-          // garantindo que as categorias apareçam de uma vez só.
-          
-        } catch (batchError) {
-          console.warn(`⚠️ Erro no lote ${Math.floor(i/batchSize) + 1}:`, batchError);
-        }
-      }
-      
       if (!mountedRef.current) return;
-      
-      // Filtrar categorias: manter se tiver conteúdo OU se for "Recentes"
-          const categoriesWithActualContent = categoriesWithContentData.filter(
-            cat => isRecentesCategoryName(cat.name) || cat.layout_type === 'banner' || cat.audios.length > 0 || cat.playlists.length > 0
-          );
+
+      // Montar estrutura final respeitando visibilidade e layouts
+      const categoriesWithActualContent = categories.map((cat) => {
+        if (isRecentesCategoryName(cat.name)) {
+          // Recentes usa activities para áudios e não precisa de stats
+          return { ...cat, audios: (activities || []).map((a: any) => a.audio), playlists: [] } as CategoryWithContent;
+        }
+        if (cat.layout_type === 'banner') {
+          return { ...cat, audios: [], playlists: [] } as CategoryWithContent;
+        }
+        const content = contentMap[cat.id] || { audios: [], playlists: [] };
+        return { ...cat, audios: content.audios || [], playlists: content.playlists || [] } as CategoryWithContent;
+      })
+      // Opcional: se quisermos esconder categorias vazias, preservar banners e Recentes
+      .filter(cat => isRecentesCategoryName(cat.name) || cat.layout_type === 'banner' || cat.audios.length > 0 || cat.playlists.length > 0);
       
       setCategoriesWithContent(categoriesWithActualContent);
       console.log('✅ Categorias com conteúdo carregadas:', categoriesWithActualContent.length);

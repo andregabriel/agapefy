@@ -24,6 +24,8 @@ export interface Audio {
   category_id: string | null;
   created_by: string | null;
   created_at: string;
+  time_of_day?: 'Wakeup' | 'Lunch' | 'Dinner' | 'Sleep' | 'Any' | null;
+  spiritual_goal?: string | null;
   category?: Category;
 }
 
@@ -169,6 +171,46 @@ export async function getAudiosByCategory(categoryId: string): Promise<Audio[]> 
   return (data as Audio[]) || [];
 }
 
+// Buscar áudios (rápido, somente colunas necessárias para lista)
+export async function getAudiosByCategoryFast(categoryId: string): Promise<Pick<Audio, 'id' | 'title' | 'subtitle' | 'duration' | 'category_id' | 'created_at'>[]> {
+  const { data, error } = await supabase
+    .from('audios')
+    .select('id,title,subtitle,duration,category_id,created_at')
+    .eq('category_id', categoryId)
+    .order('created_at', { ascending: false });
+
+  if (error) {
+    console.error('Erro ao buscar áudios (fast):', error);
+    return [];
+  }
+  return (data as any[]) || [];
+}
+
+// Buscar áudios para várias categorias em uma única requisição (fast)
+export async function getAudiosByCategoryBulkFast(categoryIds: string[]): Promise<Record<string, Pick<Audio, 'id' | 'title' | 'subtitle' | 'duration' | 'category_id' | 'created_at'>[]>> {
+  if (!categoryIds.length) return {};
+
+  const { data, error } = await supabase
+    .from('audios')
+    .select('id,title,subtitle,duration,category_id,created_at')
+    .in('category_id', categoryIds)
+    .order('created_at', { ascending: false });
+
+  if (error) {
+    console.error('Erro ao buscar áudios em lote (fast):', error);
+    return {};
+  }
+
+  const map: Record<string, any[]> = {};
+  ((data as any[]) || []).forEach((row) => {
+    const cid = row.category_id as string | null;
+    if (!cid) return;
+    if (!map[cid]) map[cid] = [];
+    map[cid].push(row);
+  });
+  return map;
+}
+
 // Função para calcular duração total de uma playlist
 export async function getPlaylistDuration(playlistId: string): Promise<number> {
   try {
@@ -260,10 +302,7 @@ export async function getPlaylistsByCategory(categoryId: string): Promise<Playli
 export async function getPlaylistsByCategoryFast(categoryId: string): Promise<Playlist[]> {
   const { data, error } = await supabase
     .from('playlists')
-    .select(`
-      *,
-      category:categories(*)
-    `)
+    .select('id,title,description,category_id,created_at,is_public,cover_url')
     .eq('category_id', categoryId)
     .eq('is_public', true)
     .order('created_at', { ascending: false });
@@ -274,6 +313,32 @@ export async function getPlaylistsByCategoryFast(categoryId: string): Promise<Pl
   }
 
   return (data as Playlist[]) || [];
+}
+
+// Buscar playlists para várias categorias em uma única requisição (fast)
+export async function getPlaylistsByCategoryBulkFast(categoryIds: string[]): Promise<Record<string, Playlist[]>> {
+  if (!categoryIds.length) return {};
+
+  const { data, error } = await supabase
+    .from('playlists')
+    .select('id,title,description,category_id,created_at,is_public,cover_url')
+    .in('category_id', categoryIds)
+    .eq('is_public', true)
+    .order('created_at', { ascending: false });
+
+  if (error) {
+    console.error('Erro ao buscar playlists em lote (fast):', error);
+    return {};
+  }
+
+  const map: Record<string, Playlist[]> = {};
+  ((data as any[]) || []).forEach((row) => {
+    const cid = row.category_id as string | null;
+    if (!cid) return;
+    if (!map[cid]) map[cid] = [];
+    map[cid].push(row as Playlist);
+  });
+  return map;
 }
 
 // Buscar áudios E playlists por categoria (função combinada)
@@ -304,7 +369,7 @@ export async function getCategoryContentFast(categoryId: string): Promise<{
 }> {
   // Evita o custo das estatísticas por playlist no carregamento inicial
   const [audios, playlists] = await Promise.all([
-    getAudiosByCategory(categoryId),
+    getAudiosByCategoryFast(categoryId) as unknown as Audio[],
     getPlaylistsByCategoryFast(categoryId)
   ]);
 
@@ -312,6 +377,25 @@ export async function getCategoryContentFast(categoryId: string): Promise<{
     audios,
     playlists
   };
+}
+
+// Buscar conteúdo de várias categorias rapidamente (2 queries totais)
+export async function getCategoriesContentFastBulk(categoryIds: string[]): Promise<Record<string, { audios: Audio[]; playlists: Playlist[] }>> {
+  if (!categoryIds.length) return {};
+
+  const [audioMap, playlistMap] = await Promise.all([
+    getAudiosByCategoryBulkFast(categoryIds),
+    getPlaylistsByCategoryBulkFast(categoryIds)
+  ]);
+
+  const result: Record<string, { audios: Audio[]; playlists: Playlist[] }> = {};
+  categoryIds.forEach((id) => {
+    result[id] = {
+      audios: (audioMap[id] as unknown as Audio[]) || [],
+      playlists: (playlistMap[id] as Playlist[]) || []
+    };
+  });
+  return result;
 }
 
 // Buscar áudios com busca por texto
