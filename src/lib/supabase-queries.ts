@@ -256,6 +256,26 @@ export async function getPlaylistsByCategory(categoryId: string): Promise<Playli
   return playlistsWithData as Playlist[];
 }
 
+// Buscar playlists públicas por categoria (rápido, sem estatísticas de duração/contagem)
+export async function getPlaylistsByCategoryFast(categoryId: string): Promise<Playlist[]> {
+  const { data, error } = await supabase
+    .from('playlists')
+    .select(`
+      *,
+      category:categories(*)
+    `)
+    .eq('category_id', categoryId)
+    .eq('is_public', true)
+    .order('created_at', { ascending: false });
+
+  if (error) {
+    console.error('Erro ao buscar playlists da categoria (fast):', error);
+    return [];
+  }
+
+  return (data as Playlist[]) || [];
+}
+
 // Buscar áudios E playlists por categoria (função combinada)
 export async function getCategoryContent(categoryId: string): Promise<{
   audios: Audio[];
@@ -271,6 +291,23 @@ export async function getCategoryContent(categoryId: string): Promise<{
 
   console.log(`✅ Categoria ${categoryId}: ${audios.length} áudios + ${playlists.length} playlists`);
   
+  return {
+    audios,
+    playlists
+  };
+}
+
+// Buscar conteúdo da categoria rapidamente (sem estatísticas pesadas)
+export async function getCategoryContentFast(categoryId: string): Promise<{
+  audios: Audio[];
+  playlists: Playlist[];
+}> {
+  // Evita o custo das estatísticas por playlist no carregamento inicial
+  const [audios, playlists] = await Promise.all([
+    getAudiosByCategory(categoryId),
+    getPlaylistsByCategoryFast(categoryId)
+  ]);
+
   return {
     audios,
     playlists

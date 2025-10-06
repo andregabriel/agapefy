@@ -29,6 +29,7 @@ import { toast } from 'sonner';
 import { 
   getCategories, 
   getCategoryContent,
+  getCategoryContentFast,
   getPlaylistsByCategory,
   getCategoryBannerLinks,
   upsertCategoryBannerLink,
@@ -162,7 +163,8 @@ export default function AdminCategoriasPage() {
             return { ...category, audios: activityAudios, playlists: recentPlaylists } as any;
           }
 
-          const { audios, playlists } = await getCategoryContent(category.id);
+          // Uso rápido sem estatísticas pesadas para carregamento inicial
+          const { audios, playlists } = await getCategoryContentFast(category.id);
           return {
             ...category,
             audios: audios || [],
@@ -182,7 +184,6 @@ export default function AdminCategoriasPage() {
   };
 
   useEffect(() => {
-    loadCategories();
     // Carregar links de banner para edição e consistência visual
     (async () => {
       try {
@@ -194,7 +195,7 @@ export default function AdminCategoriasPage() {
     })();
   }, []);
 
-  // Atualizar conteúdo da categoria "Recentes" quando atividades mudarem
+  // Carregar categorias após atividades estarem disponíveis (evita recarga duplicada)
   useEffect(() => {
     if (!activitiesLoading) {
       loadCategories();
