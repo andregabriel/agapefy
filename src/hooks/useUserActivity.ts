@@ -56,7 +56,7 @@ export function useUserActivity() {
         .limit(limit);
 
       if (fetchError) {
-        console.error('❌ useUserActivity: Erro ao buscar atividades:', fetchError);
+        console.warn('❌ useUserActivity: Erro ao buscar atividades (tratado):', fetchError);
         setError('Erro ao carregar atividades');
         return;
       }
@@ -92,7 +92,7 @@ export function useUserActivity() {
         });
 
       if (error) {
-        console.error('❌ useUserActivity: Erro ao registrar atividade:', error);
+        console.warn('❌ useUserActivity: Erro ao registrar atividade (tratado):', error);
         return false;
       }
 
