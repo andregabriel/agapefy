@@ -87,7 +87,7 @@ export default function HomePage() {
       // Buscar links de banners em paralelo
       const bannerLinksPromise = getCategoryBannerLinks();
 
-      // Respeitar visibilidade na Home (default: true)
+      // Respeitar visibilidade na Home (default: true). Todas as categorias devem estar na home exceto as ocultas
       categories = categories.filter((cat) => (cat as any).is_visible !== false);
 
       console.log('✅ Categorias encontradas:', categories.length);
@@ -121,8 +121,8 @@ export default function HomePage() {
         const content = contentMap[cat.id] || { audios: [], playlists: [] };
         return { ...cat, audios: content.audios || [], playlists: content.playlists || [] } as CategoryWithContent;
       })
-      // Opcional: se quisermos esconder categorias vazias, preservar banners e Recentes
-      .filter(cat => isRecentesCategoryName(cat.name) || cat.layout_type === 'banner' || cat.audios.length > 0 || cat.playlists.length > 0);
+      // Não esconder categorias vazias: o admin pediu que todas (não ocultas) apareçam
+      // Mantemos todas as categorias, inclusive vazias
       
       setCategoriesWithContent(categoriesWithActualContent);
       console.log('✅ Categorias com conteúdo carregadas:', categoriesWithActualContent.length);
