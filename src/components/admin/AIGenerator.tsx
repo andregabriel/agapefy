@@ -804,6 +804,7 @@ export default function AIGenerator({ onAudioGenerated }: AIGeneratorProps) {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
+          <div className="mx-auto w-full max-w-2xl space-y-4">
           {/* Input para o tema da oração */}
           <div>
             <label htmlFor="prompt" className="block text-sm font-medium mb-2">
@@ -1186,6 +1187,7 @@ export default function AIGenerator({ onAudioGenerated }: AIGeneratorProps) {
               </Button>
             </div>
           )}
+          </div>
         </CardContent>
       </Card>
 

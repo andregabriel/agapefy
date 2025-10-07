@@ -143,9 +143,10 @@ export default function AudioPlayerPage({ params }: AudioPlayerPageProps) {
         <div className="mb-6">
           <div className="aspect-square max-w-80 mx-auto">
             <div className="w-full h-full bg-gray-800 rounded-lg overflow-hidden shadow-2xl">
-              {audio.category?.image_url ? (
+              {/** Preferir a capa do próprio áudio; fallback para imagem da categoria */}
+              {audio.cover_url || audio.category?.image_url ? (
                 <img 
-                  src={audio.category.image_url} 
+                  src={audio.cover_url || (audio.category?.image_url as string)} 
                   alt={audio.title}
                   className="w-full h-full object-cover"
                 />

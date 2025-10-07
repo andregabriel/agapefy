@@ -172,10 +172,10 @@ export async function getAudiosByCategory(categoryId: string): Promise<Audio[]> 
 }
 
 // Buscar áudios (rápido, somente colunas necessárias para lista)
-export async function getAudiosByCategoryFast(categoryId: string): Promise<Pick<Audio, 'id' | 'title' | 'subtitle' | 'duration' | 'category_id' | 'created_at'>[]> {
+export async function getAudiosByCategoryFast(categoryId: string): Promise<Pick<Audio, 'id' | 'title' | 'subtitle' | 'duration' | 'category_id' | 'created_at' | 'cover_url'>[]> {
   const { data, error } = await supabase
     .from('audios')
-    .select('id,title,subtitle,duration,category_id,created_at')
+    .select('id,title,subtitle,duration,category_id,created_at,cover_url')
     .eq('category_id', categoryId)
     .order('created_at', { ascending: false });
 
@@ -187,12 +187,12 @@ export async function getAudiosByCategoryFast(categoryId: string): Promise<Pick<
 }
 
 // Buscar áudios para várias categorias em uma única requisição (fast)
-export async function getAudiosByCategoryBulkFast(categoryIds: string[]): Promise<Record<string, Pick<Audio, 'id' | 'title' | 'subtitle' | 'duration' | 'category_id' | 'created_at'>[]>> {
+export async function getAudiosByCategoryBulkFast(categoryIds: string[]): Promise<Record<string, Pick<Audio, 'id' | 'title' | 'subtitle' | 'duration' | 'category_id' | 'created_at' | 'cover_url'>[]>> {
   if (!categoryIds.length) return {};
 
   const { data, error } = await supabase
     .from('audios')
-    .select('id,title,subtitle,duration,category_id,created_at')
+    .select('id,title,subtitle,duration,category_id,created_at,cover_url')
     .in('category_id', categoryIds)
     .order('created_at', { ascending: false });
 
