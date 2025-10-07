@@ -23,7 +23,7 @@ export default function CategoryFilters({
       <div className="flex justify-between items-center mb-6">
         <div>
           <h1 className="text-2xl font-bold text-gray-900 mb-2">Gerenciamento de Categorias</h1>
-          <p className="text-gray-600">Organize as orações em categorias, defina a ordem de exibição e escolha o layout</p>
+          <p className="text-gray-600">Organize as orações em categorias, defina a ordem, visibilidade e layout</p>
         </div>
         <button
           onClick={onNewCategory}

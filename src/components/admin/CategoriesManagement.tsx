@@ -43,9 +43,15 @@ export default function CategoriesManagement() {
 
     if (sourceIndex === destinationIndex) return;
 
-    // Filtrar apenas categorias não fixas para drag and drop
+    // Bloquear drag quando estiver filtrando por busca ou ordenação não manual
+    if (searchTerm.trim() !== '' || sortBy !== 'manual') {
+      toast.error('Para reordenar, limpe a busca e use "Ordem Manual".');
+      return;
+    }
+
+    // Filtrar apenas categorias não fixas e visíveis para drag and drop
     const filteredCategories = sortCategories(
-      filterCategories(categories, searchTerm),
+      categories.filter(c => (c.is_visible !== false)),
       sortBy
     );
     const nonFeaturedCategories = filteredCategories.filter(cat => !cat.is_featured);
@@ -68,15 +74,24 @@ export default function CategoriesManagement() {
     });
 
     try {
-      // Atualizar posições no banco de dados (apenas para categorias não fixas)
-      const updatePromises = newCategories.map((category, index) => 
-        updateCategoryOrder(category.id, index + 1)
+      // Duas fases para evitar colisão com índice único:
+      // 1) Atribui posições temporárias altas
+      const tempOffset = 100000; // garante unicidade temporária
+      await Promise.all(
+        newCategories.map((category, index) => 
+          updateCategoryOrder(category.id, tempOffset + index + 1)
+        )
       );
 
-      await Promise.all(updatePromises);
+      // 2) Atribui posições finais sequenciais
+      await Promise.all(
+        newCategories.map((category, index) => 
+          updateCategoryOrder(category.id, index + 1)
+        )
+      );
       
-      // Recarregar para garantir consistência
-      await fetchCategories();
+    // Recarregar para garantir consistência
+    await fetchCategories();
       
       toast.success('Ordem das categorias atualizada!');
     } catch (error) {
@@ -166,7 +181,7 @@ export default function CategoriesManagement() {
                 category={category}
                 onEdit={handleEditClick}
                 onDelete={deleteCategory}
-                onToggleFeatured={toggleFeaturedCategory}
+              onToggleFeatured={(cat) => toggleFeaturedCategory(cat.id, !!cat.is_featured)}
                 onClick={handleCategoryClick}
               />
             ))}
@@ -181,7 +196,7 @@ export default function CategoriesManagement() {
           onDragEnd={handleDragEnd}
           onEdit={handleEditClick}
           onDelete={deleteCategory}
-          onToggleFeatured={toggleFeaturedCategory}
+          onToggleFeatured={(cat) => toggleFeaturedCategory(cat.id, !!cat.is_featured)}
           onClick={handleCategoryClick}
         />
       ) : (
@@ -192,7 +207,7 @@ export default function CategoriesManagement() {
               category={category}
               onEdit={handleEditClick}
               onDelete={deleteCategory}
-              onToggleFeatured={toggleFeaturedCategory}
+              onToggleFeatured={(cat) => toggleFeaturedCategory(cat.id, !!cat.is_featured)}
               onClick={handleCategoryClick}
             />
           ))}

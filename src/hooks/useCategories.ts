@@ -62,7 +62,7 @@ export function useCategories() {
       console.log('⭐ Atualizando categoria atual...');
       const { error } = await supabase
         .from('categories')
-        .update({ is_featured: !currentFeatured })
+        .update({ is_featured: !currentFeatured, order_position: currentFeatured ? null : undefined })
         .eq('id', categoryId);
 
       if (error) {

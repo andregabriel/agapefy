@@ -45,6 +45,7 @@ export default function CategoryModal({ category, isOpen, onClose, onSave }: Cat
     description: '',
     image_url: '',
     layout_type: 'spotify',
+    is_visible: true,
   });
   const [loading, setLoading] = useState(false);
 
@@ -62,6 +63,7 @@ export default function CategoryModal({ category, isOpen, onClose, onSave }: Cat
         description: category.description || '',
         image_url: category.image_url || '',
         layout_type: category.layout_type || 'spotify',
+        is_visible: category.is_visible !== false,
       });
     } else {
       setFormData({
@@ -69,6 +71,7 @@ export default function CategoryModal({ category, isOpen, onClose, onSave }: Cat
         description: '',
         image_url: '',
         layout_type: 'spotify',
+        is_visible: true,
       });
     }
   }, [category]);
@@ -134,14 +137,24 @@ export default function CategoryModal({ category, isOpen, onClose, onSave }: Cat
       if (category) {
         // Atualizar categoria existente
         console.log('✏️ Atualizando categoria existente...');
+        const wasHidden = category.is_visible === false;
+        const willBeVisible = formData.is_visible !== false;
+        const payload: any = {
+          name: formData.name.trim(),
+          description: formData.description.trim() || null,
+          image_url: formData.image_url.trim() || null,
+          layout_type: formData.layout_type,
+          is_visible: formData.is_visible,
+        };
+
+        // Se estava oculta e ficará visível (e não é fixa), force reassign de posição
+        if (wasHidden && willBeVisible && !category.is_featured) {
+          payload.order_position = null;
+        }
+
         const { data, error } = await supabase
           .from('categories')
-          .update({
-            name: formData.name.trim(),
-            description: formData.description.trim() || null,
-            image_url: formData.image_url.trim() || null,
-            layout_type: formData.layout_type,
-          })
+          .update(payload)
           .eq('id', category.id)
           .select();
 
@@ -162,6 +175,7 @@ export default function CategoryModal({ category, isOpen, onClose, onSave }: Cat
             description: formData.description.trim() || null,
             image_url: formData.image_url.trim() || null,
             layout_type: formData.layout_type,
+            is_visible: formData.is_visible,
           }])
           .select();
 
@@ -224,6 +238,25 @@ export default function CategoryModal({ category, isOpen, onClose, onSave }: Cat
         </div>
 
         <form onSubmit={handleSubmit} className="p-4 sm:p-6 space-y-4 sm:space-y-6">
+          {/* Visibilidade na Home */}
+          <div className="flex items-center justify-between p-3 border rounded-lg bg-gray-50">
+            <div>
+              <label className="block text-sm font-medium text-gray-700">
+                Exibição na Home
+              </label>
+              <p className="text-xs text-gray-500">Desmarque para ocultar esta categoria da página inicial</p>
+            </div>
+            <label className="inline-flex items-center cursor-pointer">
+              <input
+                type="checkbox"
+                checked={formData.is_visible}
+                onChange={(e) => setFormData({ ...formData, is_visible: e.target.checked })}
+                className="mr-2"
+              />
+              <span className="text-sm text-gray-800">Mostrar</span>
+            </label>
+          </div>
+
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Nome da Categoria *

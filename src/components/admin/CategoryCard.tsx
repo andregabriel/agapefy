@@ -1,6 +1,6 @@
 "use client";
 
-import { FolderOpen, Edit, Trash2, Star, Music, GripVertical } from 'lucide-react';
+import { FolderOpen, Edit, Trash2, Star, Music, GripVertical, EyeOff, Eye } from 'lucide-react';
 import { Category } from '@/types/category';
 import CategoryLayoutBadge from './CategoryLayoutBadge';
 
@@ -161,6 +161,13 @@ export default function CategoryCard({
       <div className="flex justify-start">
         <CategoryLayoutBadge layoutType={category.layout_type || 'spotify'} />
       </div>
+
+      {/* Visibilidade */}
+      {category.is_visible === false && (
+        <div className="mt-2 text-xs text-gray-500 flex items-center">
+          <EyeOff className="h-3 w-3 mr-1" /> Oculta na home
+        </div>
+      )}
     </div>
   );
 }
