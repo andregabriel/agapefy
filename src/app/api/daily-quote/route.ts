@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
 import { getBookName } from '@/lib/search';
-import { adminSupabase } from '@/lib/supabase-admin';
+import { getAdminSupabase } from '@/lib/supabase-admin';
 
 type HistoryItem = { verse_id: string; date: string };
 
@@ -55,8 +55,17 @@ async function getSettingsMap(): Promise<Record<string, string>> {
   return map;
 }
 
+function getWritableClient() {
+  try {
+    return getAdminSupabase();
+  } catch (_) {
+    return supabase; // fallback for dev/local where service role may be absent
+  }
+}
+
 async function setSetting(key: string, value: string) {
-  const { error } = await adminSupabase.from('app_settings').upsert({ key, value, type: 'text' }, { onConflict: 'key' });
+  const writable = getWritableClient();
+  const { error } = await writable.from('app_settings').upsert({ key, value, type: 'text' }, { onConflict: 'key' });
   if (error) throw error;
 }
 

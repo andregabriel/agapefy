@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
-import { adminSupabase } from '@/lib/supabase-admin';
+import { getAdminSupabase } from '@/lib/supabase-admin';
 
 function getFunctionsBaseUrl(): string {
   const explicit = process.env.SUPABASE_FUNCTIONS_URL;
@@ -15,7 +15,16 @@ function getFunctionsBaseUrl(): string {
   }
 }
 
+function getWritableClient() {
+  try {
+    return getAdminSupabase();
+  } catch (_) {
+    return supabase; // fallback for dev/local where service role may be absent
+  }
+}
+
 async function inlineSend(test: boolean, limit?: number) {
+  const adminSupabase = getWritableClient();
   // Ler frase do dia
   const { data: settingsRows } = await adminSupabase.from('app_settings').select('key,value').in('key', ['prayer_quote_text','prayer_quote_reference','prayer_quote_last_verse_id']);
   const map: Record<string,string> = {};
