@@ -93,6 +93,11 @@ export default function AIGenerator({ onAudioGenerated }: AIGeneratorProps) {
   const [spiritualGoal, setSpiritualGoal] = useState<string>('');
   const { settings, updateSetting } = useAppSettings();
   const [spiritualGoals, setSpiritualGoals] = useState<string[]>([]);
+  // Motores de IA (admin pode gerenciar)
+  const [aiEngines, setAiEngines] = useState<string[]>([]);
+  const [selectedAiEngine, setSelectedAiEngine] = useState<string>("");
+  const [newAiEngineName, setNewAiEngineName] = useState<string>("");
+  const [editingAiEngineName, setEditingAiEngineName] = useState<string>("");
   const [newGoalName, setNewGoalName] = useState<string>('');
   const [editingGoalName, setEditingGoalName] = useState<string>('');
   const [isGeneratingPrayer, setIsGeneratingPrayer] = useState(false);
@@ -321,10 +326,42 @@ export default function AIGenerator({ onAudioGenerated }: AIGeneratorProps) {
     }
   }, [settings?.spiritual_goals]);
 
+  // Carregar motores de IA do app_settings
+  useEffect(() => {
+    try {
+      const raw = (settings as any)?.audio_ai_engines as string | undefined;
+      let list: string[] = [];
+      if (typeof raw === 'string' && raw.trim()) {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed)) list = parsed.filter((e) => typeof e === 'string');
+      }
+      if (!list || list.length === 0) {
+        list = ['ElevenLabs', 'OpenAI Audio'];
+      }
+      setAiEngines(list);
+      if (!selectedAiEngine) {
+        setSelectedAiEngine(list[0] || '');
+      } else if (!list.includes(selectedAiEngine)) {
+        setSelectedAiEngine(list[0] || '');
+      }
+    } catch (e) {
+      console.warn('Falha ao parsear audio_ai_engines do app_settings');
+      const fallback = ['ElevenLabs', 'OpenAI Audio'];
+      setAiEngines(fallback);
+      if (!selectedAiEngine) setSelectedAiEngine(fallback[0]);
+    }
+  }, [settings && (settings as any).audio_ai_engines]);
+
   // Helpers para gerenciar objetivos espirituais
   const persistGoals = async (list: string[]) => {
     setSpiritualGoals(list);
     await updateSetting('spiritual_goals', JSON.stringify(list));
+  };
+
+  // Helpers para gerenciar motores de IA
+  const persistAiEngines = async (list: string[]) => {
+    setAiEngines(list);
+    await updateSetting('audio_ai_engines' as any, JSON.stringify(list));
   };
 
   const handleAddGoal = async () => {
@@ -361,6 +398,55 @@ export default function AIGenerator({ onAudioGenerated }: AIGeneratorProps) {
     setSpiritualGoal(nextName);
     setEditingGoalName('');
     toast.success('Objetivo espiritual renomeado');
+  };
+
+  const handleAddAiEngine = async () => {
+    const name = newAiEngineName.trim();
+    if (!name) return;
+    if (aiEngines.includes(name)) {
+      toast.error('Já existe um motor com esse nome');
+      return;
+    }
+    const next = [...aiEngines, name];
+    await persistAiEngines(next);
+    setSelectedAiEngine(name);
+    setNewAiEngineName('');
+    toast.success('Motor de IA adicionado');
+  };
+
+  const handleRenameSelectedAiEngine = async () => {
+    const selected = selectedAiEngine?.trim();
+    const nextName = editingAiEngineName.trim();
+    if (!selected) {
+      toast.error('Selecione um motor de IA para renomear');
+      return;
+    }
+    if (!nextName) return;
+    const idx = aiEngines.findIndex((g) => g === selected);
+    if (idx === -1) return;
+    if (aiEngines.includes(nextName)) {
+      toast.error('Já existe um motor com esse nome');
+      return;
+    }
+    const next = [...aiEngines];
+    next[idx] = nextName;
+    await persistAiEngines(next);
+    setSelectedAiEngine(nextName);
+    setEditingAiEngineName('');
+    toast.success('Motor de IA renomeado');
+  };
+
+  const handleRemoveSelectedAiEngine = async () => {
+    const selected = selectedAiEngine?.trim();
+    if (!selected) return;
+    const next = aiEngines.filter((e) => e !== selected);
+    if (next.length === 0) {
+      toast.error('Mantenha pelo menos um motor de IA');
+      return;
+    }
+    await persistAiEngines(next);
+    setSelectedAiEngine(next[0]);
+    toast.success('Motor de IA removido');
   };
 
   const handleGeneratePrayer = async () => {
@@ -718,6 +804,7 @@ export default function AIGenerator({ onAudioGenerated }: AIGeneratorProps) {
           category_id: selectedCategory,
           cover_url: coverPublicUrl,
           created_by: currentUserId,
+          ai_engine: selectedAiEngine || null,
         })
         .select()
         .single();
@@ -735,7 +822,7 @@ export default function AIGenerator({ onAudioGenerated }: AIGeneratorProps) {
       try {
         const { error: updateError } = await supabase
           .from('audios')
-          .update({ time_of_day: dayPart || 'Any', spiritual_goal: spiritualGoal || null })
+          .update({ time_of_day: dayPart || 'Any', spiritual_goal: spiritualGoal || null, ai_engine: selectedAiEngine || null })
           .eq('id', audioData.id);
         if (!updateError) {
           savedDirectlyInTable = true;
@@ -778,6 +865,7 @@ export default function AIGenerator({ onAudioGenerated }: AIGeneratorProps) {
       setSelectedCategory('');
       setDayPart('Any');
       setSpiritualGoal('');
+      setSelectedAiEngine(aiEngines[0] || '');
       clearDraft();
       
     } catch (error) {
@@ -1061,6 +1149,41 @@ export default function AIGenerator({ onAudioGenerated }: AIGeneratorProps) {
 
               {/* Seletor de voz e botão para gerar áudio */}
               <div className="space-y-3">
+                {/* Seletor de Motor de IA */}
+                <div className="space-y-2">
+                  <label className="block text-sm font-medium">IA utilizada</label>
+                  <Select value={selectedAiEngine} onValueChange={setSelectedAiEngine}>
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="Selecione o motor de IA" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {aiEngines.map((engine) => (
+                        <SelectItem key={engine} value={engine}>{engine}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    <div className="flex items-center gap-2">
+                      <Input
+                        placeholder="Novo motor de IA"
+                        value={newAiEngineName}
+                        onChange={(e) => setNewAiEngineName(e.target.value)}
+                      />
+                      <Button variant="outline" onClick={handleAddAiEngine}>Adicionar</Button>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Input
+                        placeholder="Renomear selecionado"
+                        value={editingAiEngineName}
+                        onChange={(e) => setEditingAiEngineName(e.target.value)}
+                      />
+                      <Button variant="outline" onClick={handleRenameSelectedAiEngine}>Renomear</Button>
+                      <Button variant="outline" onClick={handleRemoveSelectedAiEngine}>Remover</Button>
+                    </div>
+                  </div>
+                  <p className="text-xs text-muted-foreground">Gerencie e selecione o motor de IA utilizado. Será salvo no áudio.</p>
+                </div>
+
                 <div>
                   <label className="block text-sm font-medium mb-2">
                     <Mic className="inline h-4 w-4 mr-1" />

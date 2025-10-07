@@ -38,6 +38,8 @@ interface AppSettings {
   prayer_quote_last_verse_id?: string;
   prayer_quote_last_updated_at?: string; // ISO
   prayer_quote_history?: string; // JSON string: [{verse_id,date}]
+  // Lista de motores de IA para geração de áudio (string JSON: string[])
+  audio_ai_engines?: string;
 }
 
 const DEFAULT_SETTINGS: AppSettings = {
@@ -72,6 +74,9 @@ const DEFAULT_SETTINGS: AppSettings = {
   prayer_quote_last_verse_id: '',
   prayer_quote_last_updated_at: '',
   prayer_quote_history: '[]'
+  ,
+  // Lista padrão com pelo menos um motor conhecido
+  audio_ai_engines: JSON.stringify(["ElevenLabs", "OpenAI Audio"]) 
 };
 
 export function useAppSettings() {
