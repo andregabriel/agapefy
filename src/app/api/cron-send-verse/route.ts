@@ -114,10 +114,12 @@ export async function GET(req: NextRequest) {
       // We use a unique row per date so that only one insert succeeds under race.
       if (!test) {
         const lockKey = `daily_verse_lock_${todaySp}`;
-        const { error: lockError } = await supabase
+        // Use admin client to bypass RLS when acquiring the per-day lock
+        const { error: lockError } = await adminSupabase
           .from('app_settings')
           .insert({ key: lockKey, value: new Date().toISOString(), type: 'text' });
         if (lockError) {
+          // If the row already exists (duplicate key), consider it locked and skip gracefully
           return NextResponse.json({ ok: true, cron: true, triggered: false, tz: TZ, scheduledFor: time, skipped: true, reason: 'concurrent_or_locked' });
         }
       }
@@ -149,7 +151,10 @@ export async function GET(req: NextRequest) {
         inlineResult = await inlineSend(test, limit);
       }
 
-      await supabase.from('app_settings').upsert({ key: 'daily_verse_last_sent_at', value: new Date().toISOString(), type: 'text' }, { onConflict: 'key' });
+      // Record last sent timestamp with admin client (avoid RLS issues)
+      await adminSupabase
+        .from('app_settings')
+        .upsert({ key: 'daily_verse_last_sent_at', value: new Date().toISOString(), type: 'text' }, { onConflict: 'key' });
 
       return NextResponse.json({ ok: senderOk || inlineResult?.ok, status: senderStatus || 200, cron: true, triggered: true, tz: TZ, scheduledFor: time, senderOk, senderStatus, senderError, inlineResult });
     }
