@@ -4,6 +4,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
+import AdminTopBar from '@/components/admin/AdminTopBar';
 
 interface AdminLayoutProps {
   children: React.ReactNode;
@@ -171,5 +172,12 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
 
   // Se chegou até aqui, é admin - renderizar conteúdo
   console.log('✅ AdminLayout: Acesso liberado para admin');
-  return <>{children}</>;
+  return (
+    <div className="min-h-screen bg-gray-50">
+      <AdminTopBar />
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {children}
+      </div>
+    </div>
+  );
 }
