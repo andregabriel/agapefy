@@ -1,0 +1,59 @@
+
+> next-template@0.1.0 dev /Users/andregabriel/Library/CloudStorage/Dropbox/agapefy_code/agapefy
+> next dev
+
+   ▲ Next.js 15.2.4
+   - Local:        http://localhost:3023
+   - Network:      http://10.111.121.104:3023
+   - Environments: .env.local
+
+ ✓ Starting...
+ ⚠ Invalid next.config.ts options detected: 
+ ⚠     Unrecognized key(s) in object: 'swcMinify'
+ ⚠ See more info here: https://nextjs.org/docs/messages/invalid-next-config
+ ✓ Ready in 1646ms
+ ○ Compiling / ...
+ ✓ Compiled / in 3s (1128 modules)
+📊 AuthContext: Estado atual - User: false Loading: true
+ GET / 200 in 3438ms
+ ✓ Compiled in 429ms (538 modules)
+<w> [webpack.cache.PackFileCacheStrategy] Caching failed for pack: Error: incorrect header check
+📊 AuthContext: Estado atual - User: false Loading: true
+ GET / 200 in 40ms
+ ○ Compiling /favicon.ico ...
+ ✓ Compiled /favicon.ico in 522ms (1144 modules)
+ GET /login 200 in 596ms
+ GET /favicon.ico 200 in 485ms
+ GET /favicon.ico 200 in 207ms
+ ✓ Compiled /middleware in 100ms (101 modules)
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ ✓ Compiled /admin in 444ms (1207 modules)
+ GET /admin 200 in 499ms
+ GET / 200 in 14ms
+ ✓ Compiled /categoria/[id] in 276ms (1222 modules)
+ GET /categoria/c2fd2cf9-aa15-4334-8be6-60ccc100fe33 200 in 661ms
+ ○ Compiling /eu ...
+ ✓ Compiled /eu in 1317ms (3001 modules)
+ GET /eu 200 in 1365ms
+ GET / 200 in 20ms
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ GET /admin 200 in 15ms
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ ○ Compiling /admin/categorias ...
+ ✓ Compiled /admin/categorias in 1061ms (3162 modules)
+ GET /admin/categorias 200 in 1142ms
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ ○ Compiling /admin/gerar-conteudo ...
+ ✓ Compiled /admin/gerar-conteudo in 917ms (3186 modules)
+ GET /admin/gerar-conteudo 200 in 992ms
+<w> [webpack.cache.PackFileCacheStrategy] Caching failed for pack: Error: incorrect header check
+ ✓ Compiled in 1447ms (3193 modules)
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ GET /admin/gerar-conteudo 200 in 53ms
+ ✓ Compiled in 456ms (3193 modules)
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ GET /admin/gerar-conteudo 200 in 42ms
+ ✓ Compiled in 327ms (3193 modules)
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ GET /admin/gerar-conteudo 200 in 32ms
+<w> [webpack.cache.PackFileCacheStrategy] Caching failed for pack: Error: incorrect header check

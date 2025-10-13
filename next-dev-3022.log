@@ -1,0 +1,15 @@
+
+> next-template@0.1.0 dev /Users/andregabriel/Library/CloudStorage/Dropbox/agapefy_code/agapefy
+> next dev -p 3022
+
+   ▲ Next.js 15.2.4
+   - Local:        http://localhost:3022
+   - Network:      http://10.111.126.160:3022
+   - Environments: .env.local
+
+ ✓ Starting...
+ ⚠ Invalid next.config.ts options detected: 
+ ⚠     Unrecognized key(s) in object: 'swcMinify'
+ ⚠ See more info here: https://nextjs.org/docs/messages/invalid-next-config
+ ✓ Ready in 1313ms
+[?25h

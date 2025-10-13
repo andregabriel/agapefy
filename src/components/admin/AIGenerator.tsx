@@ -766,8 +766,8 @@ export default function AIGenerator({ onAudioGenerated }: AIGeneratorProps) {
 
       const selectedVoiceInfo = ELEVENLABS_VOICES.find(v => v.id === selectedVoice);
       
-      // Usar a descrição editável do áudio com informação da voz
-      const finalDescription = `${prayerData.audio_description} (Voz: ${selectedVoiceInfo?.name || 'Desconhecida'})`;
+      // Usar apenas a descrição editável do áudio, sem anexar informação da voz
+      const finalDescription = `${prayerData.audio_description}`;
       
       console.log('💾 Salvando oração no banco de dados...');
       console.log('📝 Dados a serem salvos:', {

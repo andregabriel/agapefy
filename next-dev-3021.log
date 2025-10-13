@@ -1,0 +1,48 @@
+
+> next-template@0.1.0 dev /Users/andregabriel/Library/CloudStorage/Dropbox/agapefy_code/agapefy
+> next dev -p 3021
+
+   ▲ Next.js 15.2.4
+   - Local:        http://localhost:3021
+   - Network:      http://192.168.15.16:3021
+   - Environments: .env.local
+
+ ✓ Starting...
+ ⚠ Invalid next.config.ts options detected: 
+ ⚠     Unrecognized key(s) in object: 'swcMinify'
+ ⚠ See more info here: https://nextjs.org/docs/messages/invalid-next-config
+ ✓ Ready in 1658ms
+ ○ Compiling / ...
+ ✓ Compiled / in 3.6s (1128 modules)
+📊 AuthContext: Estado atual - User: false Loading: true
+📊 AuthContext: Estado atual - User: false Loading: true
+ GET /?vscodeBrowserReqId=1759958338059 200 in 1432ms
+ ✓ Compiled in 550ms (538 modules)
+ ✓ Compiled /login in 399ms (1128 modules)
+ GET /login 200 in 505ms
+<w> [webpack.cache.PackFileCacheStrategy] Caching failed for pack: Error: incorrect header check
+ ✓ Compiled in 415ms (548 modules)
+ GET /login 200 in 103ms
+ ✓ Compiled in 193ms (548 modules)
+ GET /login 200 in 15ms
+ ✓ Compiled in 340ms (1086 modules)
+ ✓ Compiled in 223ms (548 modules)
+ GET /login 200 in 99ms
+ ✓ Compiled in 176ms (548 modules)
+ GET /login 200 in 18ms
+ ✓ Compiled in 150ms (548 modules)
+ GET /login 200 in 21ms
+ ✓ Compiled in 250ms (548 modules)
+ GET /login 200 in 30ms
+ ✓ Compiled in 198ms (548 modules)
+ GET /login 200 in 24ms
+ ✓ Compiled in 225ms (548 modules)
+ GET /login 200 in 32ms
+ ✓ Compiled in 155ms (548 modules)
+ GET /login 200 in 13ms
+ ✓ Compiled in 164ms (548 modules)
+ GET /login 200 in 27ms
+ ✓ Compiled in 143ms (548 modules)
+<w> [webpack.cache.PackFileCacheStrategy] Caching failed for pack: Error: incorrect header check
+ ✓ Compiled in 351ms (1100 modules)
+[?25h
