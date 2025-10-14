@@ -57,3 +57,85 @@
 🔍 Middleware: Permitindo acesso temporário ao admin para debug
  GET /admin/gerar-conteudo 200 in 32ms
 <w> [webpack.cache.PackFileCacheStrategy] Caching failed for pack: Error: incorrect header check
+📊 AuthContext: Estado atual - User: false Loading: true
+ GET /?vscodeBrowserReqId=1760391007091 200 in 114ms
+ ✓ Compiled /login in 359ms (1631 modules)
+ GET /login 200 in 427ms
+📊 AuthContext: Estado atual - User: false Loading: true
+ GET /?vscodeBrowserReqId=1760442907265 200 in 106ms
+ GET /login 200 in 13ms
+ ✓ Compiled in 847ms (3176 modules)
+ GET /login 200 in 50ms
+ ✓ Compiled in 237ms (3162 modules)
+<w> [webpack.cache.PackFileCacheStrategy] Caching failed for pack: Error: incorrect header check
+ ✓ Compiled in 312ms (1575 modules)
+ GET /login 200 in 67ms
+ GET /login 200 in 113ms
+ ✓ Compiled in 442ms (3277 modules)
+ GET /login 200 in 25ms
+ ✓ Compiled in 179ms (1575 modules)
+ GET /login 200 in 8ms
+ ✓ Compiled in 233ms (1575 modules)
+ GET /login 200 in 14ms
+ ✓ Compiled in 183ms (1575 modules)
+ GET /login 200 in 38ms
+ GET /login 200 in 131ms
+ ✓ Compiled in 344ms (3277 modules)
+ GET /login 200 in 22ms
+ ✓ Compiled in 173ms (1575 modules)
+ GET /login 200 in 11ms
+ ✓ Compiled in 781ms (3277 modules)
+ GET /login 200 in 438ms
+ GET /login 200 in 9ms
+ GET /login 200 in 6ms
+ ✓ Compiled in 610ms (3176 modules)
+ GET /login 200 in 50ms
+<w> [webpack.cache.PackFileCacheStrategy] Caching failed for pack: Error: incorrect header check
+ ✓ Compiled in 477ms (3162 modules)
+ ✓ Compiled in 236ms (3162 modules)
+ ✓ Compiled in 218ms (1575 modules)
+ GET /login 200 in 65ms
+ GET /login 200 in 118ms
+ ✓ Compiled in 313ms (3277 modules)
+ GET /login 200 in 40ms
+ ✓ Compiled in 240ms (1575 modules)
+ GET /login 200 in 12ms
+ GET /login 200 in 114ms
+ ✓ Compiled in 377ms (3277 modules)
+ GET /login 200 in 24ms
+ ✓ Compiled in 169ms (1575 modules)
+ GET /login 200 in 8ms
+ ✓ Compiled in 175ms (1575 modules)
+ GET /login 200 in 10ms
+ ✓ Compiled in 357ms (3176 modules)
+ GET /login 200 in 19ms
+<w> [webpack.cache.PackFileCacheStrategy] Caching failed for pack: Error: incorrect header check
+ ✓ Compiled in 599ms (3176 modules)
+ GET /login 200 in 42ms
+ ✓ Compiled in 232ms (3162 modules)
+<w> [webpack.cache.PackFileCacheStrategy] Caching failed for pack: Error: incorrect header check
+ ✓ Compiled in 829ms (3277 modules)
+ ⨯ [Error: ENOENT: no such file or directory, open '/Users/andregabriel/Library/CloudStorage/Dropbox/agapefy_code/agapefy/.next/server/app/login/page.js'] {
+  errno: -2,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: '/Users/andregabriel/Library/CloudStorage/Dropbox/agapefy_code/agapefy/.next/server/app/login/page.js',
+  page: '/login'
+}
+ ○ Compiling /_error ...
+ ✓ Compiled /_error in 775ms (3491 modules)
+ GET /login 500 in 1672ms
+ GET /login 200 in 38ms
+ GET /login 200 in 11ms
+ GET /login 200 in 9ms
+📊 AuthContext: Estado atual - User: false Loading: true
+ GET /login 200 in 86ms
+ ○ Compiling /_not-found ...
+ ✓ Compiled /_not-found in 554ms (3495 modules)
+📊 AuthContext: Estado atual - User: false Loading: true
+📊 AuthContext: Estado atual - User: false Loading: true
+ GET /_next/static/css/app/layout.css?v=1760444829874 404 in 670ms
+📊 AuthContext: Estado atual - User: false Loading: true
+ GET /_next/static/chunks/app-pages-internals.js 404 in 378ms
+ GET /_next/static/chunks/app/login/page.js 404 in 25ms
+ ✓ Compiled in 234ms (1820 modules)

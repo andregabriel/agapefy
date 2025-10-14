@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { createClient } from '@supabase/supabase-js';
 
 export async function POST(request: NextRequest) {
   try {
@@ -104,23 +105,73 @@ export async function POST(request: NextRequest) {
 
     console.log('✅ API generate-audio: Resposta OK da ElevenLabs');
 
-    // Converter o áudio para base64
+    // Converter o áudio para buffer
     const audioBuffer = await response.arrayBuffer();
-    const audioBase64 = Buffer.from(audioBuffer).toString('base64');
     
-    console.log('📦 API generate-audio: Áudio convertido para base64, tamanho:', audioBase64.length);
-    
-    // Criar URL de dados para o áudio
-    const audioDataUrl = `data:audio/mpeg;base64,${audioBase64}`;
+    console.log('📦 API generate-audio: Áudio recebido, tamanho:', audioBuffer.byteLength, 'bytes');
 
+    // Inicializar cliente Supabase para upload
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+    if (!supabaseUrl || !supabaseServiceKey) {
+      console.error('❌ API generate-audio: Credenciais do Supabase não configuradas');
+      return NextResponse.json(
+        { error: 'Configuração do servidor incompleta' },
+        { status: 500 }
+      );
+    }
+
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+    // Gerar nome único para o arquivo
+    const timestamp = Date.now();
+    const randomStr = Math.random().toString(36).substring(2, 15);
+    const fileName = `generated-${timestamp}-${randomStr}.mp3`;
+    const filePath = `generated/${fileName}`;
+
+    console.log('⬆️ API generate-audio: Fazendo upload para Supabase Storage...');
+    console.log('📁 Arquivo:', filePath);
+
+    // Upload para o Supabase Storage
+    const { error: uploadError } = await supabase.storage
+      .from('audios')
+      .upload(filePath, Buffer.from(audioBuffer), {
+        contentType: 'audio/mpeg',
+        cacheControl: '3600',
+        upsert: false
+      });
+
+    if (uploadError) {
+      console.error('❌ API generate-audio: Erro ao fazer upload no Storage:', uploadError);
+      return NextResponse.json(
+        { error: 'Erro ao salvar áudio no Storage', details: uploadError.message },
+        { status: 500 }
+      );
+    }
+
+    // Obter URL pública do arquivo
+    const { data: publicUrlData } = supabase.storage
+      .from('audios')
+      .getPublicUrl(filePath);
+
+    if (!publicUrlData?.publicUrl) {
+      console.error('❌ API generate-audio: Não foi possível obter URL pública');
+      return NextResponse.json(
+        { error: 'Erro ao obter URL pública do áudio' },
+        { status: 500 }
+      );
+    }
+
+    console.log('✅ API generate-audio: Áudio salvo no Storage:', publicUrlData.publicUrl);
     console.log('✅ API generate-audio: Áudio gerado com sucesso usando voice_id:', finalVoiceId);
 
     return NextResponse.json({ 
-      audio_url: audioDataUrl,
-      audio_base64: audioBase64,
+      audio_url: publicUrlData.publicUrl,
       content_type: 'audio/mpeg',
       voice_id_used: finalVoiceId,
-      success: true
+      success: true,
+      storage_path: filePath
     });
 
   } catch (error) {

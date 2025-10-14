@@ -45,10 +45,27 @@ export function useUserActivity() {
       const { data, error: fetchError } = await supabase
         .from('user_activity_log')
         .select(`
-          *,
+          id,
+          user_id,
+          audio_id,
+          activity_type,
+          duration_listened,
+          completed,
+          created_at,
           audio:audios(
-            *,
-            category:categories(*)
+            id,
+            title,
+            subtitle,
+            description,
+            cover_url,
+            duration,
+            category_id,
+            created_at,
+            category:categories(
+              id,
+              name,
+              image_url
+            )
           )
         `)
         .eq('user_id', user.id)
@@ -62,7 +79,7 @@ export function useUserActivity() {
       }
 
       console.log('✅ useUserActivity: Atividades carregadas:', data?.length || 0);
-      setActivities(data || []);
+      setActivities((data || []) as unknown as UserActivity[]);
     } catch (err) {
       console.error('💥 useUserActivity: Erro inesperado:', err);
       setError('Erro inesperado ao carregar atividades');
