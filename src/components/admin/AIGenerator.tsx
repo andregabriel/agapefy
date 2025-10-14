@@ -19,9 +19,12 @@ interface AIGeneratorProps {
 interface PrayerData {
   title: string;
   subtitle: string;
+  // Novo: texto de preparação e mensagem final
+  preparation_text?: string;
   prayer_text: string;
   image_prompt: string;
   audio_description: string; // Nova propriedade para descrição do áudio
+  final_message?: string;
 }
 
 interface Category {
@@ -76,9 +79,11 @@ export default function AIGenerator({ onAudioGenerated }: AIGeneratorProps) {
   const defaultPrayerData: PrayerData = {
     title: '',
     subtitle: '',
+    preparation_text: '',
     prayer_text: '',
     image_prompt: '',
-    audio_description: ''
+    audio_description: '',
+    final_message: ''
   };
   const [prayerData, setPrayerData] = useState<PrayerData | null>(defaultPrayerData);
   const [audioUrl, setAudioUrl] = useState('');
@@ -522,9 +527,17 @@ export default function AIGenerator({ onAudioGenerated }: AIGeneratorProps) {
     const selectedVoiceInfo = ELEVENLABS_VOICES.find(v => v.id === selectedVoice);
     console.log('🎵 Gerando áudio com voz:', selectedVoiceInfo?.name);
 
+    // Montar texto completo na ordem: Preparação, Oração, Mensagem final
+    const preparation = (prayerData.preparation_text || '').trim();
+    const prayer = (prayerData.prayer_text || '').trim();
+    const finalMsg = (prayerData.final_message || '').trim();
+
+    const parts = [preparation, prayer, finalMsg].filter(Boolean);
+    const fullText = parts.join('\n\n');
+
     setIsGeneratingAudio(true);
     const requestData = { 
-      text: prayerData.prayer_text.trim(),
+      text: fullText,
       voice_id: selectedVoice
     };
 
@@ -622,7 +635,7 @@ export default function AIGenerator({ onAudioGenerated }: AIGeneratorProps) {
         
         if (onAudioGenerated) {
           onAudioGenerated({
-            text: prayerData.prayer_text,
+            text: fullText,
             audio_url: data.audio_url
           });
         }
@@ -773,13 +786,19 @@ export default function AIGenerator({ onAudioGenerated }: AIGeneratorProps) {
       // Usar apenas a descrição editável do áudio, sem anexar informação da voz
       const finalDescription = `${prayerData.audio_description}`;
       
+      // Montar transcrição completa na ordem: Preparação, Oração, Mensagem final
+      const preparation = (prayerData.preparation_text || '').trim();
+      const prayer = (prayerData.prayer_text || '').trim();
+      const finalMsg = (prayerData.final_message || '').trim();
+      const transcriptFull = [preparation, prayer, finalMsg].filter(Boolean).join('\n\n');
+
       console.log('💾 Salvando oração no banco de dados...');
       console.log('📝 Dados a serem salvos:', {
         title: prayerData.title,
         subtitle: prayerData.subtitle,
         description: finalDescription,
         audio_url: audioUrl,
-        transcript: prayerData.prayer_text,
+        transcript: transcriptFull,
         duration: audioDuration ? Math.round(audioDuration) : null, // NOVO: Salvar duração
         category_id: selectedCategory,
         image_present: !!imageUrl,
@@ -803,7 +822,7 @@ export default function AIGenerator({ onAudioGenerated }: AIGeneratorProps) {
           subtitle: prayerData.subtitle,
           description: finalDescription,
           audio_url: audioUrl,
-          transcript: prayerData.prayer_text,
+          transcript: transcriptFull,
           duration: audioDuration ? Math.round(audioDuration) : null, // NOVO: Salvar duração em segundos
           category_id: selectedCategory,
           cover_url: coverPublicUrl,
@@ -982,6 +1001,20 @@ export default function AIGenerator({ onAudioGenerated }: AIGeneratorProps) {
                 </p>
               </div>
 
+              {/* Preparação para Orar - NOVO CAMPO */}
+              <div>
+                <label className="block text-sm font-medium mb-2">
+                  Preparação para Orar
+                </label>
+                <Textarea
+                  value={prayerData.preparation_text || ''}
+                  onChange={(e) => setPrayerData({ ...prayerData, preparation_text: e.target.value })}
+                  rows={4}
+                  className="resize-none"
+                  placeholder="Ex: Encontre um lugar tranquilo, respire fundo e entregue seus pensamentos a Deus."
+                />
+              </div>
+
               {/* Texto da oração */}
               <div>
                 <label className="block text-sm font-medium mb-2">
@@ -992,6 +1025,20 @@ export default function AIGenerator({ onAudioGenerated }: AIGeneratorProps) {
                   onChange={(e) => setPrayerData({...prayerData, prayer_text: e.target.value})}
                   rows={8}
                   className="resize-none"
+                />
+              </div>
+
+              {/* Mensagem final - NOVO CAMPO */}
+              <div>
+                <label className="block text-sm font-medium mb-2">
+                  Mensagem final
+                </label>
+                <Textarea
+                  value={prayerData.final_message || ''}
+                  onChange={(e) => setPrayerData({ ...prayerData, final_message: e.target.value })}
+                  rows={4}
+                  className="resize-none"
+                  placeholder="Ex: Amém. Que a paz de Deus permaneça com você durante o seu dia."
                 />
               </div>
 
