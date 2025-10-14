@@ -513,6 +513,17 @@ export default function AIGenerator({ onAudioGenerated }: AIGeneratorProps) {
     }
   };
 
+  // Formata texto com pausas: 0.5s após vírgulas e 1s após pontos finais
+  const applyPacingBreaksToText = (input: string): string => {
+    if (!input) return '';
+    let output = input;
+    // Após cada vírgula que não esteja seguida de um <break>
+    output = output.replace(/,(?!\s*<break\b)/g, ', <break time="0.5s" />');
+    // Após cada ponto final que não seja parte de reticências e não esteja seguido de um <break>
+    output = output.replace(/\.(?!\.|\s*<break\b)/g, '. <break time="1s" />');
+    return output;
+  };
+
   const handleGenerateAudio = async () => {
     if (!prayerData?.prayer_text.trim()) {
       toast.error('Primeiro gere uma oração para converter em áudio');
@@ -527,13 +538,25 @@ export default function AIGenerator({ onAudioGenerated }: AIGeneratorProps) {
     const selectedVoiceInfo = ELEVENLABS_VOICES.find(v => v.id === selectedVoice);
     console.log('🎵 Gerando áudio com voz:', selectedVoiceInfo?.name);
 
-    // Montar texto completo na ordem: Preparação, Oração, Mensagem final
-    const preparation = (prayerData.preparation_text || '').trim();
-    const prayer = (prayerData.prayer_text || '').trim();
-    const finalMsg = (prayerData.final_message || '').trim();
+    // Montar texto completo com pausas: Preparação, (break 2s) Oração, (break 2s) Mensagem final
+    const preparationRaw = (prayerData.preparation_text || '').trim();
+    const prayerRaw = (prayerData.prayer_text || '').trim();
+    const finalMsgRaw = (prayerData.final_message || '').trim();
 
-    const parts = [preparation, prayer, finalMsg].filter(Boolean);
-    const fullText = parts.join('\n\n');
+    const preparation = applyPacingBreaksToText(preparationRaw);
+    const prayer = applyPacingBreaksToText(prayerRaw);
+    const finalMsg = applyPacingBreaksToText(finalMsgRaw);
+
+    const segments: string[] = [];
+    if (preparation) segments.push(preparation);
+    if (prayer) {
+      if (segments.length > 0) segments.push('<break time="2s" />'); // antes da oração
+      segments.push(prayer);
+      segments.push('<break time="2s" />'); // depois da oração
+    }
+    if (finalMsg) segments.push(finalMsg);
+
+    const fullText = segments.join('\n\n');
 
     setIsGeneratingAudio(true);
     const requestData = { 
