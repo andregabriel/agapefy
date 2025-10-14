@@ -16,9 +16,16 @@ export function sortCategories(categories: Category[], sortBy: SortOption): Cate
     if (!a.is_featured && b.is_featured) return 1;
     
     // Para categorias não fixas, aplicar ordenação normal
+    const posA = Number.isFinite(a.order_position as any)
+      ? (a.order_position as unknown as number)
+      : Number.POSITIVE_INFINITY;
+    const posB = Number.isFinite(b.order_position as any)
+      ? (b.order_position as unknown as number)
+      : Number.POSITIVE_INFINITY;
+
     switch (sortBy) {
       case 'manual':
-        return a.order_position - b.order_position;
+        return posA - posB;
       case 'name':
         return a.name.localeCompare(b.name);
       case 'name_desc':
@@ -28,7 +35,7 @@ export function sortCategories(categories: Category[], sortBy: SortOption): Cate
       case 'created_at_desc':
         return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
       default:
-        return a.order_position - b.order_position;
+        return posA - posB;
     }
   });
 }

@@ -828,7 +828,7 @@ export default function AIGenerator({ onAudioGenerated }: AIGeneratorProps) {
       try {
         const { error: updateError } = await supabase
           .from('audios')
-          .update({ time_of_day: dayPart || 'Any', spiritual_goal: spiritualGoal || null, ai_engine: selectedAiEngine || null, voice_id: (lastVoiceIdUsed || selectedVoice) || null, voice_name: (lastVoiceNameUsed || (ELEVENLABS_VOICES.find(v => v.id === (lastVoiceIdUsed || selectedVoice))?.name)) || null })
+          .update({ time: dayPart || 'Any', spiritual_goal: spiritualGoal || null, ai_engine: selectedAiEngine || null, voice_id: (lastVoiceIdUsed || selectedVoice) || null, voice_name: (lastVoiceNameUsed || (ELEVENLABS_VOICES.find(v => v.id === (lastVoiceIdUsed || selectedVoice))?.name)) || null })
           .eq('id', audioData.id);
         if (!updateError) {
           savedDirectlyInTable = true;
@@ -843,7 +843,7 @@ export default function AIGenerator({ onAudioGenerated }: AIGeneratorProps) {
       if (!savedDirectlyInTable) {
         try {
           const metaKey = `audio_meta:${audioData.id}`;
-          const metaValue = JSON.stringify({ time_of_day: dayPart || 'Any', spiritual_goal: spiritualGoal || '', voice_id: (lastVoiceIdUsed || selectedVoice) || '', voice_name: (lastVoiceNameUsed || (ELEVENLABS_VOICES.find(v => v.id === (lastVoiceIdUsed || selectedVoice))?.name)) || '' });
+          const metaValue = JSON.stringify({ time: dayPart || 'Any', spiritual_goal: spiritualGoal || '', voice_id: (lastVoiceIdUsed || selectedVoice) || '', voice_name: (lastVoiceNameUsed || (ELEVENLABS_VOICES.find(v => v.id === (lastVoiceIdUsed || selectedVoice))?.name)) || '' });
           const { error: metaError } = await supabase
             .from('app_settings')
             .upsert({ key: metaKey, value: metaValue, type: 'text' }, { onConflict: 'key' });

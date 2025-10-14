@@ -49,17 +49,13 @@ export default function CategoriesManagement() {
       return;
     }
 
-    // Filtrar apenas categorias não fixas e visíveis para drag and drop
+    // Usar exatamente a mesma lista exibida no grid (sem remover ocultas),
+    // garantindo que os índices do DnD correspondam aos itens renderizados
     const filteredCategories = sortCategories(
-      categories.filter(c => (c.is_visible !== false)),
+      filterCategories(categories, searchTerm),
       sortBy
     );
     const nonFeaturedCategories = filteredCategories.filter(cat => !cat.is_featured);
-    
-    if (sourceIndex >= nonFeaturedCategories.length || destinationIndex >= nonFeaturedCategories.length) {
-      toast.error('Não é possível mover categoria fixa');
-      return;
-    }
 
     // Reordenar localmente primeiro para feedback imediato
     const newCategories = Array.from(nonFeaturedCategories);

@@ -24,7 +24,7 @@ export interface Audio {
   category_id: string | null;
   created_by: string | null;
   created_at: string;
-  time_of_day?: 'Wakeup' | 'Lunch' | 'Dinner' | 'Sleep' | 'Any' | null;
+  time?: 'Wakeup' | 'Lunch' | 'Dinner' | 'Sleep' | 'Any' | null;
   spiritual_goal?: string | null;
   voice_id?: string | null;
   voice_name?: string | null;
