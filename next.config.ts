@@ -70,7 +70,12 @@ const nextConfig: NextConfig = {
     return [
       {
         source: '/admin/gerar-conteudo',
-        destination: '/admin/gtema',
+        destination: '/admin/gmanual',
+        permanent: true,
+      },
+      {
+        source: '/admin/gtema',
+        destination: '/admin/gmanual',
         permanent: true,
       },
     ];

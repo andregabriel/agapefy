@@ -888,51 +888,57 @@ export default function AIGenerator({ onAudioGenerated }: AIGeneratorProps) {
   return (
     <div className="space-y-6">
       <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Wand2 className="h-5 w-5" />
-            Gerador de Orações com IA
-          </CardTitle>
-          <CardDescription>
-            Use inteligência artificial para gerar orações completas: título, sub-título, texto, imagem e áudio
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
+        {false && (
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Wand2 className="h-5 w-5" />
+              Gerador de Orações com IA
+            </CardTitle>
+            <CardDescription>
+              Use inteligência artificial para gerar orações completas: título, sub-título, texto, imagem e áudio
+            </CardDescription>
+          </CardHeader>
+        )}
+        <CardContent className="space-y-4 pt-4 sm:pt-6">
           <div className="mx-auto w-full max-w-2xl space-y-4">
-          {/* Input para o tema da oração */}
-          <div>
-            <label htmlFor="prompt" className="block text-sm font-medium mb-2">
-              Tema da Oração
-            </label>
-            <Textarea
-              id="prompt"
-              placeholder="Ex: gratidão pela família, pedido de proteção, oração pela paz..."
-              value={prompt}
-              onChange={(e) => setPrompt(e.target.value)}
-              rows={3}
-            />
-          </div>
+          {/* Input para o tema da oração (oculto no front-end, preservado para uso futuro) */}
+          {false && (
+            <div>
+              <label htmlFor="prompt" className="block text-sm font-medium mb-2">
+                Tema da Oração
+              </label>
+              <Textarea
+                id="prompt"
+                placeholder="Ex: gratidão pela família, pedido de proteção, oração pela paz..."
+                value={prompt}
+                onChange={(e) => setPrompt(e.target.value)}
+                rows={3}
+              />
+            </div>
+          )}
 
-          {/* Botão para gerar oração completa */}
-          <div className="flex sm:justify-end">
-            <Button 
-              onClick={handleGeneratePrayer}
-              disabled={isGeneratingPrayer || !prompt.trim()}
-              className="w-full sm:w-auto"
-            >
-              {isGeneratingPrayer ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Gerando oração completa...
-                </>
-              ) : (
-                <>
-                  <Wand2 className="mr-2 h-4 w-4" />
-                  Gerar Oração Completa
-                </>
-              )}
-            </Button>
-          </div>
+          {/* Botão para gerar oração completa (oculto no front-end, preservado para uso futuro) */}
+          {false && (
+            <div className="flex sm:justify-end">
+              <Button 
+                onClick={handleGeneratePrayer}
+                disabled={isGeneratingPrayer}
+                className="w-full sm:w-auto"
+              >
+                {isGeneratingPrayer ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Gerando oração completa...
+                  </>
+                ) : (
+                  <>
+                    <Wand2 className="mr-2 h-4 w-4" />
+                    Gerar Oração Completa
+                  </>
+                )}
+              </Button>
+            </div>
+          )}
 
           {/* Dados da oração gerada */}
           {prayerData && (
