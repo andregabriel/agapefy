@@ -42,6 +42,26 @@ interface DebugInfo {
 
 // Vozes do ElevenLabs com IDs corretos e verificados
 const ELEVENLABS_VOICES = [
+  // Novas vozes solicitadas (David como padrão por estar em primeiro)
+  {
+    id: '7i7dgyCkKt4c16dLtwT3',
+    name: 'David - Epic Trailer',
+    gender: 'Masculina',
+    description: 'Narrador épico de trailer'
+  },
+  {
+    id: 'YNOujSUmHtgN6anjqXPf',
+    name: 'Victor Power - Ebooks',
+    gender: 'Masculina',
+    description: 'Voz masculina forte para e-books'
+  },
+  {
+    id: 'h96v1HCJtcisNNeagp0R',
+    name: 'Will - Grave Suspense',
+    gender: 'Masculina',
+    description: 'Voz grave com tom de suspense'
+  },
+  // Vozes já existentes
   {
     id: 'pNInz6obpgDQGcFmaJgB', // Adam - Voz masculina profunda
     name: 'Pastor Gabriel',
