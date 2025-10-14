@@ -67,9 +67,9 @@ const adminRoutes = [
     color: 'text-red-500'
   },
   {
-    label: 'Gerar Conteúdo',
+    label: 'Gerar por Tema',
     icon: Sparkles,
-    href: '/admin/gerar-conteudo',
+    href: '/admin/gtema',
     color: 'text-yellow-500'
   },
   {

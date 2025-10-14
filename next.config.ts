@@ -66,6 +66,16 @@ const nextConfig: NextConfig = {
     ];
   },
 
+  async redirects() {
+    return [
+      {
+        source: '/admin/gerar-conteudo',
+        destination: '/admin/gtema',
+        permanent: true,
+      },
+    ];
+  },
+
   // ESLint configuração para não quebrar build
   eslint: {
     ignoreDuringBuilds: true, // Ignorar erros ESLint durante build

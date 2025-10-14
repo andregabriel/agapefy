@@ -38,7 +38,7 @@ const adminRouteGroups = [
   {
     title: 'Geração por IA',
     routes: [
-      adminRoutes.find(r => r.href === '/admin/gerar-conteudo'),
+      adminRoutes.find(r => r.href === '/admin/gtema'),
       adminRoutes.find(r => r.href === '/admin/gerar-lote'),
       adminRoutes.find(r => r.href === '/admin/gerar-serie')
     ].filter(Boolean)

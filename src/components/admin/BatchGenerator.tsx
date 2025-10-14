@@ -266,6 +266,7 @@ export default function BatchGenerator() {
         const { data: authData } = await supabase.auth.getUser();
         currentUserId = authData?.user?.id || null;
       } catch {}
+      const usedVoice = ELEVENLABS_VOICES.find(v => v.id === voiceId);
       const { error: saveError } = await supabase
         .from('audios')
         .insert({
@@ -277,6 +278,8 @@ export default function BatchGenerator() {
           category_id: categoryId,
           cover_url: coverPublicUrl,
           created_by: currentUserId,
+          voice_id: voiceId,
+          voice_name: usedVoice?.name || null,
         });
 
       if (saveError) {

@@ -106,6 +106,8 @@ export default function AIGenerator({ onAudioGenerated }: AIGeneratorProps) {
   const [isSaving, setIsSaving] = useState(false);
   const [showDebug, setShowDebug] = useState(false);
   const [debugLogs, setDebugLogs] = useState<DebugInfo[]>([]);
+  const [lastVoiceIdUsed, setLastVoiceIdUsed] = useState<string>("");
+  const [lastVoiceNameUsed, setLastVoiceNameUsed] = useState<string>("");
 
   // Persistência leve de rascunho para evitar perda ao trocar de aba/alt-tab
   const DRAFT_KEY = 'admin.aiGenerator.draft.v1';
@@ -613,6 +615,8 @@ export default function AIGenerator({ onAudioGenerated }: AIGeneratorProps) {
 
         const voiceUsed = data.voice_id_used || selectedVoice;
         const voiceUsedInfo = ELEVENLABS_VOICES.find(v => v.id === voiceUsed);
+        setLastVoiceIdUsed(voiceUsed);
+        setLastVoiceNameUsed(voiceUsedInfo?.name || "");
         
         console.log('✅ Áudio gerado com sucesso');
         
@@ -805,6 +809,8 @@ export default function AIGenerator({ onAudioGenerated }: AIGeneratorProps) {
           cover_url: coverPublicUrl,
           created_by: currentUserId,
           ai_engine: selectedAiEngine || null,
+          voice_id: (lastVoiceIdUsed || selectedVoice) || null,
+          voice_name: (lastVoiceNameUsed || selectedVoiceInfo?.name) || null,
         })
         .select()
         .single();
@@ -822,7 +828,7 @@ export default function AIGenerator({ onAudioGenerated }: AIGeneratorProps) {
       try {
         const { error: updateError } = await supabase
           .from('audios')
-          .update({ time_of_day: dayPart || 'Any', spiritual_goal: spiritualGoal || null, ai_engine: selectedAiEngine || null })
+          .update({ time_of_day: dayPart || 'Any', spiritual_goal: spiritualGoal || null, ai_engine: selectedAiEngine || null, voice_id: (lastVoiceIdUsed || selectedVoice) || null, voice_name: (lastVoiceNameUsed || (ELEVENLABS_VOICES.find(v => v.id === (lastVoiceIdUsed || selectedVoice))?.name)) || null })
           .eq('id', audioData.id);
         if (!updateError) {
           savedDirectlyInTable = true;
@@ -837,7 +843,7 @@ export default function AIGenerator({ onAudioGenerated }: AIGeneratorProps) {
       if (!savedDirectlyInTable) {
         try {
           const metaKey = `audio_meta:${audioData.id}`;
-          const metaValue = JSON.stringify({ time_of_day: dayPart || 'Any', spiritual_goal: spiritualGoal || '' });
+          const metaValue = JSON.stringify({ time_of_day: dayPart || 'Any', spiritual_goal: spiritualGoal || '', voice_id: (lastVoiceIdUsed || selectedVoice) || '', voice_name: (lastVoiceNameUsed || (ELEVENLABS_VOICES.find(v => v.id === (lastVoiceIdUsed || selectedVoice))?.name)) || '' });
           const { error: metaError } = await supabase
             .from('app_settings')
             .upsert({ key: metaKey, value: metaValue, type: 'text' }, { onConflict: 'key' });

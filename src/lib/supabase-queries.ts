@@ -26,6 +26,8 @@ export interface Audio {
   created_at: string;
   time_of_day?: 'Wakeup' | 'Lunch' | 'Dinner' | 'Sleep' | 'Any' | null;
   spiritual_goal?: string | null;
+  voice_id?: string | null;
+  voice_name?: string | null;
   category?: Category;
 }
 
