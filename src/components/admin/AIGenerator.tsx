@@ -2,11 +2,12 @@
 
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Loader2, Wand2, Volume2, Mic, RefreshCw, Image, Save, ChevronDown, ChevronUp, Bug, Copy, ExternalLink, Clock } from 'lucide-react';
+import { Loader2, Wand2, Volume2, Mic, RefreshCw, Image, Save, ChevronDown, ChevronUp, Bug, Copy, ExternalLink, Clock, Settings } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/lib/supabase';
 import { getCategories } from '@/lib/supabase-queries';
@@ -115,6 +116,7 @@ export default function AIGenerator({ onAudioGenerated }: AIGeneratorProps) {
   // Novos estados: Momento do dia e Objetivo espiritual
   const DAYPARTS = ['Wakeup', 'Lunch', 'Dinner', 'Sleep', 'Any'];
   const [dayPart, setDayPart] = useState<string>('Any');
+  const [moments, setMoments] = useState<string[]>(DAYPARTS);
   const [spiritualGoal, setSpiritualGoal] = useState<string>('');
   const { settings, updateSetting } = useAppSettings();
   const [spiritualGoals, setSpiritualGoals] = useState<string[]>([]);
@@ -133,6 +135,33 @@ export default function AIGenerator({ onAudioGenerated }: AIGeneratorProps) {
   const [debugLogs, setDebugLogs] = useState<DebugInfo[]>([]);
   const [lastVoiceIdUsed, setLastVoiceIdUsed] = useState<string>("");
   const [lastVoiceNameUsed, setLastVoiceNameUsed] = useState<string>("");
+  // Estados para prompts do GManual
+  const [localPrompts, setLocalPrompts] = useState({
+    title: '',
+    subtitle: '',
+    description: '',
+    preparation: '',
+    text: '',
+    final_message: ''
+  });
+  // Removido editor colapsável — prompts agora são editados via modal por campo
+  // Loaders por campo
+  const [loadingField, setLoadingField] = useState<{[k: string]: boolean}>({});
+  // Undo cache por campo
+  const [undoCache, setUndoCache] = useState<{[k: string]: string}>({});
+  // Modal de edição de prompt individual
+  const [promptModalOpen, setPromptModalOpen] = useState(false);
+  const [promptModalField, setPromptModalField] = useState<keyof typeof localPrompts | null>(null);
+  const [promptModalValue, setPromptModalValue] = useState('');
+  const [savingSinglePrompt, setSavingSinglePrompt] = useState(false);
+  // Modais para Objetivo espiritual (adicionar/renomear)
+  const [addGoalModalOpen, setAddGoalModalOpen] = useState(false);
+  const [renameGoalModalOpen, setRenameGoalModalOpen] = useState(false);
+  const [tempGoalName, setTempGoalName] = useState('');
+  // Modais para Momento (adicionar/renomear)
+  const [addMomentModalOpen, setAddMomentModalOpen] = useState(false);
+  const [renameMomentModalOpen, setRenameMomentModalOpen] = useState(false);
+  const [tempMomentName, setTempMomentName] = useState('');
 
   // Persistência leve de rascunho para evitar perda ao trocar de aba/alt-tab
   const DRAFT_KEY = 'admin.aiGenerator.draft.v1';
@@ -161,6 +190,18 @@ export default function AIGenerator({ onAudioGenerated }: AIGeneratorProps) {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Carregar prompts do app_settings
+  useEffect(() => {
+    setLocalPrompts({
+      title: (settings as any)?.gmanual_title_prompt || '',
+      subtitle: (settings as any)?.gmanual_subtitle_prompt || '',
+      description: (settings as any)?.gmanual_description_prompt || '',
+      preparation: (settings as any)?.gmanual_preparation_prompt || '',
+      text: (settings as any)?.gmanual_text_prompt || '',
+      final_message: (settings as any)?.gmanual_final_message_prompt || ''
+    });
+  }, [settings]);
 
   // Salvar rascunho ao alterar qualquer campo relevante
   useEffect(() => {
@@ -191,6 +232,198 @@ export default function AIGenerator({ onAudioGenerated }: AIGeneratorProps) {
       localStorage.removeItem(DRAFT_KEY);
     } catch (_) {
       // ignore
+    }
+  };
+
+  const restoreDefaultPrompt = (key: keyof typeof localPrompts) => {
+    const defaults: any = {
+      title: 'Escreva um título curto (máximo 60 caracteres), claro e inspirador, adequado para uma oração cristã brasileira. Use linguagem simples e reverente. Retorne apenas o título, sem aspas.',
+      subtitle: 'Escreva um subtítulo (máximo 100 caracteres) que complemente o título com leveza e clareza, em tom reverente, sem repetir o título. Apenas o subtítulo, sem aspas.',
+      description: 'Escreva 1–2 frases breves que descrevam o áudio da oração para uma lista de conteúdos (tom convidativo, claro e respeitoso). Evite emojis e hashtags. Retorne apenas o texto.',
+      preparation: 'Escreva 1–3 frases curtas de preparação para o momento de oração, guiando a pessoa a se aquietar e focar em Deus (tom acolhedor e reverente).',
+      text: 'Escreva o texto completo da oração (100–300 palavras), com estrutura tradicional: invocação, petição/gratidão e conclusão. Linguagem reverente, clara e próxima do brasileiro. Não use citações diretas extensas.',
+      final_message: 'Escreva 1–2 frases de encerramento curtas que abençoem e encorajem a continuidade da vida de oração. Apenas o texto.',
+    };
+    setLocalPrompts(prev => ({ ...prev, [key]: defaults[key] }));
+    // Se estiver com o modal aberto para o mesmo campo, atualiza o valor exibido também
+    if (promptModalField === key) {
+      setPromptModalValue(defaults[key]);
+    }
+  };
+
+  const openPromptModal = (key: keyof typeof localPrompts) => {
+    setPromptModalField(key);
+    setPromptModalValue((localPrompts as any)[key] || '');
+    setPromptModalOpen(true);
+  };
+
+  const saveSinglePrompt = async () => {
+    if (!promptModalField) return;
+    setSavingSinglePrompt(true);
+    try {
+      const map: Record<string, any> = {
+        title: 'gmanual_title_prompt',
+        subtitle: 'gmanual_subtitle_prompt',
+        description: 'gmanual_description_prompt',
+        preparation: 'gmanual_preparation_prompt',
+        text: 'gmanual_text_prompt',
+        final_message: 'gmanual_final_message_prompt',
+      };
+      const key = map[promptModalField];
+      await updateSetting(key as any, promptModalValue);
+      setLocalPrompts(prev => ({ ...prev, [promptModalField]: promptModalValue }));
+      toast.success('Prompt salvo!');
+      setPromptModalOpen(false);
+    } catch (e) {
+      toast.error('Erro ao salvar prompt');
+    } finally {
+      setSavingSinglePrompt(false);
+    }
+  };
+
+  const openAddGoalModal = () => {
+    setTempGoalName('');
+    setAddGoalModalOpen(true);
+  };
+
+  const openRenameGoalModal = () => {
+    if (!spiritualGoal) {
+      toast.error('Selecione um objetivo para renomear');
+      return;
+    }
+    setTempGoalName(spiritualGoal);
+    setRenameGoalModalOpen(true);
+  };
+
+  const saveAddGoal = async () => {
+    setNewGoalName(tempGoalName);
+    await handleAddGoal();
+    setAddGoalModalOpen(false);
+    setTempGoalName('');
+  };
+
+  const saveRenameGoal = async () => {
+    setEditingGoalName(tempGoalName);
+    await handleRenameSelectedGoal();
+    setRenameGoalModalOpen(false);
+    setTempGoalName('');
+  };
+
+  const openAddMomentModal = () => {
+    setTempMomentName('');
+    setAddMomentModalOpen(true);
+  };
+
+  const openRenameMomentModal = () => {
+    if (!dayPart) {
+      toast.error('Selecione um momento para renomear');
+      return;
+    }
+    setTempMomentName(dayPart);
+    setRenameMomentModalOpen(true);
+  };
+
+  const saveAddMoment = () => {
+    const name = tempMomentName.trim();
+    if (!name) return;
+    if (moments.includes(name)) {
+      toast.error('Já existe um momento com esse nome');
+      return;
+    }
+    const next = [...moments, name];
+    setMoments(next);
+    setDayPart(name);
+    setAddMomentModalOpen(false);
+    setTempMomentName('');
+    toast.success('Momento adicionado');
+  };
+
+  const saveRenameMoment = () => {
+    const name = tempMomentName.trim();
+    if (!name || !dayPart) return;
+    if (moments.includes(name) && name !== dayPart) {
+      toast.error('Já existe um momento com esse nome');
+      return;
+    }
+    const idx = moments.findIndex(m => m === dayPart);
+    if (idx === -1) return;
+    const next = [...moments];
+    next[idx] = name;
+    setMoments(next);
+    setDayPart(name);
+    setRenameMomentModalOpen(false);
+    setTempMomentName('');
+    toast.success('Momento renomeado');
+  };
+
+  const generateForField = async (field: 'title'|'subtitle'|'description'|'preparation'|'text'|'final_message') => {
+    setLoadingField(prev => ({ ...prev, [field]: true }));
+    try {
+      const ctx = {
+        titulo: prayerData?.title || '',
+        subtitulo: prayerData?.subtitle || '',
+        descricao: prayerData?.audio_description || '',
+        preparacao: prayerData?.preparation_text || '',
+        texto: prayerData?.prayer_text || '',
+        mensagem_final: prayerData?.final_message || '',
+        objetivo_espiritual: spiritualGoal || '',
+        momento_dia: dayPart || '',
+        categoria_nome: categories.find(c => c.id === selectedCategory)?.name || ''
+      };
+      const res = await fetch('/api/gmanual/generate-field', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ field, context: ctx })
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        toast.error(data?.error || 'Falha ao gerar');
+        return;
+      }
+
+      const content: string = data.content || '';
+      // Guardar valor anterior para undo e aplicar
+      setUndoCache(prev => ({ ...prev, [field]:
+        field === 'title' ? (prayerData?.title || '') :
+        field === 'subtitle' ? (prayerData?.subtitle || '') :
+        field === 'description' ? (prayerData?.audio_description || '') :
+        field === 'preparation' ? (prayerData?.preparation_text || '') :
+        field === 'text' ? (prayerData?.prayer_text || '') :
+        (prayerData?.final_message || '')
+      }));
+
+      setPrayerData(prev => prev ? {
+        ...prev,
+        title: field === 'title' ? content : prev.title,
+        subtitle: field === 'subtitle' ? content : prev.subtitle,
+        audio_description: field === 'description' ? content : prev.audio_description,
+        preparation_text: field === 'preparation' ? content : (prev.preparation_text || ''),
+        prayer_text: field === 'text' ? content : prev.prayer_text,
+        final_message: field === 'final_message' ? content : (prev.final_message || ''),
+      } : prev);
+
+      toast.success('Conteúdo gerado. Desfazer?', {
+        action: {
+          label: 'Desfazer',
+          onClick: () => {
+            const prevVal = undoCache[field] || '';
+            setPrayerData(prev => prev ? {
+              ...prev,
+              title: field === 'title' ? prevVal : prev.title,
+              subtitle: field === 'subtitle' ? prevVal : prev.subtitle,
+              audio_description: field === 'description' ? prevVal : prev.audio_description,
+              preparation_text: field === 'preparation' ? prevVal : (prev.preparation_text || ''),
+              prayer_text: field === 'text' ? prevVal : prev.prayer_text,
+              final_message: field === 'final_message' ? prevVal : (prev.final_message || ''),
+            } : prev);
+          }
+        },
+        duration: 10000
+      });
+    } catch (e) {
+      toast.error('Erro ao gerar');
+    } finally {
+      setLoadingField(prev => ({ ...prev, [field]: false }));
     }
   };
 
@@ -1002,53 +1235,92 @@ export default function AIGenerator({ onAudioGenerated }: AIGeneratorProps) {
             </div>
           )}
 
+          {/* Campos iniciais: Categoria, Momento, Objetivo espiritual */}
+          {/* Seletor de categoria */}
+          <div>
+            <label className="block text-sm font-medium mb-2">
+              Categoria da Oração
+            
+            </label>
+            <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="Selecione uma categoria" />
+              </SelectTrigger>
+              <SelectContent>
+                {categories.map((category) => (
+                  <SelectItem key={category.id} value={category.id}>
+                    {category.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Momento (linha única: combobox + renomear + adicionar) */}
+          <div className="space-y-2">
+            <label className="block text-sm font-medium mb-2">Momento</label>
+            <div className="flex items-center gap-2 flex-wrap">
+              <div className="flex-1">
+                <Select value={dayPart} onValueChange={setDayPart}>
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Selecione o momento" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {moments.map((p) => (
+                      <SelectItem key={p} value={p}>{p}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="flex gap-2">
+                <Button variant="outline" onClick={openRenameMomentModal}>Renomear</Button>
+                <Button variant="outline" onClick={openAddMomentModal}>Adicionar</Button>
+              </div>
+            </div>
+          </div>
+
+          {/* Objetivo espiritual (linha única: combobox + renomear + adicionar) */}
+          <div className="space-y-2">
+            <label className="block text-sm font-medium">Objetivo espiritual</label>
+            <div className="flex items-center gap-2 flex-wrap">
+              <div className="flex-1">
+                <Select value={spiritualGoal} onValueChange={setSpiritualGoal}>
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Selecione um objetivo espiritual" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {spiritualGoals.map((g) => (
+                      <SelectItem key={g} value={g}>{g}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="flex gap-2">
+                <Button variant="outline" onClick={openRenameGoalModal}>Renomear</Button>
+                <Button variant="outline" onClick={openAddGoalModal}>Adicionar</Button>
+              </div>
+            </div>
+            <p className="text-xs text-muted-foreground">Você pode selecionar, criar ou renomear objetivos aqui.</p>
+          </div>
+
+          {/* Editor colapsável de prompts removido — prompts acessíveis via modal por campo */}
+
           {/* Dados da oração gerada */}
           {prayerData && (
             <div className="space-y-4">
-              {/* Título */}
-              <div>
-                <label className="block text-sm font-medium mb-2">
-                  Título da Oração
-                </label>
-                <Input
-                  value={prayerData.title}
-                  onChange={(e) => setPrayerData({...prayerData, title: e.target.value})}
-                  className="font-medium"
-                />
-              </div>
-
-              {/* Sub-título */}
-              <div>
-                <label className="block text-sm font-medium mb-2">
-                  Sub-título
-                </label>
-                <Input
-                  value={prayerData.subtitle}
-                  onChange={(e) => setPrayerData({...prayerData, subtitle: e.target.value})}
-                />
-              </div>
-
-              {/* Descrição do Áudio - NOVO CAMPO */}
-              <div>
-                <label className="block text-sm font-medium mb-2">
-                  Descrição do Áudio
-                </label>
-                <Textarea
-                  value={prayerData.audio_description}
-                  onChange={(e) => setPrayerData({...prayerData, audio_description: e.target.value})}
-                  rows={2}
-                  placeholder="Descrição que aparecerá no áudio salvo no banco de dados..."
-                />
-                <p className="text-xs text-muted-foreground mt-1">
-                  💡 Esta descrição será salva no banco de dados junto com a informação da voz selecionada
-                </p>
-              </div>
-
               {/* Preparação para Orar - NOVO CAMPO */}
               <div>
                 <label className="block text-sm font-medium mb-2">
                   Preparação para Orar
                 </label>
+                <div className="flex gap-2 mb-2">
+                  <Button variant="outline" size="sm" onClick={() => generateForField('preparation')} disabled={!!loadingField['preparation']}>
+                    {loadingField['preparation'] ? (<><Loader2 className="mr-2 h-3 w-3 animate-spin"/>Gerando...</>) : (<><Wand2 className="mr-2 h-3 w-3"/>Gerar</>)}
+                  </Button>
+                  <Button variant="ghost" size="sm" onClick={() => { openPromptModal('preparation'); }}>
+                    <Settings className="h-3 w-3 mr-1"/>Editar prompt
+                  </Button>
+                </div>
                 <Textarea
                   value={prayerData.preparation_text || ''}
                   onChange={(e) => setPrayerData({ ...prayerData, preparation_text: e.target.value })}
@@ -1063,6 +1335,14 @@ export default function AIGenerator({ onAudioGenerated }: AIGeneratorProps) {
                 <label className="block text-sm font-medium mb-2">
                   Texto da Oração
                 </label>
+                <div className="flex gap-2 mb-2">
+                  <Button variant="outline" size="sm" onClick={() => generateForField('text')} disabled={!!loadingField['text']}>
+                    {loadingField['text'] ? (<><Loader2 className="mr-2 h-3 w-3 animate-spin"/>Gerando...</>) : (<><Wand2 className="mr-2 h-3 w-3"/>Gerar</>)}
+                  </Button>
+                  <Button variant="ghost" size="sm" onClick={() => { openPromptModal('text'); }}>
+                    <Settings className="h-3 w-3 mr-1"/>Editar prompt
+                  </Button>
+                </div>
                 <Textarea
                   value={prayerData.prayer_text}
                   onChange={(e) => setPrayerData({...prayerData, prayer_text: e.target.value})}
@@ -1076,6 +1356,14 @@ export default function AIGenerator({ onAudioGenerated }: AIGeneratorProps) {
                 <label className="block text-sm font-medium mb-2">
                   Mensagem final
                 </label>
+                <div className="flex gap-2 mb-2">
+                  <Button variant="outline" size="sm" onClick={() => generateForField('final_message')} disabled={!!loadingField['final_message']}>
+                    {loadingField['final_message'] ? (<><Loader2 className="mr-2 h-3 w-3 animate-spin"/>Gerando...</>) : (<><Wand2 className="mr-2 h-3 w-3"/>Gerar</>)}
+                  </Button>
+                  <Button variant="ghost" size="sm" onClick={() => { openPromptModal('final_message'); }}>
+                    <Settings className="h-3 w-3 mr-1"/>Editar prompt
+                  </Button>
+                </div>
                 <Textarea
                   value={prayerData.final_message || ''}
                   onChange={(e) => setPrayerData({ ...prayerData, final_message: e.target.value })}
@@ -1083,6 +1371,73 @@ export default function AIGenerator({ onAudioGenerated }: AIGeneratorProps) {
                   className="resize-none"
                   placeholder="Ex: Amém. Que a paz de Deus permaneça com você durante o seu dia."
                 />
+                <div className="text-xs text-muted-foreground mt-1">{(prayerData.final_message || '').length}/240</div>
+              </div>
+
+              {/* Título */}
+              <div>
+                <label className="block text-sm font-medium mb-2">
+                  Título da Oração
+                </label>
+                <div className="flex gap-2 mb-2">
+                  <Button variant="outline" size="sm" onClick={() => generateForField('title')} disabled={!!loadingField['title']}>
+                    {loadingField['title'] ? (<><Loader2 className="mr-2 h-3 w-3 animate-spin"/>Gerando...</>) : (<><Wand2 className="mr-2 h-3 w-3"/>Gerar</>)}
+                  </Button>
+                  <Button variant="ghost" size="sm" onClick={() => { openPromptModal('title'); }}>
+                    <Settings className="h-3 w-3 mr-1"/>Editar prompt
+                  </Button>
+                </div>
+                <Input
+                  value={prayerData.title}
+                  onChange={(e) => setPrayerData({...prayerData, title: e.target.value})}
+                  className="font-medium"
+                />
+                <div className="text-xs text-muted-foreground mt-1">{prayerData.title.length}/60</div>
+              </div>
+
+              {/* Sub-título */}
+              <div>
+                <label className="block text-sm font-medium mb-2">
+                  Sub-título
+                </label>
+                <div className="flex gap-2 mb-2">
+                  <Button variant="outline" size="sm" onClick={() => generateForField('subtitle')} disabled={!!loadingField['subtitle']}>
+                    {loadingField['subtitle'] ? (<><Loader2 className="mr-2 h-3 w-3 animate-spin"/>Gerando...</>) : (<><Wand2 className="mr-2 h-3 w-3"/>Gerar</>)}
+                  </Button>
+                  <Button variant="ghost" size="sm" onClick={() => { openPromptModal('subtitle'); }}>
+                    <Settings className="h-3 w-3 mr-1"/>Editar prompt
+                  </Button>
+                </div>
+                <Input
+                  value={prayerData.subtitle}
+                  onChange={(e) => setPrayerData({...prayerData, subtitle: e.target.value})}
+                />
+                <div className="text-xs text-muted-foreground mt-1">{prayerData.subtitle.length}/100</div>
+              </div>
+
+              {/* Descrição do Áudio - NOVO CAMPO */}
+              <div>
+                <label className="block text-sm font-medium mb-2">
+                  Descrição do Áudio
+                </label>
+                <div className="flex gap-2 mb-2">
+                  <Button variant="outline" size="sm" onClick={() => generateForField('description')} disabled={!!loadingField['description']}>
+                    {loadingField['description'] ? (<><Loader2 className="mr-2 h-3 w-3 animate-spin"/>Gerando...</>) : (<><Wand2 className="mr-2 h-3 w-3"/>Gerar</>)}
+                  </Button>
+                  <Button variant="ghost" size="sm" onClick={() => { openPromptModal('description'); }}>
+                    <Settings className="h-3 w-3 mr-1"/>Editar prompt
+                  </Button>
+                </div>
+                <Textarea
+                  value={prayerData.audio_description}
+                  onChange={(e) => setPrayerData({...prayerData, audio_description: e.target.value})}
+                  rows={2}
+                  placeholder="Descrição que aparecerá no áudio salvo no banco de dados..."
+                />
+                <div className="text-xs text-muted-foreground mt-1">{(prayerData.audio_description || '').length}/240</div>
+                <p className="text-xs text-muted-foreground mt-1">
+                  💡 Esta descrição será salva no banco de dados junto com a informação da voz selecionada
+                </p>
               </div>
 
               {/* Descrição da imagem */}
@@ -1180,74 +1535,11 @@ export default function AIGenerator({ onAudioGenerated }: AIGeneratorProps) {
                 </div>
               )}
 
-              {/* Seletor de categoria */}
-              <div>
-                <label className="block text-sm font-medium mb-2">
-                  Categoria da Oração
-                
-                </label>
-                <Select value={selectedCategory} onValueChange={setSelectedCategory}>
-                  <SelectTrigger className="w-full">
-                    <SelectValue placeholder="Selecione uma categoria" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {categories.map((category) => (
-                      <SelectItem key={category.id} value={category.id}>
-                        {category.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+              {/* Seletor de categoria - removido daqui (foi movido para o topo) */}
 
-      {/* Momento do dia */}
-      <div>
-        <label className="block text-sm font-medium mb-2">Momento do dia</label>
-        <Select value={dayPart} onValueChange={setDayPart}>
-          <SelectTrigger className="w-full">
-            <SelectValue placeholder="Selecione o momento" />
-          </SelectTrigger>
-          <SelectContent>
-            {DAYPARTS.map((p) => (
-              <SelectItem key={p} value={p}>{p}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
+      {/* Momento do dia - removido daqui (foi movido para o topo) */}
 
-      {/* Objetivo espiritual */}
-      <div className="space-y-2">
-        <label className="block text-sm font-medium">Objetivo espiritual</label>
-        <Select value={spiritualGoal} onValueChange={setSpiritualGoal}>
-          <SelectTrigger className="w-full">
-            <SelectValue placeholder="Selecione um objetivo espiritual" />
-          </SelectTrigger>
-          <SelectContent>
-            {spiritualGoals.map((g) => (
-              <SelectItem key={g} value={g}>{g}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-          <div className="flex items-center gap-2">
-            <Input
-              placeholder="Novo objetivo"
-              value={newGoalName}
-              onChange={(e) => setNewGoalName(e.target.value)}
-            />
-            <Button variant="outline" onClick={handleAddGoal}>Adicionar</Button>
-          </div>
-          <div className="flex items-center gap-2">
-            <Input
-              placeholder="Renomear selecionado"
-              value={editingGoalName}
-              onChange={(e) => setEditingGoalName(e.target.value)}
-            />
-            <Button variant="outline" onClick={handleRenameSelectedGoal}>Renomear</Button>
-          </div>
-        </div>
-        <p className="text-xs text-muted-foreground">Você pode selecionar, criar ou renomear objetivos aqui.</p>
-      </div>
+      {/* Objetivo espiritual - removido daqui (foi movido para o topo) */}
 
               {/* Seletor de voz e botão para gerar áudio */}
               <div className="space-y-3">
@@ -1481,6 +1773,120 @@ export default function AIGenerator({ onAudioGenerated }: AIGeneratorProps) {
           </CardContent>
         )}
       </Card>
+
+      {/* Modal de edição de Prompt individual */}
+      <Dialog open={promptModalOpen} onOpenChange={setPromptModalOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>
+              {promptModalField === 'title' && 'Editar Prompt: Título'}
+              {promptModalField === 'subtitle' && 'Editar Prompt: Sub-título'}
+              {promptModalField === 'description' && 'Editar Prompt: Descrição (áudio)'}
+              {promptModalField === 'preparation' && 'Editar Prompt: Preparação'}
+              {promptModalField === 'text' && 'Editar Prompt: Texto (oração)'}
+              {promptModalField === 'final_message' && 'Editar Prompt: Mensagem final'}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-2">
+            <Textarea
+              value={promptModalValue}
+              onChange={(e) => setPromptModalValue(e.target.value)}
+              rows={12}
+            />
+            <div className="text-xs text-muted-foreground">
+              Variáveis: {`{titulo}`} {`{subtitulo}`} {`{descricao}`} {`{preparacao}`} {`{texto}`} {`{mensagem_final}`} {`{objetivo_espiritual}`} {`{momento_dia}`} {`{categoria_nome}`}
+            </div>
+          </div>
+          <DialogFooter>
+            <div className="flex gap-2 w-full justify-end">
+              {promptModalField && (
+                <Button variant="outline" onClick={() => restoreDefaultPrompt(promptModalField!)}>
+                  Restaurar padrão
+                </Button>
+              )}
+              <Button onClick={saveSinglePrompt} disabled={savingSinglePrompt}>
+                {savingSinglePrompt ? (<><Loader2 className="mr-2 h-4 w-4 animate-spin"/>Salvando...</>) : 'Salvar'}
+              </Button>
+            </div>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal: Adicionar Objetivo */}
+      <Dialog open={addGoalModalOpen} onOpenChange={setAddGoalModalOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Novo objetivo espiritual</DialogTitle>
+          </DialogHeader>
+          <div>
+            <Input
+              placeholder="Nome do objetivo"
+              value={tempGoalName}
+              onChange={(e) => setTempGoalName(e.target.value)}
+            />
+          </div>
+          <DialogFooter>
+            <Button onClick={saveAddGoal} disabled={!tempGoalName.trim()}>Adicionar</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal: Renomear Objetivo */}
+      <Dialog open={renameGoalModalOpen} onOpenChange={setRenameGoalModalOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Renomear objetivo</DialogTitle>
+          </DialogHeader>
+          <div>
+            <Input
+              placeholder="Novo nome"
+              value={tempGoalName}
+              onChange={(e) => setTempGoalName(e.target.value)}
+            />
+          </div>
+          <DialogFooter>
+            <Button onClick={saveRenameGoal} disabled={!tempGoalName.trim()}>Renomear</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal: Adicionar Momento */}
+      <Dialog open={addMomentModalOpen} onOpenChange={setAddMomentModalOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Novo momento</DialogTitle>
+          </DialogHeader>
+          <div>
+            <Input
+              placeholder="Nome do momento"
+              value={tempMomentName}
+              onChange={(e) => setTempMomentName(e.target.value)}
+            />
+          </div>
+          <DialogFooter>
+            <Button onClick={saveAddMoment} disabled={!tempMomentName.trim()}>Adicionar</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal: Renomear Momento */}
+      <Dialog open={renameMomentModalOpen} onOpenChange={setRenameMomentModalOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Renomear momento</DialogTitle>
+          </DialogHeader>
+          <div>
+            <Input
+              placeholder="Novo nome"
+              value={tempMomentName}
+              onChange={(e) => setTempMomentName(e.target.value)}
+            />
+          </div>
+          <DialogFooter>
+            <Button onClick={saveRenameMoment} disabled={!tempMomentName.trim()}>Renomear</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

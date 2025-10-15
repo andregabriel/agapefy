@@ -18,6 +18,13 @@ interface AppSettings {
   logo_url: string;
   // Lista global de nomes para "Objetivos espirituais" (string JSON: string[])
   spiritual_goals?: string;
+  // Prompts por campo do GManual (string)
+  gmanual_title_prompt?: string;
+  gmanual_subtitle_prompt?: string;
+  gmanual_description_prompt?: string; // para audio_description
+  gmanual_preparation_prompt?: string;
+  gmanual_text_prompt?: string; // para prayer_text
+  gmanual_final_message_prompt?: string;
   // WhatsApp (Biblicus)
   whatsapp_biblicus_number?: string; // número destino para CTA (somente dígitos, ex: 5569920018597)
   whatsapp_welcome_message?: string; // mensagem de boas-vindas enviada pelo BW
@@ -48,6 +55,13 @@ const DEFAULT_SETTINGS: AppSettings = {
   show_prayer_stats: 'true',
   logo_url: '',
   spiritual_goals: '[]',
+  // Prompts padrão do GManual (PT-BR, reverente e objetivos claros)
+  gmanual_title_prompt: 'Escreva um título curto (máximo 60 caracteres), claro e inspirador, adequado para uma oração cristã brasileira. Use linguagem simples e reverente. Retorne apenas o título, sem aspas.',
+  gmanual_subtitle_prompt: 'Escreva um subtítulo (máximo 100 caracteres) que complemente o título com leveza e clareza, em tom reverente, sem repetir o título. Apenas o subtítulo, sem aspas.',
+  gmanual_description_prompt: 'Escreva 1–2 frases breves que descrevam o áudio da oração para uma lista de conteúdos (tom convidativo, claro e respeitoso). Evite emojis e hashtags. Retorne apenas o texto.',
+  gmanual_preparation_prompt: 'Escreva 1–3 frases curtas de preparação para o momento de oração, guiando a pessoa a se aquietar e focar em Deus (tom acolhedor e reverente).',
+  gmanual_text_prompt: 'Escreva o texto completo da oração (100–300 palavras), com estrutura tradicional: invocação, petição/gratidão e conclusão. Linguagem reverente, clara e próxima do brasileiro. Não use citações diretas extensas.',
+  gmanual_final_message_prompt: 'Escreva 1–2 frases de encerramento curtas que abençoem e encorajem a continuidade da vida de oração. Apenas o texto.',
   // WhatsApp (default de produção informado pelo admin)
   whatsapp_biblicus_number: '5569920018597',
   whatsapp_welcome_message: '📖 Olá! Eu sou o Biblicus\n\nUm assistente virtual da Agapefy para te acompanhar na sua jornada espiritual. ✨\n\n🙌 O que posso fazer:\n\n• Obter respostas baseadas na Bíblia\n• Enviar versículos diariamente\n• Lembrar você dos horários de oração\n• Montar orações personalizadas para você\n\n💬 Comandos disponíveis:\n\n• **/conversa** – Tire dúvidas e converse sobre a Bíblia\n• **/versículos** – Receba mensagens com passagens todos os dias\n• **/lembretes** – Ative lembretes nos horários de oração\n• **/oração** – Tenha uma oração feita especialmente para você\n\n✨ Como usar:\nCadastre seu número de WhatsApp e comece a conversar comigo. Você poderá enviar mensagens e receber respostas, versículos, lembretes e orações diretamente no seu celular.\n\n🚀 Pronto para começar?',
