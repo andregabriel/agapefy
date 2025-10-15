@@ -366,6 +366,7 @@ export default function AIGenerator({ onAudioGenerated }: AIGeneratorProps) {
         preparacao: prayerData?.preparation_text || '',
         texto: prayerData?.prayer_text || '',
         mensagem_final: prayerData?.final_message || '',
+        tema_central: prompt || '',
         objetivo_espiritual: spiritualGoal || '',
         momento_dia: dayPart || '',
         categoria_nome: categories.find(c => c.id === selectedCategory)?.name || ''
@@ -1256,6 +1257,19 @@ export default function AIGenerator({ onAudioGenerated }: AIGeneratorProps) {
             </Select>
           </div>
 
+          {/* Tema central - logo após a categoria */}
+          <div>
+            <label className="block text-sm font-medium mb-2">
+              Tema central
+            </label>
+            <Textarea
+              placeholder="Ex: gratidão pela família, pedido de proteção, oração pela paz..."
+              value={prompt}
+              onChange={(e) => setPrompt(e.target.value)}
+              rows={1}
+            />
+          </div>
+
           {/* Momento (linha única: combobox + renomear + adicionar) */}
           <div className="space-y-2">
             <label className="block text-sm font-medium mb-2">Momento</label>
@@ -1794,7 +1808,7 @@ export default function AIGenerator({ onAudioGenerated }: AIGeneratorProps) {
               rows={12}
             />
             <div className="text-xs text-muted-foreground">
-              Variáveis: {`{titulo}`} {`{subtitulo}`} {`{descricao}`} {`{preparacao}`} {`{texto}`} {`{mensagem_final}`} {`{objetivo_espiritual}`} {`{momento_dia}`} {`{categoria_nome}`}
+              Variáveis: {`{titulo}`} {`{subtitulo}`} {`{descricao}`} {`{preparacao}`} {`{texto}`} {`{mensagem_final}`} {`{tema_central}`} {`{objetivo_espiritual}`} {`{momento_dia}`} {`{categoria_nome}`}
             </div>
           </div>
           <DialogFooter>
