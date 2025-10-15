@@ -1872,7 +1872,7 @@ export default function AIGenerator({ onAudioGenerated }: AIGeneratorProps) {
       <Dialog open={promptModalOpen} onOpenChange={setPromptModalOpen}>
         <DialogContent className="max-w-2xl">
           <DialogHeader>
-            <DialogTitle>
+            <DialogTitle className="text-black">
               {promptModalField === 'title' && 'Editar Prompt: Título'}
               {promptModalField === 'subtitle' && 'Editar Prompt: Sub-título'}
               {promptModalField === 'description' && 'Editar Prompt: Descrição (áudio)'}
@@ -1886,7 +1886,7 @@ export default function AIGenerator({ onAudioGenerated }: AIGeneratorProps) {
               value={promptModalValue}
               onChange={(e) => setPromptModalValue(e.target.value)}
               rows={12}
-              className="text-sm"
+              className="text-sm bg-white text-black placeholder:text-gray-500 dark:bg-neutral-900 dark:text-white dark:placeholder:text-gray-400"
             />
             <div className="text-sm text-muted-foreground break-words whitespace-normal">
               Variáveis: {`{titulo}`} {`{subtitulo}`} {`{descricao}`} {`{preparacao}`} {`{texto}`} {`{mensagem_final}`} {`{tema_central}`} {`{objetivo_espiritual}`} {`{momento_dia}`} {`{categoria_nome}`}
@@ -1898,12 +1898,13 @@ export default function AIGenerator({ onAudioGenerated }: AIGeneratorProps) {
                   placeholder="Rótulo (opcional) desta versão"
                   value={promptVersionLabel}
                   onChange={(e) => setPromptVersionLabel(e.target.value)}
+                  className="bg-white text-black placeholder:text-gray-500 dark:bg-neutral-900 dark:text-white dark:placeholder:text-gray-400"
                 />
-                <Button variant="outline" onClick={savePromptVersion}>Salvar versão</Button>
+                <Button variant="outline" onClick={savePromptVersion} className="bg-white text-black border-gray-300 hover:bg-gray-100">Salvar versão</Button>
               </div>
               {promptHistory.length > 0 && (
-                <div className="border rounded-md p-2">
-                  <div className="text-sm font-medium mb-1">Versões salvas</div>
+                <div className="border rounded-md p-2 bg-white">
+                  <div className="text-sm font-medium mb-1 text-black">Versões salvas</div>
                   <div className="max-h-40 overflow-y-auto space-y-1">
                     {promptHistory.map((v, idx) => (
                       <div key={idx} className="flex items-center justify-between gap-2 text-sm">
@@ -1925,7 +1926,7 @@ export default function AIGenerator({ onAudioGenerated }: AIGeneratorProps) {
           <DialogFooter>
             <div className="flex gap-2 w-full justify-end">
               {promptModalField && (
-                <Button variant="outline" onClick={() => restoreDefaultPrompt(promptModalField!)}>
+                <Button variant="outline" onClick={() => restoreDefaultPrompt(promptModalField!)} className="bg-white text-black border-gray-300 hover:bg-gray-100">
                   Restaurar padrão
                 </Button>
               )}
