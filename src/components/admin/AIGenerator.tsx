@@ -436,7 +436,7 @@ export default function AIGenerator({ onAudioGenerated }: AIGeneratorProps) {
         mensagem_final: prayerData?.final_message || '',
         tema_central: prompt || '',
         objetivo_espiritual: spiritualGoal || '',
-        momento_dia: dayPart || '',
+        momento_dia: (dayPart && dayPart !== 'Any') ? dayPart : '',
         categoria_nome: categories.find(c => c.id === selectedCategory)?.name || ''
       };
       const res = await fetch('/api/gmanual/generate-field', {
