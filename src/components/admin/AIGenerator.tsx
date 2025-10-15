@@ -257,6 +257,8 @@ export default function AIGenerator({ onAudioGenerated }: AIGeneratorProps) {
   const openPromptModal = (key: keyof typeof localPrompts) => {
     setPromptModalField(key);
     setPromptModalValue((localPrompts as any)[key] || '');
+    // Garante que o histórico exibido será apenas do campo atual
+    setPromptHistory([]);
     setPromptModalOpen(true);
     // Carregar histórico salvo para o campo
     (async () => {
@@ -312,6 +314,16 @@ export default function AIGenerator({ onAudioGenerated }: AIGeneratorProps) {
       const key = map[promptModalField];
       await updateSetting(key as any, promptModalValue);
       setLocalPrompts(prev => ({ ...prev, [promptModalField]: promptModalValue }));
+      // Se houver um rótulo preenchido, também registra esta versão com o rótulo
+      const labelTrimmed = (promptVersionLabel || '').trim();
+      if (labelTrimmed) {
+        const historyKey = `${key}_history` as any;
+        const newEntry = { value: promptModalValue, label: labelTrimmed, date: new Date().toISOString() };
+        const next = [newEntry, ...promptHistory].slice(0, 20);
+        await updateSetting(historyKey, JSON.stringify(next));
+        setPromptHistory(next);
+        setPromptVersionLabel('');
+      }
       toast.success('Prompt salvo!');
       setPromptModalOpen(false);
     } catch (e) {
@@ -1874,8 +1886,9 @@ export default function AIGenerator({ onAudioGenerated }: AIGeneratorProps) {
               value={promptModalValue}
               onChange={(e) => setPromptModalValue(e.target.value)}
               rows={12}
+              className="text-sm"
             />
-            <div className="text-xs text-muted-foreground">
+            <div className="text-sm text-muted-foreground break-words whitespace-normal">
               Variáveis: {`{titulo}`} {`{subtitulo}`} {`{descricao}`} {`{preparacao}`} {`{texto}`} {`{mensagem_final}`} {`{tema_central}`} {`{objetivo_espiritual}`} {`{momento_dia}`} {`{categoria_nome}`}
             </div>
             {/* Controles de versão do prompt */}
@@ -1890,10 +1903,10 @@ export default function AIGenerator({ onAudioGenerated }: AIGeneratorProps) {
               </div>
               {promptHistory.length > 0 && (
                 <div className="border rounded-md p-2">
-                  <div className="text-xs font-medium mb-1">Versões salvas</div>
+                  <div className="text-sm font-medium mb-1">Versões salvas</div>
                   <div className="max-h-40 overflow-y-auto space-y-1">
                     {promptHistory.map((v, idx) => (
-                      <div key={idx} className="flex items-center justify-between gap-2 text-xs">
+                      <div key={idx} className="flex items-center justify-between gap-2 text-sm">
                         <button
                           className="text-left flex-1 hover:underline"
                           onClick={() => setPromptModalValue(v.value)}
