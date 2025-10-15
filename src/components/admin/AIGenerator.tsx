@@ -154,6 +154,9 @@ export default function AIGenerator({ onAudioGenerated }: AIGeneratorProps) {
   const [promptModalField, setPromptModalField] = useState<keyof typeof localPrompts | null>(null);
   const [promptModalValue, setPromptModalValue] = useState('');
   const [savingSinglePrompt, setSavingSinglePrompt] = useState(false);
+  // Versões do prompt
+  const [promptHistory, setPromptHistory] = useState<Array<{ value: string; label?: string; date: string }>>([]);
+  const [promptVersionLabel, setPromptVersionLabel] = useState('');
   // Modais para Objetivo espiritual (adicionar/renomear)
   const [addGoalModalOpen, setAddGoalModalOpen] = useState(false);
   const [renameGoalModalOpen, setRenameGoalModalOpen] = useState(false);
@@ -255,6 +258,43 @@ export default function AIGenerator({ onAudioGenerated }: AIGeneratorProps) {
     setPromptModalField(key);
     setPromptModalValue((localPrompts as any)[key] || '');
     setPromptModalOpen(true);
+    // Carregar histórico salvo para o campo
+    (async () => {
+      try {
+        const map: Record<string, string> = {
+          title: 'gmanual_title_prompt',
+          subtitle: 'gmanual_subtitle_prompt',
+          description: 'gmanual_description_prompt',
+          preparation: 'gmanual_preparation_prompt',
+          text: 'gmanual_text_prompt',
+          final_message: 'gmanual_final_message_prompt',
+        };
+        const baseKey = map[key];
+        const historyKey = `${baseKey}_history`;
+        const { data, error } = await supabase
+          .from('app_settings')
+          .select('value')
+          .eq('key', historyKey)
+          .limit(1)
+          .maybeSingle();
+        if (!error && data && typeof data.value === 'string') {
+          try {
+            const parsed = JSON.parse(data.value);
+            if (Array.isArray(parsed)) {
+              setPromptHistory(parsed.filter((v) => v && typeof v.value === 'string'));
+            } else {
+              setPromptHistory([]);
+            }
+          } catch (_) {
+            setPromptHistory([]);
+          }
+        } else {
+          setPromptHistory([]);
+        }
+      } catch (_) {
+        setPromptHistory([]);
+      }
+    })();
   };
 
   const saveSinglePrompt = async () => {
@@ -278,6 +318,34 @@ export default function AIGenerator({ onAudioGenerated }: AIGeneratorProps) {
       toast.error('Erro ao salvar prompt');
     } finally {
       setSavingSinglePrompt(false);
+    }
+  };
+
+  const savePromptVersion = async () => {
+    if (!promptModalField) return;
+    try {
+      const map: Record<string, string> = {
+        title: 'gmanual_title_prompt',
+        subtitle: 'gmanual_subtitle_prompt',
+        description: 'gmanual_description_prompt',
+        preparation: 'gmanual_preparation_prompt',
+        text: 'gmanual_text_prompt',
+        final_message: 'gmanual_final_message_prompt',
+      };
+      const baseKey = map[promptModalField];
+      const historyKey = `${baseKey}_history` as any;
+      const newEntry = {
+        value: promptModalValue,
+        label: promptVersionLabel?.trim() || undefined,
+        date: new Date().toISOString()
+      };
+      const next = [newEntry, ...promptHistory].slice(0, 20);
+      await updateSetting(historyKey, JSON.stringify(next));
+      setPromptHistory(next);
+      setPromptVersionLabel('');
+      toast.success('Versão salva');
+    } catch (e) {
+      toast.error('Erro ao salvar versão');
     }
   };
 
@@ -1809,6 +1877,36 @@ export default function AIGenerator({ onAudioGenerated }: AIGeneratorProps) {
             />
             <div className="text-xs text-muted-foreground">
               Variáveis: {`{titulo}`} {`{subtitulo}`} {`{descricao}`} {`{preparacao}`} {`{texto}`} {`{mensagem_final}`} {`{tema_central}`} {`{objetivo_espiritual}`} {`{momento_dia}`} {`{categoria_nome}`}
+            </div>
+            {/* Controles de versão do prompt */}
+            <div className="mt-2 space-y-2">
+              <div className="flex items-center gap-2">
+                <Input
+                  placeholder="Rótulo (opcional) desta versão"
+                  value={promptVersionLabel}
+                  onChange={(e) => setPromptVersionLabel(e.target.value)}
+                />
+                <Button variant="outline" onClick={savePromptVersion}>Salvar versão</Button>
+              </div>
+              {promptHistory.length > 0 && (
+                <div className="border rounded-md p-2">
+                  <div className="text-xs font-medium mb-1">Versões salvas</div>
+                  <div className="max-h-40 overflow-y-auto space-y-1">
+                    {promptHistory.map((v, idx) => (
+                      <div key={idx} className="flex items-center justify-between gap-2 text-xs">
+                        <button
+                          className="text-left flex-1 hover:underline"
+                          onClick={() => setPromptModalValue(v.value)}
+                          title={new Date(v.date).toLocaleString()}
+                        >
+                          {(v.label || 'Sem rótulo')} — {new Date(v.date).toLocaleDateString()} {new Date(v.date).toLocaleTimeString()}
+                        </button>
+                        <Button variant="ghost" size="sm" onClick={() => setPromptModalValue(v.value)}>Restaurar</Button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           </div>
           <DialogFooter>
