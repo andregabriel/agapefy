@@ -221,9 +221,12 @@ export default function HomePage() {
               : 0;
           })();
 
-          return categoriesWithContent.map((category, index) => (
-            <div key={category.id}>
-              {isRecentesCategoryName(category.name) ? (
+          const hasRecentesCategory = categoriesWithContent.some(c => isRecentesCategoryName(c.name));
+
+          return (
+            <>
+              {/* Fallback: mostra "Orações Recentes" no topo se não houver categoria configurada */}
+              {!hasRecentesCategory && (
                 <ActivitiesSection
                   activities={activities}
                   activitiesLoading={activitiesLoading}
@@ -232,27 +235,42 @@ export default function HomePage() {
                   formatRelativeDate={formatRelativeDate}
                   formatTime={formatTime}
                 />
-              ) : category.layout_type === 'banner' && bannerLinks[category.id] && category.image_url ? (
-                <BannerSection
-                  title={category.name}
-                  imageUrl={category.image_url}
-                  href={bannerLinks[category.id]}
-                />
-              ) : (
-                <CategorySection
-                  category={category}
-                  index={index}
-                />
               )}
 
-              {/* Inserir frase bíblica na posição dinâmica baseada na lista completa */}
-              {index === effectiveQuotePos && (
-                <div className="hidden my-8">
-                  <PrayerQuoteSection />
+              {categoriesWithContent.map((category, index) => (
+                <div key={category.id}>
+                  {isRecentesCategoryName(category.name) ? (
+                    <ActivitiesSection
+                      activities={activities}
+                      activitiesLoading={activitiesLoading}
+                      scrollCarousel={scrollCarousel}
+                      recentActivitiesCarouselRef={recentActivitiesCarouselRef}
+                      formatRelativeDate={formatRelativeDate}
+                      formatTime={formatTime}
+                    />
+                  ) : category.layout_type === 'banner' && bannerLinks[category.id] && category.image_url ? (
+                    <BannerSection
+                      title={category.name}
+                      imageUrl={category.image_url}
+                      href={bannerLinks[category.id]}
+                    />
+                  ) : (
+                    <CategorySection
+                      category={category}
+                      index={index}
+                    />
+                  )}
+
+                  {/* Inserir frase bíblica na posição dinâmica baseada na lista completa */}
+                  {index === effectiveQuotePos && (
+                    <div className="hidden my-8">
+                      <PrayerQuoteSection />
+                    </div>
+                  )}
                 </div>
-              )}
-            </div>
-          ));
+              ))}
+            </>
+          );
         })()
       )}
 
