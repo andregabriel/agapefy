@@ -108,6 +108,7 @@ export function Header() {
 
   // Verificar se é admin
   const isAdmin = userRole === 'admin';
+  const showMessagesIcon = false;
 
   return (
     <div className="fixed top-0 left-0 right-0 bg-black/95 backdrop-blur-sm border-b border-gray-800 z-40">
@@ -125,22 +126,24 @@ export function Header() {
         <div className="flex items-center space-x-4">
           {user ? (
             <div className="flex items-center space-x-2">
-              {/* Ícone de Mensagens */}
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setShowMessagesModal(true)}
-                className="text-gray-400 hover:text-white hover:bg-gray-800 relative"
-              >
-                <MessageCircle size={16} />
-                {totalUnreadCount > 0 && (
-                  <div className="absolute -top-1 -right-1 w-5 h-5 bg-blue-500 rounded-full flex items-center justify-center">
-                    <span className="text-xs text-white font-bold">
-                      {totalUnreadCount > 9 ? '9+' : totalUnreadCount}
-                    </span>
-                  </div>
-                )}
-              </Button>
+              {/* Ícone de Mensagens oculto no header */}
+              {showMessagesIcon && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setShowMessagesModal(true)}
+                  className="text-gray-400 hover:text-white hover:bg-gray-800 relative"
+                >
+                  <MessageCircle size={16} />
+                  {totalUnreadCount > 0 && (
+                    <div className="absolute -top-1 -right-1 w-5 h-5 bg-blue-500 rounded-full flex items-center justify-center">
+                      <span className="text-xs text-white font-bold">
+                        {totalUnreadCount > 9 ? '9+' : totalUnreadCount}
+                      </span>
+                    </div>
+                  )}
+                </Button>
+              )}
 
               {/* Dropdown de Notificações */}
               <DropdownMenu>
