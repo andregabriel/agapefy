@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowLeft, Plus, Download, MoreHorizontal, Shuffle, Play, Home, Search, Library, PlusCircle } from 'lucide-react';
+import { ArrowLeft, Plus, Download, MoreHorizontal, Shuffle, Play, Pause, Home, Search, Library, PlusCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useEffect, useState, use } from 'react';
 import { getPlaylistWithAudios } from '@/lib/supabase-queries';
@@ -23,7 +23,7 @@ export default function PlayerPage({ params }: PlayerPageProps) {
   const [playlist, setPlaylist] = useState<PlaylistWithAudios | null>(null);
   const [loading, setLoading] = useState(true);
   const router = useRouter();
-  const { playQueue } = usePlayer();
+  const { state, playQueue, play, pause } = usePlayer();
   
   // Unwrap params usando React.use()
   const { playlistId } = use(params);
@@ -54,13 +54,25 @@ export default function PlayerPage({ params }: PlayerPageProps) {
     }
   }, [playlistId]);
 
-  // Função para tocar a primeira oração da playlist
+  // Função para tocar/pausar playlist: se atual, alterna play/pause; senão inicia
   const handlePlayPlaylist = () => {
-    if (playlist && playlist.audios && playlist.audios.length > 0) {
-      console.log('🎵 Tocando playlist:', playlist.title, 'com', playlist.audios.length, 'áudios');
-      playQueue(playlist.audios, 0); // Começar do primeiro áudio (índice 0)
-    } else {
+    if (!playlist || !playlist.audios || playlist.audios.length === 0) {
       console.log('⚠️ Playlist vazia ou sem áudios');
+      return;
+    }
+
+    const firstAudioId = playlist.audios[0]?.id;
+    const isCurrentFromThisPlaylist = state.queue.length > 0 && state.queue[0]?.id === firstAudioId;
+
+    if (isCurrentFromThisPlaylist) {
+      if (state.isPlaying) {
+        pause();
+      } else {
+        play();
+      }
+    } else {
+      console.log('🎵 Tocando playlist:', playlist.title, 'com', playlist.audios.length, 'áudios');
+      playQueue(playlist.audios, 0);
     }
   };
 
@@ -188,7 +200,13 @@ export default function PlayerPage({ params }: PlayerPageProps) {
               className="bg-green-500 hover:bg-green-400 text-black w-14 h-14 rounded-full"
               onClick={handlePlayPlaylist}
             >
-              <Play size={20} fill="currentColor" className="ml-1" />
+              {state.isLoading && state.queue.length > 0 ? (
+                <div className="w-5 h-5 border-2 border-black border-t-transparent rounded-full animate-spin" />
+              ) : state.isPlaying && state.queue.length > 0 ? (
+                <Pause size={20} fill="currentColor" />
+              ) : (
+                <Play size={20} fill="currentColor" className="ml-1" />
+              )}
             </Button>
           </div>
         </div>

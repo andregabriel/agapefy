@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowLeft, Plus, Download, MoreHorizontal, Shuffle, Play, Home, Search, Library, PlusCircle } from 'lucide-react';
+import { ArrowLeft, Plus, Download, MoreHorizontal, Shuffle, Play, Pause, Home, Search, Library, PlusCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useEffect, useState, use } from 'react';
 import { supabase } from '@/lib/supabase';
@@ -30,7 +30,7 @@ export default function AudioPlayerPage({ params }: AudioPlayerPageProps) {
   const [audio, setAudio] = useState<AudioWithCategory | null>(null);
   const [loading, setLoading] = useState(true);
   const router = useRouter();
-  const { playQueue } = usePlayer();
+  const { state, playQueue, play, pause } = usePlayer();
   
   // Unwrap params usando React.use()
   const { audioId } = use(params);
@@ -78,13 +78,24 @@ export default function AudioPlayerPage({ params }: AudioPlayerPageProps) {
     }
   }, [audioId]);
 
-  // Função para tocar o áudio
+  // Função para tocar/pausar o áudio atual ou iniciar se for diferente
   const handlePlayAudio = () => {
-    if (audio) {
-      console.log('🎵 Tocando áudio:', audio.title);
-      playQueue([audio], 0); // Tocar apenas este áudio
-    } else {
+    if (!audio) {
       console.log('⚠️ Áudio não encontrado');
+      return;
+    }
+
+    const isCurrentAudio = state.currentAudio?.id === audio.id;
+
+    if (isCurrentAudio) {
+      if (state.isPlaying) {
+        pause();
+      } else {
+        play();
+      }
+    } else {
+      console.log('🎵 Tocando áudio:', audio.title);
+      playQueue([audio], 0); // Inicia este áudio sem depender do estado anterior
     }
   };
 
@@ -220,7 +231,13 @@ export default function AudioPlayerPage({ params }: AudioPlayerPageProps) {
               className="bg-green-500 hover:bg-green-400 text-black w-14 h-14 rounded-full"
               onClick={handlePlayAudio}
             >
-              <Play size={20} fill="currentColor" className="ml-1" />
+              {state.currentAudio?.id === audio.id && state.isLoading ? (
+                <div className="w-5 h-5 border-2 border-black border-t-transparent rounded-full animate-spin" />
+              ) : state.currentAudio?.id === audio.id && state.isPlaying ? (
+                <Pause size={20} fill="currentColor" />
+              ) : (
+                <Play size={20} fill="currentColor" className="ml-1" />
+              )}
             </Button>
           </div>
         </div>
