@@ -23,6 +23,11 @@ import { useUserActivity } from '@/hooks/useUserActivity';
 import { isRecentesCategoryName } from '@/lib/utils';
 import { ActivitiesSection } from '@/app/eu/_components/ActivitiesSection';
 import { BannerSection } from './_components/BannerSection';
+import { RoutineSection } from '@/app/eu/_components/RoutineSection';
+import { AddAudioToRoutineModal } from '@/components/AddAudioToRoutineModal';
+import { useRoutinePlaylist } from '@/hooks/useRoutinePlaylist';
+import { usePlayer } from '@/contexts/PlayerContext';
+import { toast } from 'sonner';
 
 interface CategoryWithContent extends Category {
   audios: Audio[];
@@ -37,11 +42,15 @@ export default function HomePage() {
   const { settings } = useAppSettings();
   const { activities, loading: activitiesLoading, formatRelativeDate, formatTime } = useUserActivity();
   const [bannerLinks, setBannerLinks] = useState<Record<string, string>>({});
+  const { routinePlaylist, loading: routineLoading, removeAudioFromRoutine } = useRoutinePlaylist();
+  const { playQueue } = usePlayer();
+  const [showAddAudioModal, setShowAddAudioModal] = useState(false);
   
   // Refs para controle de estado
   const loadingRef = useRef(false);
   const mountedRef = useRef(true);
   const recentActivitiesCarouselRef = useRef<HTMLDivElement | null>(null);
+  const rotinaCarouselRef = useRef<HTMLDivElement | null>(null);
 
   const scrollCarousel = (ref: React.RefObject<HTMLDivElement>, direction: 'left' | 'right') => {
     const carousel = ref.current;
@@ -52,6 +61,36 @@ export default function HomePage() {
       ? currentScroll - scrollAmount 
       : currentScroll + scrollAmount;
     carousel.scrollTo({ left: targetScroll, behavior: 'smooth' });
+  };
+
+  const formatDuration = (seconds: number): string => {
+    const minutes = Math.floor(seconds / 60);
+    const remaining = seconds % 60;
+    if (remaining === 0) return `${minutes} min`;
+    return `${minutes}:${remaining.toString().padStart(2, '0')}`;
+  };
+
+  const handlePlayRoutine = () => {
+    if (routinePlaylist && routinePlaylist.audios.length > 0) {
+      playQueue(routinePlaylist.audios, 0);
+      toast.success('Reproduzindo sua rotina de oração');
+    } else {
+      toast.info('Adicione áudios à sua rotina primeiro');
+    }
+  };
+
+  const handleRemoveFromRoutine = async (audioId: string, audioTitle: string) => {
+    try {
+      const success = await removeAudioFromRoutine(audioId);
+      if (success) {
+        toast.success(`"${audioTitle}" removido da rotina`);
+      } else {
+        toast.error('Erro ao remover áudio da rotina');
+      }
+    } catch (error) {
+      console.error('Erro ao remover áudio:', error);
+      toast.error('Erro inesperado');
+    }
   };
 
   // Cleanup no unmount
@@ -203,6 +242,16 @@ export default function HomePage() {
 
   return (
     <div className="px-4 py-6 pt-6 space-y-8">
+      <RoutineSection
+        routinePlaylist={routinePlaylist}
+        routineLoading={routineLoading}
+        handlePlayRoutine={handlePlayRoutine}
+        handleRemoveFromRoutine={handleRemoveFromRoutine}
+        setShowAddAudioModal={setShowAddAudioModal}
+        scrollCarousel={scrollCarousel}
+        rotinaCarouselRef={rotinaCarouselRef}
+        formatDuration={formatDuration}
+      />
       {/* Conteúdo principal (inclui Recentes na posição definida pelo admin) */}
       {categoriesWithContent.length === 0 ? (
         <EmptyState 
@@ -281,6 +330,11 @@ export default function HomePage() {
       {categoriesWithContent.length > 0 && (
         <PrayerStatsSection />
       )}
+
+      <AddAudioToRoutineModal
+        open={showAddAudioModal}
+        onOpenChange={setShowAddAudioModal}
+      />
     </div>
   );
 }

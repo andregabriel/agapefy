@@ -406,15 +406,13 @@ export default function AIGenerator({ onAudioGenerated }: AIGeneratorProps) {
   };
 
   const saveAddGoal = async () => {
-    setNewGoalName(tempGoalName);
-    await handleAddGoal();
+    await handleAddGoal(tempGoalName);
     setAddGoalModalOpen(false);
     setTempGoalName('');
   };
 
   const saveRenameGoal = async () => {
-    setEditingGoalName(tempGoalName);
-    await handleRenameSelectedGoal();
+    await handleRenameSelectedGoal(tempGoalName);
     setRenameGoalModalOpen(false);
     setTempGoalName('');
   };
@@ -735,8 +733,8 @@ export default function AIGenerator({ onAudioGenerated }: AIGeneratorProps) {
     await updateSetting('audio_ai_engines' as any, JSON.stringify(list));
   };
 
-  const handleAddGoal = async () => {
-    const name = newGoalName.trim();
+  const handleAddGoal = async (nameParam?: string) => {
+    const name = (nameParam ?? newGoalName).trim();
     if (!name) return;
     if (spiritualGoals.includes(name)) {
       toast.error('Já existe um objetivo com esse nome');
@@ -749,9 +747,9 @@ export default function AIGenerator({ onAudioGenerated }: AIGeneratorProps) {
     toast.success('Objetivo espiritual adicionado');
   };
 
-  const handleRenameSelectedGoal = async () => {
+  const handleRenameSelectedGoal = async (nextNameParam?: string) => {
     const selected = spiritualGoal?.trim();
-    const nextName = editingGoalName.trim();
+    const nextName = (nextNameParam ?? editingGoalName).trim();
     if (!selected) {
       toast.error('Selecione um objetivo para renomear');
       return;
