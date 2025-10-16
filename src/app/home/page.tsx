@@ -20,7 +20,7 @@ import { PrayerStatsSection } from './_components/PrayerStatsSection';
 import { PrayerQuoteSection } from '@/components/PrayerQuoteSection';
 import { useAppSettings } from '@/hooks/useAppSettings';
 import { useUserActivity } from '@/hooks/useUserActivity';
-import { isRecentesCategoryName } from '@/lib/utils';
+import { isRecentesCategoryName, isRotinaCategoryName } from '@/lib/utils';
 import { ActivitiesSection } from '@/app/eu/_components/ActivitiesSection';
 import { BannerSection } from './_components/BannerSection';
 import { RoutineSection } from '@/app/eu/_components/RoutineSection';
@@ -242,16 +242,20 @@ export default function HomePage() {
 
   return (
     <div className="px-4 py-6 pt-6 space-y-8">
-      <RoutineSection
-        routinePlaylist={routinePlaylist}
-        routineLoading={routineLoading}
-        handlePlayRoutine={handlePlayRoutine}
-        handleRemoveFromRoutine={handleRemoveFromRoutine}
-        setShowAddAudioModal={setShowAddAudioModal}
-        scrollCarousel={scrollCarousel}
-        rotinaCarouselRef={rotinaCarouselRef}
-        formatDuration={formatDuration}
-      />
+      {/* A seção Minha Rotina será mostrada como categoria quando existir a categoria "Rotina".
+          Para evitar duplicidade, só mostramos no topo se não houver categoria "Rotina" configurada. */}
+      {!categoriesWithContent.some(c => isRotinaCategoryName(c.name)) && (
+        <RoutineSection
+          routinePlaylist={routinePlaylist}
+          routineLoading={routineLoading}
+          handlePlayRoutine={handlePlayRoutine}
+          handleRemoveFromRoutine={handleRemoveFromRoutine}
+          setShowAddAudioModal={setShowAddAudioModal}
+          scrollCarousel={scrollCarousel}
+          rotinaCarouselRef={rotinaCarouselRef}
+          formatDuration={formatDuration}
+        />
+      )}
       {/* Conteúdo principal (inclui Recentes na posição definida pelo admin) */}
       {categoriesWithContent.length === 0 ? (
         <EmptyState 
@@ -296,6 +300,17 @@ export default function HomePage() {
                       recentActivitiesCarouselRef={recentActivitiesCarouselRef}
                       formatRelativeDate={formatRelativeDate}
                       formatTime={formatTime}
+                    />
+                  ) : isRotinaCategoryName(category.name) ? (
+                    <RoutineSection
+                      routinePlaylist={routinePlaylist}
+                      routineLoading={routineLoading}
+                      handlePlayRoutine={handlePlayRoutine}
+                      handleRemoveFromRoutine={handleRemoveFromRoutine}
+                      setShowAddAudioModal={setShowAddAudioModal}
+                      scrollCarousel={scrollCarousel}
+                      rotinaCarouselRef={rotinaCarouselRef}
+                      formatDuration={formatDuration}
                     />
                   ) : category.layout_type === 'banner' && bannerLinks[category.id] && category.image_url ? (
                     <BannerSection

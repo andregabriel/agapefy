@@ -34,3 +34,9 @@ export function isRecentesCategoryName(name?: string | null): boolean {
   const normalized = normalizeText(name);
   return normalized === 'recentes' || normalized === 'oracoes recentes';
 }
+
+// Identifica a categoria "Rotina" mesmo que seja salva como "Minha Rotina"
+export function isRotinaCategoryName(name?: string | null): boolean {
+  const normalized = normalizeText(name);
+  return normalized === 'rotina' || normalized === 'minha rotina';
+}

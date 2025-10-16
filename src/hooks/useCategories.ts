@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import { toast } from 'sonner';
 import { Category } from '@/types/category';
-import { isRecentesCategoryName } from '@/lib/utils';
+import { isRecentesCategoryName, isRotinaCategoryName } from '@/lib/utils';
 
 export function useCategories() {
   const [categories, setCategories] = useState<Category[]>([]);
@@ -60,6 +60,44 @@ export function useCategories() {
           }
         } catch (e) {
           console.error('Falha ao garantir categoria de Recentes:', e);
+        }
+      }
+
+      // Garantir que exista uma categoria para "Rotina" (Minha Rotina) para permitir ordenação na Home
+      const hasRotina = list.some((c) => isRotinaCategoryName(c.name as any));
+      if (!hasRotina) {
+        try {
+          const { data: createdRotina, error: insertRotinaError } = await supabase
+            .from('categories')
+            .insert({
+              name: 'Rotina',
+              description: 'Sua seção de rotina personalizada',
+              order_position: null,
+              is_featured: false,
+              is_visible: true,
+              layout_type: 'spotify',
+              image_url: null
+            })
+            .select()
+            .single();
+
+          if (insertRotinaError) {
+            console.error('Erro ao criar categoria "Rotina":', insertRotinaError);
+          } else if (createdRotina) {
+            // Recarregar lista para refletir posição correta
+            const { data: refetched2, error: refetchError2 } = await supabase
+              .from('categories')
+              .select('*')
+              .order('is_featured', { ascending: false })
+              .order('order_position', { ascending: true, nullsFirst: false });
+            if (!refetchError2) {
+              list = refetched2 || list;
+            } else {
+              list = [...list, createdRotina];
+            }
+          }
+        } catch (e) {
+          console.error('Falha ao garantir categoria de Rotina:', e);
         }
       }
 
