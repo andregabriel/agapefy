@@ -130,7 +130,7 @@ export function Header() {
                 variant="ghost"
                 size="sm"
                 onClick={() => setShowMessagesModal(true)}
-                className="text-gray-400 hover:text-white hover:bg-gray-800 relative"
+                className="hidden text-gray-400 hover:text-white hover:bg-gray-800 relative"
               >
                 <MessageCircle size={16} />
                 {totalUnreadCount > 0 && (
