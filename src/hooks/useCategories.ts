@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import { toast } from 'sonner';
 import { Category } from '@/types/category';
+import { isRecentesCategoryName } from '@/lib/utils';
 
 export function useCategories() {
   const [categories, setCategories] = useState<Category[]>([]);
@@ -18,7 +19,51 @@ export function useCategories() {
         .order('order_position', { ascending: true, nullsFirst: false });
 
       if (error) throw error;
-      setCategories(data || []);
+
+      let list = data || [];
+
+      // Garantir que exista uma categoria para "Orações Recentes" para permitir ordenação na Home
+      // Não cria se já houver uma com nome equivalente (ex.: "Recentes" ou "Orações Recentes")
+      const hasRecentes = list.some((c) => isRecentesCategoryName(c.name as any));
+      if (!hasRecentes) {
+        try {
+          const { data: created, error: insertError } = await supabase
+            .from('categories')
+            .insert({
+              name: 'Orações Recentes',
+              description: 'Seção dinâmica com suas atividades e orações recentes',
+              // Deixe order_position nulo para o trigger atribuir automaticamente a próxima posição
+              order_position: null,
+              is_featured: false,
+              is_visible: true,
+              // Mantém layout padrão existente (não utilizado para Recentes, render é por nome)
+              layout_type: 'spotify',
+              image_url: null
+            })
+            .select()
+            .single();
+
+          if (insertError) {
+            console.error('Erro ao criar categoria "Orações Recentes":', insertError);
+          } else if (created) {
+            // Recarregar lista ordenada após criação para refletir posição correta
+            const { data: refetched, error: refetchError } = await supabase
+              .from('categories')
+              .select('*')
+              .order('is_featured', { ascending: false })
+              .order('order_position', { ascending: true, nullsFirst: false });
+            if (!refetchError) {
+              list = refetched || list;
+            } else {
+              list = [...list, created];
+            }
+          }
+        } catch (e) {
+          console.error('Falha ao garantir categoria de Recentes:', e);
+        }
+      }
+
+      setCategories(list);
     } catch (error) {
       console.error('Erro ao buscar categorias:', error);
       toast.error('Erro ao carregar categorias');

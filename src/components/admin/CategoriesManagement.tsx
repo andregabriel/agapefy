@@ -6,6 +6,7 @@ import { DropResult } from 'react-beautiful-dnd';
 import { toast } from 'sonner';
 
 import { useCategories } from '@/hooks/useCategories';
+import { isRecentesCategoryName } from '@/lib/utils';
 import { sortCategories, filterCategories } from '@/utils/categoryUtils';
 import { SortOption } from '@/constants/categoryLayouts';
 import { Category } from '@/types/category';
@@ -141,6 +142,10 @@ export default function CategoriesManagement() {
   };
 
   const handleCategoryClick = (category: Category) => {
+    // Evita abrir modal de gerenciamento para a categoria especial de Recentes
+    if (isRecentesCategoryName(category.name)) {
+      return;
+    }
     console.log('📋 Abrindo gerenciamento de orações para:', category.name);
     setSelectedCategoryForAudios(category);
     setIsAudiosModalOpen(true);
