@@ -247,7 +247,7 @@ export default function AudioPlayerPage({ params }: AudioPlayerPageProps) {
           {/* Transcript Section */}
           {audio.transcript && (
             <div className="bg-gray-900 rounded-lg p-6">
-              <h3 className="text-lg font-semibold mb-4 text-white">Transcrição</h3>
+              <h3 className="text-lg font-semibold mb-4 text-white">Oração</h3>
               <p className="text-gray-300 leading-relaxed whitespace-pre-wrap">
                 {audio.transcript}
               </p>

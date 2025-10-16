@@ -37,6 +37,8 @@ export const MiniPlayer = () => {
           max={100}
           step={0.1}
           className="w-full"
+          trackClassName="bg-black"
+          rangeClassName="bg-white"
         />
         <div className="flex justify-between text-xs text-gray-400 mt-1">
           <span>{formatDuration(Math.floor(state.currentTime))}</span>
@@ -118,6 +120,8 @@ export const MiniPlayer = () => {
                   step={1}
                   orientation="vertical"
                   className="h-20"
+                  trackClassName="bg-black"
+                  rangeClassName="bg-white"
                 />
               </div>
             )}
