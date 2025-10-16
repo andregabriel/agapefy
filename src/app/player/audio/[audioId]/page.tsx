@@ -206,6 +206,7 @@ export default function AudioPlayerPage({ params }: AudioPlayerPageProps) {
               audioId={audio.id}
               audioTitle={audio.title}
               variant="default"
+              hideDownload
             />
             
             <Button variant="ghost" size="icon" className="text-gray-400 hover:text-white hover:bg-gray-800">

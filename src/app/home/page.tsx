@@ -247,7 +247,7 @@ export default function HomePage() {
 
               {/* Inserir frase bíblica na posição dinâmica baseada na lista completa */}
               {index === effectiveQuotePos && (
-                <div className="my-8">
+                <div className="hidden my-8">
                   <PrayerQuoteSection />
                 </div>
               )}

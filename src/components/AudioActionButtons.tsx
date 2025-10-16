@@ -14,13 +14,15 @@ interface AudioActionButtonsProps {
   audioTitle: string;
   variant?: 'default' | 'compact';
   className?: string;
+  hideDownload?: boolean;
 }
 
 export function AudioActionButtons({ 
   audioId, 
   audioTitle, 
   variant = 'default',
-  className = '' 
+  className = '',
+  hideDownload = false
 }: AudioActionButtonsProps) {
   const { user } = useAuth();
   const { isFavorite, toggleFavorite } = useFavorites();
@@ -114,15 +116,16 @@ export function AudioActionButtons({
         >
           <Heart size={16} fill={isAudioFavorite ? 'currentColor' : 'none'} />
         </Button>
-        
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={handleToggleDownload}
-          className={`p-2 ${isAudioDownloaded ? 'text-green-500 hover:text-green-600' : 'text-gray-400 hover:text-green-500'}`}
-        >
-          <Download size={16} fill={isAudioDownloaded ? 'currentColor' : 'none'} />
-        </Button>
+        {!hideDownload && (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={handleToggleDownload}
+            className={`p-2 ${isAudioDownloaded ? 'text-green-500 hover:text-green-600' : 'text-gray-400 hover:text-green-500'}`}
+          >
+            <Download size={16} fill={isAudioDownloaded ? 'currentColor' : 'none'} />
+          </Button>
+        )}
         
         <Button
           variant="ghost"
@@ -148,15 +151,17 @@ export function AudioActionButtons({
         <Heart size={20} fill={isAudioFavorite ? 'currentColor' : 'none'} />
       </Button>
       
-      <Button
-        variant="ghost"
-        size="icon"
-        onClick={handleToggleDownload}
-        className={`${isAudioDownloaded ? 'text-green-500 hover:text-green-600' : 'text-gray-400 hover:text-green-500'}`}
-        title={isAudioDownloaded ? 'Remover download' : 'Baixar áudio'}
-      >
-        <Download size={20} fill={isAudioDownloaded ? 'currentColor' : 'none'} />
-      </Button>
+      {!hideDownload && (
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={handleToggleDownload}
+          className={`${isAudioDownloaded ? 'text-green-500 hover:text-green-600' : 'text-gray-400 hover:text-green-500'}`}
+          title={isAudioDownloaded ? 'Remover download' : 'Baixar áudio'}
+        >
+          <Download size={20} fill={isAudioDownloaded ? 'currentColor' : 'none'} />
+        </Button>
+      )}
       
       <Button
         variant="ghost"

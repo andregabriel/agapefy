@@ -1,17 +1,42 @@
 "use client";
 
-import { Home, Search, Book, Users, User } from 'lucide-react';
+import { Home, Search, Book, User } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { cn } from '@/lib/utils';
 
+// Ícone customizado do WhatsApp (bolha + handset), usando currentColor
+const WhatsAppIcon = ({ size = 24 }: { size?: number }) => (
+  <svg
+    width={size}
+    height={size}
+    viewBox="0 0 24 24"
+    fill="none"
+    xmlns="http://www.w3.org/2000/svg"
+  >
+    {/* Bolha */}
+    <path
+      d="M21 11.5c0 4.694-3.89 8.5-8.69 8.5-1.56 0-3.02-.39-4.28-1.08L3 20.5l1.65-4.72A8.33 8.33 0 0 1 3.62 11.5C3.62 6.806 7.51 3 12.31 3 17.11 3 21 6.806 21 11.5Z"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinejoin="round"
+      fill="none"
+    />
+    {/* Handset */}
+    <path
+      d="M10.9 7.9l-.6 1.4c-.2.5-.1 1.1.3 1.5l.9 1c.4.4 1 .5 1.5.3l1.4-.6c.4-.2.9 0 1.1.4l.6 1.2c.2.4.1.9-.2 1.2-.9.9-2.2 1.4-3.5 1.2-2.4-.3-4.8-2.7-5.1-5.1-.2-1.3.3-2.6 1.2-3.5.3-.3.8-.4 1.2-.2l1.2.6c.4.2.6.7.4 1.1Z"
+      fill="currentColor"
+    />
+  </svg>
+);
+
 const navItems = [
   { href: '/', icon: Home, label: 'Início' },
   { href: '/busca', icon: Search, label: 'Buscar' },
   { href: '/biblia', icon: Book, label: 'Bíblia' },
-  { href: '/amigos', icon: Users, label: 'Amigos' },
+  { href: '/whatsapp', icon: WhatsAppIcon, label: 'WhatsApp' },
   { href: '/eu', icon: User, label: 'Você' },
 ];
 
@@ -25,7 +50,7 @@ export const BottomNavigation = () => {
         {navItems.map(({ href, icon: Icon, label }) => {
           const isActive = pathname === href;
           const isProfileTab = href === '/eu';
-          
+
           return (
             <Link
               key={href}

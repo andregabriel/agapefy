@@ -35,7 +35,7 @@ export function DownloadsSection({
       <div className="flex items-center justify-between mb-6">
         <div>
           <h2 className="text-2xl font-bold text-white mb-1 flex items-center">
-            <Download className="h-6 w-6 mr-2 text-purple-500" />
+            <Download className="hidden h-6 w-6 mr-2 text-purple-500" />
             Downloads
           </h2>
           <p className="text-sm text-gray-400">

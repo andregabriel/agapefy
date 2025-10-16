@@ -70,7 +70,7 @@ export function QuickAccessIcons() {
 
   return (
     <section className="my-8">
-      <div className="grid grid-cols-4 gap-4">
+      <div className="grid grid-cols-3 gap-4">
         <Link 
           href={categoryRoutes['Favoritos']}
           className="flex flex-col items-center space-y-2 p-4 rounded-lg hover:bg-gray-800/50 transition-colors cursor-pointer"
@@ -83,7 +83,7 @@ export function QuickAccessIcons() {
         
         <Link 
           href={categoryRoutes['Downloads']}
-          className="flex flex-col items-center space-y-2 p-4 rounded-lg hover:bg-gray-800/50 transition-colors cursor-pointer"
+          className="hidden flex flex-col items-center space-y-2 p-4 rounded-lg hover:bg-gray-800/50 transition-colors cursor-pointer"
         >
           <div className="w-12 h-12 bg-blue-500/20 rounded-full flex items-center justify-center">
             <Download size={24} className="text-blue-400" />

@@ -148,7 +148,7 @@ export function Header() {
                   <Button
                     variant="ghost"
                     size="sm"
-                    className="text-gray-400 hover:text-white hover:bg-gray-800 relative"
+                    className="hidden text-gray-400 hover:text-white hover:bg-gray-800 relative"
                   >
                     {loading ? (
                       <Loader2 size={16} className="animate-spin" />

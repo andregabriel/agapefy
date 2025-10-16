@@ -447,17 +447,19 @@ export default function EuPage() {
             formatFavoriteDate={formatFavoriteDate}
           />
 
-          {/* Downloads */}
-          <DownloadsSection
-            downloads={downloads}
-            downloadsLoading={downloadsLoading}
-            handleRemoveDownload={handleRemoveDownload}
-            scrollCarousel={scrollCarousel}
-            downloadsCarouselRef={downloadsCarouselRef}
-            formatDuration={formatDuration}
-            formatFileSize={formatFileSize}
-            formatDownloadDate={formatDownloadDate}
-          />
+          {/* Downloads (oculto apenas no front-end) */}
+          <div className="hidden">
+            <DownloadsSection
+              downloads={downloads}
+              downloadsLoading={downloadsLoading}
+              handleRemoveDownload={handleRemoveDownload}
+              scrollCarousel={scrollCarousel}
+              downloadsCarouselRef={downloadsCarouselRef}
+              formatDuration={formatDuration}
+              formatFileSize={formatFileSize}
+              formatDownloadDate={formatDownloadDate}
+            />
+          </div>
 
           {/* Intenções */}
           <IntentionsSection

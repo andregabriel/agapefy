@@ -152,7 +152,7 @@ export default function PlayerPage() {
               <Plus size={24} />
             </Button>
             
-            <Button variant="ghost" size="icon" className="text-gray-400 hover:text-white hover:bg-gray-800">
+            <Button variant="ghost" size="icon" className="hidden text-gray-400 hover:text-white hover:bg-gray-800">
               <Download size={24} />
             </Button>
             
