@@ -40,7 +40,6 @@ export default function CategoriesManagement() {
 
     const sourceIndex = result.source.index;
     const destinationIndex = result.destination.index;
-
     if (sourceIndex === destinationIndex) return;
 
     // Bloquear drag quando estiver filtrando por busca ou ordenação não manual
@@ -49,51 +48,94 @@ export default function CategoriesManagement() {
       return;
     }
 
-    // Usar exatamente a mesma lista exibida no grid (sem remover ocultas),
-    // garantindo que os índices do DnD correspondam aos itens renderizados
-    const filteredCategories = sortCategories(
+    // Lista exatamente igual à renderizada
+    const displayList = sortCategories(
       filterCategories(categories, searchTerm),
       sortBy
+    ).filter(cat => !cat.is_featured);
+
+    // Nova lista com item movido (apenas para UI e vizinhos)
+    const working = Array.from(displayList);
+    const [moved] = working.splice(sourceIndex, 1);
+    working.splice(destinationIndex, 0, moved);
+
+    // Calcular nova posição usando "gap indexing" (atualiza apenas o item movido)
+    const prevNeighbor = working[destinationIndex - 1];
+    const nextNeighbor = working[destinationIndex + 1];
+
+    const STEP = 10; // espaçamento padrão entre posições
+    const normalize = (value: number | null | undefined, fallback: number) => (
+      Number.isFinite(value as any) ? (value as number) : fallback
     );
-    const nonFeaturedCategories = filteredCategories.filter(cat => !cat.is_featured);
 
-    // Reordenar localmente primeiro para feedback imediato
-    const newCategories = Array.from(nonFeaturedCategories);
-    const [reorderedItem] = newCategories.splice(sourceIndex, 1);
-    newCategories.splice(destinationIndex, 0, reorderedItem);
+    const prevPos = prevNeighbor
+      ? normalize(prevNeighbor.order_position as any, (destinationIndex) * STEP)
+      : undefined;
+    const nextPos = nextNeighbor
+      ? normalize(nextNeighbor.order_position as any, (destinationIndex + 2) * STEP)
+      : undefined;
 
-    // Atualizar estado local
-    setCategories(prevCategories => {
-      const featuredCategories = prevCategories.filter(cat => cat.is_featured);
-      const updatedNonFeatured = [...newCategories];
-      return [...featuredCategories, ...updatedNonFeatured];
+    let newPosition: number;
+    if (prevPos === undefined && nextPos === undefined) {
+      // Lista tinha um único item
+      newPosition = STEP;
+    } else if (prevPos === undefined && nextPos !== undefined) {
+      newPosition = Math.floor(nextPos) - STEP;
+    } else if (prevPos !== undefined && nextPos === undefined) {
+      newPosition = Math.floor(prevPos) + STEP;
+    } else {
+      // ambos existem
+      const low = Math.floor(prevPos as number);
+      const high = Math.floor(nextPos as number);
+      if (high - low > 1) {
+        newPosition = Math.floor((low + high) / 2);
+      } else {
+        // Sem espaço: reindexar uma janela pequena ao redor para criar gaps
+        let base = STEP;
+        for (let i = 0; i < working.length; i++) {
+          const cat = working[i];
+          if (cat.id === moved.id) continue; // não gravar aqui; apenas criar referência
+          cat.order_position = base;
+          base += STEP;
+        }
+        // Recalcular vizinhos após reindexação local
+        const prevAfter = working[destinationIndex - 1];
+        newPosition = prevAfter ? (prevAfter.order_position as number) + STEP : STEP;
+      }
+    }
+
+    // Atualizar estado local imediatamente para melhor UX
+    setCategories(prev => {
+      const featured = prev.filter(cat => cat.is_featured);
+      const nonFeatured = prev.filter(cat => !cat.is_featured).map(cat =>
+        cat.id === moved.id ? { ...cat, order_position: newPosition } : cat
+      );
+      // Ordenar localmente somente para refletir a mudança
+      const nextList = sortCategories(nonFeatured, 'manual');
+      return [...featured, ...nextList];
     });
 
     try {
-      // Duas fases para evitar colisão com índice único:
-      // 1) Atribui posições temporárias altas
-      const tempOffset = 100000; // garante unicidade temporária
-      await Promise.all(
-        newCategories.map((category, index) => 
-          updateCategoryOrder(category.id, tempOffset + index + 1)
-        )
-      );
+      // Atualiza apenas o item movido sempre que possível
+      await updateCategoryOrder(moved.id, newPosition);
 
-      // 2) Atribui posições finais sequenciais
-      await Promise.all(
-        newCategories.map((category, index) => 
-          updateCategoryOrder(category.id, index + 1)
-        )
-      );
-      
-    // Recarregar para garantir consistência
-    await fetchCategories();
-      
+      // Se reindexamos os vizinhos no estado, persistir também para manter a base espaçada
+      // Detectar se criamos sequência espaçada (multiplo de STEP)
+      const needBulk = working.some((c, i) => i !== destinationIndex && (c.order_position % STEP) !== 0);
+      if (needBulk) {
+        let base = STEP;
+        for (const cat of working) {
+          if (cat.id === moved.id) continue;
+          await updateCategoryOrder(cat.id, base);
+          base += STEP;
+        }
+      }
+
+      await fetchCategories();
       toast.success('Ordem das categorias atualizada!');
     } catch (error) {
       console.error('Erro ao salvar nova ordem:', error);
       toast.error('Erro ao salvar nova ordem das categorias');
-      // Reverter mudanças locais em caso de erro
       fetchCategories();
     }
   };
@@ -133,6 +175,61 @@ export default function CategoriesManagement() {
     console.log('❌ Modal de orações fechado');
     setIsAudiosModalOpen(false);
     setSelectedCategoryForAudios(null);
+  };
+
+  // Alterar ordem via seletor numérico (1-based)
+  const handleChangeOrder = async (category: Category, newIndex1Based: number) => {
+    if (sortBy !== 'manual') {
+      toast.error('Para reordenar, use "Ordem Manual".');
+      return;
+    }
+
+    const nonFeatured = sortCategories(
+      filterCategories(categories, ''),
+      'manual'
+    ).filter(c => !c.is_featured);
+
+    const currentIndex = nonFeatured.findIndex(c => c.id === category.id);
+    if (currentIndex === -1) return;
+
+    const targetIndex = Math.max(0, Math.min(newIndex1Based - 1, nonFeatured.length - 1));
+    if (targetIndex === currentIndex) return;
+
+    // Recriar lista como se tivesse sido movido para targetIndex
+    const working = Array.from(nonFeatured);
+    const [moved] = working.splice(currentIndex, 1);
+    working.splice(targetIndex, 0, moved);
+
+    // Usar o mesmo algoritmo de gap indexing do drag
+    const STEP = 10;
+    let base = STEP;
+    const updates: { id: string; pos: number }[] = [];
+    for (const item of working) {
+      updates.push({ id: item.id, pos: base });
+      base += STEP;
+    }
+
+    // Atualiza estado local para feedback imediato
+    setCategories(prev => {
+      const featured = prev.filter(cat => cat.is_featured);
+      const mapped = prev.filter(cat => !cat.is_featured).map(cat => {
+        const upd = updates.find(u => u.id === cat.id);
+        return upd ? { ...cat, order_position: upd.pos } : cat;
+      });
+      return [...featured, ...sortCategories(mapped, 'manual')];
+    });
+
+    try {
+      for (const { id, pos } of updates) {
+        await updateCategoryOrder(id, pos);
+      }
+      await fetchCategories();
+      toast.success('Ordem atualizada');
+    } catch (e) {
+      console.error(e);
+      toast.error('Erro ao atualizar ordem');
+      fetchCategories();
+    }
   };
 
   // Filtrar e ordenar categorias
@@ -194,6 +291,7 @@ export default function CategoriesManagement() {
           onDelete={deleteCategory}
           onToggleFeatured={(cat) => toggleFeaturedCategory(cat.id, !!cat.is_featured)}
           onClick={handleCategoryClick}
+          onChangeOrder={handleChangeOrder}
         />
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 p-6">

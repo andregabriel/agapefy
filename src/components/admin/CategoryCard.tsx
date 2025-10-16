@@ -1,6 +1,7 @@
 "use client";
 
 import { FolderOpen, Edit, Trash2, Star, Music, GripVertical, EyeOff, Eye } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Category } from '@/types/category';
 import CategoryLayoutBadge from './CategoryLayoutBadge';
 
@@ -14,6 +15,10 @@ interface CategoryCardProps {
   dragHandleProps?: any;
   draggableProps?: any;
   innerRef?: any;
+  // ordem (baseada no grid atual, 0-based)
+  orderIndex?: number;
+  orderCount?: number;
+  onChangeOrder?: (category: Category, newPositionIndex1Based: number) => void;
 }
 
 export default function CategoryCard({
@@ -25,7 +30,10 @@ export default function CategoryCard({
   isDragging = false,
   dragHandleProps,
   draggableProps,
-  innerRef
+  innerRef,
+  orderIndex,
+  orderCount,
+  onChangeOrder
 }: CategoryCardProps) {
   const handleEditClick = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -47,14 +55,18 @@ export default function CategoryCard({
     e.stopPropagation();
   };
 
+  const displayedPosition = typeof orderIndex === 'number'
+    ? orderIndex + 1
+    : (category.order_position ?? '-');
+
   return (
     <div
       ref={innerRef}
       {...draggableProps}
       className={`
         border rounded-lg p-4 transition-all duration-200 cursor-pointer group bg-white
-        ${isDragging 
-          ? 'shadow-2xl scale-105 rotate-3 border-blue-300 bg-blue-50 z-50 opacity-90' 
+        ${isDragging
+          ? 'shadow-2xl border-blue-300 bg-blue-50 z-50 opacity-95'
           : 'shadow-sm hover:shadow-lg'
         }
       `}
@@ -143,17 +155,39 @@ export default function CategoryCard({
       
       <div className="flex items-center justify-between mb-2">
         <div className="text-xs text-gray-500">
-          Posição: {category.order_position} • {new Date(category.created_at).toLocaleDateString()}
+          Posição: {displayedPosition} • {new Date(category.created_at).toLocaleDateString()}
         </div>
-        <div className={`
-          flex items-center text-xs transition-colors duration-200
-          ${isDragging 
-            ? 'text-blue-700' 
-            : 'text-blue-600 group-hover:text-blue-700'
-          }
-        `}>
-          <Music className="h-3 w-3 mr-1" />
-          Gerenciar orações
+        <div className="flex items-center gap-2">
+          {/* Se houver manipulador de mudança de ordem, mostrar seletor compacto */}
+          {onChangeOrder && typeof orderIndex === 'number' && typeof orderCount === 'number' && (
+            <div className="w-24">
+              <Select
+                defaultValue={String(orderIndex + 1)}
+                onValueChange={(val) => onChangeOrder(category, parseInt(val, 10))}
+              >
+                <SelectTrigger className="h-8 px-2 text-xs text-gray-900">
+                  <SelectValue placeholder={String(orderIndex + 1)} />
+                </SelectTrigger>
+                <SelectContent>
+                  {Array.from({ length: orderCount }).map((_, i) => (
+                    <SelectItem key={i} value={String(i + 1)}>
+                      {i + 1}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+          <div className={`
+            flex items-center text-xs transition-colors duration-200
+            ${isDragging 
+              ? 'text-blue-700' 
+              : 'text-blue-600 group-hover:text-blue-700'
+            }
+          `}>
+            <Music className="h-3 w-3 mr-1" />
+            Gerenciar orações
+          </div>
         </div>
       </div>
       

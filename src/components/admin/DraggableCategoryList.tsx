@@ -11,6 +11,7 @@ interface DraggableCategoryListProps {
   onDelete: (categoryId: string) => void;
   onToggleFeatured: (category: Category) => void;
   onClick: (category: Category) => void;
+  onChangeOrder?: (category: Category, newPositionIndex1Based: number) => void;
 }
 
 export default function DraggableCategoryList({
@@ -19,7 +20,8 @@ export default function DraggableCategoryList({
   onEdit,
   onDelete,
   onToggleFeatured,
-  onClick
+  onClick,
+  onChangeOrder
 }: DraggableCategoryListProps) {
   return (
     <DragDropContext onDragEnd={onDragEnd}>
@@ -55,6 +57,9 @@ export default function DraggableCategoryList({
                     onDelete={onDelete}
                     onToggleFeatured={onToggleFeatured}
                     onClick={onClick}
+                    orderIndex={index}
+                    orderCount={categories.length}
+                    onChangeOrder={onChangeOrder}
                     isDragging={snapshot.isDragging}
                     dragHandleProps={provided.dragHandleProps}
                     draggableProps={provided.draggableProps}
@@ -63,21 +68,8 @@ export default function DraggableCategoryList({
                 )}
               </Draggable>
             ))}
-            
-            {/* Placeholder customizado e invisível */}
-            <div 
-              style={{
-                position: 'absolute',
-                top: '-9999px',
-                left: '-9999px',
-                width: '1px',
-                height: '1px',
-                opacity: 0,
-                pointerEvents: 'none'
-              }}
-            >
-              {provided.placeholder}
-            </div>
+            {/* Placeholder padrão mantém espaçamento do grid durante o arraste */}
+            {provided.placeholder}
           </div>
         )}
       </Droppable>

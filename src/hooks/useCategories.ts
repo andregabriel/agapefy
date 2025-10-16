@@ -14,7 +14,8 @@ export function useCategories() {
         .from('categories')
         .select('*')
         .order('is_featured', { ascending: false })
-        .order('order_position', { ascending: true });
+        // Ordena nulos por último para não interferirem no admin
+        .order('order_position', { ascending: true, nullsFirst: false });
 
       if (error) throw error;
       setCategories(data || []);
