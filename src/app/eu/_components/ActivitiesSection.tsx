@@ -26,6 +26,20 @@ export function ActivitiesSection({
 }: ActivitiesSectionProps) {
   const router = useRouter();
 
+  // Garantir que cada áudio apareça apenas uma vez (mais recente primeiro)
+  const uniqueActivities = (() => {
+    const seenAudioIds = new Set<string>();
+    const deduped: any[] = [];
+    for (const activity of activities || []) {
+      const audioId = activity?.audio?.id as string | undefined;
+      if (!audioId) continue;
+      if (seenAudioIds.has(audioId)) continue;
+      seenAudioIds.add(audioId);
+      deduped.push(activity);
+    }
+    return deduped;
+  })();
+
   return (
     <section>
       <div className="flex items-center justify-between mb-6">
@@ -35,8 +49,8 @@ export function ActivitiesSection({
             Orações Recentes
           </h2>
           <p className="text-sm text-gray-400">
-            {activities.length > 0 ? 
-              `${activities.length} atividades recentes` :
+            {uniqueActivities.length > 0 ? 
+              `${uniqueActivities.length} atividades recentes` :
               'Suas atividades aparecerão aqui'
             }
           </p>
@@ -75,13 +89,13 @@ export function ActivitiesSection({
               </div>
             ))}
           </div>
-        ) : activities.length > 0 ? (
+        ) : uniqueActivities.length > 0 ? (
           <div 
             ref={recentActivitiesCarouselRef}
             className="flex space-x-6 overflow-x-auto scrollbar-hide pb-4 scroll-smooth snap-x snap-mandatory"
             style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
           >
-            {activities.map((activity) => {
+            {uniqueActivities.map((activity) => {
               // Obter URL da imagem usando a mesma lógica da home
               const imageUrl = getImageUrl(activity.audio, activity.audio.category);
               
