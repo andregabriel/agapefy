@@ -25,6 +25,12 @@ interface AppSettings {
   gmanual_preparation_prompt?: string;
   gmanual_text_prompt?: string; // para prayer_text
   gmanual_final_message_prompt?: string;
+  gmanual_auto_pauses_prompt?: string;
+  gmanual_pauses_auto_enabled?: string;
+  gmanual_pause_comma?: string;
+  gmanual_pause_period?: string;
+  gmanual_pause_before_prayer?: string;
+  gmanual_pause_after_prayer?: string;
   // WhatsApp (Biblicus)
   whatsapp_biblicus_number?: string; // número destino para CTA (somente dígitos, ex: 5569920018597)
   whatsapp_welcome_message?: string; // mensagem de boas-vindas enviada pelo BW

@@ -7,6 +7,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Loader2, Wand2, Volume2, Mic, RefreshCw, Image, Save, ChevronDown, ChevronUp, Bug, Copy, ExternalLink, Clock, Settings } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/lib/supabase';
@@ -151,7 +152,8 @@ export default function AIGenerator({ onAudioGenerated }: AIGeneratorProps) {
   const [undoCache, setUndoCache] = useState<{[k: string]: string}>({});
   // Modal de edição de prompt individual
   const [promptModalOpen, setPromptModalOpen] = useState(false);
-  const [promptModalField, setPromptModalField] = useState<keyof typeof localPrompts | null>(null);
+  type PromptField = keyof typeof localPrompts | 'pauses';
+  const [promptModalField, setPromptModalField] = useState<PromptField | null>(null);
   const [promptModalValue, setPromptModalValue] = useState('');
   const [savingSinglePrompt, setSavingSinglePrompt] = useState(false);
   // Versões do prompt
@@ -165,6 +167,13 @@ export default function AIGenerator({ onAudioGenerated }: AIGeneratorProps) {
   const [addMomentModalOpen, setAddMomentModalOpen] = useState(false);
   const [renameMomentModalOpen, setRenameMomentModalOpen] = useState(false);
   const [tempMomentName, setTempMomentName] = useState('');
+  // Estados para configuração de pausas
+  const [pausesAutoEnabled, setPausesAutoEnabled] = useState(false);
+  const [pauseComma, setPauseComma] = useState('0.3');
+  const [pausePeriod, setPausePeriod] = useState('0.8');
+  const [pauseBeforePrayer, setPauseBeforePrayer] = useState('1.0');
+  const [pauseAfterPrayer, setPauseAfterPrayer] = useState('1.0');
+  const [autoPausesPrompt, setAutoPausesPrompt] = useState('essa oração {texto} será escutada em voz alta para as pessoas que querem encontrar um momento íntimo de oração, coloque pausas onde você achar que será melhor para quem está escutando.');
 
   // Persistência leve de rascunho para evitar perda ao trocar de aba/alt-tab
   const DRAFT_KEY = 'admin.aiGenerator.draft.v1';
@@ -204,6 +213,13 @@ export default function AIGenerator({ onAudioGenerated }: AIGeneratorProps) {
       text: (settings as any)?.gmanual_text_prompt || '',
       final_message: (settings as any)?.gmanual_final_message_prompt || ''
     });
+    // Carregar configurações de pausas
+    setAutoPausesPrompt((settings as any)?.gmanual_auto_pauses_prompt || 'essa oração {texto} será escutada em voz alta para as pessoas que querem encontrar um momento íntimo de oração, coloque pausas onde você achar que será melhor para quem está escutando.');
+    setPausesAutoEnabled((settings as any)?.gmanual_pauses_auto_enabled === 'true');
+    setPauseComma((settings as any)?.gmanual_pause_comma || '0.3');
+    setPausePeriod((settings as any)?.gmanual_pause_period || '0.8');
+    setPauseBeforePrayer((settings as any)?.gmanual_pause_before_prayer || '1.0');
+    setPauseAfterPrayer((settings as any)?.gmanual_pause_after_prayer || '1.0');
   }, [settings]);
 
   // Salvar rascunho ao alterar qualquer campo relevante
@@ -238,7 +254,7 @@ export default function AIGenerator({ onAudioGenerated }: AIGeneratorProps) {
     }
   };
 
-  const restoreDefaultPrompt = (key: keyof typeof localPrompts) => {
+  const restoreDefaultPrompt = (key: PromptField) => {
     const defaults: any = {
       title: 'Escreva um título curto (máximo 60 caracteres), claro e inspirador, adequado para uma oração cristã brasileira. Use linguagem simples e reverente. Retorne apenas o título, sem aspas.',
       subtitle: 'Escreva um subtítulo (máximo 100 caracteres) que complemente o título com leveza e clareza, em tom reverente, sem repetir o título. Apenas o subtítulo, sem aspas.',
@@ -246,11 +262,19 @@ export default function AIGenerator({ onAudioGenerated }: AIGeneratorProps) {
       preparation: 'Escreva 1–3 frases curtas de preparação para o momento de oração, guiando a pessoa a se aquietar e focar em Deus (tom acolhedor e reverente).',
       text: 'Escreva o texto completo da oração (100–300 palavras), com estrutura tradicional: invocação, petição/gratidão e conclusão. Linguagem reverente, clara e próxima do brasileiro. Não use citações diretas extensas.',
       final_message: 'Escreva 1–2 frases de encerramento curtas que abençoem e encorajem a continuidade da vida de oração. Apenas o texto.',
+      pauses: 'essa oração {texto} será escutada em voz alta para as pessoas que querem encontrar um momento íntimo de oração, coloque pausas onde você achar que será melhor para quem está escutando.',
     };
-    setLocalPrompts(prev => ({ ...prev, [key]: defaults[key] }));
-    // Se estiver com o modal aberto para o mesmo campo, atualiza o valor exibido também
-    if (promptModalField === key) {
-      setPromptModalValue(defaults[key]);
+    if (key === 'pauses') {
+      setAutoPausesPrompt(defaults[key]);
+      if (promptModalField === key) {
+        setPromptModalValue(defaults[key]);
+      }
+    } else {
+      setLocalPrompts(prev => ({ ...prev, [key]: defaults[key] }));
+      // Se estiver com o modal aberto para o mesmo campo, atualiza o valor exibido também
+      if (promptModalField === key) {
+        setPromptModalValue(defaults[key]);
+      }
     }
   };
 
@@ -310,10 +334,15 @@ export default function AIGenerator({ onAudioGenerated }: AIGeneratorProps) {
         preparation: 'gmanual_preparation_prompt',
         text: 'gmanual_text_prompt',
         final_message: 'gmanual_final_message_prompt',
+        pauses: 'gmanual_auto_pauses_prompt',
       };
       const key = map[promptModalField];
       await updateSetting(key as any, promptModalValue);
-      setLocalPrompts(prev => ({ ...prev, [promptModalField]: promptModalValue }));
+      if (promptModalField === 'pauses') {
+        setAutoPausesPrompt(promptModalValue);
+      } else {
+        setLocalPrompts(prev => ({ ...prev, [promptModalField]: promptModalValue }));
+      }
       // Se houver um rótulo preenchido, também registra esta versão com o rótulo
       const labelTrimmed = (promptVersionLabel || '').trim();
       if (labelTrimmed) {
@@ -343,6 +372,7 @@ export default function AIGenerator({ onAudioGenerated }: AIGeneratorProps) {
         preparation: 'gmanual_preparation_prompt',
         text: 'gmanual_text_prompt',
         final_message: 'gmanual_final_message_prompt',
+        pauses: 'gmanual_auto_pauses_prompt',
       };
       const baseKey = map[promptModalField];
       const historyKey = `${baseKey}_history` as any;
@@ -847,14 +877,25 @@ export default function AIGenerator({ onAudioGenerated }: AIGeneratorProps) {
     }
   };
 
-  // Formata texto com pausas: 0.5s após vírgulas e 1s após pontos finais
-  const applyPacingBreaksToText = (input: string): string => {
+  // Formata texto com pausas configuráveis
+  const normalizeSeconds = (value: string): string => {
+    // Converte vírgula para ponto e remove espaços
+    const normalized = (value || '').toString().trim().replace(',', '.');
+    // Mantém apenas números e ponto
+    const match = normalized.match(/^[0-9]+(?:\.[0-9]+)?$/);
+    if (!match) return '0.0';
+    return normalized;
+  };
+
+  const applyPacingBreaksToText = (input: string, commaTime: string, periodTime: string): string => {
     if (!input) return '';
+    const comma = normalizeSeconds(commaTime);
+    const period = normalizeSeconds(periodTime);
     let output = input;
     // Após cada vírgula que não esteja seguida de um <break>
-    output = output.replace(/,(?!\s*<break\b)/g, ', <break time="0.5s" />');
-    // Após cada ponto final que não seja parte de reticências e não esteja seguido de um <break>
-    output = output.replace(/\.(?!\.|\s*<break\b)/g, '. <break time="1s" />');
+    output = output.replace(/,(?!\s*<break\b)/g, `, <break time="${comma}s" />`);
+    // Após ponto final que não seja parte de número decimal nem já seguido de <break>
+    output = output.replace(/(^|[^0-9])\.(?![0-9]|\s*<break\b)/g, `$1. <break time="${period}s" />`);
     return output;
   };
 
@@ -872,34 +913,89 @@ export default function AIGenerator({ onAudioGenerated }: AIGeneratorProps) {
     const selectedVoiceInfo = ELEVENLABS_VOICES.find(v => v.id === selectedVoice);
     console.log('🎵 Gerando áudio com voz:', selectedVoiceInfo?.name);
 
-    // Montar texto completo com pausas: Preparação, (break 2s) Oração, (break 2s) Mensagem final
+    // Montar texto completo com pausas: Preparação, (break) Oração, (break) Mensagem final
     const preparationRaw = (prayerData.preparation_text || '').trim();
     const prayerRaw = (prayerData.prayer_text || '').trim();
     const finalMsgRaw = (prayerData.final_message || '').trim();
 
-    const preparation = applyPacingBreaksToText(preparationRaw);
-    const prayer = applyPacingBreaksToText(prayerRaw);
-    const finalMsg = applyPacingBreaksToText(finalMsgRaw);
+    let fullText = '';
 
-    const segments: string[] = [];
-    if (preparation) segments.push(preparation);
-    if (prayer) {
-      if (segments.length > 0) segments.push('<break time="2s" />'); // antes da oração
-      segments.push(prayer);
-      segments.push('<break time="2s" />'); // depois da oração
+    if (pausesAutoEnabled) {
+      // Pausas automáticas via OpenAI
+      try {
+        const rawText = [preparationRaw, prayerRaw, finalMsgRaw].filter(Boolean).join('\n\n');
+        const promptWithContext = autoPausesPrompt.replace(/{texto}/g, rawText);
+        
+        const openAIResponse = await fetch('https://api.openai.com/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${process.env.NEXT_PUBLIC_OPENAI_API_KEY || ''}`,
+          },
+          body: JSON.stringify({
+            model: 'gpt-4',
+            messages: [
+              { role: 'system', content: 'Você é um assistente que adiciona marcações SSML de pausas (<break time="Xs" />) em textos de oração.' },
+              { role: 'user', content: promptWithContext }
+            ],
+            temperature: 0.7,
+          }),
+        });
+
+        if (!openAIResponse.ok) {
+          throw new Error('Erro ao gerar pausas automáticas');
+        }
+
+        const openAIData = await openAIResponse.json();
+        fullText = openAIData.choices?.[0]?.message?.content || rawText;
+      } catch (err) {
+        console.error('Erro ao aplicar pausas automáticas, usando pausas manuais:', err);
+        toast.error('Erro ao aplicar pausas automáticas, usando pausas manuais');
+        // fallback para pausas manuais
+        const preparation = applyPacingBreaksToText(preparationRaw, pauseComma, pausePeriod);
+        const prayer = applyPacingBreaksToText(prayerRaw, pauseComma, pausePeriod);
+        const finalMsg = applyPacingBreaksToText(finalMsgRaw, pauseComma, pausePeriod);
+
+        const segments: string[] = [];
+        if (preparation) segments.push(preparation);
+        if (prayer) {
+          if (segments.length > 0) segments.push(`<break time="${pauseBeforePrayer}s" />`);
+          segments.push(prayer);
+          segments.push(`<break time="${pauseAfterPrayer}s" />`);
+        }
+        if (finalMsg) segments.push(finalMsg);
+        fullText = segments.join('\n\n');
+      }
+    } else {
+      // Pausas manuais configuradas
+      const preparation = applyPacingBreaksToText(preparationRaw, pauseComma, pausePeriod);
+      const prayer = applyPacingBreaksToText(prayerRaw, pauseComma, pausePeriod);
+      const finalMsg = applyPacingBreaksToText(finalMsgRaw, pauseComma, pausePeriod);
+
+      const segments: string[] = [];
+      if (preparation) segments.push(preparation);
+      if (prayer) {
+        // Normaliza tempos antes/depois da oração
+        const before = normalizeSeconds(pauseBeforePrayer);
+        const after = normalizeSeconds(pauseAfterPrayer);
+        if (segments.length > 0) segments.push(`<break time="${before}s" />`);
+        segments.push(prayer);
+        segments.push(`<break time="${after}s" />`);
+      }
+      if (finalMsg) segments.push(finalMsg);
+      fullText = segments.join('\n\n');
     }
-    if (finalMsg) segments.push(finalMsg);
-
-    const fullText = segments.join('\n\n');
 
     setIsGeneratingAudio(true);
     const requestData = { 
+      // Texto final que será enviado para ElevenLabs (com <break ... />)
       text: fullText,
       voice_id: selectedVoice
     };
 
     try {
-      addDebugLog('request', 'audio', requestData);
+      // Log completo para conferência no Debug
+      addDebugLog('request', 'audio', { ...requestData, preview: fullText.substring(0, 400) + (fullText.length > 400 ? '...' : '') });
 
       console.log('📡 Enviando requisição para /api/generate-audio...');
       const response = await fetch('/api/generate-audio', {
@@ -1706,6 +1802,111 @@ export default function AIGenerator({ onAudioGenerated }: AIGeneratorProps) {
                   )}
                 </div>
 
+                {/* Configuração de Pausas */}
+                <div className="border-t pt-4 space-y-4">
+                  <div className="flex items-center space-x-2">
+                    <Checkbox 
+                      id="pauses-auto" 
+                      checked={pausesAutoEnabled}
+                      onCheckedChange={(checked) => {
+                        setPausesAutoEnabled(!!checked);
+                        updateSetting('gmanual_pauses_auto_enabled', checked ? 'true' : 'false');
+                      }}
+                    />
+                    <label 
+                      htmlFor="pauses-auto" 
+                      className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                    >
+                      Deixar a OpenAI decidir as pausas
+                    </label>
+                    <Button 
+                      variant="ghost" 
+                      size="sm"
+                      onClick={() => {
+                        setPromptModalField('pauses' as any);
+                        setPromptModalValue(autoPausesPrompt);
+                        setPromptHistory([]);
+                        setPromptModalOpen(true);
+                        (async () => {
+                          try {
+                            const { data, error } = await supabase
+                              .from('app_settings')
+                              .select('value')
+                              .eq('key', 'gmanual_auto_pauses_prompt_history')
+                              .limit(1)
+                              .maybeSingle();
+                            if (!error && data?.value) {
+                              try {
+                                const hist = JSON.parse(data.value);
+                                if (Array.isArray(hist)) setPromptHistory(hist);
+                              } catch (_) {}
+                            }
+                          } catch (_) {}
+                        })();
+                      }}
+                    >
+                      Editar prompt
+                    </Button>
+                  </div>
+
+                  {!pausesAutoEnabled && (
+                    <div className="grid grid-cols-2 gap-3 pl-6">
+                      <div>
+                        <label className="block text-xs font-medium mb-1">Pausa após vírgula (s)</label>
+                        <Input
+                          type="number"
+                          step="0.1"
+                          min="0"
+                          value={pauseComma}
+                          onChange={(e) => {
+                            setPauseComma(e.target.value);
+                            updateSetting('gmanual_pause_comma', e.target.value);
+                          }}
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium mb-1">Pausa após ponto final (s)</label>
+                        <Input
+                          type="number"
+                          step="0.1"
+                          min="0"
+                          value={pausePeriod}
+                          onChange={(e) => {
+                            setPausePeriod(e.target.value);
+                            updateSetting('gmanual_pause_period', e.target.value);
+                          }}
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium mb-1">Pausa antes da oração (s)</label>
+                        <Input
+                          type="number"
+                          step="0.1"
+                          min="0"
+                          value={pauseBeforePrayer}
+                          onChange={(e) => {
+                            setPauseBeforePrayer(e.target.value);
+                            updateSetting('gmanual_pause_before_prayer', e.target.value);
+                          }}
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium mb-1">Pausa depois da oração (s)</label>
+                        <Input
+                          type="number"
+                          step="0.1"
+                          min="0"
+                          value={pauseAfterPrayer}
+                          onChange={(e) => {
+                            setPauseAfterPrayer(e.target.value);
+                            updateSetting('gmanual_pause_after_prayer', e.target.value);
+                          }}
+                        />
+                      </div>
+                    </div>
+                  )}
+                </div>
+
                 {/* Botão para gerar áudio */}
                 <div className="flex sm:justify-end">
                   <Button 
@@ -1879,6 +2080,7 @@ export default function AIGenerator({ onAudioGenerated }: AIGeneratorProps) {
               {promptModalField === 'preparation' && 'Editar Prompt: Preparação'}
               {promptModalField === 'text' && 'Editar Prompt: Texto (oração)'}
               {promptModalField === 'final_message' && 'Editar Prompt: Mensagem final'}
+              {promptModalField === 'pauses' && 'Editar Prompt: Pausas Automáticas'}
             </DialogTitle>
           </DialogHeader>
           <div className="space-y-2">
