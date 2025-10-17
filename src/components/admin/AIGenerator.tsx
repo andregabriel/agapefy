@@ -143,7 +143,8 @@ export default function AIGenerator({ onAudioGenerated }: AIGeneratorProps) {
     description: '',
     preparation: '',
     text: '',
-    final_message: ''
+    final_message: '',
+    image_prompt: ''
   });
   // Removido editor colapsável — prompts agora são editados via modal por campo
   // Loaders por campo
@@ -211,7 +212,8 @@ export default function AIGenerator({ onAudioGenerated }: AIGeneratorProps) {
       description: (settings as any)?.gmanual_description_prompt || '',
       preparation: (settings as any)?.gmanual_preparation_prompt || '',
       text: (settings as any)?.gmanual_text_prompt || '',
-      final_message: (settings as any)?.gmanual_final_message_prompt || ''
+      final_message: (settings as any)?.gmanual_final_message_prompt || '',
+      image_prompt: (settings as any)?.gmanual_image_prompt_prompt || ''
     });
     // Carregar configurações de pausas
     setAutoPausesPrompt((settings as any)?.gmanual_auto_pauses_prompt || 'essa oração {texto} será escutada em voz alta para as pessoas que querem encontrar um momento íntimo de oração, coloque pausas onde você achar que será melhor para quem está escutando.');
@@ -263,6 +265,7 @@ export default function AIGenerator({ onAudioGenerated }: AIGeneratorProps) {
       text: 'Escreva o texto completo da oração (100–300 palavras), com estrutura tradicional: invocação, petição/gratidão e conclusão. Linguagem reverente, clara e próxima do brasileiro. Não use citações diretas extensas.',
       final_message: 'Escreva 1–2 frases de encerramento curtas que abençoem e encorajem a continuidade da vida de oração. Apenas o texto.',
       pauses: 'essa oração {texto} será escutada em voz alta para as pessoas que querem encontrar um momento íntimo de oração, coloque pausas onde você achar que será melhor para quem está escutando.',
+      image_prompt: 'Escreva uma descrição detalhada, vívida e objetiva em português para gerar uma imagem relacionada a esta oração, incluindo elementos de ambiente, luz, composição, expressões e emoções. Evite nomes próprios e texto na imagem. Mínimo 20 caracteres. Retorne apenas a descrição.'
     };
     if (key === 'pauses') {
       setAutoPausesPrompt(defaults[key]);
@@ -294,6 +297,7 @@ export default function AIGenerator({ onAudioGenerated }: AIGeneratorProps) {
           preparation: 'gmanual_preparation_prompt',
           text: 'gmanual_text_prompt',
           final_message: 'gmanual_final_message_prompt',
+          image_prompt: 'gmanual_image_prompt_prompt',
         };
         const baseKey = map[key];
         const historyKey = `${baseKey}_history`;
@@ -335,6 +339,7 @@ export default function AIGenerator({ onAudioGenerated }: AIGeneratorProps) {
         text: 'gmanual_text_prompt',
         final_message: 'gmanual_final_message_prompt',
         pauses: 'gmanual_auto_pauses_prompt',
+        image_prompt: 'gmanual_image_prompt_prompt',
       };
       const key = map[promptModalField];
       await updateSetting(key as any, promptModalValue);
@@ -373,6 +378,7 @@ export default function AIGenerator({ onAudioGenerated }: AIGeneratorProps) {
         text: 'gmanual_text_prompt',
         final_message: 'gmanual_final_message_prompt',
         pauses: 'gmanual_auto_pauses_prompt',
+        image_prompt: 'gmanual_image_prompt_prompt',
       };
       const baseKey = map[promptModalField];
       const historyKey = `${baseKey}_history` as any;
@@ -464,7 +470,7 @@ export default function AIGenerator({ onAudioGenerated }: AIGeneratorProps) {
     toast.success('Momento renomeado');
   };
 
-  const generateForField = async (field: 'title'|'subtitle'|'description'|'preparation'|'text'|'final_message') => {
+  const generateForField = async (field: 'title'|'subtitle'|'description'|'preparation'|'text'|'final_message'|'image_prompt') => {
     setLoadingField(prev => ({ ...prev, [field]: true }));
     try {
       const ctx = {
@@ -477,7 +483,8 @@ export default function AIGenerator({ onAudioGenerated }: AIGeneratorProps) {
         tema_central: prompt || '',
         objetivo_espiritual: spiritualGoal || '',
         momento_dia: (dayPart && dayPart !== 'Any') ? dayPart : '',
-        categoria_nome: categories.find(c => c.id === selectedCategory)?.name || ''
+        categoria_nome: categories.find(c => c.id === selectedCategory)?.name || '',
+        descricao_imagem_atual: prayerData?.image_prompt || ''
       };
       const res = await fetch('/api/gmanual/generate-field', {
         method: 'POST',
@@ -498,7 +505,8 @@ export default function AIGenerator({ onAudioGenerated }: AIGeneratorProps) {
         field === 'description' ? (prayerData?.audio_description || '') :
         field === 'preparation' ? (prayerData?.preparation_text || '') :
         field === 'text' ? (prayerData?.prayer_text || '') :
-        (prayerData?.final_message || '')
+        field === 'final_message' ? (prayerData?.final_message || '') :
+        (prayerData?.image_prompt || '')
       }));
 
       setPrayerData(prev => prev ? {
@@ -509,6 +517,7 @@ export default function AIGenerator({ onAudioGenerated }: AIGeneratorProps) {
         preparation_text: field === 'preparation' ? content : (prev.preparation_text || ''),
         prayer_text: field === 'text' ? content : prev.prayer_text,
         final_message: field === 'final_message' ? content : (prev.final_message || ''),
+        image_prompt: field === 'image_prompt' ? content : prev.image_prompt,
       } : prev);
 
       toast.success('Conteúdo gerado. Desfazer?', {
@@ -524,6 +533,7 @@ export default function AIGenerator({ onAudioGenerated }: AIGeneratorProps) {
               preparation_text: field === 'preparation' ? prevVal : (prev.preparation_text || ''),
               prayer_text: field === 'text' ? prevVal : prev.prayer_text,
               final_message: field === 'final_message' ? prevVal : (prev.final_message || ''),
+              image_prompt: field === 'image_prompt' ? prevVal : prev.image_prompt,
             } : prev);
           }
         },
@@ -1634,6 +1644,14 @@ export default function AIGenerator({ onAudioGenerated }: AIGeneratorProps) {
                   <Image className="inline h-4 w-4 mr-1" />
                   Descrição para Imagem
                 </label>
+                <div className="flex gap-2 mb-2">
+                  <Button variant="outline" size="sm" onClick={() => generateForField('image_prompt')} disabled={!!loadingField['image_prompt']}>
+                    {loadingField['image_prompt'] ? (<><Loader2 className="mr-2 h-3 w-3 animate-spin"/>Gerando...</>) : (<><Wand2 className="mr-2 h-3 w-3"/>Gerar</>)}
+                  </Button>
+                  <Button variant="ghost" size="sm" onClick={() => { openPromptModal('image_prompt' as any); }}>
+                    <Settings className="h-3 w-3 mr-1"/>Editar prompt
+                  </Button>
+                </div>
                 <Textarea
                   value={prayerData.image_prompt}
                   onChange={(e) => setPrayerData({...prayerData, image_prompt: e.target.value})}

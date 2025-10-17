@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAdminSupabase } from '@/lib/supabase-admin';
 
-type FieldKey = 'title' | 'subtitle' | 'description' | 'preparation' | 'text' | 'final_message';
+type FieldKey = 'title' | 'subtitle' | 'description' | 'preparation' | 'text' | 'final_message' | 'image_prompt';
 
 const FIELD_TO_SETTING_KEY: Record<FieldKey, keyof any> = {
   title: 'gmanual_title_prompt',
@@ -10,6 +10,7 @@ const FIELD_TO_SETTING_KEY: Record<FieldKey, keyof any> = {
   preparation: 'gmanual_preparation_prompt',
   text: 'gmanual_text_prompt',
   final_message: 'gmanual_final_message_prompt',
+  image_prompt: 'gmanual_image_prompt_prompt',
 };
 
 function applyPlaceholders(template: string, context: Record<string, string | undefined>): string {
@@ -31,6 +32,7 @@ function sanitizeByField(field: FieldKey, text: string): string {
     preparation: null,
     text: null,
     final_message: 240,
+    image_prompt: null,
   };
 
   const limit = charLimit[field];
@@ -46,7 +48,7 @@ export async function POST(request: NextRequest) {
   try {
     const { field, context } = await request.json();
 
-    if (!field || !['title','subtitle','description','preparation','text','final_message'].includes(field)) {
+    if (!field || !['title','subtitle','description','preparation','text','final_message','image_prompt'].includes(field)) {
       return NextResponse.json({ error: 'Campo inválido' }, { status: 400 });
     }
 
