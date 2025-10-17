@@ -500,16 +500,16 @@ export default function AIGenerator({ onAudioGenerated }: AIGeneratorProps) {
         list = ['ElevenLabs', 'OpenAI Audio'];
       }
       setAiEngines(list);
-      if (!selectedAiEngine) {
-        setSelectedAiEngine(list[0] || '');
-      } else if (!list.includes(selectedAiEngine)) {
-        setSelectedAiEngine(list[0] || '');
+      const preferred = list.includes('gpt-5') ? 'gpt-5' : (list[0] || '');
+      if (!selectedAiEngine || !list.includes(selectedAiEngine)) {
+        setSelectedAiEngine(preferred);
       }
     } catch (e) {
       console.warn('Falha ao parsear audio_ai_engines do app_settings');
       const fallback = ['ElevenLabs', 'OpenAI Audio'];
       setAiEngines(fallback);
-      if (!selectedAiEngine) setSelectedAiEngine(fallback[0]);
+      const preferred = fallback.includes('gpt-5') ? 'gpt-5' : fallback[0];
+      if (!selectedAiEngine || !fallback.includes(selectedAiEngine)) setSelectedAiEngine(preferred);
     }
   }, [settings && (settings as any).audio_ai_engines]);
 
@@ -847,13 +847,17 @@ export default function AIGenerator({ onAudioGenerated }: AIGeneratorProps) {
   };
 
   const handleGenerateImage = async () => {
-    if (!prayerData?.image_prompt?.trim()) {
-      toast.error('Descrição da imagem não encontrada');
+    // Usar o prompt definido pelo admin em "Editar prompt" acima do campo
+    const adminPrompt = (localPrompts?.image_prompt || '').trim();
+    const fieldPrompt = (prayerData?.image_prompt || '').trim();
+    const originalPrompt = (adminPrompt || fieldPrompt);
+
+    if (!originalPrompt) {
+      toast.error('Thumbnail não encontrado');
       return;
     }
 
     // Validar prompt mínimo
-    const originalPrompt = prayerData.image_prompt.trim();
     if (originalPrompt.length < 20) {
       toast.error('Por favor, descreva a cena com mais detalhes (mínimo 20 caracteres)');
       return;
@@ -1043,7 +1047,7 @@ export default function AIGenerator({ onAudioGenerated }: AIGeneratorProps) {
       setSelectedCategory('');
       setDayPart('Any');
       setSpiritualGoal('');
-      setSelectedAiEngine(aiEngines[0] || '');
+      setSelectedAiEngine(aiEngines.includes('gpt-5') ? 'gpt-5' : (aiEngines[0] || ''));
       clearDraft();
       
     } catch (error) {
@@ -1281,15 +1285,15 @@ export default function AIGenerator({ onAudioGenerated }: AIGeneratorProps) {
                 </p>
               </div>
 
-              {/* Descrição da imagem */}
+              {/* Thumbnail */}
               <div>
                 <label className="block text-sm font-medium mb-2">
                   <Image className="inline h-4 w-4 mr-1" />
-                  Descrição para Imagem
+                  Thumbnail
                 </label>
                 <div className="flex gap-2 mb-2">
-                  <Button variant="outline" size="sm" onClick={() => generateForField('image_prompt')} disabled={!!loadingField['image_prompt']}>
-                    {loadingField['image_prompt'] ? (<><Loader2 className="mr-2 h-3 w-3 animate-spin"/>Gerando...</>) : (<><Wand2 className="mr-2 h-3 w-3"/>Gerar</>)}
+                  <Button variant="outline" size="sm" onClick={handleGenerateImage} disabled={isGeneratingImage || !((localPrompts?.image_prompt || prayerData.image_prompt || '').trim()) || ((localPrompts?.image_prompt || prayerData.image_prompt || '').trim().length < 20)}>
+                    {isGeneratingImage ? (<><Loader2 className="mr-2 h-3 w-3 animate-spin"/>Gerando...</>) : (<><Image className="mr-2 h-3 w-3"/>Gerar Imagem (DALL-E)</>)}
                   </Button>
                   <Button variant="ghost" size="sm" onClick={() => { openPromptModal('image_prompt' as any); }}>
                     <Settings className="h-3 w-3 mr-1"/>Editar prompt
@@ -1310,7 +1314,7 @@ export default function AIGenerator({ onAudioGenerated }: AIGeneratorProps) {
               <div className="flex sm:justify-end">
                 <Button 
                   onClick={handleGenerateImage}
-                  disabled={isGeneratingImage || !prayerData.image_prompt.trim() || prayerData.image_prompt.trim().length < 20}
+                  disabled={isGeneratingImage || !((localPrompts?.image_prompt || prayerData.image_prompt || '').trim()) || ((localPrompts?.image_prompt || prayerData.image_prompt || '').trim().length < 20)}
                   variant="outline"
                   className="w-full sm:w-auto"
                 >
