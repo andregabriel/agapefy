@@ -13,88 +13,27 @@ import { toast } from 'sonner';
 import { supabase } from '@/lib/supabase';
 import { getCategories } from '@/lib/supabase-queries';
 import { useAppSettings } from '@/hooks/useAppSettings';
+import { AIGeneratorProps, PrayerData, Category, DebugInfo } from '@/types/ai';
+import ELEVENLABS_VOICES from '@/constants/elevenlabsVoices';
+import { normalizeSeconds, applyPacingBreaksToText, formatDuration } from '@/lib/ai/textPacing';
+import { optimizeImagePrompt } from '@/lib/ai/imagePrompt';
+import { getAudioDuration } from '@/lib/audio/duration';
+import { copyToClipboard as copyToClipboardUtil } from '@/lib/clipboard';
+import { uploadImageToSupabaseFromUrl } from '@/lib/services/storage';
+import { generateField as gmanualGenerateField } from '@/lib/services/gmanual';
+import { requestGenerateAudio } from '@/lib/services/aiAudio';
+import { requestGenerateImage } from '@/lib/services/aiImage';
+import { useDebugLogs } from '@/hooks/useDebugLogs';
+import { useLocalDraft } from '@/hooks/useLocalDraft';
+import { useAppPrompts } from '@/hooks/useAppPrompts';
+import { AIEngineManager } from '@/components/admin/ai-generator/AIEngineManager';
+import { CategorySelect } from '@/components/admin/ai-generator/CategorySelect';
+import { MomentsGoalsRow } from '@/components/admin/ai-generator/MomentsGoalsRow';
+import { VoiceSelector } from '@/components/admin/ai-generator/VoiceSelector';
+import { PausesConfig } from '@/components/admin/ai-generator/PausesConfig';
+import { DebugPanel } from '@/components/admin/ai-generator/DebugPanel';
 
-interface AIGeneratorProps {
-  onAudioGenerated?: (audioData: { text: string; audio_url: string }) => void;
-}
-
-interface PrayerData {
-  title: string;
-  subtitle: string;
-  // Novo: texto de preparação e mensagem final
-  preparation_text?: string;
-  prayer_text: string;
-  image_prompt: string;
-  audio_description: string; // Nova propriedade para descrição do áudio
-  final_message?: string;
-}
-
-interface Category {
-  id: string;
-  name: string;
-  description: string | null;
-}
-
-interface DebugInfo {
-  timestamp: string;
-  type: 'request' | 'response' | 'error';
-  api: 'prayer' | 'audio' | 'image';
-  data: any;
-}
-
-// Vozes do ElevenLabs com IDs corretos e verificados
-const ELEVENLABS_VOICES = [
-  // Novas vozes solicitadas (David como padrão por estar em primeiro)
-  {
-    id: '7i7dgyCkKt4c16dLtwT3',
-    name: 'David - Epic Trailer',
-    gender: 'Masculina',
-    description: 'Narrador épico de trailer'
-  },
-  {
-    id: 'YNOujSUmHtgN6anjqXPf',
-    name: 'Victor Power - Ebooks',
-    gender: 'Masculina',
-    description: 'Voz masculina forte para e-books'
-  },
-  {
-    id: 'h96v1HCJtcisNNeagp0R',
-    name: 'Will - Grave Suspense',
-    gender: 'Masculina',
-    description: 'Voz grave com tom de suspense'
-  },
-  // Vozes já existentes
-  {
-    id: 'pNInz6obpgDQGcFmaJgB', // Adam - Voz masculina profunda
-    name: 'Pastor Gabriel',
-    gender: 'Masculina',
-    description: 'Voz masculina solene e respeitosa'
-  },
-  {
-    id: 'wBXNqKUATyqu0RtYt25i', // Adam - alternativa
-    name: 'Adam',
-    gender: 'Masculina',
-    description: 'Voz masculina clara e natural (ElevenLabs Adam)'
-  },
-  {
-    id: 'VR6AewLTigWG4xSOukaG', // Arnold - Voz masculina madura
-    name: 'Padre Miguel',
-    gender: 'Masculina', 
-    description: 'Voz masculina serena e contemplativa'
-  },
-  {
-    id: 'EXAVITQu4vr4xnSDxMaL', // Bella - Voz feminina suave
-    name: 'Pastora Maria',
-    gender: 'Feminina',
-    description: 'Voz feminina suave e acolhedora'
-  },
-  {
-    id: 'ThT5KcBeYPX3keUQqHPh', // Dorothy - Voz feminina doce
-    name: 'Irmã Clara',
-    gender: 'Feminina',
-    description: 'Voz feminina doce e reverente'
-  }
-];
+// Tipos e vozes extraídos para arquivos dedicados
 
 export default function AIGenerator({ onAudioGenerated }: AIGeneratorProps) {
   const [prompt, setPrompt] = useState('');
@@ -119,7 +58,7 @@ export default function AIGenerator({ onAudioGenerated }: AIGeneratorProps) {
   const [dayPart, setDayPart] = useState<string>('Any');
   const [moments, setMoments] = useState<string[]>(DAYPARTS);
   const [spiritualGoal, setSpiritualGoal] = useState<string>('');
-  const { settings, updateSetting } = useAppSettings();
+  const { settings, updateSetting: updateAppSetting } = useAppSettings();
   const [spiritualGoals, setSpiritualGoals] = useState<string[]>([]);
   // Motores de IA (admin pode gerenciar)
   const [aiEngines, setAiEngines] = useState<string[]>([]);
@@ -132,20 +71,11 @@ export default function AIGenerator({ onAudioGenerated }: AIGeneratorProps) {
   const [isGeneratingAudio, setIsGeneratingAudio] = useState(false);
   const [isGeneratingImage, setIsGeneratingImage] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
-  const [showDebug, setShowDebug] = useState(false);
-  const [debugLogs, setDebugLogs] = useState<DebugInfo[]>([]);
+  const { showDebug, setShowDebug, debugLogs, addDebugLog, clearLogs } = useDebugLogs();
   const [lastVoiceIdUsed, setLastVoiceIdUsed] = useState<string>("");
   const [lastVoiceNameUsed, setLastVoiceNameUsed] = useState<string>("");
   // Estados para prompts do GManual
-  const [localPrompts, setLocalPrompts] = useState({
-    title: '',
-    subtitle: '',
-    description: '',
-    preparation: '',
-    text: '',
-    final_message: '',
-    image_prompt: ''
-  });
+  const { localPrompts, setLocalPrompts, updateSetting: updatePromptsSetting } = useAppPrompts();
   // Removido editor colapsável — prompts agora são editados via modal por campo
   // Loaders por campo
   const [loadingField, setLoadingField] = useState<{[k: string]: boolean}>({});
@@ -179,56 +109,10 @@ export default function AIGenerator({ onAudioGenerated }: AIGeneratorProps) {
   // Persistência leve de rascunho para evitar perda ao trocar de aba/alt-tab
   const DRAFT_KEY = 'admin.aiGenerator.draft.v1';
 
-  // Restaurar rascunho ao montar
-  useEffect(() => {
-    try {
-      if (typeof window === 'undefined') return;
-      const raw = localStorage.getItem(DRAFT_KEY);
-      if (!raw) return;
-      const draft = JSON.parse(raw);
-      if (typeof draft.prompt === 'string') setPrompt(draft.prompt);
-      if (draft.prayerData && typeof draft.prayerData === 'object') {
-        setPrayerData(prev => ({ ...(prev || defaultPrayerData), ...draft.prayerData }));
-      }
-      if (typeof draft.selectedVoice === 'string') setSelectedVoice(draft.selectedVoice);
-      if (typeof draft.selectedCategory === 'string') setSelectedCategory(draft.selectedCategory);
-      if (typeof draft.imageUrl === 'string') setImageUrl(draft.imageUrl);
-      if (typeof draft.audioUrl === 'string') setAudioUrl(draft.audioUrl);
-      if (typeof draft.audioDuration === 'number') setAudioDuration(draft.audioDuration);
-      if (typeof draft.dayPart === 'string') setDayPart(draft.dayPart);
-      if (typeof draft.spiritualGoal === 'string') setSpiritualGoal(draft.spiritualGoal);
-      if (Array.isArray(draft.spiritualGoals)) setSpiritualGoals(draft.spiritualGoals);
-    } catch (_) {
-      // ignore
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  // Carregar prompts do app_settings
-  useEffect(() => {
-    setLocalPrompts({
-      title: (settings as any)?.gmanual_title_prompt || '',
-      subtitle: (settings as any)?.gmanual_subtitle_prompt || '',
-      description: (settings as any)?.gmanual_description_prompt || '',
-      preparation: (settings as any)?.gmanual_preparation_prompt || '',
-      text: (settings as any)?.gmanual_text_prompt || '',
-      final_message: (settings as any)?.gmanual_final_message_prompt || '',
-      image_prompt: (settings as any)?.gmanual_image_prompt_prompt || ''
-    });
-    // Carregar configurações de pausas
-    setAutoPausesPrompt((settings as any)?.gmanual_auto_pauses_prompt || 'essa oração {texto} será escutada em voz alta para as pessoas que querem encontrar um momento íntimo de oração, coloque pausas onde você achar que será melhor para quem está escutando.');
-    setPausesAutoEnabled((settings as any)?.gmanual_pauses_auto_enabled === 'true');
-    setPauseComma((settings as any)?.gmanual_pause_comma || '0.3');
-    setPausePeriod((settings as any)?.gmanual_pause_period || '0.8');
-    setPauseBeforePrayer((settings as any)?.gmanual_pause_before_prayer || '1.0');
-    setPauseAfterPrayer((settings as any)?.gmanual_pause_after_prayer || '1.0');
-  }, [settings]);
-
-  // Salvar rascunho ao alterar qualquer campo relevante
-  useEffect(() => {
-    try {
-      if (typeof window === 'undefined') return;
-      const payload = {
+  // Restore/persist draft via hook
+  useLocalDraft({
+    key: DRAFT_KEY,
+    value: {
         prompt,
         prayerData,
         selectedVoice,
@@ -239,13 +123,34 @@ export default function AIGenerator({ onAudioGenerated }: AIGeneratorProps) {
         dayPart,
         spiritualGoal,
         spiritualGoals,
-        ts: Date.now()
-      };
-      localStorage.setItem(DRAFT_KEY, JSON.stringify(payload));
-    } catch (_) {
-      // ignore
-    }
-  }, [prompt, prayerData, selectedVoice, selectedCategory, imageUrl, audioUrl, audioDuration, dayPart, spiritualGoal, spiritualGoals]);
+      ts: Date.now(),
+    },
+    onRestore: (draft: any) => {
+      if (typeof draft?.prompt === 'string') setPrompt(draft.prompt);
+      if (draft?.prayerData && typeof draft.prayerData === 'object') {
+        setPrayerData((prev) => ({ ...(prev || defaultPrayerData), ...draft.prayerData }));
+      }
+      if (typeof draft?.selectedVoice === 'string') setSelectedVoice(draft.selectedVoice);
+      if (typeof draft?.selectedCategory === 'string') setSelectedCategory(draft.selectedCategory);
+      if (typeof draft?.imageUrl === 'string') setImageUrl(draft.imageUrl);
+      if (typeof draft?.audioUrl === 'string') setAudioUrl(draft.audioUrl);
+      if (typeof draft?.audioDuration === 'number') setAudioDuration(draft.audioDuration);
+      if (typeof draft?.dayPart === 'string') setDayPart(draft.dayPart);
+      if (typeof draft?.spiritualGoal === 'string') setSpiritualGoal(draft.spiritualGoal);
+      if (Array.isArray(draft?.spiritualGoals)) setSpiritualGoals(draft.spiritualGoals);
+    },
+  });
+
+  // Carregar prompts e pausas do app_settings
+  useEffect(() => {
+    // prompts já carregados por useAppPrompts
+    setAutoPausesPrompt((settings as any)?.gmanual_auto_pauses_prompt || 'essa oração {texto} será escutada em voz alta para as pessoas que querem encontrar um momento íntimo de oração, coloque pausas onde você achar que será melhor para quem está escutando.');
+    setPausesAutoEnabled((settings as any)?.gmanual_pauses_auto_enabled === 'true');
+    setPauseComma((settings as any)?.gmanual_pause_comma || '0.3');
+    setPausePeriod((settings as any)?.gmanual_pause_period || '0.8');
+    setPauseBeforePrayer((settings as any)?.gmanual_pause_before_prayer || '1.0');
+    setPauseAfterPrayer((settings as any)?.gmanual_pause_after_prayer || '1.0');
+  }, [settings]);
 
   const clearDraft = () => {
     try {
@@ -342,7 +247,7 @@ export default function AIGenerator({ onAudioGenerated }: AIGeneratorProps) {
         image_prompt: 'gmanual_image_prompt_prompt',
       };
       const key = map[promptModalField];
-      await updateSetting(key as any, promptModalValue);
+      await updatePromptsSetting(key as any, promptModalValue);
       if (promptModalField === 'pauses') {
         setAutoPausesPrompt(promptModalValue);
       } else {
@@ -354,7 +259,7 @@ export default function AIGenerator({ onAudioGenerated }: AIGeneratorProps) {
         const historyKey = `${key}_history` as any;
         const newEntry = { value: promptModalValue, label: labelTrimmed, date: new Date().toISOString() };
         const next = [newEntry, ...promptHistory].slice(0, 20);
-        await updateSetting(historyKey, JSON.stringify(next));
+        await updatePromptsSetting(historyKey, JSON.stringify(next));
         setPromptHistory(next);
         setPromptVersionLabel('');
       }
@@ -388,7 +293,7 @@ export default function AIGenerator({ onAudioGenerated }: AIGeneratorProps) {
         date: new Date().toISOString()
       };
       const next = [newEntry, ...promptHistory].slice(0, 20);
-      await updateSetting(historyKey, JSON.stringify(next));
+      await updatePromptsSetting(historyKey, JSON.stringify(next));
       setPromptHistory(next);
       setPromptVersionLabel('');
       toast.success('Versão salva');
@@ -486,18 +391,11 @@ export default function AIGenerator({ onAudioGenerated }: AIGeneratorProps) {
         categoria_nome: categories.find(c => c.id === selectedCategory)?.name || '',
         descricao_imagem_atual: prayerData?.image_prompt || ''
       };
-      const res = await fetch('/api/gmanual/generate-field', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ field, context: ctx })
-      });
-      const data = await res.json();
-      if (!res.ok) {
-        toast.error(data?.error || 'Falha ao gerar');
+      const { ok, content, error } = await gmanualGenerateField(field, ctx);
+      if (!ok) {
+        toast.error(error || 'Falha ao gerar');
         return;
       }
-
-      const content: string = data.content || '';
       // Guardar valor anterior para undo e aplicar
       setUndoCache(prev => ({ ...prev, [field]:
         field === 'title' ? (prayerData?.title || '') :
@@ -546,136 +444,20 @@ export default function AIGenerator({ onAudioGenerated }: AIGeneratorProps) {
     }
   };
 
-  // Função para obter duração real do áudio
-  const getAudioDuration = (audioDataUrl: string): Promise<number> => {
-    return new Promise((resolve, reject) => {
-      console.log('🎵 Iniciando análise de duração do áudio...');
-      
-      const audio = new Audio();
-      
-      audio.onloadedmetadata = () => {
-        const duration = audio.duration;
-        console.log('✅ Duração do áudio obtida:', duration, 'segundos');
-        console.log('🕐 Duração formatada:', Math.round(duration), 'segundos');
-        resolve(duration);
-      };
-      
-      audio.onerror = (error) => {
-        console.error('❌ Erro ao carregar áudio para análise de duração:', error);
-        reject(error);
-      };
-      
-      audio.ontimeupdate = () => {
-        // Remover listener após obter duração
-        audio.ontimeupdate = null;
-      };
-      
-      console.log('📡 Carregando áudio para análise...');
-      audio.src = audioDataUrl;
-    });
-  };
+  // getAudioDuration e formatDuration extraídos para módulos utilitários
 
-  // Função para formatar duração em minutos e segundos
-  const formatDuration = (seconds: number): string => {
-    const minutes = Math.floor(seconds / 60);
-    const remainingSeconds = Math.floor(seconds % 60);
-    return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
-  };
+  // uploadImageToSupabaseFromUrl extraído para serviço
 
-  // Função para adicionar log de debug
-  const addDebugLog = (type: 'request' | 'response' | 'error', api: 'prayer' | 'audio' | 'image', data: any) => {
-    const newLog: DebugInfo = {
-      timestamp: new Date().toLocaleTimeString(),
-      type,
-      api,
-      data
-    };
-    setDebugLogs(prev => [newLog, ...prev].slice(0, 10)); // Manter apenas os 10 últimos logs
-  };
-
-  // Upload da imagem gerada (URL temporária) para o Supabase Storage e retorna URL pública
-  const uploadImageToSupabaseFromUrl = async (temporaryUrl: string): Promise<string> => {
+  const handleCopyToClipboard = async (text: string) => {
     try {
-      console.log('⬆️ Baixando imagem temporária via proxy para upload no Supabase...', temporaryUrl);
-      const response = await fetch('/api/image-proxy', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ url: temporaryUrl })
-      });
-      if (!response.ok) {
-        throw new Error(`Falha ao baixar imagem: HTTP ${response.status}`);
-      }
-
-      const contentType = response.headers.get('content-type') || 'image/png';
-      const blob = await response.blob();
-
-      // Determinar extensão
-      let ext = 'png';
-      if (contentType.includes('jpeg') || contentType.includes('jpg')) ext = 'jpg';
-      if (contentType.includes('webp')) ext = 'webp';
-      if (temporaryUrl.match(/\.jpe?g($|\?)/)) ext = 'jpg';
-      if (temporaryUrl.match(/\.png($|\?)/)) ext = 'png';
-      if (temporaryUrl.match(/\.webp($|\?)/)) ext = 'webp';
-
-      // Bucket e prefixo compatíveis com seu projeto
-      const BUCKET = 'media';
-      const PREFIX = 'app-26/images';
-      const fileName = `${PREFIX}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
-
-      const { error: uploadError } = await supabase.storage
-        .from(BUCKET)
-        .upload(fileName, blob, {
-          cacheControl: '3600',
-          upsert: false,
-          contentType,
-        });
-
-      if (uploadError) {
-        console.error('❌ Erro ao fazer upload da imagem no Supabase:', uploadError);
-        throw uploadError;
-      }
-
-      const { data: publicData } = supabase.storage
-        .from(BUCKET)
-        .getPublicUrl(fileName);
-
-      if (!publicData?.publicUrl) {
-        throw new Error('Não foi possível obter URL pública da imagem');
-      }
-
-      console.log('✅ Imagem hospedada no Supabase:', publicData.publicUrl);
-      return publicData.publicUrl;
-    } catch (err) {
-      console.error('❌ Falha ao hospedar imagem no Supabase:', err);
-      throw err;
-    }
-  };
-
-  // Função para copiar URL para clipboard
-  const copyToClipboard = async (text: string) => {
-    try {
-      await navigator.clipboard.writeText(text);
+      await copyToClipboardUtil(text);
       toast.success('URL copiada para a área de transferência!');
     } catch (error) {
       toast.error('Erro ao copiar URL');
     }
   };
 
-  // Função para otimizar prompt para DALL-E
-  const optimizeImagePrompt = (originalPrompt: string): string => {
-    // Remove comandos em português e otimiza para inglês
-    let optimizedPrompt = originalPrompt
-      .replace(/^(gere a imagem de|crie uma imagem de|faça uma imagem de)/i, '')
-      .trim();
-
-    // Adiciona prefixo para contexto religioso cristão
-    const prefix = 'Religious Christian scene:';
-    
-    // Adiciona sufixo para qualidade e estilo
-    const suffix = 'photorealistic, soft warm lighting, peaceful atmosphere, high quality, inspirational, beautiful composition';
-    
-    return `${prefix} ${optimizedPrompt}, ${suffix}`;
-  };
+  // optimizeImagePrompt extraído para util
 
   // Carregar categorias ao montar o componente
   useEffect(() => {
@@ -734,13 +516,13 @@ export default function AIGenerator({ onAudioGenerated }: AIGeneratorProps) {
   // Helpers para gerenciar objetivos espirituais
   const persistGoals = async (list: string[]) => {
     setSpiritualGoals(list);
-    await updateSetting('spiritual_goals', JSON.stringify(list));
+    await updateAppSetting('spiritual_goals', JSON.stringify(list));
   };
 
   // Helpers para gerenciar motores de IA
   const persistAiEngines = async (list: string[]) => {
     setAiEngines(list);
-    await updateSetting('audio_ai_engines' as any, JSON.stringify(list));
+    await updateAppSetting('audio_ai_engines' as any, JSON.stringify(list));
   };
 
   const handleAddGoal = async (nameParam?: string) => {
@@ -1005,66 +787,15 @@ export default function AIGenerator({ onAudioGenerated }: AIGeneratorProps) {
       // Log completo para conferência no Debug
       addDebugLog('request', 'audio', { ...requestData, preview: fullText.substring(0, 400) + (fullText.length > 400 ? '...' : '') });
 
-      console.log('📡 Enviando requisição para /api/generate-audio...');
-      const response = await fetch('/api/generate-audio', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(requestData),
-      });
-
-      console.log('📡 Status da resposta:', response.status);
-      console.log('📡 Headers da resposta:', Object.fromEntries(response.headers.entries()));
-
-      let data;
-      let responseText = '';
-      
-      try {
-        responseText = await response.text();
-        console.log('📦 Texto bruto da resposta:', responseText.substring(0, 200) + '...');
-        
-        if (responseText) {
-          data = JSON.parse(responseText);
-        } else {
-          data = { error: 'Resposta vazia do servidor' };
-        }
-      } catch (parseError) {
-        console.error('❌ Erro ao fazer parse da resposta:', parseError);
-        data = { 
-          error: 'Erro ao fazer parse da resposta',
-          rawResponse: responseText.substring(0, 500),
-          parseError: parseError instanceof Error ? parseError.message : 'Erro desconhecido'
-        };
-      }
-
-      addDebugLog('response', 'audio', { 
-        status: response.status, 
-        headers: Object.fromEntries(response.headers.entries()),
-        rawText: responseText.substring(0, 200),
-        parsedData: data 
-      });
-
-      if (!response.ok) {
-        console.error('❌ Erro detalhado ao gerar áudio:', {
-          status: response.status,
-          statusText: response.statusText,
-          data,
-          rawResponse: responseText.substring(0, 500)
-        });
-        addDebugLog('error', 'audio', { 
-          status: response.status, 
-          statusText: response.statusText,
-          data,
-          rawResponse: responseText.substring(0, 500)
-        });
-        
-        const errorMessage = data?.error || `Erro HTTP ${response.status}: ${response.statusText}`;
-        toast.error(`Erro ao gerar áudio: ${errorMessage}`);
+      const result = await requestGenerateAudio(requestData);
+      addDebugLog('response', 'audio', { status: result.status, headers: result.headers, rawText: result.rawText, parsedData: result.data });
+      if (!result.ok) {
+        console.error('❌ Erro detalhado ao gerar áudio:', { status: result.status, statusText: result.statusText, data: result.data, rawResponse: result.rawText });
+        addDebugLog('error', 'audio', { status: result.status, statusText: result.statusText, data: result.data, rawResponse: result.rawText });
+        toast.error(`Erro ao gerar áudio: ${result.error}`);
         return;
       }
-
-      console.log('📦 Dados do áudio recebidos:', data);
+      const data = result.data;
 
       if (data?.audio_url) {
         setAudioUrl(data.audio_url);
@@ -1149,53 +880,14 @@ export default function AIGenerator({ onAudioGenerated }: AIGeneratorProps) {
         requestPayload
       });
 
-      const response = await fetch('/api/generate-image', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(requestPayload),
-      });
-
-      console.log('📡 Status da resposta:', response.status);
-      console.log('📡 Headers da resposta:', Object.fromEntries(response.headers.entries()));
-
-      let responseData;
-      let responseText = '';
-      
-      try {
-        responseText = await response.text();
-        console.log('📦 Texto bruto da resposta:', responseText);
-        
-        if (responseText) {
-          responseData = JSON.parse(responseText);
-        } else {
-          responseData = { error: 'Resposta vazia do servidor' };
-        }
-      } catch (parseError) {
-        console.error('❌ Erro ao fazer parse da resposta:', parseError);
-        responseData = { 
-          error: 'Erro ao fazer parse da resposta',
-          rawResponse: responseText,
-          parseError: parseError instanceof Error ? parseError.message : 'Erro desconhecido'
-        };
-      }
-
-      addDebugLog('response', 'image', { 
-        status: response.status, 
-        headers: Object.fromEntries(response.headers.entries()),
-        rawText: responseText,
-        parsedData: responseData 
-      });
-
-      if (!response.ok) {
-        console.error('❌ Erro detalhado ao gerar imagem:', responseData);
-        const errorMessage = responseData?.error || `Erro HTTP ${response.status}`;
-        toast.error(`Erro ao gerar imagem: ${errorMessage}`);
+      const imageResult = await requestGenerateImage(requestPayload);
+      addDebugLog('response', 'image', { status: imageResult.status, headers: imageResult.headers, rawText: imageResult.rawText, parsedData: imageResult.data });
+      if (!imageResult.ok) {
+        console.error('❌ Erro detalhado ao gerar imagem:', imageResult.data);
+        toast.error(`Erro ao gerar imagem: ${imageResult.error}`);
         return;
       }
-
-      console.log('📦 Dados da imagem recebidos:', responseData);
+      const responseData = imageResult.data;
 
       if (responseData?.image_url) {
         setImageUrl(responseData.image_url);
@@ -1421,25 +1113,7 @@ export default function AIGenerator({ onAudioGenerated }: AIGeneratorProps) {
           )}
 
           {/* Campos iniciais: Categoria, Momento, Objetivo espiritual */}
-          {/* Seletor de categoria */}
-          <div>
-            <label className="block text-sm font-medium mb-2">
-              Categoria da Oração
-            
-            </label>
-            <Select value={selectedCategory} onValueChange={setSelectedCategory}>
-              <SelectTrigger className="w-full">
-                <SelectValue placeholder="Selecione uma categoria" />
-              </SelectTrigger>
-              <SelectContent>
-                {categories.map((category) => (
-                  <SelectItem key={category.id} value={category.id}>
-                    {category.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+          <CategorySelect categories={categories} selectedCategory={selectedCategory} onChange={setSelectedCategory} />
 
           {/* Tema central - logo após a categoria */}
           <div>
@@ -1455,51 +1129,20 @@ export default function AIGenerator({ onAudioGenerated }: AIGeneratorProps) {
           </div>
 
           {/* Momento (linha única: combobox + renomear + adicionar) */}
-          <div className="space-y-2">
-            <label className="block text-sm font-medium mb-2">Momento</label>
-            <div className="flex items-center gap-2 flex-wrap">
-              <div className="flex-1">
-                <Select value={dayPart} onValueChange={setDayPart}>
-                  <SelectTrigger className="w-full">
-                    <SelectValue placeholder="Selecione o momento" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {moments.map((p) => (
-                      <SelectItem key={p} value={p}>{p}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="flex gap-2">
-                <Button variant="outline" onClick={openRenameMomentModal}>Renomear</Button>
-                <Button variant="outline" onClick={openAddMomentModal}>Adicionar</Button>
-              </div>
-            </div>
-          </div>
+          <MomentsGoalsRow
+            moments={moments}
+            dayPart={dayPart}
+            onChangeDayPart={setDayPart}
+            onRenameMoment={openRenameMomentModal}
+            onAddMoment={openAddMomentModal}
+            spiritualGoals={spiritualGoals}
+            spiritualGoal={spiritualGoal}
+            onChangeSpiritualGoal={setSpiritualGoal}
+            onRenameGoal={openRenameGoalModal}
+            onAddGoal={openAddGoalModal}
+          />
 
-          {/* Objetivo espiritual (linha única: combobox + renomear + adicionar) */}
-          <div className="space-y-2">
-            <label className="block text-sm font-medium">Objetivo espiritual</label>
-            <div className="flex items-center gap-2 flex-wrap">
-              <div className="flex-1">
-                <Select value={spiritualGoal} onValueChange={setSpiritualGoal}>
-                  <SelectTrigger className="w-full">
-                    <SelectValue placeholder="Selecione um objetivo espiritual" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {spiritualGoals.map((g) => (
-                      <SelectItem key={g} value={g}>{g}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="flex gap-2">
-                <Button variant="outline" onClick={openRenameGoalModal}>Renomear</Button>
-                <Button variant="outline" onClick={openAddGoalModal}>Adicionar</Button>
-              </div>
-            </div>
-            <p className="text-xs text-muted-foreground">Você pode selecionar, criar ou renomear objetivos aqui.</p>
-          </div>
+          
 
           {/* Editor colapsável de prompts removido — prompts acessíveis via modal por campo */}
 
@@ -1723,7 +1366,7 @@ export default function AIGenerator({ onAudioGenerated }: AIGeneratorProps) {
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => copyToClipboard(imageUrl)}
+                        onClick={() => handleCopyToClipboard(imageUrl)}
                         className="shrink-0"
                       >
                         <Copy className="h-3 w-3" />
@@ -1748,97 +1391,17 @@ export default function AIGenerator({ onAudioGenerated }: AIGeneratorProps) {
       {/* Objetivo espiritual - removido daqui (foi movido para o topo) */}
 
               {/* Seletor de voz e botão para gerar áudio */}
-              <div className="space-y-3">
-                {/* Seletor de Motor de IA */}
-                <div className="space-y-2">
-                  <label className="block text-sm font-medium">IA utilizada</label>
-                  <Select value={selectedAiEngine} onValueChange={setSelectedAiEngine}>
-                    <SelectTrigger className="w-full">
-                      <SelectValue placeholder="Selecione o motor de IA" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {aiEngines.map((engine) => (
-                        <SelectItem key={engine} value={engine}>{engine}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                    <div className="flex items-center gap-2">
-                      <Input
-                        placeholder="Novo motor de IA"
-                        value={newAiEngineName}
-                        onChange={(e) => setNewAiEngineName(e.target.value)}
-                      />
-                      <Button variant="outline" onClick={handleAddAiEngine}>Adicionar</Button>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Input
-                        placeholder="Renomear selecionado"
-                        value={editingAiEngineName}
-                        onChange={(e) => setEditingAiEngineName(e.target.value)}
-                      />
-                      <Button variant="outline" onClick={handleRenameSelectedAiEngine}>Renomear</Button>
-                      <Button variant="outline" onClick={handleRemoveSelectedAiEngine}>Remover</Button>
-                    </div>
-                  </div>
-                  <p className="text-xs text-muted-foreground">Gerencie e selecione o motor de IA utilizado. Será salvo no áudio.</p>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium mb-2">
-                    <Mic className="inline h-4 w-4 mr-1" />
-                    Escolha a Voz para o Áudio
-                  </label>
-                  <Select value={selectedVoice} onValueChange={setSelectedVoice}>
-                    <SelectTrigger className="w-full">
-                      <SelectValue placeholder="Selecione uma voz" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {ELEVENLABS_VOICES.map((voice) => (
-                        <SelectItem key={voice.id} value={voice.id}>
-                          <div className="flex flex-col">
-                            <span className="font-medium">{voice.name}</span>
-                            <span className="text-xs text-muted-foreground">
-                              {voice.gender} • {voice.description}
-                            </span>
-                          </div>
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  {selectedVoiceInfo && (
-                    <div className="mt-2 p-2 bg-muted rounded-md">
-                      <p className="text-sm font-medium text-primary">
-                        ✓ Voz selecionada: {selectedVoiceInfo.name}
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        {selectedVoiceInfo.gender} • {selectedVoiceInfo.description}
-                      </p>
-                    </div>
-                  )}
-                </div>
+              <VoiceSelector selectedVoice={selectedVoice} onChange={setSelectedVoice} />
 
                 {/* Configuração de Pausas */}
-                <div className="border-t pt-4 space-y-4">
-                  <div className="flex items-center space-x-2">
-                    <Checkbox 
-                      id="pauses-auto" 
-                      checked={pausesAutoEnabled}
-                      onCheckedChange={(checked) => {
-                        setPausesAutoEnabled(!!checked);
-                        updateSetting('gmanual_pauses_auto_enabled', checked ? 'true' : 'false');
-                      }}
-                    />
-                    <label 
-                      htmlFor="pauses-auto" 
-                      className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                    >
-                      Deixar a OpenAI decidir as pausas
-                    </label>
-                    <Button 
-                      variant="ghost" 
-                      size="sm"
-                      onClick={() => {
+              <PausesConfig
+                pausesAutoEnabled={pausesAutoEnabled}
+                setPausesAutoEnabled={(v) => {
+                  setPausesAutoEnabled(v);
+                  updateAppSetting('gmanual_pauses_auto_enabled', v ? 'true' : 'false');
+                }}
+                autoPausesPrompt={autoPausesPrompt}
+                onEditAutoPrompt={() => {
                         setPromptModalField('pauses' as any);
                         setPromptModalValue(autoPausesPrompt);
                         setPromptHistory([]);
@@ -1860,68 +1423,15 @@ export default function AIGenerator({ onAudioGenerated }: AIGeneratorProps) {
                           } catch (_) {}
                         })();
                       }}
-                    >
-                      Editar prompt
-                    </Button>
-                  </div>
-
-                  {!pausesAutoEnabled && (
-                    <div className="grid grid-cols-2 gap-3 pl-6">
-                      <div>
-                        <label className="block text-xs font-medium mb-1">Pausa após vírgula (s)</label>
-                        <Input
-                          type="number"
-                          step="0.1"
-                          min="0"
-                          value={pauseComma}
-                          onChange={(e) => {
-                            setPauseComma(e.target.value);
-                            updateSetting('gmanual_pause_comma', e.target.value);
-                          }}
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-xs font-medium mb-1">Pausa após ponto final (s)</label>
-                        <Input
-                          type="number"
-                          step="0.1"
-                          min="0"
-                          value={pausePeriod}
-                          onChange={(e) => {
-                            setPausePeriod(e.target.value);
-                            updateSetting('gmanual_pause_period', e.target.value);
-                          }}
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-xs font-medium mb-1">Pausa antes da oração (s)</label>
-                        <Input
-                          type="number"
-                          step="0.1"
-                          min="0"
-                          value={pauseBeforePrayer}
-                          onChange={(e) => {
-                            setPauseBeforePrayer(e.target.value);
-                            updateSetting('gmanual_pause_before_prayer', e.target.value);
-                          }}
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-xs font-medium mb-1">Pausa depois da oração (s)</label>
-                        <Input
-                          type="number"
-                          step="0.1"
-                          min="0"
-                          value={pauseAfterPrayer}
-                          onChange={(e) => {
-                            setPauseAfterPrayer(e.target.value);
-                            updateSetting('gmanual_pause_after_prayer', e.target.value);
-                          }}
-                        />
-                      </div>
-                    </div>
-                  )}
-                </div>
+                pauseComma={pauseComma}
+                setPauseComma={(v) => { setPauseComma(v); updateAppSetting('gmanual_pause_comma', v); }}
+                pausePeriod={pausePeriod}
+                setPausePeriod={(v) => { setPausePeriod(v); updateAppSetting('gmanual_pause_period', v); }}
+                pauseBeforePrayer={pauseBeforePrayer}
+                setPauseBeforePrayer={(v) => { setPauseBeforePrayer(v); updateAppSetting('gmanual_pause_before_prayer', v); }}
+                pauseAfterPrayer={pauseAfterPrayer}
+                setPauseAfterPrayer={(v) => { setPauseAfterPrayer(v); updateAppSetting('gmanual_pause_after_prayer', v); }}
+              />
 
                 {/* Botão para gerar áudio */}
                 <div className="flex sm:justify-end">
@@ -1948,7 +1458,6 @@ export default function AIGenerator({ onAudioGenerated }: AIGeneratorProps) {
                       </>
                     )}
                   </Button>
-                </div>
               </div>
 
               {/* Player de áudio */}
@@ -2020,70 +1529,7 @@ export default function AIGenerator({ onAudioGenerated }: AIGeneratorProps) {
       </Card>
 
       {/* Seção de Debug */}
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <CardTitle className="flex items-center gap-2">
-              <Bug className="h-5 w-5" />
-              Debug API - Input/Output
-            </CardTitle>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setShowDebug(!showDebug)}
-            >
-              {showDebug ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-            </Button>
-          </div>
-          <CardDescription>
-            Visualize as requisições e respostas das APIs em tempo real
-          </CardDescription>
-        </CardHeader>
-        {showDebug && (
-          <CardContent>
-            <div className="space-y-4 max-h-96 overflow-y-auto">
-              {debugLogs.length === 0 ? (
-                <p className="text-muted-foreground text-center py-4">
-                  Nenhum log de debug ainda. Execute uma ação para ver os dados.
-                </p>
-              ) : (
-                debugLogs.map((log, index) => (
-                  <div key={index} className="border rounded-lg p-3">
-                    <div className="flex items-center gap-2 mb-2">
-                      <span className={`px-2 py-1 rounded text-xs font-medium ${
-                        log.type === 'request' ? 'bg-blue-100 text-blue-800' :
-                        log.type === 'response' ? 'bg-green-100 text-green-800' :
-                        'bg-red-100 text-red-800'
-                      }`}>
-                        {log.type.toUpperCase()}
-                      </span>
-                      <span className="px-2 py-1 rounded text-xs bg-gray-100 text-gray-800">
-                        {log.api.toUpperCase()}
-                      </span>
-                      <span className="text-xs text-muted-foreground">
-                        {log.timestamp}
-                      </span>
-                    </div>
-                    <pre className="text-xs bg-gray-50 p-2 rounded overflow-x-auto">
-                      {JSON.stringify(log.data, null, 2)}
-                    </pre>
-                  </div>
-                ))
-              )}
-            </div>
-            {debugLogs.length > 0 && (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setDebugLogs([])}
-                className="mt-4"
-              >
-                Limpar Logs
-              </Button>
-            )}
-          </CardContent>
-        )}
-      </Card>
+      <DebugPanel showDebug={showDebug} setShowDebug={setShowDebug} debugLogs={debugLogs} onClear={clearLogs} />
 
       {/* Modal de edição de Prompt individual */}
       <Dialog open={promptModalOpen} onOpenChange={setPromptModalOpen}>
