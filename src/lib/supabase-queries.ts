@@ -19,6 +19,7 @@ export interface Audio {
   description: string | null;
   audio_url: string;
   cover_url?: string | null; // NOVO CAMPO ADICIONADO
+  thumbnail_url?: string | null; // Thumbnail 1:1 para exibição na home
   duration: number | null;
   transcript: string | null;
   category_id: string | null;
@@ -174,33 +175,56 @@ export async function getAudiosByCategory(categoryId: string): Promise<Audio[]> 
 }
 
 // Buscar áudios (rápido, somente colunas necessárias para lista)
-export async function getAudiosByCategoryFast(categoryId: string): Promise<Pick<Audio, 'id' | 'title' | 'subtitle' | 'duration' | 'category_id' | 'created_at' | 'cover_url'>[]> {
-  const { data, error } = await supabase
+export async function getAudiosByCategoryFast(categoryId: string): Promise<Pick<Audio, 'id' | 'title' | 'subtitle' | 'duration' | 'category_id' | 'created_at' | 'cover_url' | 'thumbnail_url'>[]> {
+  // Primeiro tenta buscar com thumbnail_url; se a coluna não existir no banco, faz fallback sem ela
+  let query = supabase
     .from('audios')
-    .select('id,title,subtitle,duration,category_id,created_at,cover_url')
+    .select('id,title,subtitle,duration,category_id,created_at,cover_url,thumbnail_url')
     .eq('category_id', categoryId)
     .order('created_at', { ascending: false });
 
+  let { data, error } = await query;
+
   if (error) {
-    console.error('Erro ao buscar áudios (fast):', error);
-    return [];
+    console.warn('getAudiosByCategoryFast: fallback sem thumbnail_url (coluna pode não existir). Detalhes:', error?.message);
+    const fallback = await supabase
+      .from('audios')
+      .select('id,title,subtitle,duration,category_id,created_at,cover_url')
+      .eq('category_id', categoryId)
+      .order('created_at', { ascending: false });
+    if (fallback.error) {
+      console.error('Erro ao buscar áudios (fast):', fallback.error);
+      return [];
+    }
+    return (fallback.data as any[]) || [];
   }
   return (data as any[]) || [];
 }
 
 // Buscar áudios para várias categorias em uma única requisição (fast)
-export async function getAudiosByCategoryBulkFast(categoryIds: string[]): Promise<Record<string, Pick<Audio, 'id' | 'title' | 'subtitle' | 'duration' | 'category_id' | 'created_at' | 'cover_url'>[]>> {
+export async function getAudiosByCategoryBulkFast(categoryIds: string[]): Promise<Record<string, Pick<Audio, 'id' | 'title' | 'subtitle' | 'duration' | 'category_id' | 'created_at' | 'cover_url' | 'thumbnail_url'>[]>> {
   if (!categoryIds.length) return {};
 
-  const { data, error } = await supabase
+  // Tenta com thumbnail_url e faz fallback sem caso a coluna não exista
+  let { data, error } = await supabase
     .from('audios')
-    .select('id,title,subtitle,duration,category_id,created_at,cover_url')
+    .select('id,title,subtitle,duration,category_id,created_at,cover_url,thumbnail_url')
     .in('category_id', categoryIds)
     .order('created_at', { ascending: false });
 
   if (error) {
-    console.error('Erro ao buscar áudios em lote (fast):', error);
-    return {};
+    console.warn('getAudiosByCategoryBulkFast: fallback sem thumbnail_url (coluna pode não existir). Detalhes:', error?.message);
+    const fallback = await supabase
+      .from('audios')
+      .select('id,title,subtitle,duration,category_id,created_at,cover_url')
+      .in('category_id', categoryIds)
+      .order('created_at', { ascending: false });
+
+    if (fallback.error) {
+      console.error('Erro ao buscar áudios em lote (fast):', fallback.error);
+      return {};
+    }
+    data = fallback.data as any[];
   }
 
   const map: Record<string, any[]> = {};

@@ -1299,94 +1299,61 @@ export default function AIGenerator({ onAudioGenerated }: AIGeneratorProps) {
                     <Settings className="h-3 w-3 mr-1"/>Editar prompt
                   </Button>
                 </div>
-                <Textarea
-                  value={prayerData.image_prompt}
-                  onChange={(e) => setPrayerData({...prayerData, image_prompt: e.target.value})}
-                  rows={3}
-                  placeholder="Descreva a cena com riqueza de detalhes. Ex: 'Uma família serena reunida em oração, com luz dourada suave, mãos unidas, expressões de paz e gratidão, ambiente acolhedor'. Mínimo 20 caracteres para melhor qualidade."
-                />
-                <p className="text-xs text-muted-foreground mt-1">
-                  💡 Dica: Descreva detalhes como iluminação, expressões, ambiente e emoções para melhores resultados
-                </p>
+                {/* Campo de texto removido conforme solicitação do usuário */}
               </div>
 
-              {/* Botão para gerar imagem */}
-              <div className="flex sm:justify-end">
-                <Button 
-                  onClick={handleGenerateImage}
-                  disabled={isGeneratingImage || !((localPrompts?.image_prompt || prayerData.image_prompt || '').trim()) || ((localPrompts?.image_prompt || prayerData.image_prompt || '').trim().length < 20)}
-                  variant="outline"
-                  className="w-full sm:w-auto"
-                >
-                  {isGeneratingImage ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Gerando imagem com DALL-E 3...
-                    </>
-                  ) : imageUrl ? (
-                    <>
-                      <RefreshCw className="mr-2 h-4 w-4" />
-                      Regenerar Imagem (DALL-E 3)
-                    </>
-                  ) : (
-                    <>
-                      <Image className="mr-2 h-4 w-4" />
-                      Gerar Imagem (DALL-E 3)
-                      {prayerData.image_prompt?.trim() && prayerData.image_prompt.trim().length < 20 && (
-                        <span className="ml-2 text-xs text-muted-foreground">
-                          (mín. 20 chars)
-                        </span>
-                      )}
-                    </>
-                  )}
-                </Button>
-              </div>
 
-              {/* Imagem gerada */}
-              {imageUrl && (
-                <div>
-                  <label className="block text-sm font-medium mb-2">
-                    Imagem Gerada (DALL-E 3 - HD)
-                  </label>
-                  <div className="border rounded-lg p-2">
+              {/* Imagem gerada (mostrada vazia até gerar) */}
+              <div>
+                <label className="block text-sm font-medium mb-2">
+                  Imagem Gerada (DALL-E 3 - HD)
+                </label>
+                <div className="border rounded-lg p-2">
+                  {imageUrl ? (
                     <img 
                       src={imageUrl} 
                       alt="Imagem da oração gerada por IA" 
                       className="w-full max-w-md mx-auto rounded-md"
                     />
-                  </div>
-                  
-                  {/* URL da imagem */}
-                  <div className="mt-3 p-3 bg-gray-50 rounded-lg border">
-                    <label className="block text-xs font-medium text-gray-600 mb-2">
-                      URL da Imagem (será salva no banco de dados):
-                    </label>
-                    <div className="flex items-center gap-2">
-                      <Input
-                        value={imageUrl}
-                        readOnly
-                        className="text-xs font-mono bg-white"
-                      />
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleCopyToClipboard(imageUrl)}
-                        className="shrink-0"
-                      >
-                        <Copy className="h-3 w-3" />
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => window.open(imageUrl, '_blank')}
-                        className="shrink-0"
-                      >
-                        <ExternalLink className="h-3 w-3" />
-                      </Button>
+                  ) : (
+                    <div className="w-full max-w-md mx-auto rounded-md bg-white text-xs text-muted-foreground text-center py-16">
+                      A imagem aparecerá aqui após gerar
                     </div>
+                  )}
+                </div>
+                
+                {/* URL da imagem (mostrada vazia até gerar) */}
+                <div className="mt-3 p-3 bg-gray-50 rounded-lg border">
+                  <label className="block text-xs font-medium text-gray-600 mb-2">
+                    URL da Imagem (será salva no banco de dados):
+                  </label>
+                  <div className="flex items-center gap-2">
+                    <Input
+                      value={imageUrl || ''}
+                      readOnly
+                      className="text-xs font-mono bg-white"
+                    />
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => imageUrl && handleCopyToClipboard(imageUrl)}
+                      className="shrink-0"
+                      disabled={!imageUrl}
+                    >
+                      <Copy className="h-3 w-3" />
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => imageUrl && window.open(imageUrl, '_blank')}
+                      className="shrink-0"
+                      disabled={!imageUrl}
+                    >
+                      <ExternalLink className="h-3 w-3" />
+                    </Button>
                   </div>
                 </div>
-              )}
+              </div>
 
               {/* Seletor de categoria - removido daqui (foi movido para o topo) */}
 
