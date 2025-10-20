@@ -70,6 +70,7 @@ export default function AIGenerator({ onAudioGenerated }: AIGeneratorProps) {
   const [isGeneratingPrayer, setIsGeneratingPrayer] = useState(false);
   const [isGeneratingAudio, setIsGeneratingAudio] = useState(false);
   const [isGeneratingImage, setIsGeneratingImage] = useState(false);
+  const [isGeneratingAll, setIsGeneratingAll] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const { showDebug, setShowDebug, debugLogs, addDebugLog, clearLogs } = useDebugLogs();
   const [lastVoiceIdUsed, setLastVoiceIdUsed] = useState<string>("");
@@ -158,6 +159,32 @@ export default function AIGenerator({ onAudioGenerated }: AIGeneratorProps) {
       localStorage.removeItem(DRAFT_KEY);
     } catch (_) {
       // ignore
+    }
+  };
+
+  const handleGenerateAllFields = async () => {
+    if (isGeneratingAll) return;
+    setIsGeneratingAll(true);
+    try {
+      // 1) Gera Texto da Oração e aguarda preencher o campo
+      await generateForField('text');
+      // Garante flush do estado para {texto}
+      await new Promise((r) => setTimeout(r, 0));
+      // 2) Em paralelo: demais campos + áudio
+      await Promise.all([
+        generateForField('preparation'),
+        generateForField('final_message'),
+        generateForField('title'),
+        generateForField('subtitle'),
+        generateForField('description'),
+        generateForField('image_prompt'),
+        (async () => { try { await handleGenerateAudio(); } catch (_) {} })(),
+      ]);
+      toast.success('Campos gerados (texto > demais em paralelo).');
+    } catch (err) {
+      toast.error('Falha ao gerar todos os campos');
+    } finally {
+      setIsGeneratingAll(false);
     }
   };
 
@@ -1153,6 +1180,28 @@ export default function AIGenerator({ onAudioGenerated }: AIGeneratorProps) {
           {/* Dados da oração gerada */}
           {prayerData && (
             <div className="space-y-4">
+              {/* Botão de orquestração: gera Texto e depois os demais em paralelo */}
+              <div className="flex sm:justify-end">
+                <Button 
+                  variant="default"
+                  onClick={handleGenerateAllFields}
+                  disabled={isGeneratingAll}
+                  className="w-full sm:w-auto"
+                >
+                  {isGeneratingAll ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Gerando todos os campos...
+                    </>
+                  ) : (
+                    <>
+                      <Wand2 className="mr-2 h-4 w-4" />
+                      Gerar todos os campos (ordem inteligente)
+                    </>
+                  )}
+                </Button>
+              </div>
+
               {/* Preparação para Orar - NOVO CAMPO */}
               <div>
                 <label className="block text-sm font-medium mb-2">
@@ -1292,7 +1341,7 @@ export default function AIGenerator({ onAudioGenerated }: AIGeneratorProps) {
                   Thumbnail
                 </label>
                 <div className="flex gap-2 mb-2">
-                  <Button variant="outline" size="sm" onClick={handleGenerateImage} disabled={isGeneratingImage || !((localPrompts?.image_prompt || prayerData.image_prompt || '').trim()) || ((localPrompts?.image_prompt || prayerData.image_prompt || '').trim().length < 20)}>
+                  <Button variant="outline" size="sm" onClick={handleGenerateImage} disabled={isGeneratingImage}>
                     {isGeneratingImage ? (<><Loader2 className="mr-2 h-3 w-3 animate-spin"/>Gerando...</>) : (<><Image className="mr-2 h-3 w-3"/>Gerar Imagem (DALL-E)</>)}
                   </Button>
                   <Button variant="ghost" size="sm" onClick={() => { openPromptModal('image_prompt' as any); }}>
@@ -1538,8 +1587,8 @@ export default function AIGenerator({ onAudioGenerated }: AIGeneratorProps) {
                 <Button variant="outline" onClick={savePromptVersion} className="bg-white text-black border-gray-300 hover:bg-gray-100">Salvar versão</Button>
               </div>
               {promptHistory.length > 0 && (
-                <div className="border rounded-md p-2 bg-white">
-                  <div className="text-sm font-medium mb-1 text-black">Versões salvas</div>
+                <div className="border rounded-md p-2 bg-white text-black dark:bg-neutral-900 dark:text-white">
+                  <div className="text-sm font-medium mb-1">Versões salvas</div>
                   <div className="max-h-40 overflow-y-auto space-y-1">
                     {promptHistory.map((v, idx) => (
                       <div key={idx} className="flex items-center justify-between gap-2 text-sm">
@@ -1550,7 +1599,7 @@ export default function AIGenerator({ onAudioGenerated }: AIGeneratorProps) {
                         >
                           {(v.label || 'Sem rótulo')} — {new Date(v.date).toLocaleDateString()} {new Date(v.date).toLocaleTimeString()}
                         </button>
-                        <Button variant="ghost" size="sm" onClick={() => setPromptModalValue(v.value)}>Restaurar</Button>
+                        <Button variant="outline" size="sm" className="bg-white text-black border-gray-300 hover:bg-gray-100 dark:bg-neutral-900 dark:text-white dark:border-neutral-700 dark:hover:bg-neutral-800" onClick={() => setPromptModalValue(v.value)}>Restaurar</Button>
                       </div>
                     ))}
                   </div>
