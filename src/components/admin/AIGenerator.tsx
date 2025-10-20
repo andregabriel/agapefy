@@ -28,7 +28,6 @@ import { useLocalDraft } from '@/hooks/useLocalDraft';
 import { useAppPrompts } from '@/hooks/useAppPrompts';
 import { AIEngineManager } from '@/components/admin/ai-generator/AIEngineManager';
 import { CategorySelect } from '@/components/admin/ai-generator/CategorySelect';
-import { MomentsGoalsRow } from '@/components/admin/ai-generator/MomentsGoalsRow';
 import { VoiceSelector } from '@/components/admin/ai-generator/VoiceSelector';
 import { PausesConfig } from '@/components/admin/ai-generator/PausesConfig';
 import { DebugPanel } from '@/components/admin/ai-generator/DebugPanel';
@@ -1228,19 +1227,72 @@ export default function AIGenerator({ onAudioGenerated }: AIGeneratorProps) {
             />
           </div>
 
-          {/* Momento (linha única: combobox + renomear + adicionar) */}
-          <MomentsGoalsRow
-            moments={moments}
-            dayPart={dayPart}
-            onChangeDayPart={setDayPart}
-            onRenameMoment={openRenameMomentModal}
-            onAddMoment={openAddMomentModal}
-            spiritualGoals={spiritualGoals}
-            spiritualGoal={spiritualGoal}
-            onChangeSpiritualGoal={setSpiritualGoal}
-            onRenameGoal={openRenameGoalModal}
-            onAddGoal={openAddGoalModal}
-          />
+          {/* Objetivo espiritual */}
+          <div className="space-y-2">
+            <label className="block text-sm font-medium">Objetivo espiritual</label>
+            <div className="flex items-center gap-2 flex-wrap">
+              <div className="flex-1">
+                <Select value={spiritualGoal} onValueChange={setSpiritualGoal}>
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Selecione um objetivo espiritual" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {spiritualGoals.map((g) => (
+                      <SelectItem key={g} value={g}>{g}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="flex gap-2">
+                <Button variant="outline" onClick={openRenameGoalModal}>Renomear</Button>
+                <Button variant="outline" onClick={openAddGoalModal}>Adicionar</Button>
+              </div>
+            </div>
+            <p className="text-xs text-muted-foreground">Você pode selecionar, criar ou renomear objetivos aqui.</p>
+          </div>
+
+          {/* Base bíblica */}
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <label className="block text-sm font-medium">
+                Base bíblica
+              </label>
+              <div className="flex items-center gap-2">
+                <Checkbox id="auto-biblical-base" checked={autoDetectBiblicalBase} onCheckedChange={(v: any) => setAutoDetectBiblicalBase(!!v)} />
+                <label htmlFor="auto-biblical-base" className="text-xs text-muted-foreground">Detectar automaticamente</label>
+              </div>
+            </div>
+            <Input
+              value={biblicalBase}
+              onChange={(e) => setBiblicalBase(e.target.value)}
+              placeholder="Ex: João 3:16; Salmo 23"
+              disabled={autoDetectBiblicalBase}
+            />
+            <p className="text-xs text-muted-foreground mt-1">Quando ativado, detectamos automaticamente a base bíblica a partir do texto da oração.</p>
+          </div>
+
+          {/* Momento */}
+          <div className="space-y-2">
+            <label className="block text-sm font-medium mb-2">Momento</label>
+            <div className="flex items-center gap-2 flex-wrap">
+              <div className="flex-1">
+                <Select value={dayPart} onValueChange={setDayPart}>
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Selecione o momento" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {moments.map((p) => (
+                      <SelectItem key={p} value={p}>{p}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="flex gap-2">
+                <Button variant="outline" onClick={openRenameMomentModal}>Renomear</Button>
+                <Button variant="outline" onClick={openAddMomentModal}>Adicionar</Button>
+              </div>
+            </div>
+          </div>
 
           
 
@@ -1314,25 +1366,7 @@ export default function AIGenerator({ onAudioGenerated }: AIGeneratorProps) {
                 />
               </div>
 
-              {/* Base bíblica */}
-              <div>
-                <div className="flex items-center justify-between mb-2">
-                  <label className="block text-sm font-medium">
-                    Base bíblica
-                  </label>
-                  <div className="flex items-center gap-2">
-                    <Checkbox id="auto-biblical-base" checked={autoDetectBiblicalBase} onCheckedChange={(v: any) => setAutoDetectBiblicalBase(!!v)} />
-                    <label htmlFor="auto-biblical-base" className="text-xs text-muted-foreground">Detectar automaticamente</label>
-                  </div>
-                </div>
-                <Input
-                  value={biblicalBase}
-                  onChange={(e) => setBiblicalBase(e.target.value)}
-                  placeholder="Ex: João 3:16; Salmo 23"
-                  disabled={autoDetectBiblicalBase}
-                />
-                <p className="text-xs text-muted-foreground mt-1">Quando ativado, detectamos automaticamente a base bíblica a partir do texto da oração.</p>
-              </div>
+              {/* Base bíblica movida para o topo */}
 
               {/* Mensagem final - NOVO CAMPO */}
               <div>
