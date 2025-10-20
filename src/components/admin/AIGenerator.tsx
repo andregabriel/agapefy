@@ -16,7 +16,6 @@ import { useAppSettings } from '@/hooks/useAppSettings';
 import { AIGeneratorProps, PrayerData, Category, DebugInfo } from '@/types/ai';
 import ELEVENLABS_VOICES from '@/constants/elevenlabsVoices';
 import { normalizeSeconds, applyPacingBreaksToText, formatDuration } from '@/lib/ai/textPacing';
-import { optimizeImagePrompt } from '@/lib/ai/imagePrompt';
 import { getAudioDuration } from '@/lib/audio/duration';
 import { copyToClipboard as copyToClipboardUtil } from '@/lib/clipboard';
 import { uploadImageToSupabaseFromUrl } from '@/lib/services/storage';
@@ -510,7 +509,7 @@ export default function AIGenerator({ onAudioGenerated }: AIGeneratorProps) {
     }
   };
 
-  // optimizeImagePrompt extraído para util
+  // optimizeImagePrompt removido: agora enviamos exatamente o texto do prompt definido pelo admin
 
   // Carregar categorias ao montar o componente
   useEffect(() => {
@@ -925,24 +924,19 @@ export default function AIGenerator({ onAudioGenerated }: AIGeneratorProps) {
       return;
     }
 
-    // Otimizar prompt para DALL-E
-    const optimizedPrompt = optimizeImagePrompt(originalPrompt);
-
     console.log('🖼️ Iniciando geração de imagem com DALL-E 3...');
-    console.log('📝 Prompt original:', originalPrompt);
-    console.log('🎯 Prompt otimizado:', optimizedPrompt);
+    console.log('📝 Prompt enviado (sem otimização):', originalPrompt);
     
     setIsGeneratingImage(true);
     
-    // Objeto completo que será enviado para a API
+    // Objeto completo que será enviado para a API (exatamente o texto definido em "Editar prompt")
     const requestPayload = { 
-      prompt: optimizedPrompt
+      prompt: originalPrompt
     };
 
     try {
       addDebugLog('request', 'image', {
         originalPrompt,
-        optimizedPrompt,
         requestPayload
       });
 
