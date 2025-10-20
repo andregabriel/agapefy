@@ -88,6 +88,9 @@ export default function AIGenerator({ onAudioGenerated }: AIGeneratorProps) {
   const [promptModalField, setPromptModalField] = useState<PromptField | null>(null);
   const [promptModalValue, setPromptModalValue] = useState('');
   const [savingSinglePrompt, setSavingSinglePrompt] = useState(false);
+  // Base bíblica (novo campo)
+  const [biblicalBase, setBiblicalBase] = useState<string>('');
+  const [autoDetectBiblicalBase, setAutoDetectBiblicalBase] = useState<boolean>(true);
   // Versões do prompt
   const [promptHistory, setPromptHistory] = useState<Array<{ value: string; label?: string; date: string }>>([]);
   const [promptVersionLabel, setPromptVersionLabel] = useState('');
@@ -177,7 +180,16 @@ export default function AIGenerator({ onAudioGenerated }: AIGeneratorProps) {
         generateForField('title'),
         generateForField('subtitle'),
         generateForField('description'),
-        generateForField('image_prompt'),
+        // Gera o prompt de imagem e, em seguida, dispara a geração da imagem
+        (async () => {
+          try {
+            await generateForField('image_prompt');
+            // pequeno yield para garantir que o prompt foi aplicado ao estado
+            await new Promise((r) => setTimeout(r, 0));
+            await handleGenerateImage();
+          } catch (_) {}
+        })(),
+        // Dispara geração de áudio em paralelo após o texto estar pronto
         (async () => { try { await handleGenerateAudio(); } catch (_) {} })(),
       ]);
       toast.success('Campos gerados (texto > demais em paralelo).');
@@ -416,7 +428,8 @@ export default function AIGenerator({ onAudioGenerated }: AIGeneratorProps) {
         objetivo_espiritual: spiritualGoal || '',
         momento_dia: (dayPart && dayPart !== 'Any') ? dayPart : '',
         categoria_nome: categories.find(c => c.id === selectedCategory)?.name || '',
-        descricao_imagem_atual: prayerData?.image_prompt || ''
+        descricao_imagem_atual: prayerData?.image_prompt || '',
+        base_biblica: biblicalBase || ''
       };
       const { ok, content, error } = await gmanualGenerateField(field, ctx);
       if (!ok) {
@@ -1245,6 +1258,26 @@ export default function AIGenerator({ onAudioGenerated }: AIGeneratorProps) {
                 />
               </div>
 
+              {/* Base bíblica */}
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <label className="block text-sm font-medium">
+                    Base bíblica
+                  </label>
+                  <div className="flex items-center gap-2">
+                    <Checkbox id="auto-biblical-base" checked={autoDetectBiblicalBase} onCheckedChange={(v: any) => setAutoDetectBiblicalBase(!!v)} />
+                    <label htmlFor="auto-biblical-base" className="text-xs text-muted-foreground">Detectar automaticamente</label>
+                  </div>
+                </div>
+                <Input
+                  value={biblicalBase}
+                  onChange={(e) => setBiblicalBase(e.target.value)}
+                  placeholder="Ex: João 3:16; Salmo 23"
+                  disabled={autoDetectBiblicalBase}
+                />
+                <p className="text-xs text-muted-foreground mt-1">Quando ativado, detectamos automaticamente a base bíblica a partir do texto da oração.</p>
+              </div>
+
               {/* Mensagem final - NOVO CAMPO */}
               <div>
                 <label className="block text-sm font-medium mb-2">
@@ -1573,7 +1606,7 @@ export default function AIGenerator({ onAudioGenerated }: AIGeneratorProps) {
               className="text-sm bg-white text-black placeholder:text-gray-500 dark:bg-neutral-900 dark:text-white dark:placeholder:text-gray-400"
             />
             <div className="text-sm text-muted-foreground break-words whitespace-normal">
-              Variáveis: {`{titulo}`} {`{subtitulo}`} {`{descricao}`} {`{preparacao}`} {`{texto}`} {`{mensagem_final}`} {`{tema_central}`} {`{objetivo_espiritual}`} {`{momento_dia}`} {`{categoria_nome}`}
+              Variáveis: {`{titulo}`} {`{subtitulo}`} {`{descricao}`} {`{preparacao}`} {`{texto}`} {`{mensagem_final}`} {`{tema_central}`} {`{objetivo_espiritual}`} {`{momento_dia}`} {`{categoria_nome}`} {`{base_biblica}`}
             </div>
             {/* Controles de versão do prompt */}
             <div className="mt-2 space-y-2">

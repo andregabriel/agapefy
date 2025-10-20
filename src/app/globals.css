@@ -82,7 +82,7 @@
     @apply bg-background text-foreground;
   }
   
-  /* Garantir que todos os inputs e textareas tenham texto preto */
+  /* Inputs seguem a cor do tema atual (claro/escuro) */
   input[type="text"],
   input[type="email"],
   input[type="password"],
@@ -91,13 +91,13 @@
   input[type="search"],
   textarea,
   select {
-    color: #000000 !important;
+    color: hsl(var(--foreground));
   }
   
-  /* Placeholder também visível */
+  /* Placeholder também visível e de acordo com o tema */
   input::placeholder,
   textarea::placeholder {
-    color: #6b7280 !important;
+    color: hsl(var(--muted-foreground));
     opacity: 1;
   }
 }
