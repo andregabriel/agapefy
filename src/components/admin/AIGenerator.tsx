@@ -168,30 +168,40 @@ export default function AIGenerator({ onAudioGenerated }: AIGeneratorProps) {
     if (isGeneratingAll) return;
     setIsGeneratingAll(true);
     try {
-      // 1) Gerar Texto da Oração e capturar imediatamente para acionar áudio sem depender do setState
+      // 1) Gerar Texto da Oração e capturar imediatamente para uso em prompts dependentes
       const generatedText = await generateForField('text');
-      // Garante flush do estado para {texto}
-      await new Promise((r) => setTimeout(r, 0));
-      // 2) Em paralelo: demais campos + áudio (usando o texto recém-gerado)
-      await Promise.all([
-        generateForField('preparation'),
-        generateForField('final_message'),
-        generateForField('title'),
-        generateForField('subtitle'),
-        generateForField('description'),
-        // Gera o prompt de imagem e, em seguida, dispara a geração da imagem
-        (async () => {
-          try {
-            await generateForField('image_prompt');
-            // pequeno yield para garantir que o prompt foi aplicado ao estado
-            await new Promise((r) => setTimeout(r, 0));
-            await handleGenerateImage();
-          } catch (_) {}
-        })(),
-        // Dispara geração de áudio em paralelo usando o texto recém-gerado (fallback para estado caso undefined)
-        (async () => { try { await generateAudio(generatedText || undefined); } catch (_) {} })(),
+      const textoCtx = { texto: generatedText || '' };
+      // 2) Disparar tarefas independentes (título e imagem) em paralelo
+      const titleTask = generateForField('title', textoCtx);
+      const imageTask = (async () => {
+        try {
+          await generateForField('image_prompt', textoCtx);
+          await new Promise((r) => setTimeout(r, 0));
+          await handleGenerateImage();
+        } catch (_) {}
+      })();
+
+      // 3) Gerar em paralelo os campos que compõem o áudio e aguardar ambos
+      const [preparationContent, finalMessageContent] = await Promise.all([
+        generateForField('preparation', textoCtx),
+        generateForField('final_message', textoCtx),
       ]);
-      toast.success('Campos gerados (texto > demais em paralelo).');
+
+      // 4) Agora gerar o áudio com o texto completo (prep + texto + final)
+      try {
+        await generateAudio(generatedText || undefined, {
+          preparation: preparationContent ?? (prayerData?.preparation_text || ''),
+          final_message: finalMessageContent ?? (prayerData?.final_message || ''),
+        });
+      } catch (_) {}
+
+      // 5) Gerar subtítulo com texto atualizado
+      const subtitleContent = await generateForField('subtitle', textoCtx);
+      // 6) Gerar descrição com texto e subtítulo mais recentes
+      await generateForField('description', { ...textoCtx, subtitulo: subtitleContent || '' });
+      // 7) Garantir a conclusão das tarefas independentes
+      await Promise.all([titleTask, imageTask]);
+      toast.success('Campos gerados (texto -> dependentes com contexto atualizado).');
     } catch (err) {
       toast.error('Falha ao gerar todos os campos');
     } finally {
@@ -413,7 +423,7 @@ export default function AIGenerator({ onAudioGenerated }: AIGeneratorProps) {
     toast.success('Momento renomeado');
   };
 
-  const generateForField = async (field: 'title'|'subtitle'|'description'|'preparation'|'text'|'final_message'|'image_prompt'): Promise<string | undefined> => {
+  const generateForField = async (field: 'title'|'subtitle'|'description'|'preparation'|'text'|'final_message'|'image_prompt', overrideCtx?: Record<string, string>): Promise<string | undefined> => {
     setLoadingField(prev => ({ ...prev, [field]: true }));
     try {
       let generatedContent: string | undefined;
@@ -431,7 +441,8 @@ export default function AIGenerator({ onAudioGenerated }: AIGeneratorProps) {
         descricao_imagem_atual: prayerData?.image_prompt || '',
         base_biblica: biblicalBase || ''
       };
-      const { ok, content, error } = await gmanualGenerateField(field, ctx);
+      const mergedCtx = { ...ctx, ...(overrideCtx || {}) };
+      const { ok, content, error } = await gmanualGenerateField(field, mergedCtx);
       if (!ok) {
         toast.error(error || 'Falha ao gerar');
         return;
@@ -731,7 +742,10 @@ export default function AIGenerator({ onAudioGenerated }: AIGeneratorProps) {
     return output;
   };
 
-  const generateAudio = async (overrideText?: string) => {
+  const generateAudio = async (
+    overrideText?: string,
+    overrideSegments?: { preparation?: string; final_message?: string }
+  ) => {
     const prayerTextToUse = overrideText ?? prayerData?.prayer_text;
     if (!prayerTextToUse?.trim()) {
       toast.error('Primeiro gere uma oração para converter em áudio');
@@ -747,9 +761,9 @@ export default function AIGenerator({ onAudioGenerated }: AIGeneratorProps) {
     console.log('🎵 Gerando áudio com voz:', selectedVoiceInfo?.name);
 
     // Montar texto completo com pausas: Preparação, (break) Oração, (break) Mensagem final
-    const preparationRaw = (prayerData.preparation_text || '').trim();
+    const preparationRaw = ((overrideSegments?.preparation ?? prayerData.preparation_text) || '').trim();
     const prayerRaw = (prayerTextToUse || '').trim();
-    const finalMsgRaw = (prayerData.final_message || '').trim();
+    const finalMsgRaw = ((overrideSegments?.final_message ?? prayerData.final_message) || '').trim();
 
     let fullText = '';
 
