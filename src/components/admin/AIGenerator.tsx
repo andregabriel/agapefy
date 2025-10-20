@@ -975,24 +975,42 @@ export default function AIGenerator({ onAudioGenerated }: AIGeneratorProps) {
       setBiblicalBase('');
       return;
     }
-    // Heurística simples para detectar referências: NomeDoLivro 1:1 ou NomeDoLivro 23
-    const refRegex = /\b([1-3]?\s?[A-ZÁÂÃÀÉÊÍÓÔÕÚ][a-záâãàéêíóôõúç]+)\s+(\d{1,3})(?::(\d{1,3})(?:-(\d{1,3}))?)?/g;
-    const found: string[] = [];
-    let match: RegExpExecArray | null;
-    while ((match = refRegex.exec(text)) !== null) {
-      const book = match[1];
-      const chapter = match[2];
-      const verse = match[3];
-      const endVerse = match[4];
+    // Primeiro: regex local instantânea para UX imediata
+    const localRegex = /\b([1-3]?\s?[A-ZÁÂÃÀÉÊÍÓÔÕÚ][a-záâãàéêíóôõúç]+)\s+(\d{1,3})(?::(\d{1,3})(?:-(\d{1,3}))?)?/g;
+    const localFound: string[] = [];
+    let m: RegExpExecArray | null;
+    while ((m = localRegex.exec(text)) !== null) {
+      const book = m[1];
+      const chapter = m[2];
+      const verse = m[3];
+      const endVerse = m[4];
       let ref = `${book} ${chapter}`;
       if (verse) {
         ref += `:${verse}`;
         if (endVerse) ref += `-${endVerse}`;
       }
-      if (!found.includes(ref)) found.push(ref);
-      if (found.length >= 3) break;
+      if (!localFound.includes(ref)) localFound.push(ref);
+      if (localFound.length >= 3) break;
     }
-    setBiblicalBase(found.join('; '));
+    if (localFound.length > 0) {
+      setBiblicalBase(localFound.join('; '));
+    }
+    // Depois: chamada leve à API para manter a lógica centralizada e futura melhora
+    (async () => {
+      try {
+        const resp = await fetch('/api/detect-biblical-base', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ text })
+        });
+        const data = await resp.json().catch(() => ({}));
+        if (resp.ok && typeof data?.joined === 'string') {
+          setBiblicalBase((prev) => data.joined || prev || '');
+        }
+      } catch (_) {
+        // silencioso para não poluir a UI
+      }
+    })();
   }, [prayerData?.prayer_text, autoDetectBiblicalBase]);
 
   const handleSaveToDatabase = async () => {
