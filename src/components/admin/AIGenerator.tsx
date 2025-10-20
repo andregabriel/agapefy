@@ -169,11 +169,11 @@ export default function AIGenerator({ onAudioGenerated }: AIGeneratorProps) {
     if (isGeneratingAll) return;
     setIsGeneratingAll(true);
     try {
-      // 1) Gera Texto da Oração e aguarda preencher o campo
-      await generateForField('text');
+      // 1) Gerar Texto da Oração e capturar imediatamente para acionar áudio sem depender do setState
+      const generatedText = await generateForField('text');
       // Garante flush do estado para {texto}
       await new Promise((r) => setTimeout(r, 0));
-      // 2) Em paralelo: demais campos + áudio
+      // 2) Em paralelo: demais campos + áudio (usando o texto recém-gerado)
       await Promise.all([
         generateForField('preparation'),
         generateForField('final_message'),
@@ -189,8 +189,8 @@ export default function AIGenerator({ onAudioGenerated }: AIGeneratorProps) {
             await handleGenerateImage();
           } catch (_) {}
         })(),
-        // Dispara geração de áudio em paralelo após o texto estar pronto
-        (async () => { try { await handleGenerateAudio(); } catch (_) {} })(),
+        // Dispara geração de áudio em paralelo usando o texto recém-gerado (fallback para estado caso undefined)
+        (async () => { try { await generateAudio(generatedText || undefined); } catch (_) {} })(),
       ]);
       toast.success('Campos gerados (texto > demais em paralelo).');
     } catch (err) {
@@ -414,9 +414,10 @@ export default function AIGenerator({ onAudioGenerated }: AIGeneratorProps) {
     toast.success('Momento renomeado');
   };
 
-  const generateForField = async (field: 'title'|'subtitle'|'description'|'preparation'|'text'|'final_message'|'image_prompt') => {
+  const generateForField = async (field: 'title'|'subtitle'|'description'|'preparation'|'text'|'final_message'|'image_prompt'): Promise<string | undefined> => {
     setLoadingField(prev => ({ ...prev, [field]: true }));
     try {
+      let generatedContent: string | undefined;
       const ctx = {
         titulo: prayerData?.title || '',
         subtitulo: prayerData?.subtitle || '',
@@ -436,6 +437,7 @@ export default function AIGenerator({ onAudioGenerated }: AIGeneratorProps) {
         toast.error(error || 'Falha ao gerar');
         return;
       }
+      generatedContent = content;
       // Guardar valor anterior para undo e aplicar
       setUndoCache(prev => ({ ...prev, [field]:
         field === 'title' ? (prayerData?.title || '') :
@@ -477,6 +479,7 @@ export default function AIGenerator({ onAudioGenerated }: AIGeneratorProps) {
         },
         duration: 10000
       });
+      return generatedContent;
     } catch (e) {
       toast.error('Erro ao gerar');
     } finally {
@@ -729,8 +732,9 @@ export default function AIGenerator({ onAudioGenerated }: AIGeneratorProps) {
     return output;
   };
 
-  const handleGenerateAudio = async () => {
-    if (!prayerData?.prayer_text.trim()) {
+  const generateAudio = async (overrideText?: string) => {
+    const prayerTextToUse = overrideText ?? prayerData?.prayer_text;
+    if (!prayerTextToUse?.trim()) {
       toast.error('Primeiro gere uma oração para converter em áudio');
       return;
     }
@@ -745,7 +749,7 @@ export default function AIGenerator({ onAudioGenerated }: AIGeneratorProps) {
 
     // Montar texto completo com pausas: Preparação, (break) Oração, (break) Mensagem final
     const preparationRaw = (prayerData.preparation_text || '').trim();
-    const prayerRaw = (prayerData.prayer_text || '').trim();
+    const prayerRaw = (prayerTextToUse || '').trim();
     const finalMsgRaw = (prayerData.final_message || '').trim();
 
     let fullText = '';
@@ -886,6 +890,11 @@ export default function AIGenerator({ onAudioGenerated }: AIGeneratorProps) {
     }
   };
 
+  // Wrapper compatível com onClick
+  const handleGenerateAudio = async () => {
+    await generateAudio();
+  };
+
   const handleGenerateImage = async () => {
     // Usar o prompt definido pelo admin em "Editar prompt" acima do campo
     const adminPrompt = (localPrompts?.image_prompt || '').trim();
@@ -957,6 +966,34 @@ export default function AIGenerator({ onAudioGenerated }: AIGeneratorProps) {
       setIsGeneratingImage(false);
     }
   };
+  
+  // Detecção automática da Base bíblica baseada no texto da oração
+  useEffect(() => {
+    if (!autoDetectBiblicalBase) return;
+    const text = (prayerData?.prayer_text || '').trim();
+    if (!text) {
+      setBiblicalBase('');
+      return;
+    }
+    // Heurística simples para detectar referências: NomeDoLivro 1:1 ou NomeDoLivro 23
+    const refRegex = /\b([1-3]?\s?[A-ZÁÂÃÀÉÊÍÓÔÕÚ][a-záâãàéêíóôõúç]+)\s+(\d{1,3})(?::(\d{1,3})(?:-(\d{1,3}))?)?/g;
+    const found: string[] = [];
+    let match: RegExpExecArray | null;
+    while ((match = refRegex.exec(text)) !== null) {
+      const book = match[1];
+      const chapter = match[2];
+      const verse = match[3];
+      const endVerse = match[4];
+      let ref = `${book} ${chapter}`;
+      if (verse) {
+        ref += `:${verse}`;
+        if (endVerse) ref += `-${endVerse}`;
+      }
+      if (!found.includes(ref)) found.push(ref);
+      if (found.length >= 3) break;
+    }
+    setBiblicalBase(found.join('; '));
+  }, [prayerData?.prayer_text, autoDetectBiblicalBase]);
 
   const handleSaveToDatabase = async () => {
     if (!audioUrl) {
@@ -1027,6 +1064,7 @@ export default function AIGenerator({ onAudioGenerated }: AIGeneratorProps) {
           ai_engine: selectedAiEngine || null,
           voice_id: (lastVoiceIdUsed || selectedVoice) || null,
           voice_name: (lastVoiceNameUsed || selectedVoiceInfo?.name) || null,
+          biblical_base: biblicalBase || null,
         })
         .select()
         .single();
@@ -1044,7 +1082,7 @@ export default function AIGenerator({ onAudioGenerated }: AIGeneratorProps) {
       try {
         const { error: updateError } = await supabase
           .from('audios')
-          .update({ time: dayPart || 'Any', spiritual_goal: spiritualGoal || null, ai_engine: selectedAiEngine || null, voice_id: (lastVoiceIdUsed || selectedVoice) || null, voice_name: (lastVoiceNameUsed || (ELEVENLABS_VOICES.find(v => v.id === (lastVoiceIdUsed || selectedVoice))?.name)) || null })
+          .update({ time: dayPart || 'Any', spiritual_goal: spiritualGoal || null, ai_engine: selectedAiEngine || null, voice_id: (lastVoiceIdUsed || selectedVoice) || null, voice_name: (lastVoiceNameUsed || (ELEVENLABS_VOICES.find(v => v.id === (lastVoiceIdUsed || selectedVoice))?.name)) || null, biblical_base: biblicalBase || null })
           .eq('id', audioData.id);
         if (!updateError) {
           savedDirectlyInTable = true;
