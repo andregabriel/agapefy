@@ -12,6 +12,7 @@ import { saveFormResponse } from '@/lib/services/forms';
 import { useAuth } from '@/contexts/AuthContext';
 import { ArrowRight } from 'lucide-react';
 import Link from 'next/link';
+import { getPlaylistsByCategoryFast } from '@/lib/supabase-queries';
 
 interface FormOption { label: string; category_id: string }
 interface AdminForm { id: string; name: string; description?: string; schema: FormOption[]; onboard_step?: number | null }
@@ -34,6 +35,7 @@ export default function OnboardingClient() {
   const [loading, setLoading] = useState<boolean>(true);
   const [category, setCategory] = useState<{ id: string; name: string; description?: string | null; image_url?: string | null } | null>(null);
   const [audios, setAudios] = useState<AudioPreview[]>([]);
+  const [playlists, setPlaylists] = useState<{ id: string; title: string; description?: string | null; cover_url?: string | null }[]>([]);
 
   useEffect(() => {
     let mounted = true;
@@ -74,7 +76,7 @@ export default function OnboardingClient() {
               setAudios([]);
             }
           } else {
-            const [{ data: cat, error: catErr }, { data: auds, error: audErr }] = await Promise.all([
+            const [{ data: cat, error: catErr }, { data: auds, error: audErr }, getPl] = await Promise.all([
               supabase
               .from('categories')
               .select('id,name,description,image_url')
@@ -85,13 +87,15 @@ export default function OnboardingClient() {
                 .select('id,title,subtitle,duration,cover_url')
                 .eq('category_id', categoryId)
                 .order('created_at', { ascending: false })
-                .limit(3)
+                .limit(3),
+              getPlaylistsByCategoryFast(categoryId)
             ]);
             if (catErr) throw catErr;
             if (audErr) throw audErr;
             if (mounted) {
               setCategory((cat as any) || null);
               setAudios(((auds as any[]) || []) as AudioPreview[]);
+              setPlaylists((getPl as any[]) || []);
             }
           }
         }
@@ -116,13 +120,13 @@ export default function OnboardingClient() {
       setSubmitting(true);
       await saveFormResponse({ formId: form.id, answers: { option: selected }, userId: user?.id ?? null });
       toast.success('Resposta enviada');
-      // Ir direto para o preview (passo 2) com a categoria selecionada
-      router.replace(`/onboarding?step=2&categoryId=${encodeURIComponent(selected)}`);
     } catch (e) {
       // eslint-disable-next-line no-console
       console.error(e);
-      toast.error('Não foi possível enviar');
+      toast.error('Não foi possível enviar. Seguimos para o próximo passo.');
     } finally {
+      // Ir direto para o preview (passo 2) com a categoria selecionada
+      router.replace(`/onboarding?step=2&categoryId=${encodeURIComponent(selected)}`);
       setSubmitting(false);
     }
   }
@@ -169,11 +173,6 @@ export default function OnboardingClient() {
 
   // Passo 2: Preview da categoria
   if (desiredStep === 2) {
-    if (!category) {
-      // Se não houver categoria, mandar direto para WhatsApp (caminho seguro)
-      router.replace('/whatsapp');
-      return null;
-    }
 
     const formatDuration = (seconds?: number | null): string | null => {
       if (!seconds && seconds !== 0) return null;
@@ -194,15 +193,17 @@ export default function OnboardingClient() {
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="bg-gray-900 border border-gray-800 rounded-lg overflow-hidden">
-              {category.image_url ? (
+              {category?.image_url ? (
                 <img src={category.image_url} alt={category.name} className="w-full h-40 object-cover" />
               ) : (
                 <div className="w-full h-40 bg-gradient-to-br from-green-600 to-green-800" />
               )}
               <div className="p-4">
-                <div className="text-lg font-semibold">{category.name}</div>
-                {category.description && (
+                <div className="text-lg font-semibold">{category?.name || 'Categoria selecionada'}</div>
+                {category?.description ? (
                   <p className="text-gray-400 text-sm mt-1 line-clamp-2">{category.description}</p>
+                ) : (
+                  <p className="text-gray-400 text-sm mt-1">Sua playlist foi criada com base na categoria escolhida.</p>
                 )}
               </div>
             </div>
@@ -240,6 +241,34 @@ export default function OnboardingClient() {
                       </Link>
                     );
                   })}
+                </div>
+              </div>
+            )}
+
+            {playlists.length > 0 && (
+              <div className="space-y-3">
+                <div className="text-sm text-gray-400">Playlists dessa categoria</div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {playlists.map((playlist) => (
+                    <div key={playlist.id} className="group bg-gray-900 border border-gray-800 rounded-lg overflow-hidden">
+                      <div className="flex items-center gap-3 p-3">
+                        <div className="w-14 h-14 rounded-md overflow-hidden bg-gray-800 flex-shrink-0">
+                          {playlist.cover_url ? (
+                            <img src={playlist.cover_url} alt={playlist.title} className="w-full h-full object-cover" />
+                          ) : (
+                            <div className="w-full h-full bg-gradient-to-br from-blue-600 to-blue-800" />
+                          )}
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <div className="font-medium text-sm truncate group-hover:text-blue-400 transition-colors">{playlist.title}</div>
+                          {playlist.description && (
+                            <div className="text-xs text-gray-400 truncate">{playlist.description}</div>
+                          )}
+                        </div>
+                      </div>
+                      {/* Desabilitar play: não há botão de play e clic não navega */}
+                    </div>
+                  ))}
                 </div>
               </div>
             )}

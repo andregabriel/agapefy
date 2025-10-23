@@ -186,7 +186,7 @@ export default function AIGenerator({ onAudioGenerated }: AIGeneratorProps) {
     }
   };
 
-  const handleGenerateAllFields = async () => {
+  const handleGenerateAllFields = async (options?: { autoSave?: boolean }) => {
     if (isGeneratingAll) return;
     setIsGeneratingAll(true);
     try {
@@ -197,7 +197,7 @@ export default function AIGenerator({ onAudioGenerated }: AIGeneratorProps) {
       const texto = (textContent?.trim() || prayerData?.prayer_text || '');
       await new Promise((r) => setTimeout(r, 0));
 
-      // 4) Paralelo dos campos dependentes do texto (exceto áudio)
+      // 4) Iniciar em paralelo os campos dependentes do texto
       const prepP = generateForField('preparation', { texto });
       const finalP = generateForField('final_message', { texto });
       const titleP = generateForField('title', { texto });
@@ -205,13 +205,19 @@ export default function AIGenerator({ onAudioGenerated }: AIGeneratorProps) {
       const descP = generateForField('description', { texto });
       const imageDescP = generateForField('image_prompt', { texto });
 
-      // 5) Esperar descrição da imagem e gerar imagem usando o valor retornado (sem depender de flush de estado)
-      const imageDesc = await imageDescP;
-      if ((imageDesc || '').trim().length >= 20) {
-        await handleGenerateImage(imageDesc as string);
-      }
+      // 5) Disparar geração da imagem assim que a descrição estiver pronta, sem bloquear o fluxo
+      imageDescP.then(async (desc) => {
+        const clean = (desc || '').trim();
+        if (clean.length >= 20) {
+          try {
+            await handleGenerateImage(clean as string);
+          } catch (_) {
+            // erros já são tratados dentro de handleGenerateImage
+          }
+        }
+      });
 
-      // 6) Garantir que preparação e mensagem final estejam prontos antes do áudio
+      // 6) Assim que preparação e mensagem final estiverem prontas, gerar o áudio (independente da imagem)
       const [prepText, finalText] = await Promise.all([prepP, finalP]);
       try {
         await generateAudio(texto, {
@@ -222,9 +228,29 @@ export default function AIGenerator({ onAudioGenerated }: AIGeneratorProps) {
         // já tratamos toast internamente em generateAudio
       }
 
-      // 7) Aguarda os demais campos de texto
+      // 7) Aguarda os demais campos de texto (título, subtítulo, descrição)
       await Promise.all([titleP, subtitleP, descP]);
-      toast.success('Campos gerados (texto > campos + imagem + áudio).');
+      toast.success('Campos gerados (texto + campos + áudio). Imagem sendo gerada em paralelo.');
+
+      // 8) Auto-save opcional após gerar todos os campos
+      if (options?.autoSave) {
+        // Garante que estados assíncronos tenham sido commitados
+        await new Promise((r) => setTimeout(r, 0));
+        // Valida pré-requisitos mínimos
+        if (!prayerData) {
+          toast.error('Falha ao salvar: dados da oração não disponíveis');
+        } else if (!audioUrl) {
+          toast.error('Falha ao salvar: gere o áudio primeiro');
+        } else if (!selectedCategory) {
+          toast.error('Por favor, selecione uma categoria');
+        } else {
+          if (editingAudioId) {
+            await handleUpdateInDatabase();
+          } else {
+            await handleSaveToDatabase();
+          }
+        }
+      }
     } catch (err) {
       toast.error('Falha ao gerar todos os campos');
     } finally {
@@ -237,8 +263,8 @@ export default function AIGenerator({ onAudioGenerated }: AIGeneratorProps) {
     if (isGeneratingAndSaving) return;
     setIsGeneratingAndSaving(true);
     try {
-      // 1) Gera todos os campos incluindo imagem e áudio
-      await handleGenerateAllFields();
+      // 1) Gera todos os campos incluindo imagem e áudio (sem auto-save aqui, pois este fluxo já salvará abaixo)
+      await handleGenerateAllFields({ autoSave: false });
 
       // 2) Aguarda de fato o término de geração de imagem/áudio
       // (handleGenerateAllFields já aguarda todas as promises internas,
@@ -1624,9 +1650,9 @@ export default function AIGenerator({ onAudioGenerated }: AIGeneratorProps) {
             <div className="space-y-4">
               {/* Botões de orquestração */}
               <div className="flex sm:justify-end flex-col sm:flex-row">
-                <Button 
-                  variant="default"
-                  onClick={handleGenerateAllFields}
+              <Button 
+                variant="default"
+                onClick={() => handleGenerateAllFields({ autoSave: true })}
                   disabled={isGeneratingAll || isGeneratingAndSaving}
                   className="w-full sm:w-auto"
                 >
