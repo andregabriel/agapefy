@@ -196,25 +196,33 @@ export default function AIGenerator({ onAudioGenerated }: AIGeneratorProps) {
       const texto = (textContent?.trim() || prayerData?.prayer_text || '');
       await new Promise((r) => setTimeout(r, 0));
 
-      // 4) Paralelo (inclui áudio)
+      // 4) Paralelo dos campos dependentes do texto (exceto áudio)
       const prepP = generateForField('preparation', { texto });
       const finalP = generateForField('final_message', { texto });
       const titleP = generateForField('title', { texto });
       const subtitleP = generateForField('subtitle', { texto });
       const descP = generateForField('description', { texto });
       const imageDescP = generateForField('image_prompt', { texto });
-      const audioP = (async () => { try { await generateAudio(texto); } catch (_) {} })();
 
-      // 5) Esperar descrição da imagem preencher e flush
-      await imageDescP; 
+      // 5) Esperar descrição da imagem preencher e flush, depois gerar imagem
+      await imageDescP;
       await new Promise((r) => setTimeout(r, 0));
-
-      // 6) Gerar imagem
       await handleGenerateImage();
 
-      // Aguarda demais
-      await Promise.all([prepP, finalP, titleP, subtitleP, descP, audioP]);
-      toast.success('Campos gerados (texto > paralelos + imagem).');
+      // 6) Garantir que preparação e mensagem final estejam prontos antes do áudio
+      const [prepText, finalText] = await Promise.all([prepP, finalP]);
+      try {
+        await generateAudio(texto, {
+          preparation: (prepText || prayerData?.preparation_text || ''),
+          final_message: (finalText || prayerData?.final_message || '')
+        });
+      } catch (_) {
+        // já tratamos toast internamente em generateAudio
+      }
+
+      // 7) Aguarda os demais campos de texto
+      await Promise.all([titleP, subtitleP, descP]);
+      toast.success('Campos gerados (texto > campos + imagem + áudio).');
     } catch (err) {
       toast.error('Falha ao gerar todos os campos');
     } finally {

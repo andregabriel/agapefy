@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Users, Music, BookOpen, Heart, Download, MessageSquare, Calendar, Target } from 'lucide-react';
+import { Users, Music, BookOpen, Heart, Download, MessageSquare, Calendar, Target, FileText } from 'lucide-react';
 import AdminHamburgerMenu from './AdminHamburgerMenu';
 
 interface DashboardStats {
@@ -220,6 +220,13 @@ export default function Dashboard() {
             >
               <BookOpen className="h-6 w-6 mx-auto mb-2 text-orange-600" />
               <span className="text-sm font-medium text-gray-900">Categorias</span>
+            </a>
+            <a
+              href="/admin/forms"
+              className="p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors text-center"
+            >
+              <FileText className="h-6 w-6 mx-auto mb-2 text-sky-600" />
+              <span className="text-sm font-medium text-gray-900">Forms</span>
             </a>
           </div>
         </div>

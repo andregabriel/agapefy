@@ -76,7 +76,7 @@ export function useMessages() {
             .from('profiles')
             .select('id, username, full_name, avatar_url')
             .eq('id', otherUserId)
-            .single();
+            .maybeSingle();
 
           // Buscar última mensagem
           const { data: lastMessage } = await supabase
@@ -85,7 +85,7 @@ export function useMessages() {
             .eq('conversation_id', conv.id)
             .order('created_at', { ascending: false })
             .limit(1)
-            .single();
+            .maybeSingle();
 
           // Contar mensagens não lidas
           const { count: unreadCount } = await supabase
@@ -130,7 +130,7 @@ export function useMessages() {
         .from('conversations')
         .select('id')
         .or(`and(user1_id.eq.${user.id},user2_id.eq.${otherUserId}),and(user1_id.eq.${otherUserId},user2_id.eq.${user.id})`)
-        .single();
+        .maybeSingle();
 
       if (existingConv) {
         console.log('✅ Conversa existente encontrada:', existingConv.id);

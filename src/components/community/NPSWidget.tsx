@@ -165,7 +165,7 @@ export default function NPSWidget({ onClose }: NPSWidgetProps) {
 
   if (!isOpen) {
     return (
-      <div className="fixed bottom-20 right-4 z-50">
+      <div className="fixed bottom-20 left-4 right-4 z-50 flex justify-end">
         <Button
           onClick={handleOpen}
           className="bg-blue-600 hover:bg-blue-700 text-white rounded-full shadow-lg"
@@ -179,8 +179,8 @@ export default function NPSWidget({ onClose }: NPSWidgetProps) {
   }
 
   return (
-    <div className="fixed bottom-20 right-4 z-50">
-      <Card className="bg-gray-900 border-gray-700 w-80 shadow-xl">
+    <div className="fixed bottom-20 left-4 right-4 z-50">
+      <Card className="bg-gray-900 border-gray-700 w-full max-w-[20rem] ml-auto shadow-xl">
         <CardContent className="p-4">
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-white font-medium">

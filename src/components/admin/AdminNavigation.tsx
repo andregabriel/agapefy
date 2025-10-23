@@ -61,6 +61,12 @@ const adminRoutes = [
     color: 'text-gray-500'
   },
   {
+    label: 'Forms',
+    icon: FileText,
+    href: '/admin/forms',
+    color: 'text-sky-500'
+  },
+  {
     label: 'Documentos Legais',
     icon: FileText,
     href: '/admin/documentos-legais',

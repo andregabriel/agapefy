@@ -13,6 +13,7 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Switch } from "@/components/ui/switch";
 
 import {
   MessageCircle,
@@ -34,6 +35,10 @@ export default function WhatsAppSetupPage() {
   const [saving, setSaving] = useState(false);
   const [testing, setTesting] = useState<null | "start" | "chat" | "verse" | "reminder" | "prayer">(null);
   const [status, setStatus] = useState<null | { ok: boolean; details?: any }>(null);
+  const [isActive, setIsActive] = useState(true); // Biblicus (obrigatório)
+  const [dailyVerse, setDailyVerse] = useState(true); // Versículo Diário
+  const [dailyPrayer, setDailyPrayer] = useState(false); // Caminho Selecionado
+  const [dailyRoutine, setDailyRoutine] = useState(false); // Minha Rotina
 
   useEffect(() => {
     if (!loading && !user) {
@@ -46,11 +51,15 @@ export default function WhatsAppSetupPage() {
       try {
         const { data, error } = await supabase
           .from("whatsapp_users")
-          .select("phone_number")
+          .select("phone_number, is_active, receives_daily_verse, receives_daily_prayer, receives_daily_routine")
           .eq("user_id", user?.id ?? "-")
           .maybeSingle();
         if (error) return;
         if (data?.phone_number) setPhone(data.phone_number);
+        if (typeof data?.is_active === 'boolean') setIsActive(Boolean(data.is_active));
+        if (typeof data?.receives_daily_verse === 'boolean') setDailyVerse(Boolean(data.receives_daily_verse));
+        if (typeof data?.receives_daily_prayer === 'boolean') setDailyPrayer(Boolean(data.receives_daily_prayer));
+        if (typeof data?.receives_daily_routine === 'boolean') setDailyRoutine(Boolean(data.receives_daily_routine));
       } catch {}
     };
     if (user?.id) fetchExisting();
@@ -99,6 +108,28 @@ export default function WhatsAppSetupPage() {
       toast.error("Não foi possível salvar o número");
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function updatePreference(field: "is_active" | "receives_daily_verse" | "receives_daily_prayer" | "receives_daily_routine", value: boolean) {
+    const clean = phone.replace(/\D/g, "");
+    if (!clean) {
+      toast.error("Cadastre um número válido primeiro");
+      return;
+    }
+    try {
+      const { error } = await supabase
+        .from('whatsapp_users')
+        .upsert({ phone_number: clean, [field]: value, updated_at: new Date().toISOString() } as any, { onConflict: 'phone_number' });
+      if (error) throw error;
+      if (field === 'is_active') setIsActive(value);
+      if (field === 'receives_daily_verse') setDailyVerse(value);
+      if (field === 'receives_daily_prayer') setDailyPrayer(value);
+      if (field === 'receives_daily_routine') setDailyRoutine(value);
+      toast.success('Preferência atualizada');
+    } catch (e) {
+      console.warn(e);
+      toast.error('Não foi possível atualizar a preferência');
     }
   }
 
@@ -173,27 +204,43 @@ export default function WhatsAppSetupPage() {
             <p className="text-xs text-muted-foreground">Seu número será usado apenas para enviar/receber mensagens do Biblicus.</p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            <Button variant="secondary" onClick={() => test("start")} disabled={testing !== null} className="justify-start">
-              <Send className="h-4 w-4 mr-2" /> Testar comando /start
-            </Button>
-            <Button variant="secondary" onClick={() => test("chat")} disabled={testing !== null} className="justify-start">
-              <MessageCircle className="h-4 w-4 mr-2" /> Testar Conversa
-            </Button>
-            <Button variant="secondary" onClick={() => test("verse")} disabled={testing !== null} className="justify-start">
-              <BookText className="h-4 w-4 mr-2" /> Testar Versículos
-            </Button>
-            <Button variant="secondary" onClick={() => test("reminder")} disabled={testing !== null} className="justify-start">
-              <Clock className="h-4 w-4 mr-2" /> Testar Lembretes
-            </Button>
-            <Button variant="secondary" onClick={() => test("prayer")} disabled={testing !== null} className="justify-start">
-              <Sparkles className="h-4 w-4 mr-2" /> Testar Oração
-            </Button>
-          </div>
+          <div className="space-y-4">
+            {/* Biblicus (obrigatório) */}
+            <div className="flex items-start justify-between gap-4 p-3 rounded-md bg-muted/40">
+              <div>
+                <div className="font-medium">Biblicus</div>
+                <p className="text-sm text-muted-foreground">Deve ficar ativado obrigatoriamente; ele conduz respostas e automações no WhatsApp.</p>
+              </div>
+              <Switch checked={isActive} disabled onCheckedChange={(v) => updatePreference('is_active', v)} />
+            </div>
 
-          <p className="text-xs text-muted-foreground">
-            Dica: os botões acima realizam um envio manual de teste (não é o webhook automático).
-          </p>
+            {/* Versículo Diário */}
+            <div className="flex items-start justify-between gap-4 p-3 rounded-md bg-muted/40">
+              <div>
+                <div className="font-medium">Versículo Diário</div>
+                <p className="text-sm text-muted-foreground">Você receberá um versículo diariamente em seu WhatsApp.</p>
+              </div>
+              <Switch checked={dailyVerse} onCheckedChange={(v) => updatePreference('receives_daily_verse', v)} />
+            </div>
+
+            {/* Caminho Selecionado */}
+            <div className="flex items-start justify-between gap-4 p-3 rounded-md bg-muted/40">
+              <div>
+                <div className="font-medium">Caminho Selecionado</div>
+                <p className="text-sm text-muted-foreground">Você receberá orações diariamente para superar sua dificuldade selecionada.</p>
+              </div>
+              <Switch checked={dailyPrayer} onCheckedChange={(v) => updatePreference('receives_daily_prayer', v)} />
+            </div>
+
+            {/* Minha Rotina */}
+            <div className="flex items-start justify-between gap-4 p-3 rounded-md bg-muted/40">
+              <div>
+                <div className="font-medium">Minha Rotina</div>
+                <p className="text-sm text-muted-foreground">Você receberá sua rotina diariamente em seu WhatsApp.</p>
+              </div>
+              <Switch checked={dailyRoutine} onCheckedChange={(v) => updatePreference('receives_daily_routine', v)} />
+            </div>
+          </div>
 
           {status && (
             <Alert className="mt-2">
@@ -210,61 +257,7 @@ export default function WhatsAppSetupPage() {
         </CardContent>
       </Card>
 
-      <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4">
-        <Card>
-          <CardHeader>
-            <CardTitle>O que o Biblicus pode fazer</CardTitle>
-            <CardDescription>Use os comandos abaixo no WhatsApp para interagir.</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <div className="flex items-start gap-3">
-              <Badge variant="secondary">/conversa</Badge>
-              <div>
-                <div className="font-medium">Obtenha respostas baseadas na Bíblia</div>
-                <p className="text-sm text-muted-foreground">Converse livremente e receba respostas fundamentadas nas Escrituras.</p>
-              </div>
-            </div>
-            <div className="flex items-start gap-3">
-              <Badge variant="secondary">/versículos</Badge>
-              <div>
-                <div className="font-medium">Receba versículos diariamente</div>
-                <p className="text-sm text-muted-foreground">Ative o envio automático do versículo do dia.</p>
-              </div>
-            </div>
-            <div className="flex items-start gap-3">
-              <Badge variant="secondary">/lembretes</Badge>
-              <div>
-                <div className="font-medium">Receba lembretes nos horários de oração</div>
-                <p className="text-sm text-muted-foreground">Defina horários para ser lembrado de orar.</p>
-              </div>
-            </div>
-            <div className="flex items-start gap-3">
-              <Badge variant="secondary">/oração</Badge>
-              <div>
-                <div className="font-medium">Monte uma oração personalizada pra você</div>
-                <p className="text-sm text-muted-foreground">Descreva sua situação e receba uma oração personalizada.</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Como começar</CardTitle>
-            <CardDescription>Após salvar seu número, envie uma mensagem para o Biblicus.</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <div className="flex items-start gap-3">
-              <Phone className="h-4 w-4 mt-1" />
-              <p className="text-sm text-muted-foreground">Abra o WhatsApp e envie <span className="font-medium">/start</span> para iniciar.</p>
-            </div>
-            <div className="flex items-start gap-3">
-              <MessageCircle className="h-4 w-4 mt-1" />
-              <p className="text-sm text-muted-foreground">Use os comandos acima ou apenas converse normalmente.</p>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+      {/* seção informativa removida a pedido: cards "O que o Biblicus pode fazer" e "Como começar" */}
     </div>
   );
 }

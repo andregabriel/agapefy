@@ -13,7 +13,6 @@ import Link from 'next/link';
 
 // Componentes extraídos
 import { ProfileHeader } from './_components/ProfileHeader';
-import { SpiritualDashboard } from './_components/SpiritualDashboard';
 import { RoutineSection } from './_components/RoutineSection';
 import { ActivitiesSection } from './_components/ActivitiesSection';
 import { FavoritesSection } from './_components/FavoritesSection';
@@ -27,13 +26,10 @@ import { IntentionModal } from '@/components/IntentionModal';
 import { ReflectionModal } from '@/components/ReflectionModal';
 
 // Hooks existentes
-import { useUserGoals } from '@/hooks/useUserGoals';
-import { usePrayerDates } from '@/hooks/usePrayerDates';
 import { useRoutinePlaylist } from '@/hooks/useRoutinePlaylist';
 import { useUserActivity } from '@/hooks/useUserActivity';
 import { useFavorites } from '@/hooks/useFavorites';
 import { useDownloads } from '@/hooks/useDownloads';
-import { useUserMetrics } from '@/hooks/useUserMetrics';
 import { useIntentions } from '@/hooks/useIntentions';
 import { useReflections } from '@/hooks/useReflections';
 
@@ -54,13 +50,10 @@ export default function EuPage() {
     }
   }, []);
 
-  const { goals, loading: goalsLoading } = useUserGoals();
-  const { prayerDates, loading: datesLoading, getConsecutiveDays } = usePrayerDates();
   const { routinePlaylist, loading: routineLoading, removeAudioFromRoutine } = useRoutinePlaylist();
   const { activities, loading: activitiesLoading, formatRelativeDate, formatTime } = useUserActivity();
   const { favorites, loading: favoritesLoading, removeFromFavorites } = useFavorites();
   const { downloads, loading: downloadsLoading, removeDownload, formatFileSize, formatDownloadDate } = useDownloads();
-  const { metrics, loading: metricsLoading, formatTotalTime, getWeeklyProgressText, getConsecutiveProgressText } = useUserMetrics();
   const { intentions, loading: intentionsLoading, createIntention, updateIntention, deleteIntention, formatRelativeDate: formatIntentionDate } = useIntentions();
   const { reflections, loading: reflectionsLoading, createReflection, updateReflection, deleteReflection, formatRelativeDate: formatReflectionDate } = useReflections();
   const { playQueue, playAudio } = usePlayer();
@@ -177,8 +170,7 @@ export default function EuPage() {
     );
   }
 
-  // Usar métricas calculadas dinamicamente
-  const consecutiveDays = getConsecutiveDays();
+  // Removido: métricas do dashboard espiritual
 
   // Função para formatar duração em minutos
   const formatDuration = (seconds: number): string => {
@@ -399,18 +391,7 @@ export default function EuPage() {
         {/* Preferências rápidas */}
         <WhatsAppDailyVerseCard defaultSendTime="09:00" />
 
-        {/* Dashboard de Métricas Espirituais */}
-        <SpiritualDashboard
-          goals={goals}
-          goalsLoading={goalsLoading}
-          prayerDates={prayerDates}
-          datesLoading={datesLoading}
-          consecutiveDays={consecutiveDays}
-          metrics={metrics}
-          metricsLoading={metricsLoading}
-          getWeeklyProgressText={getWeeklyProgressText}
-          getConsecutiveProgressText={getConsecutiveProgressText}
-        />
+        {/* Dashboard de Métricas Espirituais ocultado */}
 
         {/* Seções de conteúdo */}
         <div className="space-y-8">

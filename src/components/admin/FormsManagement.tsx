@@ -1,0 +1,143 @@
+'use client';
+
+import { useEffect, useState } from 'react';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { FileText, Plus, Trash } from 'lucide-react';
+import { supabase } from '@/lib/supabase';
+import { toast } from 'sonner';
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+
+interface OnboardForm {
+  id: string;
+  name: string;
+  description?: string;
+  form_type?: string;
+  created_at: string;
+  onboard_step?: number | null;
+}
+
+export default function FormsManagement() {
+  const [forms, setForms] = useState<OnboardForm[]>([]);
+  const [loading, setLoading] = useState<boolean>(false);
+  const router = useRouter();
+
+  useEffect(() => {
+    let isMounted = true;
+    async function fetchForms() {
+      try {
+        setLoading(true);
+        const { data, error } = await supabase
+          .from('admin_forms')
+          .select('*')
+          .order('created_at', { ascending: false });
+        if (error) throw error;
+        if (isMounted) setForms((data || []) as unknown as OnboardForm[]);
+      } catch (e) {
+        // eslint-disable-next-line no-console
+        console.error(e);
+        toast.error('Erro ao carregar formulários');
+      } finally {
+        if (isMounted) setLoading(false);
+      }
+    }
+    void fetchForms();
+    return () => { isMounted = false; };
+  }, []);
+
+  return (
+    <div>
+      <div className="mb-6">
+        <h1 className="text-2xl font-bold text-gray-900 mb-1">Forms</h1>
+        <p className="text-gray-500">Gerencie formulários administrativos, como o onboarding.</p>
+      </div>
+
+      <Card className="mb-6">
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+          <div>
+            <CardTitle className="text-sm font-medium text-gray-600">Formulário de Onboard</CardTitle>
+            <CardDescription>Crie perguntas e fluxo para onboarding de usuários</CardDescription>
+          </div>
+          <Button size="sm" className="gap-2" onClick={async () => {
+            try {
+              setLoading(true);
+              const { data, error } = await supabase
+                .from('admin_forms')
+                .insert({ name: 'Novo formulário', description: '', form_type: 'onboarding', schema: [] })
+                .select('*')
+                .single();
+              if (error) throw error;
+              const created = data as unknown as OnboardForm & { id: string };
+              router.push(`/admin/forms/${created.id}`);
+            } catch (e) {
+              console.error(e);
+              toast.error('Não foi possível criar o formulário');
+            } finally {
+              setLoading(false);
+            }
+          }} disabled={loading}>
+            <Plus className="h-4 w-4" />
+            {loading ? 'Criando...' : 'Novo formulário'}
+          </Button>
+        </CardHeader>
+        <CardContent>
+          {forms.length === 0 ? (
+            <div className="flex items-center justify-center py-10 text-gray-500">
+              <div className="text-center">
+                <FileText className="h-8 w-8 mx-auto mb-2 text-gray-400" />
+                <p className="text-sm">Nenhum formulário criado ainda.</p>
+              </div>
+            </div>
+          ) : (
+            <ul className="divide-y divide-gray-200">
+              {forms.map((form) => (
+                <li key={form.id} className="py-3 flex items-center justify-between gap-3">
+                  <Link href={`/admin/forms/${form.id}`} className="flex-1 min-w-0">
+                    <div>
+                      <p className="font-medium text-gray-900 hover:underline">{form.name}</p>
+                      {form.description && (
+                        <p className="text-sm text-gray-500 truncate">{form.description}</p>
+                      )}
+                    </div>
+                  </Link>
+                  <div className="text-sm text-gray-400 ml-4 whitespace-nowrap flex items-center gap-3">
+                    {typeof form.onboard_step === 'number' && (
+                      <span className="px-2 py-0.5 rounded bg-gray-800 text-gray-200">Passo {form.onboard_step}</span>
+                    )}
+                    <span>{new Date(form.created_at).toLocaleString()}</span>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={async () => {
+                        try {
+                          if (!confirm(`Deseja realmente excluir o formulário "${form.name}"?`)) return;
+                          const { error } = await supabase
+                            .from('admin_forms')
+                            .delete()
+                            .eq('id', form.id);
+                          if (error) throw error;
+                          setForms(prev => prev.filter(f => f.id !== form.id));
+                          toast.success('Formulário excluído');
+                        } catch (e) {
+                          console.error(e);
+                          toast.error('Não foi possível excluir');
+                        }
+                      }}
+                      aria-label={`Excluir ${form.name}`}
+                      title="Excluir"
+                    >
+                      <Trash className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+

@@ -29,7 +29,7 @@ export function RoutineSection({
 }: RoutineSectionProps) {
   return (
     <section>
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6">
         <div>
           <h2 className="text-2xl font-bold text-white mb-1 flex items-center">
             <Clock className="h-6 w-6 mr-2 text-blue-500" />
@@ -42,7 +42,7 @@ export function RoutineSection({
             }
           </p>
         </div>
-        <div className="flex space-x-2">
+        <div className="flex flex-wrap gap-2 sm:flex-nowrap">
           {routinePlaylist && routinePlaylist.audios.length > 0 && (
             <Button
               size="sm"
@@ -65,7 +65,7 @@ export function RoutineSection({
             variant="ghost"
             size="icon"
             onClick={() => scrollCarousel(rotinaCarouselRef, 'left')}
-            className="text-gray-400 hover:text-white hover:bg-gray-800 rounded-full w-8 h-8"
+            className="hidden sm:inline-flex text-gray-400 hover:text-white hover:bg-gray-800 rounded-full w-8 h-8"
           >
             <ChevronLeft className="h-4 w-4" />
           </Button>
@@ -73,7 +73,7 @@ export function RoutineSection({
             variant="ghost"
             size="icon"
             onClick={() => scrollCarousel(rotinaCarouselRef, 'right')}
-            className="text-gray-400 hover:text-white hover:bg-gray-800 rounded-full w-8 h-8"
+            className="hidden sm:inline-flex text-gray-400 hover:text-white hover:bg-gray-800 rounded-full w-8 h-8"
           >
             <ChevronRight className="h-4 w-4" />
           </Button>
