@@ -13,6 +13,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { ArrowRight } from 'lucide-react';
 import Link from 'next/link';
 import { getPlaylistsByCategoryFast } from '@/lib/supabase-queries';
+import WhatsAppSetup from '@/components/whatsapp/WhatsAppSetup';
 
 interface FormOption { label: string; category_id: string }
 interface AdminForm { id: string; name: string; description?: string; schema: FormOption[]; onboard_step?: number | null }
@@ -27,6 +28,7 @@ export default function OnboardingClient() {
     const parsed = stepParam ? Number(stepParam) : NaN;
     return Number.isFinite(parsed) && parsed > 0 ? parsed : 1;
   }, [searchParams]);
+  const currentCategoryId = useMemo(() => searchParams?.get('categoryId') || '', [searchParams]);
 
   const [form, setForm] = useState<AdminForm | null>(null);
   const [selected, setSelected] = useState<string>(''); // stores selected category_id
@@ -109,6 +111,16 @@ export default function OnboardingClient() {
               setPlaylists((getPl as any[]) || []);
             }
           }
+        } else if (desiredStep === 3) {
+          const categoryId = searchParams?.get('categoryId');
+          if (categoryId && !category) {
+            const { data: cat } = await supabase
+              .from('categories')
+              .select('id,name,description,image_url')
+              .eq('id', categoryId)
+              .maybeSingle();
+            if (mounted) setCategory((cat as any) || null);
+          }
         }
       } catch (e) {
         // eslint-disable-next-line no-console
@@ -178,6 +190,30 @@ export default function OnboardingClient() {
           <div className="h-32 w-full bg-gray-900 border border-gray-800 rounded animate-pulse" />
           <div className="h-10 w-32 bg-gray-800 rounded ml-auto animate-pulse" />
         </div>
+      </div>
+    );
+  }
+
+  // Passo 3: Configurar WhatsApp (embedded)
+  if (desiredStep === 3) {
+    return (
+      <div className="max-w-2xl mx-auto p-4">
+        <Card>
+          <CardHeader>
+            <div className="relative">
+              <span className="absolute right-0 top-0 px-2 py-0.5 rounded bg-gray-800 text-gray-200 text-xs">Passo 3</span>
+              <div className="mt-10 md:mt-12 text-center px-2 md:px-6">
+                <CardTitle className="text-xl md:text-2xl leading-snug break-words max-w-3xl mx-auto">Conecte seu WhatsApp para receber uma mensagem diária para {category?.name || 'sua dificuldade selecionada'}.</CardTitle>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <WhatsAppSetup variant="embedded" redirectIfNotLoggedIn={false} />
+            <div className="flex justify-end">
+              <Button onClick={() => router.replace('/')}>Concluir</Button>
+            </div>
+          </CardContent>
+        </Card>
       </div>
     );
   }
@@ -265,7 +301,7 @@ export default function OnboardingClient() {
             })()}
 
             <div className="flex justify-end">
-              <Button onClick={() => router.replace('/whatsapp')}>
+              <Button onClick={() => router.replace(`/onboarding?step=3${currentCategoryId ? `&categoryId=${encodeURIComponent(currentCategoryId)}` : ''}`)}>
                 Avançar
                 <ArrowRight className="ml-2 h-4 w-4" />
               </Button>
