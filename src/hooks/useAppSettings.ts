@@ -26,6 +26,8 @@ interface AppSettings {
   gmanual_text_prompt?: string; // para prayer_text
   gmanual_final_message_prompt?: string;
   gmanual_image_prompt_prompt?: string; // para prompt da imagem (thumbnail)
+  // Template usado para enviar ao DALL‑E (padrão e ativo)
+  gmanual_image_generate_template?: string;
   gmanual_auto_pauses_prompt?: string;
   gmanual_pauses_auto_enabled?: string;
   gmanual_pause_comma?: string;
@@ -70,6 +72,8 @@ const DEFAULT_SETTINGS: AppSettings = {
   gmanual_text_prompt: 'Escreva o texto completo da oração (100–300 palavras), com estrutura tradicional: invocação, petição/gratidão e conclusão. Linguagem reverente, clara e próxima do brasileiro. Não use citações diretas extensas.',
   gmanual_final_message_prompt: 'Escreva 1–2 frases de encerramento curtas que abençoem e encorajem a continuidade da vida de oração. Apenas o texto.',
   gmanual_image_prompt_prompt: 'Escreva uma descrição detalhada, vívida e objetiva em português para gerar uma imagem relacionada a esta oração, incluindo elementos de ambiente, luz, composição, expressões e emoções. Evite nomes próprios e texto na imagem. Mínimo 20 caracteres. Retorne apenas a descrição.',
+  // Template ativo para geração de imagem (DALL‑E)
+  gmanual_image_generate_template: '{imagem_descricao}',
   // WhatsApp (default de produção informado pelo admin)
   whatsapp_biblicus_number: '5569920018597',
   whatsapp_welcome_message: '📖 Olá! Eu sou o Biblicus\n\nUm assistente virtual da Agapefy para te acompanhar na sua jornada espiritual. ✨\n\n🙌 O que posso fazer:\n\n• Obter respostas baseadas na Bíblia\n• Enviar versículos diariamente\n• Lembrar você dos horários de oração\n• Montar orações personalizadas para você\n\n💬 Comandos disponíveis:\n\n• **/conversa** – Tire dúvidas e converse sobre a Bíblia\n• **/versículos** – Receba mensagens com passagens todos os dias\n• **/lembretes** – Ative lembretes nos horários de oração\n• **/oração** – Tenha uma oração feita especialmente para você\n\n✨ Como usar:\nCadastre seu número de WhatsApp e comece a conversar comigo. Você poderá enviar mensagens e receber respostas, versículos, lembretes e orações diretamente no seu celular.\n\n🚀 Pronto para começar?',

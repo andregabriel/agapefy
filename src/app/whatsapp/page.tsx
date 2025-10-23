@@ -35,8 +35,8 @@ export default function WhatsAppSetupPage() {
   const [saving, setSaving] = useState(false);
   const [testing, setTesting] = useState<null | "start" | "chat" | "verse" | "reminder" | "prayer">(null);
   const [status, setStatus] = useState<null | { ok: boolean; details?: any }>(null);
-  const [isActive, setIsActive] = useState(true); // Biblicus (obrigatório)
-  const [dailyVerse, setDailyVerse] = useState(true); // Versículo Diário
+  const [isActive, setIsActive] = useState(false); // Biblicus
+  const [dailyVerse, setDailyVerse] = useState(false); // Versículo Diário
   const [dailyPrayer, setDailyPrayer] = useState(false); // Caminho Selecionado
   const [dailyRoutine, setDailyRoutine] = useState(false); // Minha Rotina
 
@@ -81,13 +81,15 @@ export default function WhatsAppSetupPage() {
           phone_number: clean,
           name: user?.email?.split("@")[0] ?? "Irmão(ã)",
           is_active: true,
-          receives_daily_verse: true,
+          receives_daily_verse: false,
           updated_at: new Date().toISOString(),
         },
         { onConflict: "phone_number" }
       );
       if (error) throw error;
       toast.success("Número salvo com sucesso. Envie /start no seu WhatsApp.");
+      // Ativar Biblicus automaticamente ao salvar o número
+      setIsActive(true);
 
       // Enviar mensagem de boas-vindas configurável (se houver)
       const welcome = settings.whatsapp_welcome_message?.trim();

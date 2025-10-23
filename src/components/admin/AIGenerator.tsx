@@ -685,6 +685,15 @@ export default function AIGenerator({ onAudioGenerated }: AIGeneratorProps) {
         },
         duration: 10000
       });
+      // Auto-disparar geração de imagem quando a descrição da imagem for gerada isoladamente
+      if (field === 'image_prompt') {
+        // aguardar flush do estado antes de compilar o prompt
+        await new Promise((r) => setTimeout(r, 0));
+        // evitar duplicidade quando já estamos no fluxo "Gerar todos os campos"
+        if (!isGeneratingAll) {
+          await handleGenerateImage();
+        }
+      }
       return generatedContent;
     } catch (e) {
       toast.error('Erro ao gerar');
@@ -2036,17 +2045,19 @@ export default function AIGenerator({ onAudioGenerated }: AIGeneratorProps) {
           setImageGenPromptModalOpen(open);
           if (open) {
             try {
-              const { data, error } = await supabase
+              // 1) Carregar histórico (aceita string JSON ou valor já como array)
+              const { data: histData, error: histErr } = await supabase
                 .from('app_settings')
                 .select('value')
                 .eq('key', 'gmanual_image_generate_template_history')
                 .limit(1)
                 .maybeSingle();
-              if (!error && data && typeof data.value === 'string') {
+              if (!histErr && histData) {
+                const v = (histData as any).value;
                 try {
-                  const parsed = JSON.parse(data.value);
+                  const parsed = typeof v === 'string' ? JSON.parse(v) : v;
                   if (Array.isArray(parsed)) {
-                    setImageGenTemplateHistory(parsed.filter((v) => v && typeof v.value === 'string'));
+                    setImageGenTemplateHistory(parsed.filter((e) => e && typeof e.value === 'string'));
                   } else {
                     setImageGenTemplateHistory([]);
                   }
@@ -2056,6 +2067,28 @@ export default function AIGenerator({ onAudioGenerated }: AIGeneratorProps) {
               } else {
                 setImageGenTemplateHistory([]);
               }
+
+              // 2) Carregar template atual diretamente do banco
+              const { data: curData, error: curErr } = await supabase
+                .from('app_settings')
+                .select('value')
+                .eq('key', 'gmanual_image_generate_template')
+                .limit(1)
+                .maybeSingle();
+              if (!curErr && curData) {
+                const v = (curData as any).value;
+                const value = typeof v === 'string' ? v : (v?.toString?.() ?? '');
+                if (value) setImageGenTemplate(value);
+              }
+
+              // 3) Fallback: se não houver template ativo, usar a versão mais recente do histórico
+              setTimeout(() => {
+                setImageGenTemplate((prev) => {
+                  if (prev && prev.trim()) return prev;
+                  const latest = (imageGenTemplateHistory && imageGenTemplateHistory[0]?.value) || '';
+                  return latest || '{imagem_descricao}';
+                });
+              }, 0);
             } catch (_) {
               setImageGenTemplateHistory([]);
             }

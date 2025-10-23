@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Switch } from '@/components/ui/switch';
 import { FileText, Plus, Trash } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { toast } from 'sonner';
@@ -16,6 +17,7 @@ interface OnboardForm {
   form_type?: string;
   created_at: string;
   onboard_step?: number | null;
+  is_active?: boolean;
 }
 
 export default function FormsManagement() {
@@ -106,6 +108,27 @@ export default function FormsManagement() {
                       <span className="px-2 py-0.5 rounded bg-gray-800 text-gray-200">Passo {form.onboard_step}</span>
                     )}
                     <span>{new Date(form.created_at).toLocaleString()}</span>
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs text-gray-500">Ativo</span>
+                      <Switch
+                        checked={form.is_active ?? true}
+                        onCheckedChange={async (checked) => {
+                          try {
+                            setForms(prev => prev.map(f => f.id === form.id ? { ...f, is_active: checked } : f));
+                            const { error } = await supabase
+                              .from('admin_forms')
+                              .update({ is_active: checked })
+                              .eq('id', form.id);
+                            if (error) throw error;
+                          } catch (e) {
+                            console.error(e);
+                            toast.error('Não foi possível atualizar');
+                            setForms(prev => prev.map(f => f.id === form.id ? { ...f, is_active: !(checked) } : f));
+                          }
+                        }}
+                        aria-label={`Alternar ativo para ${form.name}`}
+                      />
+                    </div>
                     <Button
                       variant="ghost"
                       size="sm"
