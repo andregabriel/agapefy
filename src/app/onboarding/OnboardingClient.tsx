@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, useRef } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -36,6 +36,17 @@ export default function OnboardingClient() {
   const [category, setCategory] = useState<{ id: string; name: string; description?: string | null; image_url?: string | null } | null>(null);
   const [audios, setAudios] = useState<AudioPreview[]>([]);
   const [playlists, setPlaylists] = useState<{ id: string; title: string; description?: string | null; cover_url?: string | null }[]>([]);
+
+  // Carrossel da categoria (preview sem play)
+  const carouselRef = useRef<HTMLDivElement | null>(null);
+  const scrollCarousel = (direction: 'left' | 'right') => {
+    const carousel = carouselRef.current;
+    if (!carousel) return;
+    const scrollAmount = 240;
+    const current = carousel.scrollLeft;
+    const target = direction === 'left' ? current - scrollAmount : current + scrollAmount;
+    carousel.scrollTo({ left: target, behavior: 'smooth' });
+  };
 
   useEffect(() => {
     let mounted = true;
@@ -87,7 +98,7 @@ export default function OnboardingClient() {
                 .select('id,title,subtitle,duration,cover_url')
                 .eq('category_id', categoryId)
                 .order('created_at', { ascending: false })
-                .limit(3),
+                .limit(10),
               getPlaylistsByCategoryFast(categoryId)
             ]);
             if (catErr) throw catErr;
@@ -186,88 +197,72 @@ export default function OnboardingClient() {
       <div className="max-w-2xl mx-auto p-4">
         <Card>
           <CardHeader>
-            <div className="flex items-center justify-between">
-              <CardTitle className="text-2xl">Parabéns pela coragem e pela abertura de dar as mãos à Jesus neste momento difícil.</CardTitle>
-              <span className="px-2 py-0.5 rounded bg-gray-800 text-gray-200 text-xs">Passo 2</span>
+            <div className="relative">
+              <span className="absolute right-0 top-0 px-2 py-0.5 rounded bg-gray-800 text-gray-200 text-xs">Passo 2</span>
+              <div className="mt-10 md:mt-12 text-center px-2 md:px-6">
+                <CardTitle className="text-2xl md:text-3xl leading-tight line-clamp-2 max-w-4xl mx-auto">Parabéns pela coragem e pela abertura de dar as mãos à Jesus neste momento difícil.</CardTitle>
+                <p className="mt-3 text-black text-base md:text-lg max-w-3xl mx-auto">Sua playlist foi criada, em breve você poderá escutar essas orações.</p>
+              </div>
             </div>
           </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="bg-gray-900 border border-gray-800 rounded-lg overflow-hidden">
-              {category?.image_url ? (
-                <img src={category.image_url} alt={category.name} className="w-full h-40 object-cover" />
-              ) : (
-                <div className="w-full h-40 bg-gradient-to-br from-green-600 to-green-800" />
-              )}
-              <div className="p-4">
-                <div className="text-lg font-semibold">{category?.name || 'Categoria selecionada'}</div>
-                <p className="text-gray-200 text-sm mt-1">Sua playlist foi criada, em breve você poderá escutar essas orações.</p>
-              </div>
-            </div>
+          <CardContent className="space-y-8">
 
-            {audios.length > 0 && (
-              <div className="space-y-3">
-                <div className="text-sm text-gray-400">Sugestões dessa categoria</div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  {audios.slice(0, 3).map((audio) => {
-                    const durationText = formatDuration(audio.duration);
-                    return (
-                      <Link
-                        href={`/player/audio/${audio.id}`}
-                        key={audio.id}
-                        className="group block bg-gray-900 border border-gray-800 rounded-lg overflow-hidden hover:bg-gray-800/60 transition-colors"
-                      >
-                        <div className="flex items-center gap-3 p-3">
-                          <div className="w-14 h-14 rounded-md overflow-hidden bg-gray-800 flex-shrink-0">
-                            {audio.cover_url ? (
-                              <img src={audio.cover_url} alt={audio.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
-                            ) : (
-                              <div className="w-full h-full bg-gradient-to-br from-green-600 to-green-800" />
-                            )}
+            {(() => {
+              const combined: Array<{
+                id: string;
+                type: 'audio' | 'playlist';
+                title: string;
+                subtitle?: string | null;
+                duration?: number | null;
+                image?: string | null;
+              }> = [
+                ...playlists.map(p => ({ id: p.id, type: 'playlist' as const, title: p.title, subtitle: null, duration: null, image: p.cover_url || category?.image_url || null })),
+                ...audios.map(a => ({ id: a.id, type: 'audio' as const, title: a.title, subtitle: a.subtitle || null, duration: a.duration || null, image: a.cover_url || category?.image_url || null })),
+              ];
+
+              if (combined.length === 0) return null;
+
+              return (
+                <div className="space-y-4">
+                  <h2 className="text-2xl font-bold text-black">{category?.name}</h2>
+                  <div className="relative group">
+                    {/* Setas do carrossel */}
+                    <button onClick={() => scrollCarousel('left')} className="absolute left-0 top-1/2 -translate-y-1/2 z-20 bg-white/90 hover:bg-white text-gray-800 rounded-full w-10 h-10 flex items-center justify-center shadow-lg border-2 border-gray-200" title="Rolar para a esquerda">
+                      <svg width="20" height="20" viewBox="0 0 24 24"><path fill="currentColor" d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"/></svg>
+                    </button>
+                    <button onClick={() => scrollCarousel('right')} className="absolute right-0 top-1/2 -translate-y-1/2 z-20 bg-white/90 hover:bg-white text-gray-800 rounded-full w-10 h-10 flex items-center justify-center shadow-lg border-2 border-gray-200" title="Rolar para a direita">
+                      <svg width="20" height="20" viewBox="0 0 24 24"><path fill="currentColor" d="M8.59 16.59L10 18l6-6-6-6-1.41 1.41L13.17 12z"/></svg>
+                    </button>
+
+                    <div ref={carouselRef} className="flex space-x-6 overflow-x-auto scrollbar-hide pb-2 scroll-smooth snap-x snap-mandatory">
+                      {combined.map((item) => (
+                        <div key={`${item.type}-${item.id}`} className="flex-shrink-0 w-48 snap-start group">
+                          <div className="relative mb-4">
+                            <div className="w-48 h-48 rounded-lg overflow-hidden bg-gray-800">
+                              {item.image ? (
+                                <img src={item.image} alt={item.title} className="w-full h-full object-cover" />
+                              ) : (
+                                <div className="w-full h-48 bg-gray-800" />
+                              )}
+                            </div>
+                            {/* Sem overlay de play no preview */}
                           </div>
-                          <div className="min-w-0 flex-1">
-                            <div className="font-medium text-sm truncate group-hover:text-green-400 transition-colors">{audio.title}</div>
-                            {audio.subtitle && (
-                              <div className="text-xs text-gray-400 truncate">{audio.subtitle}</div>
+                          <div className="space-y-1">
+                            <div className="font-bold text-black text-base leading-tight truncate">{item.title}</div>
+                            {item.subtitle && (
+                              <div className="text-sm text-gray-400 truncate">{item.subtitle}</div>
                             )}
-                            {durationText && (
-                              <div className="text-xs text-gray-500 mt-1">{durationText}</div>
+                            {typeof item.duration === 'number' && item.duration !== null && (
+                              <div className="text-sm text-gray-400">{formatDuration(item.duration)}</div>
                             )}
                           </div>
                         </div>
-                      </Link>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
-
-            {playlists.length > 0 && (
-              <div className="space-y-3">
-                <div className="text-sm text-gray-400">{category?.name}</div>
-                <div className="flex space-x-6 overflow-x-auto scrollbar-hide pb-4 scroll-smooth snap-x snap-mandatory">
-                  {playlists.map((playlist) => (
-                    <div key={playlist.id} className="flex-shrink-0 w-48 snap-start group">
-                      <div className="relative mb-4">
-                        <div className="w-48 h-48 rounded-lg overflow-hidden bg-gray-800">
-                          {playlist.cover_url ? (
-                            <img src={playlist.cover_url} alt={playlist.title} className="w-full h-full object-cover" />
-                          ) : (
-                            <div className="w-full h-full bg-gradient-to-br from-blue-600 to-blue-800" />
-                          )}
-                        </div>
-                        {/* Sem play overlay no preview */}
-                      </div>
-                      <div className="space-y-1">
-                        <div className="font-bold text-white text-base leading-tight truncate">{playlist.title}</div>
-                        {playlist.description && (
-                          <div className="text-sm text-gray-400 line-clamp-2">{playlist.description}</div>
-                        )}
-                      </div>
+                      ))}
                     </div>
-                  ))}
+                  </div>
                 </div>
-              </div>
-            )}
+              );
+            })()}
 
             <div className="flex justify-end">
               <Button onClick={() => router.replace('/whatsapp')}>
