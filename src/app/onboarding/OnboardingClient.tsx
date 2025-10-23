@@ -187,7 +187,7 @@ export default function OnboardingClient() {
         <Card>
           <CardHeader>
             <div className="flex items-center justify-between">
-              <CardTitle>Parabéns, sua playlist foi criada!</CardTitle>
+              <CardTitle className="text-2xl">Parabéns pela coragem e pela abertura de dar as mãos à Jesus neste momento difícil.</CardTitle>
               <span className="px-2 py-0.5 rounded bg-gray-800 text-gray-200 text-xs">Passo 2</span>
             </div>
           </CardHeader>
@@ -200,11 +200,7 @@ export default function OnboardingClient() {
               )}
               <div className="p-4">
                 <div className="text-lg font-semibold">{category?.name || 'Categoria selecionada'}</div>
-                {category?.description ? (
-                  <p className="text-gray-400 text-sm mt-1 line-clamp-2">{category.description}</p>
-                ) : (
-                  <p className="text-gray-400 text-sm mt-1">Sua playlist foi criada com base na categoria escolhida.</p>
-                )}
+                <p className="text-gray-200 text-sm mt-1">Sua playlist foi criada, em breve você poderá escutar essas orações.</p>
               </div>
             </div>
 
@@ -247,26 +243,26 @@ export default function OnboardingClient() {
 
             {playlists.length > 0 && (
               <div className="space-y-3">
-                <div className="text-sm text-gray-400">Playlists dessa categoria</div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="text-sm text-gray-400">{category?.name}</div>
+                <div className="flex space-x-6 overflow-x-auto scrollbar-hide pb-4 scroll-smooth snap-x snap-mandatory">
                   {playlists.map((playlist) => (
-                    <div key={playlist.id} className="group bg-gray-900 border border-gray-800 rounded-lg overflow-hidden">
-                      <div className="flex items-center gap-3 p-3">
-                        <div className="w-14 h-14 rounded-md overflow-hidden bg-gray-800 flex-shrink-0">
+                    <div key={playlist.id} className="flex-shrink-0 w-48 snap-start group">
+                      <div className="relative mb-4">
+                        <div className="w-48 h-48 rounded-lg overflow-hidden bg-gray-800">
                           {playlist.cover_url ? (
                             <img src={playlist.cover_url} alt={playlist.title} className="w-full h-full object-cover" />
                           ) : (
                             <div className="w-full h-full bg-gradient-to-br from-blue-600 to-blue-800" />
                           )}
                         </div>
-                        <div className="min-w-0 flex-1">
-                          <div className="font-medium text-sm truncate group-hover:text-blue-400 transition-colors">{playlist.title}</div>
-                          {playlist.description && (
-                            <div className="text-xs text-gray-400 truncate">{playlist.description}</div>
-                          )}
-                        </div>
+                        {/* Sem play overlay no preview */}
                       </div>
-                      {/* Desabilitar play: não há botão de play e clic não navega */}
+                      <div className="space-y-1">
+                        <div className="font-bold text-white text-base leading-tight truncate">{playlist.title}</div>
+                        {playlist.description && (
+                          <div className="text-sm text-gray-400 line-clamp-2">{playlist.description}</div>
+                        )}
+                      </div>
                     </div>
                   ))}
                 </div>

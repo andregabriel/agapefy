@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
@@ -186,7 +186,7 @@ export default function AIGenerator({ onAudioGenerated }: AIGeneratorProps) {
     }
   };
 
-  const handleGenerateAllFields = async (options?: { autoSave?: boolean }) => {
+  const handleGenerateAllFields = async () => {
     if (isGeneratingAll) return;
     setIsGeneratingAll(true);
     try {
@@ -231,26 +231,6 @@ export default function AIGenerator({ onAudioGenerated }: AIGeneratorProps) {
       // 7) Aguarda os demais campos de texto (título, subtítulo, descrição)
       await Promise.all([titleP, subtitleP, descP]);
       toast.success('Campos gerados (texto + campos + áudio). Imagem sendo gerada em paralelo.');
-
-      // 8) Auto-save opcional após gerar todos os campos
-      if (options?.autoSave) {
-        // Garante que estados assíncronos tenham sido commitados
-        await new Promise((r) => setTimeout(r, 0));
-        // Valida pré-requisitos mínimos
-        if (!prayerData) {
-          toast.error('Falha ao salvar: dados da oração não disponíveis');
-        } else if (!audioUrl) {
-          toast.error('Falha ao salvar: gere o áudio primeiro');
-        } else if (!selectedCategory) {
-          toast.error('Por favor, selecione uma categoria');
-        } else {
-          if (editingAudioId) {
-            await handleUpdateInDatabase();
-          } else {
-            await handleSaveToDatabase();
-          }
-        }
-      }
     } catch (err) {
       toast.error('Falha ao gerar todos os campos');
     } finally {
@@ -263,20 +243,21 @@ export default function AIGenerator({ onAudioGenerated }: AIGeneratorProps) {
     if (isGeneratingAndSaving) return;
     setIsGeneratingAndSaving(true);
     try {
-      // 1) Gera todos os campos incluindo imagem e áudio (sem auto-save aqui, pois este fluxo já salvará abaixo)
-      await handleGenerateAllFields({ autoSave: false });
+      // 1) Gera todos os campos incluindo imagem e áudio
+      await handleGenerateAllFields();
 
       // 2) Aguarda de fato o término de geração de imagem/áudio
       // (handleGenerateAllFields já aguarda todas as promises internas,
       //  mas aqui garantimos que estados assíncronos tenham sido commitados)
       await new Promise((r) => setTimeout(r, 0));
+      const ensuredAudioUrl = await waitForAudioUrl(20000);
 
       // 3) Valida pré-requisitos do salvamento
       if (!prayerData) {
         toast.error('Falha ao salvar: dados da oração não disponíveis');
         return;
       }
-      if (!audioUrl) {
+      if (!ensuredAudioUrl) {
         toast.error('Falha ao salvar: gere o áudio primeiro');
         return;
       }
@@ -1161,6 +1142,7 @@ export default function AIGenerator({ onAudioGenerated }: AIGeneratorProps) {
             audio_url: data.audio_url
           });
         }
+        return data.audio_url;
       } else {
         console.error('❌ URL do áudio não encontrada na resposta');
         toast.error('Nenhum áudio foi gerado');
@@ -1468,6 +1450,20 @@ export default function AIGenerator({ onAudioGenerated }: AIGeneratorProps) {
 
   const selectedVoiceInfo = ELEVENLABS_VOICES.find(v => v.id === selectedVoice);
 
+  // Ref para acessar o valor mais recente de audioUrl dentro de promises/loops assícronos
+  const audioUrlRef = useRef<string>("");
+  useEffect(() => { audioUrlRef.current = audioUrl; }, [audioUrl]);
+
+  const waitForAudioUrl = async (timeoutMs: number = 15000): Promise<string | null> => {
+    const startedAt = Date.now();
+    while (Date.now() - startedAt < timeoutMs) {
+      const current = audioUrlRef.current;
+      if (current && current.trim().length > 0) return current;
+      await new Promise((r) => setTimeout(r, 150));
+    }
+    return null;
+  };
+
   return (
     <div className="space-y-6">
       <Card>
@@ -1650,9 +1646,9 @@ export default function AIGenerator({ onAudioGenerated }: AIGeneratorProps) {
             <div className="space-y-4">
               {/* Botões de orquestração */}
               <div className="flex sm:justify-end flex-col sm:flex-row">
-              <Button 
-                variant="default"
-                onClick={() => handleGenerateAllFields({ autoSave: true })}
+                <Button 
+                  variant="default"
+                  onClick={handleGenerateAllFields}
                   disabled={isGeneratingAll || isGeneratingAndSaving}
                   className="w-full sm:w-auto"
                 >
