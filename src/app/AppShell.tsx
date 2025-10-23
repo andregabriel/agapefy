@@ -16,8 +16,9 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   const isLoginPage = pathname === '/login';
   const isBuscaPage = pathname === '/busca';
   const isBibliaPage = pathname === '/biblia';
-  const hideHeader = isLoginPage || isBuscaPage || isBibliaPage;
-  const hideBottomNav = isLoginPage;
+  const isOnboardingPage = pathname?.startsWith('/onboarding');
+  const hideHeader = isLoginPage || isBuscaPage || isBibliaPage || isOnboardingPage;
+  const hideBottomNav = isLoginPage || isOnboardingPage;
 
   // Gate de onboarding: somente primeiro acesso enquanto houver passos pendentes
   useEffect(() => {

@@ -21,7 +21,8 @@ export async function GET(request: NextRequest) {
     if (formsError) throw formsError;
 
     if (!forms || forms.length === 0) {
-      return NextResponse.json({ pending: false, steps: [] });
+      // Sem passos configurados: considerar que não há pendências
+      return NextResponse.json({ pending: false, steps: [], nextStep: null });
     }
 
     const formIds = forms.map(f => f.id);

@@ -73,6 +73,7 @@ export default function AIGenerator({ onAudioGenerated }: AIGeneratorProps) {
   const [isGeneratingImage, setIsGeneratingImage] = useState(false);
   const [isGeneratingAll, setIsGeneratingAll] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [isGeneratingAndSaving, setIsGeneratingAndSaving] = useState(false);
   const { showDebug, setShowDebug, debugLogs, addDebugLog, clearLogs } = useDebugLogs();
   const [lastVoiceIdUsed, setLastVoiceIdUsed] = useState<string>("");
   const [lastVoiceNameUsed, setLastVoiceNameUsed] = useState<string>("");
@@ -228,6 +229,46 @@ export default function AIGenerator({ onAudioGenerated }: AIGeneratorProps) {
       toast.error('Falha ao gerar todos os campos');
     } finally {
       setIsGeneratingAll(false);
+    }
+  };
+
+  // Novo: Botão único que gera todos os campos e salva no banco
+  const handleGenerateAndSave = async () => {
+    if (isGeneratingAndSaving) return;
+    setIsGeneratingAndSaving(true);
+    try {
+      // 1) Gera todos os campos incluindo imagem e áudio
+      await handleGenerateAllFields();
+
+      // 2) Aguarda de fato o término de geração de imagem/áudio
+      // (handleGenerateAllFields já aguarda todas as promises internas,
+      //  mas aqui garantimos que estados assíncronos tenham sido commitados)
+      await new Promise((r) => setTimeout(r, 0));
+
+      // 3) Valida pré-requisitos do salvamento
+      if (!prayerData) {
+        toast.error('Falha ao salvar: dados da oração não disponíveis');
+        return;
+      }
+      if (!audioUrl) {
+        toast.error('Falha ao salvar: gere o áudio primeiro');
+        return;
+      }
+      if (!selectedCategory) {
+        toast.error('Por favor, selecione uma categoria');
+        return;
+      }
+
+      // 4) Salva no banco (cria ou atualiza)
+      if (editingAudioId) {
+        await handleUpdateInDatabase();
+      } else {
+        await handleSaveToDatabase();
+      }
+    } catch (err) {
+      toast.error('Falha ao gerar e salvar a oração');
+    } finally {
+      setIsGeneratingAndSaving(false);
     }
   };
 
@@ -1581,12 +1622,12 @@ export default function AIGenerator({ onAudioGenerated }: AIGeneratorProps) {
           {/* Dados da oração gerada */}
           {prayerData && (
             <div className="space-y-4">
-              {/* Botão de orquestração: gera Texto e depois os demais em paralelo */}
-              <div className="flex sm:justify-end">
+              {/* Botões de orquestração */}
+              <div className="flex sm:justify-end flex-col sm:flex-row">
                 <Button 
                   variant="default"
                   onClick={handleGenerateAllFields}
-                  disabled={isGeneratingAll}
+                  disabled={isGeneratingAll || isGeneratingAndSaving}
                   className="w-full sm:w-auto"
                 >
                   {isGeneratingAll ? (
@@ -1598,6 +1639,25 @@ export default function AIGenerator({ onAudioGenerated }: AIGeneratorProps) {
                     <>
                       <Wand2 className="mr-2 h-4 w-4" />
                       Gerar todos os campos (ordem inteligente)
+                    </>
+                  )}
+                </Button>
+
+                <Button
+                  variant="default"
+                  onClick={handleGenerateAndSave}
+                  disabled={isGeneratingAndSaving || isGeneratingAll || isSaving}
+                  className="w-full sm:w-auto mt-2 sm:mt-0 sm:ml-2"
+                >
+                  {isGeneratingAndSaving ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Gerando oração...
+                    </>
+                  ) : (
+                    <>
+                      <Save className="mr-2 h-4 w-4" />
+                      Gerar oração
                     </>
                   )}
                 </Button>

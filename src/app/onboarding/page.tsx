@@ -3,9 +3,11 @@ import OnboardingClient from './OnboardingClient';
 
 export default function OnboardingPage() {
   return (
-    <Suspense fallback={null}>
-      <OnboardingClient />
-    </Suspense>
+    <div className="min-h-screen bg-black text-white">
+      <Suspense fallback={null}>
+        <OnboardingClient />
+      </Suspense>
+    </div>
   );
 }
 
