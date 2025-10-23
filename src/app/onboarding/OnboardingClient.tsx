@@ -288,7 +288,7 @@ export default function OnboardingClient() {
         </CardHeader>
         <CardContent className="space-y-6">
           {form.description && (
-            <p className="text-gray-400 text-base">{form.description}</p>
+            <p className="text-black text-lg">{form.description}</p>
           )}
 
           <RadioGroup
