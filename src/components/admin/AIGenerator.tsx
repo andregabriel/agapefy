@@ -7,15 +7,18 @@ import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Loader2, Wand2, Volume2, Mic, RefreshCw, Image, Save, ChevronDown, ChevronUp, Bug, Copy, ExternalLink, Clock, Settings } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/lib/supabase';
-import { getCategories } from '@/lib/supabase-queries';
+import { getCategories, searchAudios, Audio as DBAudio } from '@/lib/supabase-queries';
 import { useAppSettings } from '@/hooks/useAppSettings';
 import { AIGeneratorProps, PrayerData, Category, DebugInfo } from '@/types/ai';
 import ELEVENLABS_VOICES from '@/constants/elevenlabsVoices';
 import { normalizeSeconds, applyPacingBreaksToText, formatDuration } from '@/lib/ai/textPacing';
+import { optimizeImagePrompt } from '@/lib/ai/imagePrompt';
 import { getAudioDuration } from '@/lib/audio/duration';
 import { copyToClipboard as copyToClipboardUtil } from '@/lib/clipboard';
 import { uploadImageToSupabaseFromUrl } from '@/lib/services/storage';
@@ -89,9 +92,27 @@ export default function AIGenerator({ onAudioGenerated }: AIGeneratorProps) {
   // Base bíblica (novo campo)
   const [biblicalBase, setBiblicalBase] = useState<string>('');
   const [autoDetectBiblicalBase, setAutoDetectBiblicalBase] = useState<boolean>(true);
+  // Edição de oração existente
+  const [editingAudioId, setEditingAudioId] = useState<string | null>(null);
+  const [editingAudio, setEditingAudio] = useState<DBAudio | null>(null);
+  const [searchQuery, setSearchQuery] = useState<string>('');
+  const [searchResults, setSearchResults] = useState<DBAudio[]>([]);
+  const [isSearching, setIsSearching] = useState<boolean>(false);
+  // Combobox dinâmico
+  const [comboOpen, setComboOpen] = useState(false);
+  const [allAudios, setAllAudios] = useState<DBAudio[]>([]);
+  const [comboQuery, setComboQuery] = useState('');
+  const [comboLoading, setComboLoading] = useState(false);
   // Versões do prompt
   const [promptHistory, setPromptHistory] = useState<Array<{ value: string; label?: string; date: string }>>([]);
   const [promptVersionLabel, setPromptVersionLabel] = useState('');
+  // Template de geração da imagem (enviado ao DALL-E)
+  const [imageGenTemplate, setImageGenTemplate] = useState<string>('');
+  const [imageGenPromptModalOpen, setImageGenPromptModalOpen] = useState(false);
+  const [savingImageGenTemplate, setSavingImageGenTemplate] = useState(false);
+  // Histórico de versões do template DALL‑E
+  const [imageGenTemplateHistory, setImageGenTemplateHistory] = useState<Array<{ value: string; label?: string; date: string }>>([]);
+  const [imageGenTemplateVersionLabel, setImageGenTemplateVersionLabel] = useState('');
   // Modais para Objetivo espiritual (adicionar/renomear)
   const [addGoalModalOpen, setAddGoalModalOpen] = useState(false);
   const [renameGoalModalOpen, setRenameGoalModalOpen] = useState(false);
@@ -152,6 +173,7 @@ export default function AIGenerator({ onAudioGenerated }: AIGeneratorProps) {
     setPausePeriod((settings as any)?.gmanual_pause_period || '0.8');
     setPauseBeforePrayer((settings as any)?.gmanual_pause_before_prayer || '1.0');
     setPauseAfterPrayer((settings as any)?.gmanual_pause_after_prayer || '1.0');
+    setImageGenTemplate((settings as any)?.gmanual_image_generate_template || '{imagem_descricao}');
   }, [settings]);
 
   const clearDraft = () => {
@@ -167,46 +189,207 @@ export default function AIGenerator({ onAudioGenerated }: AIGeneratorProps) {
     if (isGeneratingAll) return;
     setIsGeneratingAll(true);
     try {
-      // 1) Gerar Texto da Oração e capturar imediatamente para uso em prompts dependentes
-      const generatedText = await generateForField('text');
-      const textoCtx = { texto: generatedText || '' };
-      // 2) Disparar tarefas independentes (título e imagem) em paralelo
-      const titleTask = generateForField('title', textoCtx);
-      const imageTask = (async () => {
-        try {
-          await generateForField('image_prompt', textoCtx);
-          await new Promise((r) => setTimeout(r, 0));
-          await handleGenerateImage();
-        } catch (_) {}
-      })();
+      // 1) texto
+      const textContent = await generateForField('text');
+      // 2) retorno da API já aguardado acima
+      // 3) garantir flush de estado para {texto}
+      const texto = (textContent?.trim() || prayerData?.prayer_text || '');
+      await new Promise((r) => setTimeout(r, 0));
 
-      // 3) Gerar em paralelo os campos que compõem o áudio e aguardar ambos
-      const [preparationContent, finalMessageContent] = await Promise.all([
-        generateForField('preparation', textoCtx),
-        generateForField('final_message', textoCtx),
-      ]);
+      // 4) Paralelo (inclui áudio)
+      const prepP = generateForField('preparation', { texto });
+      const finalP = generateForField('final_message', { texto });
+      const titleP = generateForField('title', { texto });
+      const subtitleP = generateForField('subtitle', { texto });
+      const descP = generateForField('description', { texto });
+      const imageDescP = generateForField('image_prompt', { texto });
+      const audioP = (async () => { try { await generateAudio(texto); } catch (_) {} })();
 
-      // 4) Agora gerar o áudio com o texto completo (prep + texto + final)
-      try {
-        await generateAudio(generatedText || undefined, {
-          preparation: preparationContent ?? (prayerData?.preparation_text || ''),
-          final_message: finalMessageContent ?? (prayerData?.final_message || ''),
-        });
-      } catch (_) {}
+      // 5) Esperar descrição da imagem preencher e flush
+      await imageDescP; 
+      await new Promise((r) => setTimeout(r, 0));
 
-      // 5) Gerar subtítulo com texto atualizado
-      const subtitleContent = await generateForField('subtitle', textoCtx);
-      // 6) Gerar descrição com texto e subtítulo mais recentes
-      await generateForField('description', { ...textoCtx, subtitulo: subtitleContent || '' });
-      // 7) Garantir a conclusão das tarefas independentes
-      await Promise.all([titleTask, imageTask]);
-      toast.success('Campos gerados (texto -> dependentes com contexto atualizado).');
+      // 6) Gerar imagem
+      await handleGenerateImage();
+
+      // Aguarda demais
+      await Promise.all([prepP, finalP, titleP, subtitleP, descP, audioP]);
+      toast.success('Campos gerados (texto > paralelos + imagem).');
     } catch (err) {
       toast.error('Falha ao gerar todos os campos');
     } finally {
       setIsGeneratingAll(false);
     }
   };
+
+  // Buscar orações (áudios) existentes por título/descrição
+  const handleSearchAudios = async () => {
+    const term = (searchQuery || '').trim();
+    if (!term) {
+      setSearchResults([]);
+      return;
+    }
+    try {
+      setIsSearching(true);
+      const results = await searchAudios(term);
+      setSearchResults(results || []);
+    } catch (_) {
+      toast.error('Erro ao buscar orações');
+    } finally {
+      setIsSearching(false);
+    }
+  };
+
+  // Carregar uma oração existente no formulário para edição
+  const loadAudioForEdit = async (audioId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('audios')
+        .select('*')
+        .eq('id', audioId)
+        .single();
+      if (error || !data) {
+        toast.error('Erro ao carregar oração selecionada');
+        return;
+      }
+
+      const row = data as unknown as DBAudio & { ai_engine?: string | null; biblical_base?: string | null; time?: string | null; spiritual_goal?: string | null; };
+      setEditingAudioId(row.id);
+      setEditingAudio(row);
+
+      // Mapear campos para o formulário do gerador
+      setSelectedCategory(row.category_id || '');
+      setDayPart((row as any).time || 'Any');
+      setSpiritualGoal((row as any).spiritual_goal || '');
+      if (typeof (row as any).ai_engine === 'string') setSelectedAiEngine((row as any).ai_engine || selectedAiEngine);
+      if (typeof row.voice_id === 'string') setLastVoiceIdUsed(row.voice_id || '');
+      if (typeof row.voice_name === 'string') setLastVoiceNameUsed(row.voice_name || '');
+      setBiblicalBase(((row as any).biblical_base as string) || '');
+
+      setPrayerData((prev) => ({
+        title: row.title || '',
+        subtitle: row.subtitle || '',
+        preparation_text: '',
+        // Sem separadores na base, carregamos o transcript inteiro em prayer_text
+        prayer_text: (row.transcript as string) || '',
+        image_prompt: '',
+        audio_description: row.description || '',
+        final_message: ''
+      }));
+
+      setAudioUrl(row.audio_url || '');
+      setAudioDuration((row.duration as any) ?? null);
+      // Exibir capa existente (se houver)
+      const existingCover = (row as any).cover_url || (row as any).thumbnail_url || '';
+      setImageUrl(existingCover || '');
+
+      toast.success('Oração carregada para edição');
+    } catch (_) {
+      toast.error('Erro inesperado ao carregar oração');
+    }
+  };
+
+  const clearEditingSelection = () => {
+    setEditingAudioId(null);
+    setEditingAudio(null);
+  };
+
+  // Atualizar oração existente (update)
+  const handleUpdateInDatabase = async () => {
+    if (!editingAudioId) return;
+    if (!prayerData) return;
+    if (!selectedCategory) {
+      toast.error('Por favor, selecione uma categoria');
+      return;
+    }
+
+    setIsSaving(true);
+    try {
+      const selectedVoiceInfo = ELEVENLABS_VOICES.find(v => v.id === (lastVoiceIdUsed || selectedVoice));
+      const finalDescription = `${prayerData.audio_description || ''}`;
+      const preparation = (prayerData.preparation_text || '').trim();
+      const prayer = (prayerData.prayer_text || '').trim();
+      const finalMsg = (prayerData.final_message || '').trim();
+      const transcriptFull = [preparation, prayer, finalMsg].filter(Boolean).join('\n\n');
+
+      // Se uma imagem for uma URL direta, apenas persistimos; manteremos a já existente se o campo estiver vazio
+      const coverPublicUrl = imageUrl || (editingAudio as any)?.cover_url || null;
+
+      const { error: updateError } = await supabase
+        .from('audios')
+        .update({
+          title: prayerData.title,
+          subtitle: prayerData.subtitle || null,
+          description: finalDescription || null,
+          audio_url: audioUrl || (editingAudio as any)?.audio_url || null,
+          transcript: transcriptFull || null,
+          duration: audioDuration ? Math.round(audioDuration) : (editingAudio as any)?.duration || null,
+          category_id: selectedCategory || null,
+          cover_url: coverPublicUrl,
+          ai_engine: selectedAiEngine || null,
+          voice_id: (lastVoiceIdUsed || selectedVoice) || null,
+          voice_name: (lastVoiceNameUsed || selectedVoiceInfo?.name) || null,
+          biblical_base: biblicalBase || null,
+          time: dayPart || 'Any',
+          spiritual_goal: spiritualGoal || null,
+        })
+        .eq('id', editingAudioId);
+
+      if (updateError) {
+        console.error('❌ Erro ao atualizar áudio:', updateError);
+        toast.error('Erro ao atualizar no banco de dados');
+        return;
+      }
+
+      toast.success('✅ Oração atualizada com sucesso');
+      // Atualizar snapshot local
+      setEditingAudio((prev) => prev ? ({ ...prev, title: prayerData.title, subtitle: prayerData.subtitle || null, description: finalDescription || null, audio_url: audioUrl || prev.audio_url, duration: audioDuration ? Math.round(audioDuration) : (prev.duration as any) || null, category_id: selectedCategory || null, cover_url: coverPublicUrl as any, voice_id: (lastVoiceIdUsed || selectedVoice) || null, voice_name: (lastVoiceNameUsed || selectedVoiceInfo?.name) || null } as any) : prev);
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido';
+      console.error('❌ Erro ao atualizar:', errorMessage);
+      toast.error('❌ Erro ao atualizar no banco de dados');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  // Carregar lista inicial para o combobox ao abrir
+  const preloadAllAudios = async () => {
+    if (allAudios.length > 0) return;
+    try {
+      setComboLoading(true);
+      const { data, error } = await supabase
+        .from('audios')
+        .select('id,title')
+        .order('created_at', { ascending: false })
+        .limit(500);
+      if (!error && Array.isArray(data)) {
+        setAllAudios((data as any[]).map((r: any) => ({ id: r.id, title: r.title } as any)) as DBAudio[]);
+      }
+    } finally {
+      setComboLoading(false);
+    }
+  };
+
+  // Busca dinâmica (remota) quando o usuário digita dentro do combobox
+  useEffect(() => {
+    let timer: any;
+    if (comboQuery && comboQuery.trim().length >= 2) {
+      setComboLoading(true);
+      timer = setTimeout(async () => {
+        try {
+          const results = await searchAudios(comboQuery.trim());
+          setSearchResults(results || []);
+        } finally {
+          setComboLoading(false);
+        }
+      }, 250);
+    } else {
+      // Limpa resultados para voltar ao preload
+      setSearchResults([]);
+    }
+    return () => { if (timer) clearTimeout(timer); };
+  }, [comboQuery]);
 
   const restoreDefaultPrompt = (key: PromptField) => {
     const defaults: any = {
@@ -441,6 +624,12 @@ export default function AIGenerator({ onAudioGenerated }: AIGeneratorProps) {
         base_biblica: biblicalBase || ''
       };
       const mergedCtx = { ...ctx, ...(overrideCtx || {}) };
+
+      // Garantia: estes campos só rodam se houver texto disponível
+      if ((field === 'subtitle' || field === 'description' || field === 'preparation' || field === 'final_message' || field === 'title' || field === 'image_prompt') && !(mergedCtx.texto || '').trim()) {
+        toast.error('Gere primeiro o Texto da Oração para usar neste campo.');
+        return;
+      }
       const { ok, content, error } = await gmanualGenerateField(field, mergedCtx);
       if (!ok) {
         toast.error(error || 'Falha ao gerar');
@@ -509,7 +698,7 @@ export default function AIGenerator({ onAudioGenerated }: AIGeneratorProps) {
     }
   };
 
-  // optimizeImagePrompt removido: agora enviamos exatamente o texto do prompt definido pelo admin
+  // optimizeImagePrompt extraído para util
 
   // Carregar categorias ao montar o componente
   useEffect(() => {
@@ -908,13 +1097,11 @@ export default function AIGenerator({ onAudioGenerated }: AIGeneratorProps) {
   };
 
   const handleGenerateImage = async () => {
-    // Usar o prompt definido pelo admin em "Editar prompt" acima do campo
-    const adminPrompt = (localPrompts?.image_prompt || '').trim();
-    const fieldPrompt = (prayerData?.image_prompt || '').trim();
-    const originalPrompt = (adminPrompt || fieldPrompt);
+    // Usar a descrição editável combinada com o template configurável
+    const originalPrompt = (prayerData?.image_prompt || '').trim();
 
     if (!originalPrompt) {
-      toast.error('Thumbnail não encontrado');
+      toast.error('Por favor, preencha a descrição da imagem');
       return;
     }
 
@@ -924,19 +1111,51 @@ export default function AIGenerator({ onAudioGenerated }: AIGeneratorProps) {
       return;
     }
 
+    // Montar contexto de variáveis para template
+    const ctx = {
+      imagem_descricao: originalPrompt,
+      titulo: prayerData?.title || '',
+      subtitulo: prayerData?.subtitle || '',
+      descricao: prayerData?.audio_description || '',
+      preparacao: prayerData?.preparation_text || '',
+      texto: prayerData?.prayer_text || '',
+      mensagem_final: prayerData?.final_message || '',
+      tema_central: prompt || '',
+      objetivo_espiritual: spiritualGoal || '',
+      momento_dia: (dayPart && dayPart !== 'Any') ? dayPart : '',
+      categoria_nome: categories.find(c => c.id === selectedCategory)?.name || '',
+      base_biblica: biblicalBase || ''
+    } as Record<string, string>;
+
+    // Template atual ou padrão
+    const template = (imageGenTemplate && imageGenTemplate.trim()) || '{imagem_descricao}';
+
+    // Aplicar variáveis do template
+    const compiled = template.replace(/\{([a-zA-Z_]+)\}/g, (_, key: string) => {
+      const v = ctx[key];
+      return typeof v === 'string' ? v : '';
+    });
+
+    // Otimizar prompt para DALL-E
+    const optimizedPrompt = optimizeImagePrompt(compiled);
+
     console.log('🖼️ Iniciando geração de imagem com DALL-E 3...');
-    console.log('📝 Prompt enviado (sem otimização):', originalPrompt);
+    console.log('📝 Prompt original:', originalPrompt);
+    console.log('🎯 Prompt otimizado:', optimizedPrompt);
     
     setIsGeneratingImage(true);
     
-    // Objeto completo que será enviado para a API (exatamente o texto definido em "Editar prompt")
+    // Objeto completo que será enviado para a API
     const requestPayload = { 
-      prompt: originalPrompt
+      prompt: optimizedPrompt
     };
 
     try {
       addDebugLog('request', 'image', {
         originalPrompt,
+        templateUsed: template,
+        compiledPrompt: compiled,
+        optimizedPrompt,
         requestPayload
       });
 
@@ -1180,6 +1399,41 @@ export default function AIGenerator({ onAudioGenerated }: AIGeneratorProps) {
         )}
         <CardContent className="space-y-4 pt-4 sm:pt-6">
           <div className="mx-auto w-full max-w-2xl space-y-4">
+          {/* Selecionar/editar oração existente (opcional) - Combobox dinâmico */}
+          <div className="space-y-2">
+            <label className="block text-sm font-medium">Editar oração existente (opcional)</label>
+            <div className="flex items-center gap-2">
+              <Popover open={comboOpen} onOpenChange={(o) => { setComboOpen(o); if (o) preloadAllAudios(); }}>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" role="combobox" aria-expanded={comboOpen} className="w-full justify-between">
+                    {editingAudio?.title || 'Selecione ou pesquise uma oração...'}
+                    <ChevronDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="p-0 w-[420px] sm:w-[520px]">
+                  <Command>
+                    <CommandInput value={comboQuery} onValueChange={setComboQuery} placeholder="Digite para filtrar..." />
+                    <CommandList>
+                      <CommandEmpty>{comboLoading ? 'Carregando...' : 'Nenhuma oração encontrada'}</CommandEmpty>
+                      <CommandGroup heading="Resultados">
+                        {((searchResults.length ? searchResults : allAudios) || []).map((a) => (
+                          <CommandItem key={a.id} value={a.title || a.id} onSelect={() => { setComboOpen(false); loadAudioForEdit(a.id); setComboQuery(''); }}>
+                            {a.title || 'Sem título'}
+                          </CommandItem>
+                        ))}
+                      </CommandGroup>
+                    </CommandList>
+                  </Command>
+                </PopoverContent>
+              </Popover>
+              {editingAudioId && (
+                <Button variant="ghost" onClick={clearEditingSelection}>Limpar</Button>
+              )}
+            </div>
+            {editingAudio && (
+              <div className="text-xs text-muted-foreground">Editando: <span className="font-medium">{editingAudio.title}</span></div>
+            )}
+          </div>
           {/* Input para o tema da oração (oculto no front-end, preservado para uso futuro) */}
           {false && (
             <div>
@@ -1465,21 +1719,35 @@ export default function AIGenerator({ onAudioGenerated }: AIGeneratorProps) {
                 </p>
               </div>
 
-              {/* Thumbnail */}
+              {/* Thumbnail / Imagem: gerar descrição + editar prompt + gerar imagem */}
               <div>
                 <label className="block text-sm font-medium mb-2">
                   <Image className="inline h-4 w-4 mr-1" />
                   Thumbnail
                 </label>
                 <div className="flex gap-2 mb-2">
-                  <Button variant="outline" size="sm" onClick={handleGenerateImage} disabled={isGeneratingImage}>
-                    {isGeneratingImage ? (<><Loader2 className="mr-2 h-3 w-3 animate-spin"/>Gerando...</>) : (<><Image className="mr-2 h-3 w-3"/>Gerar Imagem (DALL-E)</>)}
+                  <Button variant="outline" size="sm" onClick={() => generateForField('image_prompt')} disabled={!!loadingField['image_prompt']}>
+                    {loadingField['image_prompt'] ? (<><Loader2 className="mr-2 h-3 w-3 animate-spin"/>Gerando...</>) : (<><Wand2 className="mr-2 h-3 w-3"/>Gerar</>)}
                   </Button>
                   <Button variant="ghost" size="sm" onClick={() => { openPromptModal('image_prompt' as any); }}>
                     <Settings className="h-3 w-3 mr-1"/>Editar prompt
                   </Button>
+                  <Button variant="outline" size="sm" onClick={handleGenerateImage} disabled={isGeneratingImage}>
+                    {isGeneratingImage ? (<><Loader2 className="mr-2 h-3 w-3 animate-spin"/>Gerando...</>) : (<><Image className="mr-2 h-3 w-3"/>Gerar imagem</>)}
+                  </Button>
+                  <Button variant="ghost" size="sm" onClick={() => setImageGenPromptModalOpen(true)}>
+                    <Settings className="h-3 w-3 mr-1"/>Editar prompt DALL‑E
+                  </Button>
                 </div>
-                {/* Campo de texto removido conforme solicitação do usuário */}
+                {/* Campo da descrição da imagem (editável) que será enviada à DALL-E */}
+                <Textarea
+                  value={prayerData.image_prompt || ''}
+                  onChange={(e) => setPrayerData({ ...prayerData, image_prompt: e.target.value })}
+                  rows={3}
+                  className="resize-none"
+                  placeholder="Descreva a imagem que deseja gerar (este texto será enviado ao DALL-E)"
+                />
+                <div className="text-xs text-muted-foreground mt-1">{(prayerData.image_prompt || '').length} caracteres</div>
               </div>
 
 
@@ -1651,7 +1919,7 @@ export default function AIGenerator({ onAudioGenerated }: AIGeneratorProps) {
           {prayerData && audioUrl && (
             <div className="flex sm:justify-end">
               <Button 
-                onClick={handleSaveToDatabase}
+                onClick={editingAudioId ? handleUpdateInDatabase : handleSaveToDatabase}
                 disabled={isSaving || !selectedCategory}
                 className="w-full sm:w-auto"
                 variant="default"
@@ -1659,12 +1927,12 @@ export default function AIGenerator({ onAudioGenerated }: AIGeneratorProps) {
                 {isSaving ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Salvando...
+                    {editingAudioId ? 'Atualizando...' : 'Salvando...'}
                   </>
                 ) : (
                   <>
                     <Save className="mr-2 h-4 w-4" />
-                    Salvar Oração Completa no Banco
+                    {editingAudioId ? 'Atualizar Oração' : 'Salvar Oração Completa no Banco'}
                     {audioDuration && (
                       <span className="ml-2 text-xs opacity-75">
                         (com duração: {formatDuration(audioDuration)})
@@ -1747,6 +2015,152 @@ export default function AIGenerator({ onAudioGenerated }: AIGeneratorProps) {
               )}
               <Button onClick={saveSinglePrompt} disabled={savingSinglePrompt}>
                 {savingSinglePrompt ? (<><Loader2 className="mr-2 h-4 w-4 animate-spin"/>Salvando...</>) : 'Salvar'}
+              </Button>
+            </div>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal: Edição do prompt usado para enviar ao DALL‑E */}
+      <Dialog
+        open={imageGenPromptModalOpen}
+        onOpenChange={async (open) => {
+          setImageGenPromptModalOpen(open);
+          if (open) {
+            try {
+              const { data, error } = await supabase
+                .from('app_settings')
+                .select('value')
+                .eq('key', 'gmanual_image_generate_template_history')
+                .limit(1)
+                .maybeSingle();
+              if (!error && data && typeof data.value === 'string') {
+                try {
+                  const parsed = JSON.parse(data.value);
+                  if (Array.isArray(parsed)) {
+                    setImageGenTemplateHistory(parsed.filter((v) => v && typeof v.value === 'string'));
+                  } else {
+                    setImageGenTemplateHistory([]);
+                  }
+                } catch (_) {
+                  setImageGenTemplateHistory([]);
+                }
+              } else {
+                setImageGenTemplateHistory([]);
+              }
+            } catch (_) {
+              setImageGenTemplateHistory([]);
+            }
+          }
+        }}
+      >
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle className="text-black">Editar Prompt para DALL‑E</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-2">
+            <Textarea
+              value={imageGenTemplate}
+              onChange={(e) => setImageGenTemplate(e.target.value)}
+              rows={10}
+              className="text-sm bg-white text-black placeholder:text-gray-500 dark:bg-neutral-900 dark:text-white dark:placeholder:text-gray-400"
+            />
+            <div className="text-sm text-muted-foreground break-words whitespace-normal">
+              Variáveis disponíveis: {`{imagem_descricao}`} {`{titulo}`} {`{subtitulo}`} {`{descricao}`} {`{preparacao}`} {`{texto}`} {`{mensagem_final}`} {`{tema_central}`} {`{objetivo_espiritual}`} {`{momento_dia}`} {`{categoria_nome}`} {`{base_biblica}`}
+            </div>
+            <div className="text-xs text-muted-foreground">
+              Dica: o padrão é {`{imagem_descricao}`}. Edite para acrescentar instruções antes/depois da variável.
+            </div>
+            {/* Controles de versão para o template DALL‑E */}
+            <div className="mt-2 space-y-2">
+              <div className="flex items-center gap-2">
+                <Input
+                  placeholder="Rótulo (opcional) desta versão"
+                  value={imageGenTemplateVersionLabel}
+                  onChange={(e) => setImageGenTemplateVersionLabel(e.target.value)}
+                  className="bg-white text-black placeholder:text-gray-500 dark:bg-neutral-900 dark:text-white dark:placeholder:text-gray-400"
+                />
+                <Button
+                  variant="outline"
+                  onClick={async () => {
+                    try {
+                      const newEntry = { value: imageGenTemplate, label: imageGenTemplateVersionLabel?.trim() || undefined, date: new Date().toISOString() };
+                      const next = [newEntry, ...imageGenTemplateHistory].slice(0, 20);
+                      await updatePromptsSetting('gmanual_image_generate_template_history' as any, JSON.stringify(next));
+                      setImageGenTemplateHistory(next);
+                      setImageGenTemplateVersionLabel('');
+                      toast.success('Versão do prompt DALL‑E salva');
+                    } catch (_) {
+                      toast.error('Erro ao salvar versão');
+                    }
+                  }}
+                  className="bg-white text-black border-gray-300 hover:bg-gray-100"
+                >
+                  Salvar versão
+                </Button>
+              </div>
+              {imageGenTemplateHistory.length > 0 && (
+                <div className="border rounded-md p-2 bg-white text-black dark:bg-neutral-900 dark:text-white">
+                  <div className="text-sm font-medium mb-1">Versões salvas</div>
+                  <div className="max-h-40 overflow-y-auto space-y-1">
+                    {imageGenTemplateHistory.map((v, idx) => (
+                      <div key={idx} className="flex items-center justify-between gap-2 text-sm">
+                        <button
+                          className="text-left flex-1 hover:underline"
+                          onClick={() => setImageGenTemplate(v.value)}
+                          title={new Date(v.date).toLocaleString()}
+                        >
+                          {(v.label || 'Sem rótulo')} — {new Date(v.date).toLocaleDateString()} {new Date(v.date).toLocaleTimeString()}
+                        </button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="bg-white text-black border-gray-300 hover:bg-gray-100 dark:bg-neutral-900 dark:text-white dark:border-neutral-700 dark:hover:bg-neutral-800"
+                          onClick={() => setImageGenTemplate(v.value)}
+                        >
+                          Restaurar
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+          <DialogFooter>
+            <div className="flex gap-2 w-full justify-end">
+              <Button
+                variant="outline"
+                onClick={() => setImageGenTemplate('{imagem_descricao}')}
+                className="bg-white text-black border-gray-300 hover:bg-gray-100"
+              >
+                Restaurar padrão
+              </Button>
+              <Button
+                onClick={async () => {
+                  try {
+                    setSavingImageGenTemplate(true);
+                    await updatePromptsSetting('gmanual_image_generate_template' as any, imageGenTemplate);
+                    // Se houver rótulo, também salvar versão
+                    const label = (imageGenTemplateVersionLabel || '').trim();
+                    if (label) {
+                      const newEntry = { value: imageGenTemplate, label, date: new Date().toISOString() };
+                      const next = [newEntry, ...imageGenTemplateHistory].slice(0, 20);
+                      await updatePromptsSetting('gmanual_image_generate_template_history' as any, JSON.stringify(next));
+                      setImageGenTemplateHistory(next);
+                      setImageGenTemplateVersionLabel('');
+                    }
+                    toast.success('Prompt DALL‑E salvo!');
+                    setImageGenPromptModalOpen(false);
+                  } catch (_) {
+                    toast.error('Erro ao salvar prompt DALL‑E');
+                  } finally {
+                    setSavingImageGenTemplate(false);
+                  }
+                }}
+                disabled={savingImageGenTemplate}
+              >
+                {savingImageGenTemplate ? (<><Loader2 className="mr-2 h-4 w-4 animate-spin"/>Salvando...</>) : 'Salvar'}
               </Button>
             </div>
           </DialogFooter>
