@@ -204,10 +204,11 @@ export default function AIGenerator({ onAudioGenerated }: AIGeneratorProps) {
       const descP = generateForField('description', { texto });
       const imageDescP = generateForField('image_prompt', { texto });
 
-      // 5) Esperar descrição da imagem preencher e flush, depois gerar imagem
-      await imageDescP;
-      await new Promise((r) => setTimeout(r, 0));
-      await handleGenerateImage();
+      // 5) Esperar descrição da imagem e gerar imagem usando o valor retornado (sem depender de flush de estado)
+      const imageDesc = await imageDescP;
+      if ((imageDesc || '').trim().length >= 20) {
+        await handleGenerateImage(imageDesc as string);
+      }
 
       // 6) Garantir que preparação e mensagem final estejam prontos antes do áudio
       const [prepText, finalText] = await Promise.all([prepP, finalP]);
@@ -1113,9 +1114,9 @@ export default function AIGenerator({ onAudioGenerated }: AIGeneratorProps) {
     await generateAudio();
   };
 
-  const handleGenerateImage = async () => {
+  const handleGenerateImage = async (overridePrompt?: string) => {
     // Usar a descrição editável combinada com o template configurável
-    const originalPrompt = (prayerData?.image_prompt || '').trim();
+    const originalPrompt = (overridePrompt ?? (prayerData?.image_prompt || '')).trim();
 
     if (!originalPrompt) {
       toast.error('Por favor, preencha a descrição da imagem');

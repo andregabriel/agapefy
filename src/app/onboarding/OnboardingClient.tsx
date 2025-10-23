@@ -85,6 +85,34 @@ export default function OnboardingClient() {
     }
   }
 
+  async function skip() {
+    if (!form) return;
+    try {
+      setSubmitting(true);
+      await saveFormResponse({ formId: form.id, answers: { skipped: true }, userId: user?.id ?? null });
+      toast.success('Passo adiado');
+      const nextStep = (form.onboard_step || desiredStep) + 1;
+      const { data } = await supabase
+        .from('admin_forms')
+        .select('id')
+        .eq('form_type', 'onboarding')
+        .eq('is_active', true)
+        .eq('onboard_step', nextStep)
+        .maybeSingle();
+      if (data) {
+        router.replace(`/onboarding?step=${nextStep}`);
+      } else {
+        router.replace('/');
+      }
+    } catch (e) {
+      // eslint-disable-next-line no-console
+      console.error(e);
+      toast.error('Não foi possível adiar este passo');
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
   if (loading) return null;
   if (!form) return null;
 
@@ -118,7 +146,8 @@ export default function OnboardingClient() {
             ))}
           </div>
 
-          <div className="flex justify-end">
+          <div className="flex justify-between">
+            <Button variant="ghost" onClick={skip} disabled={submitting}>Agora não</Button>
             <Button onClick={submit} disabled={submitting}>{submitting ? 'Enviando...' : 'Enviar'}</Button>
           </div>
         </CardContent>
