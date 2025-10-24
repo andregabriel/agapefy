@@ -235,6 +235,8 @@ export default function AIGenerator({ onAudioGenerated }: AIGeneratorProps) {
       toast.error('Falha ao gerar todos os campos');
     } finally {
       setIsGeneratingAll(false);
+      // Garantir que o botão "Gerar imagem" fique clicável após o fluxo concluir
+      setIsGeneratingImage(false);
     }
   };
 
