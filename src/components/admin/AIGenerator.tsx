@@ -1907,7 +1907,7 @@ export default function AIGenerator({ onAudioGenerated }: AIGeneratorProps) {
                   <Button variant="ghost" size="sm" onClick={() => { openPromptModal('image_prompt' as any); }}>
                     <Settings className="h-3 w-3 mr-1"/>Editar prompt
                   </Button>
-                  <Button variant="outline" size="sm" onClick={handleGenerateImage} disabled={isGeneratingImage}>
+                  <Button variant="outline" size="sm" onClick={() => handleGenerateImage()} disabled={isGeneratingImage}>
                     {isGeneratingImage ? (<><Loader2 className="mr-2 h-3 w-3 animate-spin"/>Gerando...</>) : (<><Image className="mr-2 h-3 w-3"/>Gerar imagem</>)}
                   </Button>
                   <Button variant="ghost" size="sm" onClick={() => setImageGenPromptModalOpen(true)}>
