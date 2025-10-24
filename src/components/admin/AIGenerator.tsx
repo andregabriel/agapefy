@@ -74,6 +74,8 @@ export default function AIGenerator({ onAudioGenerated }: AIGeneratorProps) {
   const [isGeneratingAll, setIsGeneratingAll] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [isGeneratingAndSaving, setIsGeneratingAndSaving] = useState(false);
+  // Manter ID para atualização assíncrona de capa quando imagem chegar depois do insert
+  const [pendingCoverUpdateId, setPendingCoverUpdateId] = useState<string | null>(null);
   const { showDebug, setShowDebug, debugLogs, addDebugLog, clearLogs } = useDebugLogs();
   const [lastVoiceIdUsed, setLastVoiceIdUsed] = useState<string>("");
   const [lastVoiceNameUsed, setLastVoiceNameUsed] = useState<string>("");
@@ -207,7 +209,11 @@ export default function AIGenerator({ onAudioGenerated }: AIGeneratorProps) {
 
       // 5) Disparar geração da imagem assim que a descrição estiver pronta, sem bloquear o fluxo
       imageDescP.then(async (desc) => {
-        const clean = (desc || '').trim();
+        if (typeof desc !== 'string') {
+          addDebugLog('warn', 'image', { nonStringDesc: desc });
+          return;
+        }
+        const clean = desc.trim();
         if (clean.length >= 20) {
           try {
             await handleGenerateImage(clean as string);
@@ -253,6 +259,10 @@ export default function AIGenerator({ onAudioGenerated }: AIGeneratorProps) {
       //  mas aqui garantimos que estados assíncronos tenham sido commitados)
       await new Promise((r) => setTimeout(r, 0));
       const ensuredAudioUrl = await waitForAudioUrl(20000);
+      const ensuredImageUrl = await waitForImageUrl(15000);
+      if (ensuredImageUrl && ensuredImageUrl !== imageUrl) {
+        setImageUrl(ensuredImageUrl);
+      }
 
       // 3) Valida pré-requisitos do salvamento
       if (!prayerData) {
@@ -1167,7 +1177,8 @@ export default function AIGenerator({ onAudioGenerated }: AIGeneratorProps) {
 
   const handleGenerateImage = async (overridePrompt?: string) => {
     // Usar a descrição editável combinada com o template configurável
-    const originalPrompt = (overridePrompt ?? (prayerData?.image_prompt || '')).trim();
+    const rawPrompt = overridePrompt ?? (prayerData?.image_prompt as unknown);
+    const originalPrompt = (typeof rawPrompt === 'string' ? rawPrompt : '').trim();
 
     if (!originalPrompt) {
       toast.error('Por favor, preencha a descrição da imagem');
@@ -1232,7 +1243,8 @@ export default function AIGenerator({ onAudioGenerated }: AIGeneratorProps) {
       addDebugLog('response', 'image', { status: imageResult.status, headers: imageResult.headers, rawText: imageResult.rawText, parsedData: imageResult.data });
       if (!imageResult.ok) {
         console.error('❌ Erro detalhado ao gerar imagem:', imageResult.data);
-        toast.error(`Erro ao gerar imagem: ${imageResult.error}`);
+        const apiErr = (imageResult.data && (imageResult.data.error || imageResult.data.details?.error || imageResult.data.details?.message)) || imageResult.error;
+        toast.error(`Erro ao gerar imagem: ${apiErr}`);
         return;
       }
       const responseData = imageResult.data;
@@ -1390,6 +1402,11 @@ export default function AIGenerator({ onAudioGenerated }: AIGeneratorProps) {
 
       console.log('✅ Áudio salvo com sucesso:', audioData);
 
+      // Se não havia capa disponível no momento do insert, marcar para atualizar assim que a imagem for gerada
+      if (!coverPublicUrl && audioData?.id) {
+        setPendingCoverUpdateId(audioData.id as string);
+      }
+
       // Tentar salvar diretamente nas colunas da tabela audios
       let savedDirectlyInTable = false;
       try {
@@ -1456,6 +1473,19 @@ export default function AIGenerator({ onAudioGenerated }: AIGeneratorProps) {
   const audioUrlRef = useRef<string>("");
   useEffect(() => { audioUrlRef.current = audioUrl; }, [audioUrl]);
 
+  // Ref e espera para URL da imagem, semelhante ao áudio
+  const imageUrlRef = useRef<string>("");
+  useEffect(() => { imageUrlRef.current = imageUrl; }, [imageUrl]);
+  const waitForImageUrl = async (timeoutMs: number = 15000): Promise<string | null> => {
+    const startedAt = Date.now();
+    while (Date.now() - startedAt < timeoutMs) {
+      const current = imageUrlRef.current;
+      if (current && current.trim().length > 0) return current;
+      await new Promise((r) => setTimeout(r, 150));
+    }
+    return null;
+  };
+
   const waitForAudioUrl = async (timeoutMs: number = 15000): Promise<string | null> => {
     const startedAt = Date.now();
     while (Date.now() - startedAt < timeoutMs) {
@@ -1465,6 +1495,42 @@ export default function AIGenerator({ onAudioGenerated }: AIGeneratorProps) {
     }
     return null;
   };
+
+  // Atualização assíncrona de cover_url quando a imagem fica pronta
+  const coverUpdateInFlightRef = useRef<boolean>(false);
+  useEffect(() => {
+    const tryUpdateCover = async () => {
+      if (coverUpdateInFlightRef.current) return;
+      const url = (imageUrlRef.current || '').trim();
+      const targetId = editingAudioId || pendingCoverUpdateId;
+      if (!url || !targetId) return;
+      coverUpdateInFlightRef.current = true;
+      try {
+        let publicUrl: string | null = null;
+        try {
+          publicUrl = await uploadImageToSupabaseFromUrl(url);
+        } catch (e) {
+          console.warn('⚠️ Falha ao enviar imagem ao Storage para cover_url:', e);
+          publicUrl = null;
+        }
+        if (!publicUrl) return; // sem URL pública, não atualiza
+        const { error } = await supabase
+          .from('audios')
+          .update({ cover_url: publicUrl })
+          .eq('id', targetId);
+        if (!error) {
+          if (pendingCoverUpdateId) setPendingCoverUpdateId(null);
+          if (editingAudio) setEditingAudio((prev) => prev ? ({ ...prev, cover_url: publicUrl } as any) : prev);
+          toast.success('Capa adicionada');
+        } else {
+          console.warn('⚠️ Falha ao atualizar cover_url posterior:', error);
+        }
+      } finally {
+        coverUpdateInFlightRef.current = false;
+      }
+    };
+    tryUpdateCover();
+  }, [imageUrl, pendingCoverUpdateId, editingAudioId]);
 
   return (
     <div className="space-y-6">

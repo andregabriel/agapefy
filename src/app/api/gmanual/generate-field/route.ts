@@ -70,12 +70,13 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Erro ao carregar prompt salvo' }, { status: 500 });
     }
 
-    const template = (settingRows?.[0]?.value as string | undefined) || '';
-    if (!template.trim()) {
+    const rawValue = settingRows?.[0]?.value as unknown;
+    const templateStr = typeof rawValue === 'string' ? rawValue : (rawValue == null ? '' : String(rawValue));
+    if (!templateStr.trim()) {
       return NextResponse.json({ error: 'Prompt salvo está vazio para este campo' }, { status: 400 });
     }
 
-    const rendered = applyPlaceholders(template, context || {});
+    const rendered = applyPlaceholders(templateStr, context || {});
 
     const candidateModels = ['gpt-5', 'gpt-4.1', 'gpt-4o', 'gpt-4o-mini'];
     const temperature = 1;

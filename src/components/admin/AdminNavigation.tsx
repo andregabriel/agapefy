@@ -73,7 +73,7 @@ const adminRoutes = [
     color: 'text-red-500'
   },
   {
-    label: 'Gerar manual',
+    label: 'Gerar Oração',
     icon: Sparkles,
     href: '/admin/go',
     color: 'text-yellow-500'
