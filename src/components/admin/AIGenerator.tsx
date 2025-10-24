@@ -249,6 +249,11 @@ export default function AIGenerator({ onAudioGenerated }: AIGeneratorProps) {
   // Novo: Botão único que gera todos os campos e salva no banco
   const handleGenerateAndSave = async () => {
     if (isGeneratingAndSaving) return;
+    // Pré-validação
+    if (!selectedCategory) {
+      toast.error('Por favor, selecione uma categoria');
+      return;
+    }
     setIsGeneratingAndSaving(true);
     try {
       // 1) Gera todos os campos incluindo imagem e áudio
@@ -258,7 +263,11 @@ export default function AIGenerator({ onAudioGenerated }: AIGeneratorProps) {
       // (handleGenerateAllFields já aguarda todas as promises internas,
       //  mas aqui garantimos que estados assíncronos tenham sido commitados)
       await new Promise((r) => setTimeout(r, 0));
-      const ensuredAudioUrl = await waitForAudioUrl(20000);
+      let ensuredAudioUrl = await waitForAudioUrl(60000);
+      if (!ensuredAudioUrl && isGeneratingAudio) {
+        // dar mais um pequeno tempo se ainda está gerando
+        ensuredAudioUrl = await waitForAudioUrl(15000);
+      }
       const ensuredImageUrl = await waitForImageUrl(15000);
       if (ensuredImageUrl && ensuredImageUrl !== imageUrl) {
         setImageUrl(ensuredImageUrl);
@@ -271,10 +280,7 @@ export default function AIGenerator({ onAudioGenerated }: AIGeneratorProps) {
       }
       if (!ensuredAudioUrl) {
         toast.error('Falha ao salvar: gere o áudio primeiro');
-        return;
-      }
-      if (!selectedCategory) {
-        toast.error('Por favor, selecione uma categoria');
+        addDebugLog('error', 'save', { reason: 'audioUrl not available after wait', isGeneratingAudio });
         return;
       }
 
@@ -1521,9 +1527,10 @@ export default function AIGenerator({ onAudioGenerated }: AIGeneratorProps) {
         if (!error) {
           if (pendingCoverUpdateId) setPendingCoverUpdateId(null);
           if (editingAudio) setEditingAudio((prev) => prev ? ({ ...prev, cover_url: publicUrl } as any) : prev);
-          toast.success('Capa adicionada');
+          addDebugLog('success', 'image', { action: 'cover_url_updated', audioId: targetId, cover_url: publicUrl });
         } else {
           console.warn('⚠️ Falha ao atualizar cover_url posterior:', error);
+          addDebugLog('error', 'image', { action: 'cover_url_update_failed', audioId: targetId, error });
         }
       } finally {
         coverUpdateInFlightRef.current = false;

@@ -17,7 +17,9 @@ export const requestGenerateImage = async (payload: { prompt: string }): Promise
   }
 
   if (!response.ok) {
-    return { ok: false, data: responseData, error: responseData?.error || `Erro HTTP ${response.status}`, rawText: responseText, status: response.status, headers: Object.fromEntries(response.headers.entries()) };
+    // Normalizar erro quando o corpo vier vazio ou apenas {}
+    const normalizedError = responseData?.error || (responseText && responseText.trim() ? undefined : `HTTP ${response.status}`) || `HTTP ${response.status}`;
+    return { ok: false, data: responseData, error: normalizedError, rawText: responseText, status: response.status, headers: Object.fromEntries(response.headers.entries()) };
   }
 
   return { ok: true, data: responseData, rawText: responseText, status: response.status, headers: Object.fromEntries(response.headers.entries()) };

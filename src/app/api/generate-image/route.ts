@@ -67,30 +67,60 @@ export async function POST(request: NextRequest) {
     console.log('📡 Headers da resposta DALL-E 3:', Object.fromEntries(response.headers.entries()));
 
     if (!response.ok) {
-      const errorText = await response.text();
-      console.error('❌ Erro da API DALL-E 3:', errorText);
-      
-      let errorMessage = 'Erro ao gerar imagem';
-      let errorDetails = {};
-      
-      try {
-        const errorJson = JSON.parse(errorText);
-        errorMessage = errorJson.error?.message || errorMessage;
-        errorDetails = errorJson;
-        console.error('❌ Detalhes do erro DALL-E 3:', errorDetails);
-      } catch (e) {
-        console.error('❌ Não foi possível fazer parse do erro:', e);
-        errorDetails = { rawError: errorText };
+      const buildErrorPayload = async (resp: Response, reqBody: any) => {
+        const errorText = await resp.text().catch(() => '');
+        console.error('❌ Erro da API DALL-E 3:', errorText);
+        let errorMessage = 'Erro ao gerar imagem';
+        let errorDetails: any = {};
+        try {
+          if (errorText && errorText.trim()) {
+            const errorJson = JSON.parse(errorText);
+            errorMessage = errorJson.error?.message || errorMessage;
+            errorDetails = errorJson;
+          } else {
+            errorDetails = { rawError: '(vazio)' };
+          }
+        } catch (e) {
+          console.error('❌ Não foi possível fazer parse do erro:', e);
+          errorDetails = { rawError: errorText };
+        }
+        return { error: errorMessage, details: errorDetails, requestSent: reqBody };
+      };
+
+      // Retry único com qualidade padrão caso erro 5xx ou corpo vazio
+      const shouldRetry = response.status >= 500;
+      if (shouldRetry) {
+        const retryReq = { ...dalleRequest, quality: 'standard' } as any;
+        console.warn('↻ Retry DALL-E 3 com quality=standard');
+        const retryResp = await fetch('https://api.openai.com/v1/images/generations', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${openaiApiKey}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(retryReq),
+        });
+        console.log('📡 Status retry DALL-E 3:', retryResp.status);
+        if (retryResp.ok) {
+          const retryData = await retryResp.json();
+          const imageUrlRetry = retryData.data?.[0]?.url;
+          if (imageUrlRetry) {
+            return NextResponse.json({ 
+              image_url: imageUrlRetry,
+              prompt_used: cleanPrompt,
+              revised_prompt: retryData.data?.[0]?.revised_prompt,
+              dalle_request: retryReq,
+              dalle_response: retryData,
+              model_used: 'dall-e-3'
+            });
+          }
+        }
+        const payload = await buildErrorPayload(retryResp, retryReq);
+        return NextResponse.json(payload, { status: retryResp.status });
       }
-      
-      return NextResponse.json(
-        { 
-          error: errorMessage,
-          details: errorDetails,
-          requestSent: dalleRequest
-        },
-        { status: response.status }
-      );
+
+      const payload = await buildErrorPayload(response, dalleRequest);
+      return NextResponse.json(payload, { status: response.status });
     }
 
     const data = await response.json();
@@ -129,7 +159,8 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(
       { 
         error: `Erro interno do servidor: ${errorMessage}`,
-        stack: error instanceof Error ? error.stack : undefined
+        details: { stack: error instanceof Error ? error.stack : undefined },
+        requestSent: null
       },
       { status: 500 }
     );
