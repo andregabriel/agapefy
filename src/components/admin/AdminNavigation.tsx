@@ -75,7 +75,7 @@ const adminRoutes = [
   {
     label: 'Gerar manual',
     icon: Sparkles,
-    href: '/admin/gmanual',
+    href: '/admin/go',
     color: 'text-yellow-500'
   },
   {

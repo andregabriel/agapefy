@@ -69,13 +69,18 @@ const nextConfig: NextConfig = {
   async redirects() {
     return [
       {
+        source: '/admin/gmanual',
+        destination: '/admin/go',
+        permanent: true,
+      },
+      {
         source: '/admin/gerar-conteudo',
-        destination: '/admin/gmanual',
+        destination: '/admin/go',
         permanent: true,
       },
       {
         source: '/admin/gtema',
-        destination: '/admin/gmanual',
+        destination: '/admin/go',
         permanent: true,
       },
     ];
