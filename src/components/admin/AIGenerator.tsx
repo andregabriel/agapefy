@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, forwardRef, useImperativeHandle } from 'react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
@@ -15,7 +15,7 @@ import { toast } from 'sonner';
 import { supabase } from '@/lib/supabase';
 import { getCategories, searchAudios, Audio as DBAudio } from '@/lib/supabase-queries';
 import { useAppSettings } from '@/hooks/useAppSettings';
-import { AIGeneratorProps, PrayerData, Category, DebugInfo } from '@/types/ai';
+import { AIGeneratorProps, PrayerData, Category, DebugInfo, AIGeneratorHandle } from '@/types/ai';
 import ELEVENLABS_VOICES from '@/constants/elevenlabsVoices';
 import { normalizeSeconds, applyPacingBreaksToText, formatDuration } from '@/lib/ai/textPacing';
 import { optimizeImagePrompt } from '@/lib/ai/imagePrompt';
@@ -36,7 +36,10 @@ import { DebugPanel } from '@/components/admin/ai-generator/DebugPanel';
 
 // Tipos e vozes extraídos para arquivos dedicados
 
-export default function AIGenerator({ onAudioGenerated }: AIGeneratorProps) {
+const AIGenerator = forwardRef<AIGeneratorHandle, AIGeneratorProps>(function AIGenerator(
+  { onAudioGenerated, onReady }: AIGeneratorProps,
+  ref
+) {
   const [prompt, setPrompt] = useState('');
   const defaultPrayerData: PrayerData = {
     title: '',
@@ -210,7 +213,7 @@ export default function AIGenerator({ onAudioGenerated }: AIGeneratorProps) {
       // 5) Disparar geração da imagem assim que a descrição estiver pronta, sem bloquear o fluxo
       imageDescP.then(async (desc) => {
         if (typeof desc !== 'string') {
-          addDebugLog('warn', 'image', { nonStringDesc: desc });
+          addDebugLog('error', 'image', { nonStringDesc: desc });
           return;
         }
         const clean = desc.trim();
@@ -280,7 +283,7 @@ export default function AIGenerator({ onAudioGenerated }: AIGeneratorProps) {
       }
       if (!ensuredAudioUrl) {
         toast.error('Falha ao salvar: gere o áudio primeiro');
-        addDebugLog('error', 'save', { reason: 'audioUrl not available after wait', isGeneratingAudio });
+        addDebugLog('error', 'audio', { reason: 'audioUrl not available after wait', isGeneratingAudio });
         return;
       }
 
@@ -1256,9 +1259,18 @@ export default function AIGenerator({ onAudioGenerated }: AIGeneratorProps) {
       const responseData = imageResult.data;
 
       if (responseData?.image_url) {
-        setImageUrl(responseData.image_url);
-        console.log('✅ Imagem gerada com sucesso (DALL-E 3):', responseData.image_url);
-        
+        const generatedUrl = responseData.image_url as string;
+        console.log('✅ Imagem gerada (URL temporária):', generatedUrl);
+
+        try {
+          const publicUrl = await uploadImageToSupabaseFromUrl(generatedUrl);
+          setImageUrl(publicUrl);
+          console.log('✅ Imagem copiada para Supabase Storage:', publicUrl);
+        } catch (copyErr) {
+          console.warn('⚠️ Falha ao copiar imagem para Supabase; mantendo URL original temporária.', copyErr);
+          setImageUrl(generatedUrl);
+        }
+
         let successMessage = '🖼️ Imagem gerada com sucesso usando DALL-E 3!';
         if (responseData.model_used) {
           successMessage += ` (${responseData.model_used.toUpperCase()})`;
@@ -1326,15 +1338,15 @@ export default function AIGenerator({ onAudioGenerated }: AIGeneratorProps) {
     })();
   }, [prayerData?.prayer_text, autoDetectBiblicalBase]);
 
-  const handleSaveToDatabase = async () => {
+  const handleSaveToDatabase = async (): Promise<string | null> => {
     if (!audioUrl) {
       toast.error('É necessário ter oração completa e áudio gerados para salvar');
-      return;
+      return null;
     }
 
     if (!selectedCategory) {
       toast.error('Por favor, selecione uma categoria');
-      return;
+      return null;
     }
 
     setIsSaving(true);
@@ -1403,7 +1415,7 @@ export default function AIGenerator({ onAudioGenerated }: AIGeneratorProps) {
       if (audioError) {
         console.error('❌ Erro ao salvar áudio:', audioError);
         toast.error('Erro ao salvar no banco de dados');
-        return;
+        return null;
       }
 
       console.log('✅ Áudio salvo com sucesso:', audioData);
@@ -1463,11 +1475,13 @@ export default function AIGenerator({ onAudioGenerated }: AIGeneratorProps) {
       setSpiritualGoal('');
       setSelectedAiEngine(aiEngines.includes('gpt-5') ? 'gpt-5' : (aiEngines[0] || ''));
       clearDraft();
+      return audioData?.id || null;
       
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido';
       console.error('❌ Erro ao salvar:', errorMessage);
       toast.error('❌ Erro ao salvar no banco de dados');
+      return null;
     } finally {
       setIsSaving(false);
     }
@@ -1502,6 +1516,24 @@ export default function AIGenerator({ onAudioGenerated }: AIGeneratorProps) {
     return null;
   };
 
+  // Expor API imperativa para /admin/gm
+  useImperativeHandle(ref, () => ({
+    setCategoryById: (id: string) => { setSelectedCategory(id || ''); },
+    setPrompt: (value: string) => { setPrompt(value || ''); },
+    setBiblicalBase: (value: string) => { setAutoDetectBiblicalBase(false); setBiblicalBase(value || ''); },
+    handleGenerateAllFields,
+    setTitle: (value: string) => { setPrayerData(prev => ({ ...(prev || defaultPrayerData), title: value || '' })); },
+    waitForAudioUrl,
+    handleSaveToDatabase,
+    flushState: async () => { await new Promise((r) => setTimeout(r, 0)); }
+  }));
+
+  // Notificar prontidão do gerador
+  useEffect(() => {
+    if (onReady) onReady(true);
+    return () => { if (onReady) onReady(false); };
+  }, [onReady]);
+
   // Atualização assíncrona de cover_url quando a imagem fica pronta
   const coverUpdateInFlightRef = useRef<boolean>(false);
   useEffect(() => {
@@ -1527,7 +1559,7 @@ export default function AIGenerator({ onAudioGenerated }: AIGeneratorProps) {
         if (!error) {
           if (pendingCoverUpdateId) setPendingCoverUpdateId(null);
           if (editingAudio) setEditingAudio((prev) => prev ? ({ ...prev, cover_url: publicUrl } as any) : prev);
-          addDebugLog('success', 'image', { action: 'cover_url_updated', audioId: targetId, cover_url: publicUrl });
+          addDebugLog('response', 'image', { action: 'cover_url_updated', audioId: targetId, cover_url: publicUrl });
         } else {
           console.warn('⚠️ Falha ao atualizar cover_url posterior:', error);
           addDebugLog('error', 'image', { action: 'cover_url_update_failed', audioId: targetId, error });
@@ -2443,4 +2475,6 @@ export default function AIGenerator({ onAudioGenerated }: AIGeneratorProps) {
       </Dialog>
     </div>
   );
-}
+});
+
+export default AIGenerator;

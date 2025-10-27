@@ -1,6 +1,21 @@
 import { supabase } from '@/lib/supabase';
 
+// Detecta se a URL já é uma URL pública do Supabase Storage
+export const isSupabasePublicUrl = (url: string): boolean => {
+  try {
+    const u = new URL(url);
+    return u.hostname.includes('.supabase.co') && u.pathname.includes('/storage/v1/object/public/');
+  } catch {
+    return false;
+  }
+};
+
 export const uploadImageToSupabaseFromUrl = async (temporaryUrl: string): Promise<string> => {
+  // Se já for uma URL pública do Supabase, retorna como está (evita reupload e duplicação)
+  if (isSupabasePublicUrl(temporaryUrl)) {
+    return temporaryUrl;
+  }
+
   const response = await fetch('/api/image-proxy', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },

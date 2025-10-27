@@ -604,3 +604,92 @@ export async function refreshCategories(): Promise<Category[]> {
   console.log('🔄 Forçando recarregamento das categorias...');
   return await getCategories();
 }
+
+// --- Helpers de playlist para /admin/gm ---
+function normalizeInsensitive(input: string): string {
+  return (input || '')
+    .toString()
+    .trim()
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '');
+}
+
+export async function findPlaylistByTitleInsensitive(title: string): Promise<Playlist | null> {
+  const needle = normalizeInsensitive(title);
+  if (!needle) return null;
+
+  const { data, error } = await supabase
+    .from('playlists')
+    .select('id,title,description,cover_url,category_id,created_by,is_public,created_at')
+    .ilike('title', `%${title}%`);
+
+  if (error) {
+    console.error('Erro ao buscar playlist por título:', error);
+    return null;
+  }
+
+  const rows: any[] = data || [];
+  const exact = rows.find(row => normalizeInsensitive(row.title) === needle);
+  return (exact as Playlist) || null;
+}
+
+export async function addAudioToPlaylist(audioId: string, playlistId: string): Promise<{ success: boolean; error?: string }> {
+  if (!audioId || !playlistId) return { success: false, error: 'IDs inválidos' };
+
+  const { data: exists, error: selErr } = await supabase
+    .from('playlist_audios')
+    .select('audio_id')
+    .eq('audio_id', audioId)
+    .eq('playlist_id', playlistId)
+    .maybeSingle();
+
+  if (selErr) {
+    console.warn('Falha ao verificar associação de playlist:', selErr);
+  }
+  if (exists) return { success: true };
+
+  const { error: insErr } = await supabase
+    .from('playlist_audios')
+    .insert({ audio_id: audioId, playlist_id: playlistId });
+
+  if (insErr) return { success: false, error: insErr.message };
+  return { success: true };
+}
+
+export async function createPlaylist(title: string, categoryId?: string | null): Promise<Playlist | null> {
+  const safeTitle = (title || '').toString().trim();
+  if (!safeTitle) return null;
+  try {
+    const { data: auth } = await supabase.auth.getUser();
+    const createdBy = auth?.user?.id || null;
+
+    const { data, error } = await supabase
+      .from('playlists')
+      .insert({
+        title: safeTitle,
+        description: null,
+        cover_url: null,
+        category_id: categoryId || null,
+        created_by: createdBy,
+        is_public: true,
+      })
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Erro ao criar playlist:', error);
+      return null;
+    }
+    return (data as unknown) as Playlist;
+  } catch (e) {
+    console.error('Falha inesperada ao criar playlist:', e);
+    return null;
+  }
+}
+
+export async function ensurePlaylistByTitleInsensitive(title: string, categoryId?: string | null): Promise<Playlist | null> {
+  const existing = await findPlaylistByTitleInsensitive(title);
+  if (existing) return existing;
+  return await createPlaylist(title, categoryId || null);
+}

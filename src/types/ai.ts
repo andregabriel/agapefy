@@ -1,5 +1,6 @@
 export interface AIGeneratorProps {
   onAudioGenerated?: (audioData: { text: string; audio_url: string }) => void;
+  onReady?: (ready: boolean) => void;
 }
 
 export interface PrayerData {
@@ -33,5 +34,17 @@ export interface ElevenLabsVoice {
   name: string;
   gender: 'Masculina' | 'Feminina';
   description: string;
+}
+
+// API imperativa exposta pelo AIGenerator para reuso em /admin/gm
+export interface AIGeneratorHandle {
+  setCategoryById: (id: string) => void;
+  setPrompt: (value: string) => void;
+  setBiblicalBase: (value: string) => void;
+  handleGenerateAllFields: () => Promise<void>;
+  setTitle: (value: string) => void;
+  waitForAudioUrl: (timeoutMs?: number) => Promise<string | null>;
+  handleSaveToDatabase: () => Promise<string | null>;
+  flushState: () => Promise<void>;
 }
 
