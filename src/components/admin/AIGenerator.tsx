@@ -237,17 +237,22 @@ const AIGenerator = forwardRef<AIGeneratorHandle, AIGeneratorProps>(function AIG
         // já tratamos toast internamente em generateAudio
       }
 
-      // 7) Aguarda os demais campos de texto (título, subtítulo, descrição)
-      await Promise.all([titleP, subtitleP, descP]);
-      toast.success('Campos gerados (texto + campos + áudio). Imagem sendo gerada em paralelo.');
-    } catch (err) {
-      toast.error('Falha ao gerar todos os campos');
-    } finally {
-      setIsGeneratingAll(false);
-      // Garantir que o botão "Gerar imagem" fique clicável após o fluxo concluir
-      setIsGeneratingImage(false);
-    }
-  };
+    // 7) Aguarda os demais campos de texto (título, subtítulo, descrição)
+    await Promise.all([titleP, subtitleP, descP]);
+    
+    // 8) CRÍTICO: Aguardar flush final do estado para garantir que todos os setPrayerData foram executados
+    // Isso é essencial para /admin/gm conseguir ler os valores via getPrayerData()
+    await new Promise((r) => setTimeout(r, 100));
+    
+    toast.success('Campos gerados (texto + campos + áudio). Imagem sendo gerada em paralelo.');
+  } catch (err) {
+    toast.error('Falha ao gerar todos os campos');
+  } finally {
+    setIsGeneratingAll(false);
+    // Garantir que o botão "Gerar imagem" fique clicável após o fluxo concluir
+    setIsGeneratingImage(false);
+  }
+};
 
   // Novo: Botão único que gera todos os campos e salva no banco
   const handleGenerateAndSave = async () => {
@@ -1251,8 +1256,15 @@ const AIGenerator = forwardRef<AIGeneratorHandle, AIGeneratorProps>(function AIG
       const imageResult = await requestGenerateImage(requestPayload);
       addDebugLog('response', 'image', { status: imageResult.status, headers: imageResult.headers, rawText: imageResult.rawText, parsedData: imageResult.data });
       if (!imageResult.ok) {
-        console.error('❌ Erro detalhado ao gerar imagem:', imageResult.data);
-        const apiErr = (imageResult.data && (imageResult.data.error || imageResult.data.details?.error || imageResult.data.details?.message)) || imageResult.error;
+        const apiErr = imageResult.error || 
+                      (imageResult.data && (imageResult.data.error || imageResult.data.details?.error || imageResult.data.details?.message)) || 
+                      'Erro desconhecido ao gerar imagem';
+        console.error('❌ Erro ao gerar imagem:', {
+          error: apiErr,
+          status: imageResult.status,
+          rawText: imageResult.rawText,
+          data: imageResult.data
+        });
         toast.error(`Erro ao gerar imagem: ${apiErr}`);
         return;
       }
@@ -1339,18 +1351,69 @@ const AIGenerator = forwardRef<AIGeneratorHandle, AIGeneratorProps>(function AIG
   }, [prayerData?.prayer_text, autoDetectBiblicalBase]);
 
   const handleSaveToDatabase = async (): Promise<string | null> => {
-    if (!audioUrl) {
+    // Congelar um snapshot dos estados usados no salvamento para evitar corrida entre itens do lote
+    const snapshotPrayer = prayerData ? { ...prayerData } : null;
+    const snapshotAudioUrl = audioUrl;
+    const snapshotImageUrl = imageUrl;
+    const snapshotCategory = selectedCategory;
+    const snapshotAudioDuration = audioDuration;
+
+    if (!snapshotAudioUrl) {
       toast.error('É necessário ter oração completa e áudio gerados para salvar');
       return null;
     }
 
-    if (!selectedCategory) {
+    if (!snapshotCategory) {
       toast.error('Por favor, selecione uma categoria');
       return null;
     }
 
     setIsSaving(true);
     try {
+      // Garantia: se algum campo essencial estiver vazio, re-gerar automaticamente
+      // Usamos o texto da oração como contexto principal para prompts específicos
+      if (snapshotPrayer) {
+        // Se não houver texto ainda por algum motivo, tenta gerar
+        const baseTexto = (snapshotPrayer.prayer_text || '').trim();
+        let ensuredTexto = baseTexto;
+        if (!ensuredTexto) {
+          const textoGerado = await generateForField('text');
+          if (textoGerado && textoGerado.trim()) {
+            ensuredTexto = textoGerado.trim();
+            snapshotPrayer.prayer_text = ensuredTexto;
+            setPrayerData(prev => prev ? { ...prev, prayer_text: ensuredTexto } : prev);
+          }
+        }
+
+        const ensureField = async (field: 'title' | 'subtitle' | 'description') => {
+          const currentVal =
+            field === 'title' ? (snapshotPrayer.title || '') :
+            field === 'subtitle' ? (snapshotPrayer.subtitle || '') :
+            (snapshotPrayer.audio_description || '');
+          if ((currentVal || '').trim()) return;
+          const generated = await generateForField(field, { texto: ensuredTexto || snapshotPrayer.prayer_text || '' });
+          if (generated && generated.trim()) {
+            const clean = generated.trim();
+            if (field === 'title') {
+              snapshotPrayer.title = clean;
+              setPrayerData(prev => prev ? { ...prev, title: clean } : prev);
+            } else if (field === 'subtitle') {
+              snapshotPrayer.subtitle = clean;
+              setPrayerData(prev => prev ? { ...prev, subtitle: clean } : prev);
+            } else {
+              snapshotPrayer.audio_description = clean;
+              setPrayerData(prev => prev ? { ...prev, audio_description: clean } : prev);
+            }
+          }
+        };
+
+        await Promise.all([
+          ensureField('title'),
+          ensureField('subtitle'),
+          ensureField('description')
+        ]);
+      }
+
       // Obter usuário atual para preencher created_by
       const { data: authData, error: authError } = await supabase.auth.getUser();
       if (authError) {
@@ -1361,12 +1424,12 @@ const AIGenerator = forwardRef<AIGeneratorHandle, AIGeneratorProps>(function AIG
       const selectedVoiceInfo = ELEVENLABS_VOICES.find(v => v.id === selectedVoice);
       
       // Usar apenas a descrição editável do áudio, sem anexar informação da voz
-      const finalDescription = `${prayerData.audio_description}`;
+      const finalDescription = `${snapshotPrayer?.audio_description || ''}`;
       
       // Montar transcrição completa na ordem: Preparação, Oração, Mensagem final
-      const preparation = (prayerData.preparation_text || '').trim();
-      const prayer = (prayerData.prayer_text || '').trim();
-      const finalMsg = (prayerData.final_message || '').trim();
+      const preparation = (snapshotPrayer?.preparation_text || '').trim();
+      const prayer = (snapshotPrayer?.prayer_text || '').trim();
+      const finalMsg = (snapshotPrayer?.final_message || '').trim();
       const transcriptFull = [preparation, prayer, finalMsg].filter(Boolean).join('\n\n');
 
       console.log('💾 Salvando oração no banco de dados...');
@@ -1378,14 +1441,14 @@ const AIGenerator = forwardRef<AIGeneratorHandle, AIGeneratorProps>(function AIG
         transcript: transcriptFull,
         duration: audioDuration ? Math.round(audioDuration) : null, // NOVO: Salvar duração
         category_id: selectedCategory,
-        image_present: !!imageUrl,
+        image_present: !!snapshotImageUrl,
       });
       
       // Se houver imagem gerada, enviar para o Storage e obter URL pública
       let coverPublicUrl: string | null = null;
-      if (imageUrl) {
+      if (snapshotImageUrl) {
         try {
-          coverPublicUrl = await uploadImageToSupabaseFromUrl(imageUrl);
+          coverPublicUrl = await uploadImageToSupabaseFromUrl(snapshotImageUrl);
         } catch (e) {
           console.warn('⚠️ Prosseguindo sem cover_url devido a erro no upload da imagem.');
         }
@@ -1395,19 +1458,19 @@ const AIGenerator = forwardRef<AIGeneratorHandle, AIGeneratorProps>(function AIG
       const { data: audioData, error: audioError } = await supabase
         .from('audios')
         .insert({
-          title: prayerData.title,
-          subtitle: prayerData.subtitle,
+          title: snapshotPrayer?.title || '',
+          subtitle: snapshotPrayer?.subtitle || null,
           description: finalDescription,
-          audio_url: audioUrl,
+          audio_url: snapshotAudioUrl,
           transcript: transcriptFull,
-          duration: audioDuration ? Math.round(audioDuration) : null, // NOVO: Salvar duração em segundos
-          category_id: selectedCategory,
+          duration: snapshotAudioDuration ? Math.round(snapshotAudioDuration) : null,
+          category_id: snapshotCategory,
           cover_url: coverPublicUrl,
           created_by: currentUserId,
           ai_engine: selectedAiEngine || null,
           voice_id: (lastVoiceIdUsed || selectedVoice) || null,
           voice_name: (lastVoiceNameUsed || selectedVoiceInfo?.name) || null,
-          biblical_base: biblicalBase || null,
+          biblical_base: snapshotPrayer?.final_message !== undefined ? (biblicalBase || null) : (biblicalBase || null),
         })
         .select()
         .single();
@@ -1464,6 +1527,9 @@ const AIGenerator = forwardRef<AIGeneratorHandle, AIGeneratorProps>(function AIG
       
       toast.success(successMessage);
       
+      // Capturar id salvo antes de limpar
+      const savedId = audioData?.id || null;
+      
       // Limpar formulário após salvar
       setPrompt('');
       setPrayerData(defaultPrayerData);
@@ -1475,6 +1541,8 @@ const AIGenerator = forwardRef<AIGeneratorHandle, AIGeneratorProps>(function AIG
       setSpiritualGoal('');
       setSelectedAiEngine(aiEngines.includes('gpt-5') ? 'gpt-5' : (aiEngines[0] || ''));
       clearDraft();
+      
+      return savedId;
       return audioData?.id || null;
       
     } catch (error) {
@@ -1524,8 +1592,10 @@ const AIGenerator = forwardRef<AIGeneratorHandle, AIGeneratorProps>(function AIG
     handleGenerateAllFields,
     setTitle: (value: string) => { setPrayerData(prev => ({ ...(prev || defaultPrayerData), title: value || '' })); },
     waitForAudioUrl,
+    waitForImageUrl,
     handleSaveToDatabase,
-    flushState: async () => { await new Promise((r) => setTimeout(r, 0)); }
+    flushState: async () => { await new Promise((r) => setTimeout(r, 0)); },
+    getPrayerData: () => prayerData
   }));
 
   // Notificar prontidão do gerador

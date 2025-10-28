@@ -44,7 +44,9 @@ export interface AIGeneratorHandle {
   handleGenerateAllFields: () => Promise<void>;
   setTitle: (value: string) => void;
   waitForAudioUrl: (timeoutMs?: number) => Promise<string | null>;
+  waitForImageUrl: (timeoutMs?: number) => Promise<string | null>;
   handleSaveToDatabase: () => Promise<string | null>;
   flushState: () => Promise<void>;
+  getPrayerData: () => PrayerData | null;
 }
 

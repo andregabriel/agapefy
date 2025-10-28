@@ -208,9 +208,10 @@ export default function GmPage() {
       handleGenerateAllFields,
       setTitle,
       waitForAudioUrl,
+      waitForImageUrl,
       handleSaveToDatabase
     } = api;
-    if (!setCategoryById || !setPrompt || !setBiblicalBase || !handleGenerateAllFields || !setTitle || !waitForAudioUrl || !handleSaveToDatabase) {
+    if (!setCategoryById || !setPrompt || !setBiblicalBase || !handleGenerateAllFields || !setTitle || !waitForAudioUrl || !waitForImageUrl || !handleSaveToDatabase) {
       toast.error('Gerador indisponível. Recarregue a página.');
       return;
     }
@@ -254,6 +255,31 @@ export default function GmPage() {
         setBiblicalBase(line.base);
         await api.flushState();
         await handleGenerateAllFields();
+        
+        // Aguardar commit dos campos gerados antes de validar
+        // O handleGenerateAllFields já aguarda 100ms internamente, mas adicionamos mais segurança
+        await api.flushState();
+        await new Promise(r => setTimeout(r, 1000));
+        
+        // Validar campos essenciais para geração de áudio
+        const generatedData = api.getPrayerData();
+        const prep = (generatedData?.preparation_text || '').trim();
+        const texto = (generatedData?.prayer_text || '').trim();
+        const final = (generatedData?.final_message || '').trim();
+        
+        if (!prep || !texto || !final) {
+          const missing = [];
+          if (!prep) missing.push('Preparação para Orar');
+          if (!texto) missing.push('Texto da Oração');
+          if (!final) missing.push('Mensagem Final');
+          updateItemStep(itemIdx, 'Gerar campos', { 
+            status: 'error', 
+            message: `Campos não gerados: ${missing.join(', ')}` 
+          });
+          updateItemStatus(itemIdx, 'error', `Campos faltando: ${missing.join(', ')}`);
+          continue;
+        }
+        
         updateItemStep(itemIdx, 'Gerar campos', { status: 'success' });
 
         // 2) Ajustar título
@@ -264,12 +290,14 @@ export default function GmPage() {
 
         // 3) Garantir áudio/imagen prontos (ou tentar até o timeout)
         updateItemStep(itemIdx, 'Áudio/Imagem', { status: 'running' });
-        const ensured = await waitForAudioUrl(60000);
-        if (!ensured) {
+        const ensuredAudio = await waitForAudioUrl(60000);
+        if (!ensuredAudio) {
           updateItemStep(itemIdx, 'Áudio/Imagem', { status: 'error', message: 'Áudio não gerado a tempo' });
           updateItemStatus(itemIdx, 'error', 'Áudio não gerado');
           continue; // pula salvar/playlist
         }
+        // Aguardar imagem também (pode demorar mais)
+        await waitForImageUrl(60000);
         updateItemStep(itemIdx, 'Áudio/Imagem', { status: 'success' });
 
         // 4) Salvar
