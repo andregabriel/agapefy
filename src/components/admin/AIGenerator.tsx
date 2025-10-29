@@ -1392,13 +1392,14 @@ const AIGenerator = forwardRef<AIGeneratorHandle, AIGeneratorProps>(function AIG
         const apiErr = imageResult.error || 
                       (imageResult.data && (imageResult.data.error || imageResult.data.details?.error || imageResult.data.details?.message)) || 
                       'Erro desconhecido ao gerar imagem';
-        console.error('❌ Erro ao gerar imagem:', {
+        // Log silencioso no painel de debug (evitar Console Error na UI)
+        addDebugLog('error', 'image', {
           error: apiErr,
           status: imageResult.status,
           rawText: imageResult.rawText,
           data: imageResult.data
         });
-        toast.error(`Erro ao gerar imagem: ${apiErr}`);
+        toast.message('Imagem indisponível. Salvaremos sem imagem.', { description: String(apiErr) });
         try { onProgress && onProgress({ scope: 'image', phase: 'error', info: String(apiErr) }); } catch (_) {}
         return null;
       }
@@ -1437,10 +1438,8 @@ const AIGenerator = forwardRef<AIGeneratorHandle, AIGeneratorProps>(function AIG
       }
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido';
-      console.error('❌ Erro na requisição de imagem:', errorMessage);
-      console.error('🔍 Stack trace:', error);
       addDebugLog('error', 'image', { error: errorMessage, stack: error instanceof Error ? error.stack : undefined });
-      toast.error(`Erro ao gerar imagem: ${errorMessage}`);
+      toast.message('Imagem indisponível. Salvaremos sem imagem.', { description: String(errorMessage) });
       try { onProgress && onProgress({ scope: 'image', phase: 'error', info: errorMessage }); } catch (_) {}
       return null;
     } finally {
