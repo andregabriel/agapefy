@@ -2743,3 +2743,183 @@ Import trace for requested module:
  ✓ Compiled in 672ms (1635 modules)
 <w> [webpack.cache.PackFileCacheStrategy] Caching failed for pack: Error: too many length or distance symbols
 <w> [webpack.cache.PackFileCacheStrategy] Caching failed for pack: Error: invalid block type
+ ✓ Compiled in 804ms (1635 modules)
+ ✓ Compiled in 533ms (1635 modules)
+ ✓ Compiled in 386ms (1635 modules)
+ ✓ Compiled in 374ms (1635 modules)
+<w> [webpack.cache.PackFileCacheStrategy] Caching failed for pack: Error: too many length or distance symbols
+<w> [webpack.cache.PackFileCacheStrategy] Caching failed for pack: Error: ENOENT: no such file or directory, rename '/Users/andregabriel/Library/CloudStorage/Dropbox/agapefy_code/agapefy/.next/cache/webpack/client-development/2.pack.gz_' -> '/Users/andregabriel/Library/CloudStorage/Dropbox/agapefy_code/agapefy/.next/cache/webpack/client-development/2.pack.gz'
+ ✓ Compiled in 793ms (1635 modules)
+ ✓ Compiled in 451ms (1635 modules)
+ ✓ Compiled in 553ms (1635 modules)
+<w> [webpack.cache.PackFileCacheStrategy] Caching failed for pack: Error: incorrect header check
+<w> [webpack.cache.PackFileCacheStrategy] Caching failed for pack: Error: ENOENT: no such file or directory, rename '/Users/andregabriel/Library/CloudStorage/Dropbox/agapefy_code/agapefy/.next/cache/webpack/server-development/2.pack.gz_' -> '/Users/andregabriel/Library/CloudStorage/Dropbox/agapefy_code/agapefy/.next/cache/webpack/server-development/2.pack.gz'
+ ✓ Compiled in 884ms (1635 modules)
+ ✓ Compiled in 477ms (1635 modules)
+<w> [webpack.cache.PackFileCacheStrategy] Caching failed for pack: Error: incorrect header check
+<w> [webpack.cache.PackFileCacheStrategy] Caching failed for pack: Error: ENOENT: no such file or directory, rename '/Users/andregabriel/Library/CloudStorage/Dropbox/agapefy_code/agapefy/.next/cache/webpack/server-development/4.pack.gz_' -> '/Users/andregabriel/Library/CloudStorage/Dropbox/agapefy_code/agapefy/.next/cache/webpack/server-development/4.pack.gz'
+ ✓ Compiled in 709ms (1635 modules)
+ ✓ Compiled in 389ms (1635 modules)
+<w> [webpack.cache.PackFileCacheStrategy] Restoring failed for ResolverCachePlugin|normal|default|alias=[|server-only$=|next/dist/compiled/server-only/index|client-only$=|next/dist/compiled/client-only/index|next/dist/compiled/client-only$=|next/dist/compiled/client-only/index|next/dist/compiled/server-only=|next/dist/compiled/server-only/index|/Users/andregabriel/Library/CloudStorage/Dropbox/agapefy_code/agapefy/node_modules/.pnpm/next@15.2.4_react-dom@19.1.0_react@19.1.0__react@19.1.0/node_modules/next/head.js=|next/dist/client/components/noop-head|/Users/andregabriel/Library/CloudStorage/Dropbox/agapefy_code/agapefy/node_modules/.pnpm/next@15.2.4_react-dom@19.1.0_react@19.1.0__react@19.1.0/node_modules/next/image.js=|next/dist/api/image|/Users/andregabriel/Library/CloudStorage/Dropbox/agapefy_code/agapefy/node_modules/.pnpm/next@15.2.4_react-dom@19.1.0_react@19.1.0__react@19.1.0/node_modules/next/constants.js=|next/dist/api/constants|/Users/andregabriel/Library/CloudStorage/Dropbox/agapefy_code/agapefy/node_modules/.pnpm/next@15.2.4_react-dom@19.1.0_react@19.1.0__react@19.1.0/node_modules/next/router.js=|next/dist/api/router|/Users/andregabriel/Library/CloudStorage/Dropbox/agapefy_code/agapefy/node_modules/.pnpm/next@15.2.4_react-dom@19.1.0_react@19.1.0__react@19.1.0/node_modules/next/dynamic.js=|next/dist/api/app-dynamic|/Users/andregabriel/Library/CloudStorage/Dropbox/agapefy_code/agapefy/node_modules/.pnpm/next@15.2.4_react-dom@19.1.0_react@19.1.0__react@19.1.0/node_modules/next/script.js=|next/dist/api/script|/Users/andregabriel/Library/CloudStorage/Dropbox/agapefy_code/agapefy/node_modules/.pnpm/next@15.2.4_react-dom@19.1.0_react@19.1.0__react@19.1.0/node_modules/next/link.js=|next/dist/client/app-dir/link|/Users/andregabriel/Library/CloudStorage/Dropbox/agapefy_code/agapefy/node_modules/.pnpm/next@15.2.4_react-dom@19.1.0_react@19.1.0__react@19.1.0/node_modules/next/form.js=|next/dist/client/app-dir/form|/Users/andregabriel/Library/CloudStorage/Dropbox/agapefy_code/agapefy/node_modules/.pnpm/next@15.2.4_react-dom@19.1.0_react@19.1.0__react@19.1.0/node_modules/next/navigation.js=|next/dist/api/navigation|/Users/andregabriel/Library/CloudStorage/Dropbox/agapefy_code/agapefy/node_modules/.pnpm/next@15.2.4_react-dom@19.1.0_react@19.1.0__react@19.1.0/node_modules/next/headers.js=|next/dist/api/headers|/Users/andregabriel/Library/CloudStorage/Dropbox/agapefy_code/agapefy/node_modules/.pnpm/next@15.2.4_react-dom@19.1.0_react@19.1.0__react@19.1.0/node_modules/next/og.js=|next/dist/api/og|/Users/andregabriel/Library/CloudStorage/Dropbox/agapefy_code/agapefy/node_modules/.pnpm/next@15.2.4_react-dom@19.1.0_react@19.1.0__react@19.1.0/node_modules/next/server.js=|next/dist/api/server|/Users/andregabriel/Library/CloudStorage/Dropbox/agapefy_code/agapefy/node_modules/.pnpm/next@15.2.4_react-dom@19.1.0_react@19.1.0__react@19.1.0/node_modules/next/document.js=|next/dist/api/document|/Users/andregabriel/Library/CloudStorage/Dropbox/agapefy_code/agapefy/node_modules/.pnpm/next@15.2.4_react-dom@19.1.0_react@19.1.0__react@19.1.0/node_modules/next/app.js=|next/dist/api/app|react$=|next/dist/compiled/react|react-dom$=|next/dist/compiled/react-dom|react/jsx-runtime$=|next/dist/compiled/react/jsx-runtime|react/jsx-dev-runtime$=|next/dist/compiled/react/jsx-dev-runtime|react/compiler-runtime$=|next/dist/compiled/react/compiler-runtime|react-dom/client$=|next/dist/compiled/react-dom/client|react-dom/server$=|next/dist/compiled/react-dom/server|react-dom/server.browser$=|next/dist/compiled/react-dom/server.browser|react-dom/static$=|next/dist/compiled/react-dom/static|react-dom/static.edge$=|next/dist/compiled/react-dom/static.edge|react-dom/static.browser$=|next/dist/compiled/react-dom/static.browser|react-dom/server.edge$=|next/dist/build/webpack/alias/react-dom-server-edge.js|react-server-dom-webpack/client$=|next/dist/compiled/react-server-dom-webpack/client|react-server-dom-webpack/client.edge$=|next/dist/compiled/react-server-dom-webpack/client.edge|react-server-dom-webpack/server.edge$=|next/dist/compiled/react-server-dom-webpack/server.edge|react-server-dom-webpack/server.node$=|next/dist/compiled/react-server-dom-webpack/server.node|react-server-dom-webpack/static.edge$=|next/dist/compiled/react-server-dom-webpack/static.edge|@vercel/turbopack-ecmascript-runtime/browser/dev/hmr-client/hmr-client.ts=|next/dist/client/dev/noop-turbopack-hmr|next=|/Users/andregabriel/Library/CloudStorage/Dropbox/agapefy_code/agapefy/node_modules/.pnpm/next@15.2.4_react-dom@19.1.0_react@19.1.0__react@19.1.0/node_modules/next|]|mainFields=[|0=|browser|1=|module|2=|main|]|fallback=[|assert=|/Users/andregabriel/Library/CloudStorage/Dropbox/agapefy_code/agapefy/node_modules/.pnpm/next@15.2.4_react-dom@19.1.0_react@19.1.0__react@19.1.0/node_modules/next/dist/compiled/assert/assert.js|buffer=|/Users/andregabriel/Library/CloudStorage/Dropbox/agapefy_code/agapefy/node_modules/.pnpm/next@15.2.4_react-dom@19.1.0_react@19.1.0__react@19.1.0/node_modules/next/dist/compiled/buffer/index.js|constants=|/Users/andregabriel/Library/CloudStorage/Dropbox/agapefy_code/agapefy/node_modules/.pnpm/next@15.2.4_react-dom@19.1.0_react@19.1.0__react@19.1.0/node_modules/next/dist/compiled/constants-browserify/constants.json|crypto=|/Users/andregabriel/Library/CloudStorage/Dropbox/agapefy_code/agapefy/node_modules/.pnpm/next@15.2.4_react-dom@19.1.0_react@19.1.0__react@19.1.0/node_modules/next/dist/compiled/crypto-browserify/index.js|domain=|/Users/andregabriel/Library/CloudStorage/Dropbox/agapefy_code/agapefy/node_modules/.pnpm/next@15.2.4_react-dom@19.1.0_react@19.1.0__react@19.1.0/node_modules/next/dist/compiled/domain-browser/index.js|http=|/Users/andregabriel/Library/CloudStorage/Dropbox/agapefy_code/agapefy/node_modules/.pnpm/next@15.2.4_react-dom@19.1.0_react@19.1.0__react@19.1.0/node_modules/next/dist/compiled/stream-http/index.js|https=|/Users/andregabriel/Library/CloudStorage/Dropbox/agapefy_code/agapefy/node_modules/.pnpm/next@15.2.4_react-dom@19.1.0_react@19.1.0__react@19.1.0/node_modules/next/dist/compiled/https-browserify/index.js|os=|/Users/andregabriel/Library/CloudStorage/Dropbox/agapefy_code/agapefy/node_modules/.pnpm/next@15.2.4_react-dom@19.1.0_react@19.1.0__react@19.1.0/node_modules/next/dist/compiled/os-browserify/browser.js|path=|/Users/andregabriel/Library/CloudStorage/Dropbox/agapefy_code/agapefy/node_modules/.pnpm/next@15.2.4_react-dom@19.1.0_react@19.1.0__react@19.1.0/node_modules/next/dist/compiled/path-browserify/index.js|punycode=|/Users/andregabriel/Library/CloudStorage/Dropbox/agapefy_code/agapefy/node_modules/.pnpm/next@15.2.4_react-dom@19.1.0_react@19.1.0__react@19.1.0/node_modules/next/dist/compiled/punycode/punycode.js|process=|/Users/andregabriel/Library/CloudStorage/Dropbox/agapefy_code/agapefy/node_modules/.pnpm/next@15.2.4_react-dom@19.1.0_react@19.1.0__react@19.1.0/node_modules/next/dist/build/polyfills/process.js|querystring=|/Users/andregabriel/Library/CloudStorage/Dropbox/agapefy_code/agapefy/node_modules/.pnpm/next@15.2.4_react-dom@19.1.0_react@19.1.0__react@19.1.0/node_modules/next/dist/compiled/querystring-es3/index.js|stream=|/Users/andregabriel/Library/CloudStorage/Dropbox/agapefy_code/agapefy/node_modules/.pnpm/next@15.2.4_react-dom@19.1.0_react@19.1.0__react@19.1.0/node_modules/next/dist/compiled/stream-browserify/index.js|string_decoder=|/Users/andregabriel/Library/CloudStorage/Dropbox/agapefy_code/agapefy/node_modules/.pnpm/next@15.2.4_react-dom@19.1.0_react@19.1.0__react@19.1.0/node_modules/next/dist/compiled/string_decoder/string_decoder.js|sys=|/Users/andregabriel/Library/CloudStorage/Dropbox/agapefy_code/agapefy/node_modules/.pnpm/next@15.2.4_react-dom@19.1.0_react@19.1.0__react@19.1.0/node_modules/next/dist/compiled/util/util.js|timers=|/Users/andregabriel/Library/CloudStorage/Dropbox/agapefy_code/agapefy/node_modules/.pnpm/next@15.2.4_react-dom@19.1.0_react@19.1.0__react@19.1.0/node_modules/next/dist/compiled/timers-browserify/main.js|tty=|/Users/andregabriel/Library/CloudStorage/Dropbox/agapefy_code/agapefy/node_modules/.pnpm/next@15.2.4_react-dom@19.1.0_react@19.1.0__react@19.1.0/node_modules/next/dist/compiled/tty-browserify/index.js|util=|/Users/andregabriel/Library/CloudStorage/Dropbox/agapefy_code/agapefy/node_modules/.pnpm/next@15.2.4_react-dom@19.1.0_react@19.1.0__react@19.1.0/node_modules/next/dist/compiled/util/util.js|vm=|/Users/andregabriel/Library/CloudStorage/Dropbox/agapefy_code/agapefy/node_modules/.pnpm/next@15.2.4_react-dom@19.1.0_react@19.1.0__react@19.1.0/node_modules/next/dist/compiled/vm-browserify/index.js|zlib=|/Users/andregabriel/Library/CloudStorage/Dropbox/agapefy_code/agapefy/node_modules/.pnpm/next@15.2.4_react-dom@19.1.0_react@19.1.0__react@19.1.0/node_modules/next/dist/compiled/browserify-zlib/index.js|events=|/Users/andregabriel/Library/CloudStorage/Dropbox/agapefy_code/agapefy/node_modules/.pnpm/next@15.2.4_react-dom@19.1.0_react@19.1.0__react@19.1.0/node_modules/next/dist/compiled/events/events.js|setImmediate=|/Users/andregabriel/Library/CloudStorage/Dropbox/agapefy_code/agapefy/node_modules/.pnpm/next@15.2.4_react-dom@19.1.0_react@19.1.0__react@19.1.0/node_modules/next/dist/compiled/setimmediate/setImmediate.js|]|dependencyType=|esm|path=|/Users/andregabriel/Library/CloudStorage/Dropbox/agapefy_code/agapefy/src/app/admin/gm|request=|@/components/admin/AIGenerator from pack: Error: incorrect header check
+ ✓ Compiled in 479ms (1635 modules)
+ ✓ Compiled in 285ms (1635 modules)
+<w> [webpack.cache.PackFileCacheStrategy] Caching failed for pack: Error: too many length or distance symbols
+<w> [webpack.cache.PackFileCacheStrategy] Caching failed for pack: Error: ENOENT: no such file or directory, rename '/Users/andregabriel/Library/CloudStorage/Dropbox/agapefy_code/agapefy/.next/cache/webpack/client-development/2.pack.gz_' -> '/Users/andregabriel/Library/CloudStorage/Dropbox/agapefy_code/agapefy/.next/cache/webpack/client-development/2.pack.gz'
+<w> [webpack.cache.PackFileCacheStrategy] Restoring pack failed from /Users/andregabriel/Library/CloudStorage/Dropbox/agapefy_code/agapefy/.next/cache/webpack/client-development.pack.gz: Error: invalid distance code
+ ✓ Compiled in 543ms (1635 modules)
+ ✓ Compiled in 406ms (1635 modules)
+<w> [webpack.cache.PackFileCacheStrategy] Caching failed for pack: Error: too many length or distance symbols
+<w> [webpack.cache.PackFileCacheStrategy] Caching failed for pack: Error: ENOENT: no such file or directory, rename '/Users/andregabriel/Library/CloudStorage/Dropbox/agapefy_code/agapefy/.next/cache/webpack/client-development/0.pack.gz_' -> '/Users/andregabriel/Library/CloudStorage/Dropbox/agapefy_code/agapefy/.next/cache/webpack/client-development/0.pack.gz'
+ ✓ Compiled in 557ms (1635 modules)
+ ✓ Compiled in 460ms (1635 modules)
+ ✓ Compiled in 344ms (1635 modules)
+ ✓ Compiled in 322ms (1635 modules)
+ ✓ Compiled in 279ms (1635 modules)
+ ⨯ ./src/app/admin/gm/page.tsx
+Error:   [31mx[0m Unexpected token `div`. Expected jsx identifier
+     ,-[[36;1;4m/Users/andregabriel/Library/CloudStorage/Dropbox/agapefy_code/agapefy/src/app/admin/gm/page.tsx[0m:447:1]
+ [2m444[0m |   const progressPercent = progress.total > 0 ? Math.round((progress.completed / progress.total) * 100) : 0;
+ [2m445[0m | 
+ [2m446[0m |   return (
+ [2m447[0m |     <div className="space-y-6">
+     : [35;1m     ^^^[0m
+ [2m448[0m |       {/* AIGenerator escondido: reuso da lógica sem duplicação */}
+ [2m449[0m |       <div className="hidden">
+ [2m450[0m |         <AIGeneratorWithRef ref={aiRef} onReady={setAiReady} onProgress={handleGeneratorProgress as AIGeneratorProps['onProgress']} />
+     `----
+
+Caused by:
+    Syntax Error
+
+Import trace for requested module:
+./src/app/admin/gm/page.tsx
+ ⨯ ./src/app/admin/gm/page.tsx
+Error:   [31mx[0m Unexpected token `div`. Expected jsx identifier
+     ,-[[36;1;4m/Users/andregabriel/Library/CloudStorage/Dropbox/agapefy_code/agapefy/src/app/admin/gm/page.tsx[0m:459:1]
+ [2m456[0m |   const progressPercent = progress.total > 0 ? Math.round((progress.completed / progress.total) * 100) : 0;
+ [2m457[0m | 
+ [2m458[0m |   return (
+ [2m459[0m |     <div className="space-y-6">
+     : [35;1m     ^^^[0m
+ [2m460[0m |       {/* AIGenerator escondido: reuso da lógica sem duplicação */}
+ [2m461[0m |       <div className="hidden">
+ [2m462[0m |         <AIGeneratorWithRef ref={aiRef} onReady={setAiReady} onProgress={handleGeneratorProgress as AIGeneratorProps['onProgress']} />
+     `----
+
+Caused by:
+    Syntax Error
+
+Import trace for requested module:
+./src/app/admin/gm/page.tsx
+ ⨯ ./src/app/admin/gm/page.tsx
+Error:   [31mx[0m Unexpected token `div`. Expected jsx identifier
+     ,-[[36;1;4m/Users/andregabriel/Library/CloudStorage/Dropbox/agapefy_code/agapefy/src/app/admin/gm/page.tsx[0m:459:1]
+ [2m456[0m |   const progressPercent = progress.total > 0 ? Math.round((progress.completed / progress.total) * 100) : 0;
+ [2m457[0m | 
+ [2m458[0m |   return (
+ [2m459[0m |     <div className="space-y-6">
+     : [35;1m     ^^^[0m
+ [2m460[0m |       {/* AIGenerator escondido: reuso da lógica sem duplicação */}
+ [2m461[0m |       <div className="hidden">
+ [2m462[0m |         <AIGeneratorWithRef ref={aiRef} onReady={setAiReady} onProgress={handleGeneratorProgress as AIGeneratorProps['onProgress']} />
+     `----
+
+Caused by:
+    Syntax Error
+
+Import trace for requested module:
+./src/app/admin/gm/page.tsx
+ ⨯ ./src/app/admin/gm/page.tsx
+Error:   [31mx[0m Unexpected token `div`. Expected jsx identifier
+     ,-[[36;1;4m/Users/andregabriel/Library/CloudStorage/Dropbox/agapefy_code/agapefy/src/app/admin/gm/page.tsx[0m:460:1]
+ [2m457[0m |   const progressPercent = progress.total > 0 ? Math.round((progress.completed / progress.total) * 100) : 0;
+ [2m458[0m | 
+ [2m459[0m |   return (
+ [2m460[0m |     <div className="space-y-6">
+     : [35;1m     ^^^[0m
+ [2m461[0m |       {/* AIGenerator escondido: reuso da lógica sem duplicação */}
+ [2m462[0m |       <div className="hidden">
+ [2m463[0m |         <AIGeneratorWithRef ref={aiRef} onReady={setAiReady} onProgress={handleGeneratorProgress as AIGeneratorProps['onProgress']} />
+     `----
+
+Caused by:
+    Syntax Error
+
+Import trace for requested module:
+./src/app/admin/gm/page.tsx
+ ⨯ ./src/app/admin/gm/page.tsx
+Error:   [31mx[0m Unexpected token `div`. Expected jsx identifier
+     ,-[[36;1;4m/Users/andregabriel/Library/CloudStorage/Dropbox/agapefy_code/agapefy/src/app/admin/gm/page.tsx[0m:460:1]
+ [2m457[0m |   const progressPercent = progress.total > 0 ? Math.round((progress.completed / progress.total) * 100) : 0;
+ [2m458[0m | 
+ [2m459[0m |   return (
+ [2m460[0m |     <div className="space-y-6">
+     : [35;1m     ^^^[0m
+ [2m461[0m |       {/* AIGenerator escondido: reuso da lógica sem duplicação */}
+ [2m462[0m |       <div className="hidden">
+ [2m463[0m |         <AIGeneratorWithRef ref={aiRef} onReady={setAiReady} onProgress={handleGeneratorProgress as AIGeneratorProps['onProgress']} />
+     `----
+
+Caused by:
+    Syntax Error
+
+Import trace for requested module:
+./src/app/admin/gm/page.tsx
+<w> [webpack.cache.PackFileCacheStrategy] Restoring failed for FlagDependencyExportsPlugin|javascript/auto|/Users/andregabriel/Library/CloudStorage/Dropbox/agapefy_code/agapefy/node_modules/.pnpm/next@15.2.4_react-dom@19.1.0_react@19.1.0__react@19.1.0/node_modules/next/dist/compiled/@next/react-refresh-utils/dist/loader.js!/Users/andregabriel/Library/CloudStorage/Dropbox/agapefy_code/agapefy/node_modules/.pnpm/next@15.2.4_react-dom@19.1.0_react@19.1.0__react@19.1.0/node_modules/next/dist/build/webpack/loaders/next-flight-client-module-loader.js!/Users/andregabriel/Library/CloudStorage/Dropbox/agapefy_code/agapefy/node_modules/.pnpm/next@15.2.4_react-dom@19.1.0_react@19.1.0__react@19.1.0/node_modules/next/dist/build/webpack/loaders/next-swc-loader.js??ruleSet[1].rules[16].oneOf[6].use[1]!/Users/andregabriel/Library/CloudStorage/Dropbox/agapefy_code/agapefy/src/components/admin/AIGenerator.tsx|app-pages-browser from pack: Error: invalid stored block lengths
+ ⨯ ./src/app/admin/gm/page.tsx
+Error:   [31mx[0m Unexpected token `div`. Expected jsx identifier
+     ,-[[36;1;4m/Users/andregabriel/Library/CloudStorage/Dropbox/agapefy_code/agapefy/src/app/admin/gm/page.tsx[0m:460:1]
+ [2m457[0m |   const progressPercent = progress.total > 0 ? Math.round((progress.completed / progress.total) * 100) : 0;
+ [2m458[0m | 
+ [2m459[0m |   return (
+ [2m460[0m |     <div className="space-y-6">
+     : [35;1m     ^^^[0m
+ [2m461[0m |       {/* AIGenerator escondido: reuso da lógica sem duplicação */}
+ [2m462[0m |       <div className="hidden">
+ [2m463[0m |         <AIGeneratorWithRef ref={aiRef} onReady={setAiReady} onProgress={handleGeneratorProgress as AIGeneratorProps['onProgress']} />
+     `----
+
+Caused by:
+    Syntax Error
+
+Import trace for requested module:
+./src/app/admin/gm/page.tsx
+<w> [webpack.cache.PackFileCacheStrategy] Caching failed for pack: Error: invalid stored block lengths
+ ⨯ ./src/app/admin/gm/page.tsx
+Error:   [31mx[0m Unexpected token `div`. Expected jsx identifier
+     ,-[[36;1;4m/Users/andregabriel/Library/CloudStorage/Dropbox/agapefy_code/agapefy/src/app/admin/gm/page.tsx[0m:461:1]
+ [2m458[0m |   const onProgressHandler = handleGeneratorProgress as unknown as AIGeneratorProps['onProgress'];
+ [2m459[0m | 
+ [2m460[0m |   return (
+ [2m461[0m |     <div className="space-y-6">
+     : [35;1m     ^^^[0m
+ [2m462[0m |       {/* AIGenerator escondido: reuso da lógica sem duplicação */}
+ [2m463[0m |       <div className="hidden">
+ [2m464[0m |         <AIGeneratorWithRef ref={aiRef} onReady={setAiReady} onProgress={onProgressHandler} />
+     `----
+
+Caused by:
+    Syntax Error
+
+Import trace for requested module:
+./src/app/admin/gm/page.tsx
+ ⨯ ./src/app/admin/gm/page.tsx
+Error:   [31mx[0m Unexpected token `div`. Expected jsx identifier
+     ,-[[36;1;4m/Users/andregabriel/Library/CloudStorage/Dropbox/agapefy_code/agapefy/src/app/admin/gm/page.tsx[0m:461:1]
+ [2m458[0m |   const onProgressHandler = handleGeneratorProgress as unknown as AIGeneratorProps['onProgress'];
+ [2m459[0m | 
+ [2m460[0m |   return (
+ [2m461[0m |     <div className="space-y-6">
+     : [35;1m     ^^^[0m
+ [2m462[0m |       {/* AIGenerator escondido: reuso da lógica sem duplicação */}
+ [2m463[0m |       <div className="hidden">
+ [2m464[0m |         <AIGeneratorWithRef ref={aiRef} onReady={setAiReady} onProgress={onProgressHandler} />
+     `----
+
+Caused by:
+    Syntax Error
+
+Import trace for requested module:
+./src/app/admin/gm/page.tsx
+<w> [webpack.cache.PackFileCacheStrategy] Caching failed for pack: Error: invalid stored block lengths
+ ✓ Compiled in 1263ms (1635 modules)

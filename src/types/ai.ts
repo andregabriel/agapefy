@@ -1,6 +1,14 @@
+export interface AIGProgressEvent {
+  scope: 'field' | 'audio' | 'image';
+  phase: 'start' | 'success' | 'error';
+  name?: 'text' | 'preparation' | 'final_message' | 'title' | 'subtitle' | 'description' | 'image_prompt';
+  info?: string;
+}
+
 export interface AIGeneratorProps {
   onAudioGenerated?: (audioData: { text: string; audio_url: string }) => void;
   onReady?: (ready: boolean) => void;
+  onProgress?: (ev: AIGProgressEvent) => void;
 }
 
 export interface PrayerData {
@@ -55,7 +63,12 @@ export interface AIGeneratorHandle {
   setTitle: (value: string) => void;
   waitForAudioUrl: (timeoutMs?: number) => Promise<string | null>;
   waitForImageUrl: (timeoutMs?: number) => Promise<string | null>;
-  handleSaveToDatabase: (overrideTitle?: string) => Promise<{ id: string | null; error?: string }>;
+  handleSaveToDatabase: (
+    overrideTitle?: string,
+    overrideBase?: string,
+    overrideCategoryId?: string,
+    skipEnsureFields?: boolean
+  ) => Promise<{ id: string | null; error?: string }>;
   flushState: () => Promise<void>;
   getPrayerData: () => PrayerData | null;
 }

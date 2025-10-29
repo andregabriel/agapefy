@@ -12,6 +12,7 @@ import { supabase } from '@/lib/supabase';
 import { getCategories, type Category, ensurePlaylistByTitleInsensitive, addAudioToPlaylist } from '@/lib/supabase-queries';
 import AIGenerator from '@/components/admin/AIGenerator';
 import type { AIGeneratorHandle, AIGeneratorProps } from '@/types/ai';
+import type { AIGProgressEvent } from '@/types/ai';
 
 type BatchLine = {
   titulo: string;
@@ -64,6 +65,26 @@ export default function GmPage() {
     current: string;
     items: ItemProgress[];
   }>({ total: 0, completed: 0, current: '', items: [] });
+
+  // Progresso fino por evento do gerador
+  const currentItemIdxRef = useRef<number | null>(null);
+  const handleGeneratorProgress = useCallback((ev: AIGProgressEvent) => {
+    const idx = currentItemIdxRef.current;
+    if (!idx) return;
+    if (ev.scope === 'field') {
+      if (ev.phase === 'start') updateItemStep(idx, 'Gerar campos', { status: 'running', message: `Gerando ${ev.name}` });
+      if (ev.phase === 'success') updateItemStep(idx, 'Gerar campos', { status: 'success', message: `${ev.name} pronto` });
+      if (ev.phase === 'error') updateItemStep(idx, 'Gerar campos', { status: 'error', message: `${ev.name}: ${ev.info || 'erro'}` });
+    } else if (ev.scope === 'audio') {
+      if (ev.phase === 'start') updateItemStep(idx, 'Áudio/Imagem', { status: 'running', message: 'Gerando áudio' });
+      if (ev.phase === 'success') updateItemStep(idx, 'Áudio/Imagem', { status: 'success', message: 'Áudio ok' });
+      if (ev.phase === 'error') updateItemStep(idx, 'Áudio/Imagem', { status: 'error', message: `Áudio: ${ev.info || 'erro'}` });
+    } else if (ev.scope === 'image') {
+      if (ev.phase === 'start') updateItemStep(idx, 'Áudio/Imagem', { status: 'running', message: 'Gerando imagem' });
+      if (ev.phase === 'success') updateItemStep(idx, 'Áudio/Imagem', { status: 'success', message: 'Imagem ok' });
+      if (ev.phase === 'error') updateItemStep(idx, 'Áudio/Imagem', { status: 'error', message: `Imagem indisponível (${ev.info || 'erro'})` });
+    }
+  }, []);
 
   React.useEffect(() => {
     (async () => {
@@ -252,6 +273,7 @@ export default function GmPage() {
         // garantir que não herdaremos dados de item anterior
         resetForBatchItem();
         setCategoryById(categoryId);
+        currentItemIdxRef.current = itemIdx;
         await api.flushState();
         let r = await generateAllWithContext({ tema: line.tema, base: line.base, titulo: line.titulo, categoryId });
         if (!r.ok) {
@@ -261,42 +283,13 @@ export default function GmPage() {
           r = await generateAllWithContext({ tema: line.tema, base: line.base, titulo: line.titulo, categoryId });
         }
         
-        // Aguardar commit dos campos gerados antes de validar
-        // O handleGenerateAllFields já aguarda 100ms internamente, mas adicionamos mais segurança
-        await api.flushState();
-        await new Promise(r => setTimeout(r, 1000));
-        
-        // Validar campos essenciais para geração de áudio
-        const generatedData = api.getPrayerData();
-        
-        // Debug log
-        if (typeof window !== 'undefined' && window.localStorage.getItem('gm_debug') === '1') {
-          console.log(`[gm] item ${itemIdx} getPrayerData:`, {
-            prep: (generatedData?.preparation_text || '').length,
-            texto: (generatedData?.prayer_text || '').length,
-            final: (generatedData?.final_message || '').length,
-            title: generatedData?.title || '(vazio)'
-          });
-        }
-        
-        const prep = (generatedData?.preparation_text || '').trim();
-        const texto = (generatedData?.prayer_text || '').trim();
-        const final = (generatedData?.final_message || '').trim();
-        
-        if (!prep || !texto || !final) {
-          const missing = [];
-          if (!prep) missing.push('Preparação para Orar');
-          if (!texto) missing.push('Texto da Oração');
-          if (!final) missing.push('Mensagem Final');
-          updateItemStep(itemIdx, 'Gerar campos', { 
-            status: 'error', 
-            message: `Campos não gerados: ${missing.join(', ')}` 
-          });
-          updateItemStatus(itemIdx, 'error', `Campos faltando: ${missing.join(', ')}`);
+        // Validar campos essenciais usando o retorno do orquestrador (sem depender do estado do React)
+        if (!r.ok) {
+          updateItemStep(itemIdx, 'Gerar campos', { status: 'error', message: `Texto/Prep/Final incompletos (t:${r.textoLen}, p:${r.prepLen}, f:${r.finalLen})` });
+          updateItemStatus(itemIdx, 'error', 'Campos faltando');
           continue;
         }
-        
-        updateItemStep(itemIdx, 'Gerar campos', { status: 'success' });
+        updateItemStep(itemIdx, 'Gerar campos', { status: 'success', message: `t:${r.textoLen}, p:${r.prepLen}, f:${r.finalLen}` });
 
         // 2) Ajustar título
         updateItemStep(itemIdx, 'Título ajustado', { status: 'running' });
@@ -335,7 +328,8 @@ export default function GmPage() {
 
         // 4) Salvar
         updateItemStep(itemIdx, 'Salvar', { status: 'running' });
-        const saveRes = await handleSaveToDatabase(line.titulo);
+        // No fluxo em massa já geramos todos os campos; evitar ensure dentro do salvar
+        const saveRes = await handleSaveToDatabase(line.titulo, line.base, categoryId, true);
         if (!saveRes?.id) {
           const msg = saveRes?.error || 'Falha ao salvar';
           updateItemStep(itemIdx, 'Salvar', { status: 'error', message: msg });
@@ -390,7 +384,7 @@ export default function GmPage() {
     <div className="space-y-6">
       {/* AIGenerator escondido: reuso da lógica sem duplicação */}
       <div className="hidden">
-        <AIGeneratorWithRef ref={aiRef} onReady={setAiReady} />
+        <AIGeneratorWithRef ref={aiRef} onReady={setAiReady} onProgress={handleGeneratorProgress as AIGeneratorProps['onProgress']} />
       </div>
 
       <Card>

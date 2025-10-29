@@ -37,7 +37,7 @@ import { DebugPanel } from '@/components/admin/ai-generator/DebugPanel';
 // Tipos e vozes extraídos para arquivos dedicados
 
 const AIGenerator = forwardRef<AIGeneratorHandle, AIGeneratorProps>(function AIGenerator(
-  { onAudioGenerated, onReady }: AIGeneratorProps,
+  { onAudioGenerated, onReady, onProgress }: AIGeneratorProps,
   ref
 ) {
   const [prompt, setPrompt] = useState('');
@@ -331,9 +331,10 @@ const AIGenerator = forwardRef<AIGeneratorHandle, AIGeneratorProps>(function AIG
       const [prepText, finalText] = await Promise.all([prepP, finalP]);
       const prep = (prepText || '').trim();
       const fin = (finalText || '').trim();
+      let audioUrlGen: string | null = null;
       try {
-        await generateAudio(texto, { preparation: prep, final_message: fin });
-      } catch (_) {}
+        audioUrlGen = await generateAudio(texto, { preparation: prep, final_message: fin });
+      } catch (_) { audioUrlGen = null; }
 
       // 4) Imagem quando a descrição estiver pronta (uma vez)
       try {
@@ -354,7 +355,7 @@ const AIGenerator = forwardRef<AIGeneratorHandle, AIGeneratorProps>(function AIG
         await new Promise(r => setTimeout(r, 0));
       }
 
-      const ok = !!(texto && prep && fin);
+      const ok = !!(texto && prep && fin && (audioUrlGen && audioUrlGen.trim().length > 0));
       return { ok, textoLen: texto.length, prepLen: prep.length, finalLen: fin.length };
     } finally {
       setIsGeneratingAll(false);
@@ -803,6 +804,8 @@ const AIGenerator = forwardRef<AIGeneratorHandle, AIGeneratorProps>(function AIG
   const generateForField = async (field: 'title'|'subtitle'|'description'|'preparation'|'text'|'final_message'|'image_prompt', overrideCtx?: Record<string, string>): Promise<string | undefined> => {
     setLoadingField(prev => ({ ...prev, [field]: true }));
     try {
+      // progresso: início de campo
+      try { onProgress && onProgress({ scope: 'field', phase: 'start', name: field }); } catch (_) {}
       let generatedContent: string | undefined;
       const ctx = {
         titulo: prayerData?.title || '',
@@ -840,9 +843,11 @@ const AIGenerator = forwardRef<AIGeneratorHandle, AIGeneratorProps>(function AIG
       const { ok, content, error } = await gmanualGenerateField(field, mergedCtx);
       if (!ok) {
         toast.error(error || 'Falha ao gerar');
+        try { onProgress && onProgress({ scope: 'field', phase: 'error', name: field, info: error || 'erro' }); } catch (_) {}
         return;
       }
       generatedContent = content;
+      try { onProgress && onProgress({ scope: 'field', phase: 'success', name: field }); } catch (_) {}
       // Guardar valor anterior para undo e aplicar
       setUndoCache(prev => ({ ...prev, [field]:
         field === 'title' ? (prayerData?.title || '') :
@@ -1150,6 +1155,7 @@ const AIGenerator = forwardRef<AIGeneratorHandle, AIGeneratorProps>(function AIG
     overrideText?: string,
     overrideSegments?: { preparation?: string; final_message?: string }
   ) => {
+    try { onProgress && onProgress({ scope: 'audio', phase: 'start' }); } catch (_) {}
     const prayerTextToUse = overrideText ?? prayerData?.prayer_text;
     if (!prayerTextToUse?.trim()) {
       toast.error('Primeiro gere uma oração para converter em áudio');
@@ -1254,6 +1260,7 @@ const AIGenerator = forwardRef<AIGeneratorHandle, AIGeneratorProps>(function AIG
         console.error('❌ Erro detalhado ao gerar áudio:', { status: result.status, statusText: result.statusText, data: result.data, rawResponse: result.rawText });
         addDebugLog('error', 'audio', { status: result.status, statusText: result.statusText, data: result.data, rawResponse: result.rawText });
         toast.error(`Erro ao gerar áudio: ${result.error}`);
+        try { onProgress && onProgress({ scope: 'audio', phase: 'error', info: result.error }); } catch (_) {}
         return;
       }
       const data = result.data;
@@ -1285,6 +1292,7 @@ const AIGenerator = forwardRef<AIGeneratorHandle, AIGeneratorProps>(function AIG
         setLastVoiceNameUsed(voiceUsedInfo?.name || "");
         
         console.log('✅ Áudio gerado com sucesso');
+        try { onProgress && onProgress({ scope: 'audio', phase: 'success' }); } catch (_) {}
         
         if (onAudioGenerated) {
           onAudioGenerated({
@@ -1313,20 +1321,20 @@ const AIGenerator = forwardRef<AIGeneratorHandle, AIGeneratorProps>(function AIG
     await generateAudio();
   };
 
-  const handleGenerateImage = async (overridePrompt?: string) => {
+  const handleGenerateImage = async (overridePrompt?: string): Promise<string | null> => {
     // Usar a descrição editável combinada com o template configurável
     const rawPrompt = overridePrompt ?? (prayerData?.image_prompt as unknown);
     const originalPrompt = (typeof rawPrompt === 'string' ? rawPrompt : '').trim();
 
     if (!originalPrompt) {
       toast.error('Por favor, preencha a descrição da imagem');
-      return;
+      return null;
     }
 
     // Validar prompt mínimo
     if (originalPrompt.length < 20) {
       toast.error('Por favor, descreva a cena com mais detalhes (mínimo 20 caracteres)');
-      return;
+      return null;
     }
 
     // Montar contexto de variáveis para template
@@ -1358,6 +1366,7 @@ const AIGenerator = forwardRef<AIGeneratorHandle, AIGeneratorProps>(function AIG
     const optimizedPrompt = optimizeImagePrompt(compiled);
 
     console.log('🖼️ Iniciando geração de imagem com DALL-E 3...');
+    try { onProgress && onProgress({ scope: 'image', phase: 'start' }); } catch (_) {}
     console.log('📝 Prompt original:', originalPrompt);
     console.log('🎯 Prompt otimizado:', optimizedPrompt);
     
@@ -1390,7 +1399,8 @@ const AIGenerator = forwardRef<AIGeneratorHandle, AIGeneratorProps>(function AIG
           data: imageResult.data
         });
         toast.error(`Erro ao gerar imagem: ${apiErr}`);
-        return;
+        try { onProgress && onProgress({ scope: 'image', phase: 'error', info: String(apiErr) }); } catch (_) {}
+        return null;
       }
       const responseData = imageResult.data;
 
@@ -1402,9 +1412,13 @@ const AIGenerator = forwardRef<AIGeneratorHandle, AIGeneratorProps>(function AIG
           const publicUrl = await uploadImageToSupabaseFromUrl(generatedUrl);
           setImageUrl(publicUrl);
           console.log('✅ Imagem copiada para Supabase Storage:', publicUrl);
+          try { onProgress && onProgress({ scope: 'image', phase: 'success' }); } catch (_) {}
+          return publicUrl || null;
         } catch (copyErr) {
           console.warn('⚠️ Falha ao copiar imagem para Supabase; mantendo URL original temporária.', copyErr);
           setImageUrl(generatedUrl);
+          try { onProgress && onProgress({ scope: 'image', phase: 'success' }); } catch (_) {}
+          return generatedUrl;
         }
 
         let successMessage = '🖼️ Imagem gerada com sucesso usando DALL-E 3!';
@@ -1413,9 +1427,13 @@ const AIGenerator = forwardRef<AIGeneratorHandle, AIGeneratorProps>(function AIG
         }
         
         toast.success(successMessage);
+        try { onProgress && onProgress({ scope: 'image', phase: 'success' }); } catch (_) {}
+        return imageUrl || null;
       } else {
         console.error('❌ URL da imagem não encontrada na resposta');
         toast.error('Nenhuma imagem foi gerada');
+        try { onProgress && onProgress({ scope: 'image', phase: 'error', info: 'no_image_url' }); } catch (_) {}
+        return null;
       }
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido';
@@ -1423,6 +1441,8 @@ const AIGenerator = forwardRef<AIGeneratorHandle, AIGeneratorProps>(function AIG
       console.error('🔍 Stack trace:', error);
       addDebugLog('error', 'image', { error: errorMessage, stack: error instanceof Error ? error.stack : undefined });
       toast.error(`Erro ao gerar imagem: ${errorMessage}`);
+      try { onProgress && onProgress({ scope: 'image', phase: 'error', info: errorMessage }); } catch (_) {}
+      return null;
     } finally {
       setIsGeneratingImage(false);
     }
@@ -1474,7 +1494,12 @@ const AIGenerator = forwardRef<AIGeneratorHandle, AIGeneratorProps>(function AIG
     })();
   }, [prayerData?.prayer_text, autoDetectBiblicalBase]);
 
-  const handleSaveToDatabase = async (overrideTitle?: string): Promise<{ id: string | null; error?: string }> => {
+  const handleSaveToDatabase = async (
+    overrideTitle?: string,
+    overrideBase?: string,
+    overrideCategoryId?: string,
+    skipEnsureFields?: boolean
+  ): Promise<{ id: string | null; error?: string }> => {
     // Congelar um snapshot dos estados usados no salvamento para evitar corrida entre itens do lote
     const snapshotPrayer = prayerData ? { ...prayerData } : null;
     // Forçar título vindo do GM se fornecido
@@ -1485,10 +1510,24 @@ const AIGenerator = forwardRef<AIGeneratorHandle, AIGeneratorProps>(function AIG
         setPrayerData(prev => prev ? { ...prev, title: clean } : prev);
       }
     }
-    const snapshotAudioUrl = audioUrl;
-    const snapshotImageUrl = imageUrl;
-    const snapshotCategory = selectedCategory;
+    // Usar refs reativas para evitar corrida entre itens do lote
+    let snapshotAudioUrl = audioUrlRef.current || audioUrl;
+    let snapshotImageUrl = imageUrlRef.current || imageUrl;
+    // Micro-tique para permitir commit de estados em ambientes lentos
+    if (!snapshotAudioUrl) {
+      await new Promise(r => setTimeout(r, 0));
+      snapshotAudioUrl = audioUrlRef.current || snapshotAudioUrl;
+    }
+    let snapshotCategory = overrideCategoryId || selectedCategory;
+    if (!snapshotCategory) {
+      // pequeno fallback para garantir categoria definida em execuções em lote
+      await new Promise(r => setTimeout(r, 0));
+      snapshotCategory = overrideCategoryId || selectedCategory;
+    }
     const snapshotAudioDuration = audioDuration;
+    const snapshotBiblicalBase = (overrideBase ?? biblicalBase) || null;
+    const snapshotPrompt = (prompt || '').trim();
+    const snapshotCategoryName = categories.find(c => c.id === snapshotCategory)?.name || '';
 
     if (!snapshotAudioUrl) {
       const msg = 'É necessário ter oração completa e áudio gerados para salvar';
@@ -1506,7 +1545,7 @@ const AIGenerator = forwardRef<AIGeneratorHandle, AIGeneratorProps>(function AIG
     try {
       // Garantia: se algum campo essencial estiver vazio, re-gerar automaticamente
       // Usamos o texto da oração como contexto principal para prompts específicos
-      if (snapshotPrayer) {
+      if (snapshotPrayer && !skipEnsureFields) {
         // Se não houver texto ainda por algum motivo, tenta gerar
         const baseTexto = (snapshotPrayer.prayer_text || '').trim();
         let ensuredTexto = baseTexto;
@@ -1525,7 +1564,12 @@ const AIGenerator = forwardRef<AIGeneratorHandle, AIGeneratorProps>(function AIG
             field === 'subtitle' ? (snapshotPrayer.subtitle || '') :
             (snapshotPrayer.audio_description || '');
           if ((currentVal || '').trim()) return;
-          const generated = await generateForField(field, { texto: ensuredTexto || snapshotPrayer.prayer_text || '' });
+          const generated = await generateForField(field, {
+            texto: ensuredTexto || snapshotPrayer.prayer_text || '',
+            base_biblica: snapshotBiblicalBase || '',
+            tema_central: snapshotPrompt || '',
+            categoria_nome: snapshotCategoryName || ''
+          });
           if (generated && generated.trim()) {
             const clean = generated.trim();
             if (field === 'title') {
@@ -1559,22 +1603,49 @@ const AIGenerator = forwardRef<AIGeneratorHandle, AIGeneratorProps>(function AIG
       
       // Usar apenas a descrição editável do áudio, sem anexar informação da voz
       const finalDescription = `${snapshotPrayer?.audio_description || ''}`;
-      
+
+      // Reforçar snapshot com dados atuais do state caso algum campo esteja vazio
+      const ensuredPrayer = (() => {
+        const current = prayerData ? { ...prayerData } : null;
+        if (!snapshotPrayer) return current;
+        const merged: any = { ...snapshotPrayer };
+        if ((!merged.title || !merged.title.trim()) && current?.title) merged.title = current.title;
+        if ((!merged.subtitle || !merged.subtitle.trim()) && current?.subtitle) merged.subtitle = current.subtitle;
+        if ((!merged.audio_description || !merged.audio_description.trim()) && current?.audio_description) merged.audio_description = current.audio_description;
+        if ((!merged.preparation_text || !merged.preparation_text.trim()) && current?.preparation_text) merged.preparation_text = current.preparation_text;
+        if ((!merged.prayer_text || !merged.prayer_text.trim()) && current?.prayer_text) merged.prayer_text = current.prayer_text;
+        if ((!merged.final_message || !merged.final_message.trim()) && current?.final_message) merged.final_message = current.final_message;
+        return merged as typeof snapshotPrayer;
+      })();
+
       // Montar transcrição completa na ordem: Preparação, Oração, Mensagem final
-      const preparation = (snapshotPrayer?.preparation_text || '').trim();
-      const prayer = (snapshotPrayer?.prayer_text || '').trim();
-      const finalMsg = (snapshotPrayer?.final_message || '').trim();
-      const transcriptFull = [preparation, prayer, finalMsg].filter(Boolean).join('\n\n');
+      const preparation = (ensuredPrayer?.preparation_text || '').trim();
+      const prayer = (ensuredPrayer?.prayer_text || '').trim();
+      const finalMsg = (ensuredPrayer?.final_message || '').trim();
+      let transcriptFull = [preparation, prayer, finalMsg].filter(Boolean).join('\n\n');
+      if (!transcriptFull.trim()) {
+        // Fallback: ao menos salvar o texto principal
+        transcriptFull = prayer || '';
+      }
+
+      // Subtítulo: evitar NULL — usar derivado da base bíblica quando vazio
+      const subtitleToSave = (() => {
+        const cur = (ensuredPrayer?.subtitle || '').trim();
+        if (cur) return cur;
+        if (snapshotBiblicalBase) return `De ${snapshotBiblicalBase}`;
+        return null;
+      })();
 
       console.log('💾 Salvando oração no banco de dados...');
       console.log('📝 Dados a serem salvos:', {
-        title: snapshotPrayer?.title,
-        subtitle: snapshotPrayer?.subtitle,
+        title: ensuredPrayer?.title,
+        subtitle: subtitleToSave,
         description: finalDescription,
-        audio_url: audioUrl,
-        transcript: transcriptFull,
-        duration: audioDuration ? Math.round(audioDuration) : null, // NOVO: Salvar duração
-        category_id: selectedCategory,
+        audio_url: snapshotAudioUrl,
+        transcript: transcriptFull?.substring(0, 120) + (transcriptFull.length > 120 ? '...' : ''),
+        duration: snapshotAudioDuration ? Math.round(snapshotAudioDuration) : null,
+        category_id: snapshotCategory,
+        biblical_base: snapshotBiblicalBase,
         image_present: !!snapshotImageUrl,
       });
       
@@ -1592,8 +1663,8 @@ const AIGenerator = forwardRef<AIGeneratorHandle, AIGeneratorProps>(function AIG
       const { data: audioData, error: audioError } = await supabase
         .from('audios')
         .insert({
-          title: snapshotPrayer?.title || '',
-          subtitle: snapshotPrayer?.subtitle || null,
+          title: ensuredPrayer?.title || '',
+          subtitle: subtitleToSave,
           description: finalDescription,
           audio_url: snapshotAudioUrl,
           transcript: transcriptFull,
@@ -1604,7 +1675,7 @@ const AIGenerator = forwardRef<AIGeneratorHandle, AIGeneratorProps>(function AIG
           ai_engine: selectedAiEngine || null,
           voice_id: (lastVoiceIdUsed || selectedVoice) || null,
           voice_name: (lastVoiceNameUsed || selectedVoiceInfo?.name) || null,
-          biblical_base: snapshotPrayer?.final_message !== undefined ? (biblicalBase || null) : (biblicalBase || null),
+          biblical_base: snapshotBiblicalBase,
         })
         .select()
         .single();
@@ -1628,7 +1699,7 @@ const AIGenerator = forwardRef<AIGeneratorHandle, AIGeneratorProps>(function AIG
       try {
         const { error: updateError } = await supabase
           .from('audios')
-          .update({ time: dayPart || 'Any', spiritual_goal: spiritualGoal || null, ai_engine: selectedAiEngine || null, voice_id: (lastVoiceIdUsed || selectedVoice) || null, voice_name: (lastVoiceNameUsed || (ELEVENLABS_VOICES.find(v => v.id === (lastVoiceIdUsed || selectedVoice))?.name)) || null, biblical_base: biblicalBase || null })
+          .update({ time: dayPart || 'Any', spiritual_goal: spiritualGoal || null, ai_engine: selectedAiEngine || null, voice_id: (lastVoiceIdUsed || selectedVoice) || null, voice_name: (lastVoiceNameUsed || (ELEVENLABS_VOICES.find(v => v.id === (lastVoiceIdUsed || selectedVoice))?.name)) || null, biblical_base: snapshotBiblicalBase })
           .eq('id', audioData.id);
         if (!updateError) {
           savedDirectlyInTable = true;
