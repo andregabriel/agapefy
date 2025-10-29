@@ -203,16 +203,14 @@ export default function GmPage() {
     const api = aiRef.current as AIGeneratorHandle;
     const {
       setCategoryById,
-      setPrompt,
-      setBiblicalBase,
-      handleGenerateAllFields,
+      generateAllWithContext,
       resetForBatchItem,
       setTitle,
       waitForAudioUrl,
       waitForImageUrl,
       handleSaveToDatabase
     } = api;
-    if (!setCategoryById || !setPrompt || !setBiblicalBase || !handleGenerateAllFields || !resetForBatchItem || !setTitle || !waitForAudioUrl || !waitForImageUrl || !handleSaveToDatabase) {
+    if (!setCategoryById || !generateAllWithContext || !resetForBatchItem || !setTitle || !waitForAudioUrl || !waitForImageUrl || !handleSaveToDatabase) {
       toast.error('Gerador indisponível. Recarregue a página.');
       return;
     }
@@ -254,15 +252,13 @@ export default function GmPage() {
         // garantir que não herdaremos dados de item anterior
         resetForBatchItem();
         setCategoryById(categoryId);
-        setPrompt(line.tema);
-        setBiblicalBase(line.base);
         await api.flushState();
-        let ok = await handleGenerateAllFields();
-        if (!ok) {
-          // retry curto
+        let r = await generateAllWithContext({ tema: line.tema, base: line.base, titulo: line.titulo, categoryId });
+        if (!r.ok) {
+          // retry curto determinístico
           await api.flushState();
-          await new Promise(r => setTimeout(r, 800));
-          ok = await handleGenerateAllFields();
+          await new Promise(r => setTimeout(r, 500));
+          r = await generateAllWithContext({ tema: line.tema, base: line.base, titulo: line.titulo, categoryId });
         }
         
         // Aguardar commit dos campos gerados antes de validar
@@ -339,10 +335,11 @@ export default function GmPage() {
 
         // 4) Salvar
         updateItemStep(itemIdx, 'Salvar', { status: 'running' });
-        const audioId = await handleSaveToDatabase();
-        if (!audioId) {
-          updateItemStep(itemIdx, 'Salvar', { status: 'error', message: 'Falha ao salvar' });
-          updateItemStatus(itemIdx, 'error', 'Falha ao salvar');
+        const saveRes = await handleSaveToDatabase(line.titulo);
+        if (!saveRes?.id) {
+          const msg = saveRes?.error || 'Falha ao salvar';
+          updateItemStep(itemIdx, 'Salvar', { status: 'error', message: msg });
+          updateItemStatus(itemIdx, 'error', msg);
           continue; // pula playlist
         }
         updateItemStep(itemIdx, 'Salvar', { status: 'success' });
@@ -354,7 +351,7 @@ export default function GmPage() {
           for (const name of line.playlists) {
             const pl = await ensurePlaylistByTitleInsensitive(name.trim(), categoryId);
             if (pl?.id) {
-              const res = await addAudioToPlaylist(audioId, pl.id);
+              const res = await addAudioToPlaylist(saveRes.id, pl.id);
               if (!res.success) failures.push(`${name}: ${res.error || 'falha'}`);
             } else {
               failures.push(`${name}: não encontrada/criada`);

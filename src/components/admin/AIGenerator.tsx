@@ -79,6 +79,8 @@ const AIGenerator = forwardRef<AIGeneratorHandle, AIGeneratorProps>(function AIG
   const [isGeneratingAndSaving, setIsGeneratingAndSaving] = useState(false);
   // Manter ID para atualização assíncrona de capa quando imagem chegar depois do insert
   const [pendingCoverUpdateId, setPendingCoverUpdateId] = useState<string | null>(null);
+  // Sinal síncrono para indicar execução em lote (usado para bloquear auto-disparo de imagem)
+  const isBatchRef = useRef<boolean>(false);
   const { showDebug, setShowDebug, debugLogs, addDebugLog, clearLogs } = useDebugLogs();
   const [lastVoiceIdUsed, setLastVoiceIdUsed] = useState<string>("");
   const [lastVoiceNameUsed, setLastVoiceNameUsed] = useState<string>("");
@@ -283,6 +285,80 @@ const AIGenerator = forwardRef<AIGeneratorHandle, AIGeneratorProps>(function AIG
       setIsGeneratingAll(false);
       // Garantir que o botão "Gerar imagem" fique clicável após o fluxo concluir
       setIsGeneratingImage(false);
+    }
+  };
+
+  // Orquestrador determinístico para uso em /admin/gm
+  const generateAllWithContext = async ({
+    tema,
+    base,
+    titulo,
+    categoryId,
+  }: {
+    tema: string; base: string; titulo?: string; categoryId?: string;
+  }): Promise<{ ok: boolean; textoLen: number; prepLen: number; finalLen: number }> => {
+    setIsGeneratingAll(true);
+    isBatchRef.current = true;
+    try {
+      // reset leve preservando preferências externas
+      setAutoDetectBiblicalBase(false);
+      setPrayerData({ ...defaultPrayerData });
+      setAudioUrl('');
+      setImageUrl('');
+      setIsGeneratingAudio(false);
+      setIsGeneratingImage(false);
+      if (categoryId) setSelectedCategory(categoryId);
+
+      setPrompt(tema || '');
+      setBiblicalBase(base || '');
+      await new Promise(r => setTimeout(r, 0));
+
+      // 1) Texto primeiro com contexto explícito
+      const textContent = await generateForField('text', { tema_central: tema || '', base_biblica: base || '' });
+      const texto = (textContent || '').trim();
+      if (!texto) return { ok: false, textoLen: 0, prepLen: 0, finalLen: 0 };
+
+      // 2) Demais campos em paralelo com {texto, base_biblica, tema_central}
+      const ctx = { texto, base_biblica: base || '', tema_central: tema || '' } as Record<string,string>;
+      const prepP = generateForField('preparation', ctx);
+      const finalP = generateForField('final_message', ctx);
+      const titleP = generateForField('title', ctx);
+      const subtitleP = generateForField('subtitle', ctx);
+      const descP = generateForField('description', ctx);
+      const imgPromptP = generateForField('image_prompt', ctx);
+
+      // 3) Áudio quando preparação+final disponíveis
+      const [prepText, finalText] = await Promise.all([prepP, finalP]);
+      const prep = (prepText || '').trim();
+      const fin = (finalText || '').trim();
+      try {
+        await generateAudio(texto, { preparation: prep, final_message: fin });
+      } catch (_) {}
+
+      // 4) Imagem quando a descrição estiver pronta (uma vez)
+      try {
+        const imgDesc = ((await imgPromptP) || '').trim();
+        if (imgDesc.length >= 20 && !isGeneratingImage) {
+          setIsGeneratingImage(true);
+          await handleGenerateImage(imgDesc);
+          setIsGeneratingImage(false);
+        }
+      } catch (_) {}
+
+      // 5) Título/subtítulo/descrição
+      await Promise.all([titleP, subtitleP, descP]);
+
+      // 6) Título final vindo do GM
+      if (titulo && titulo.trim()) {
+        setPrayerData(prev => prev ? { ...prev, title: titulo } : prev);
+        await new Promise(r => setTimeout(r, 0));
+      }
+
+      const ok = !!(texto && prep && fin);
+      return { ok, textoLen: texto.length, prepLen: prep.length, finalLen: fin.length };
+    } finally {
+      setIsGeneratingAll(false);
+      isBatchRef.current = false;
     }
   };
 
@@ -812,8 +888,8 @@ const AIGenerator = forwardRef<AIGeneratorHandle, AIGeneratorProps>(function AIG
       if (field === 'image_prompt') {
         // aguardar flush do estado antes de compilar o prompt
         await new Promise((r) => setTimeout(r, 0));
-        // evitar duplicidade quando já estamos no fluxo "Gerar todos os campos"
-        if (!isGeneratingAll) {
+        // evitar duplicidade quando já estamos no fluxo em massa (GM) ou no Gerar tudo
+        if (!isBatchRef.current && !isGeneratingAll) {
           await handleGenerateImage();
         }
       }
@@ -1398,22 +1474,32 @@ const AIGenerator = forwardRef<AIGeneratorHandle, AIGeneratorProps>(function AIG
     })();
   }, [prayerData?.prayer_text, autoDetectBiblicalBase]);
 
-  const handleSaveToDatabase = async (): Promise<string | null> => {
+  const handleSaveToDatabase = async (overrideTitle?: string): Promise<{ id: string | null; error?: string }> => {
     // Congelar um snapshot dos estados usados no salvamento para evitar corrida entre itens do lote
     const snapshotPrayer = prayerData ? { ...prayerData } : null;
+    // Forçar título vindo do GM se fornecido
+    if (overrideTitle && snapshotPrayer) {
+      const clean = (overrideTitle || '').trim();
+      if (clean) {
+        snapshotPrayer.title = clean;
+        setPrayerData(prev => prev ? { ...prev, title: clean } : prev);
+      }
+    }
     const snapshotAudioUrl = audioUrl;
     const snapshotImageUrl = imageUrl;
     const snapshotCategory = selectedCategory;
     const snapshotAudioDuration = audioDuration;
 
     if (!snapshotAudioUrl) {
-      toast.error('É necessário ter oração completa e áudio gerados para salvar');
-      return null;
+      const msg = 'É necessário ter oração completa e áudio gerados para salvar';
+      toast.error(msg);
+      return { id: null, error: msg };
     }
 
     if (!snapshotCategory) {
-      toast.error('Por favor, selecione uma categoria');
-      return null;
+      const msg = 'Por favor, selecione uma categoria';
+      toast.error(msg);
+      return { id: null, error: msg };
     }
 
     setIsSaving(true);
@@ -1482,8 +1568,8 @@ const AIGenerator = forwardRef<AIGeneratorHandle, AIGeneratorProps>(function AIG
 
       console.log('💾 Salvando oração no banco de dados...');
       console.log('📝 Dados a serem salvos:', {
-        title: prayerData.title,
-        subtitle: prayerData.subtitle,
+        title: snapshotPrayer?.title,
+        subtitle: snapshotPrayer?.subtitle,
         description: finalDescription,
         audio_url: audioUrl,
         transcript: transcriptFull,
@@ -1525,8 +1611,9 @@ const AIGenerator = forwardRef<AIGeneratorHandle, AIGeneratorProps>(function AIG
 
       if (audioError) {
         console.error('❌ Erro ao salvar áudio:', audioError);
-        toast.error('Erro ao salvar no banco de dados');
-        return null;
+        const msg = (audioError as any)?.message || 'Erro ao salvar no banco de dados';
+        toast.error(msg);
+        return { id: null, error: msg };
       }
 
       console.log('✅ Áudio salvo com sucesso:', audioData);
@@ -1590,14 +1677,13 @@ const AIGenerator = forwardRef<AIGeneratorHandle, AIGeneratorProps>(function AIG
       setSelectedAiEngine(aiEngines.includes('gpt-5') ? 'gpt-5' : (aiEngines[0] || ''));
       clearDraft();
       
-      return savedId;
-      return audioData?.id || null;
+      return { id: savedId };
       
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido';
       console.error('❌ Erro ao salvar:', errorMessage);
       toast.error('❌ Erro ao salvar no banco de dados');
-      return null;
+      return { id: null, error: errorMessage };
     } finally {
       setIsSaving(false);
     }
@@ -1649,6 +1735,7 @@ const AIGenerator = forwardRef<AIGeneratorHandle, AIGeneratorProps>(function AIG
       setIsGeneratingImage(false);
       setIsGeneratingAll(false);
     },
+    generateAllWithContext,
     setTitle: (value: string) => { setPrayerData(prev => ({ ...(prev || defaultPrayerData), title: value || '' })); },
     waitForAudioUrl,
     waitForImageUrl,
@@ -2255,7 +2342,7 @@ const AIGenerator = forwardRef<AIGeneratorHandle, AIGeneratorProps>(function AIG
           {prayerData && audioUrl && (
             <div className="flex sm:justify-end">
               <Button 
-                onClick={editingAudioId ? handleUpdateInDatabase : handleSaveToDatabase}
+                onClick={editingAudioId ? handleUpdateInDatabase : () => handleSaveToDatabase()}
                 disabled={isSaving || !selectedCategory}
                 className="w-full sm:w-auto"
                 variant="default"

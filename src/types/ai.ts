@@ -45,10 +45,17 @@ export interface AIGeneratorHandle {
   handleGenerateAllFields: () => Promise<boolean>;
   // Limpa estado entre itens de lote, preservando preferências como categoria/voz
   resetForBatchItem: () => void;
+  // Orquestrador determinístico para o fluxo do /admin/gm
+  generateAllWithContext: (args: {
+    tema: string;
+    base: string;
+    titulo?: string;
+    categoryId?: string;
+  }) => Promise<{ ok: boolean; textoLen: number; prepLen: number; finalLen: number }>;
   setTitle: (value: string) => void;
   waitForAudioUrl: (timeoutMs?: number) => Promise<string | null>;
   waitForImageUrl: (timeoutMs?: number) => Promise<string | null>;
-  handleSaveToDatabase: () => Promise<string | null>;
+  handleSaveToDatabase: (overrideTitle?: string) => Promise<{ id: string | null; error?: string }>;
   flushState: () => Promise<void>;
   getPrayerData: () => PrayerData | null;
 }
