@@ -206,12 +206,13 @@ export default function GmPage() {
       setPrompt,
       setBiblicalBase,
       handleGenerateAllFields,
+      resetForBatchItem,
       setTitle,
       waitForAudioUrl,
       waitForImageUrl,
       handleSaveToDatabase
     } = api;
-    if (!setCategoryById || !setPrompt || !setBiblicalBase || !handleGenerateAllFields || !setTitle || !waitForAudioUrl || !waitForImageUrl || !handleSaveToDatabase) {
+    if (!setCategoryById || !setPrompt || !setBiblicalBase || !handleGenerateAllFields || !resetForBatchItem || !setTitle || !waitForAudioUrl || !waitForImageUrl || !handleSaveToDatabase) {
       toast.error('Gerador indisponível. Recarregue a página.');
       return;
     }
@@ -250,11 +251,19 @@ export default function GmPage() {
       try {
         // 1) Gerar todos os campos
         updateItemStep(itemIdx, 'Gerar campos', { status: 'running' });
+        // garantir que não herdaremos dados de item anterior
+        resetForBatchItem();
         setCategoryById(categoryId);
         setPrompt(line.tema);
         setBiblicalBase(line.base);
         await api.flushState();
-        await handleGenerateAllFields();
+        let ok = await handleGenerateAllFields();
+        if (!ok) {
+          // retry curto
+          await api.flushState();
+          await new Promise(r => setTimeout(r, 800));
+          ok = await handleGenerateAllFields();
+        }
         
         // Aguardar commit dos campos gerados antes de validar
         // O handleGenerateAllFields já aguarda 100ms internamente, mas adicionamos mais segurança
@@ -263,6 +272,17 @@ export default function GmPage() {
         
         // Validar campos essenciais para geração de áudio
         const generatedData = api.getPrayerData();
+        
+        // Debug log
+        if (typeof window !== 'undefined' && window.localStorage.getItem('gm_debug') === '1') {
+          console.log(`[gm] item ${itemIdx} getPrayerData:`, {
+            prep: (generatedData?.preparation_text || '').length,
+            texto: (generatedData?.prayer_text || '').length,
+            final: (generatedData?.final_message || '').length,
+            title: generatedData?.title || '(vazio)'
+          });
+        }
+        
         const prep = (generatedData?.preparation_text || '').trim();
         const texto = (generatedData?.prayer_text || '').trim();
         const final = (generatedData?.final_message || '').trim();
@@ -286,18 +306,35 @@ export default function GmPage() {
         updateItemStep(itemIdx, 'Título ajustado', { status: 'running' });
         setTitle(line.titulo);
         await api.flushState();
+        // Aguardar commit do título antes de prosseguir
+        await new Promise(r => setTimeout(r, 500));
+        
+        // Validar se o título foi realmente atualizado
+        const updatedData = api.getPrayerData();
+        if (typeof window !== 'undefined' && window.localStorage.getItem('gm_debug') === '1') {
+          console.log(`[gm] item ${itemIdx} título após setTitle:`, {
+            esperado: line.titulo,
+            atual: updatedData?.title || '(vazio)',
+            match: updatedData?.title === line.titulo
+          });
+        }
+        
         updateItemStep(itemIdx, 'Título ajustado', { status: 'success' });
 
         // 3) Garantir áudio/imagen prontos (ou tentar até o timeout)
         updateItemStep(itemIdx, 'Áudio/Imagem', { status: 'running' });
-        const ensuredAudio = await waitForAudioUrl(60000);
+        let ensuredAudio = await waitForAudioUrl(90000);
         if (!ensuredAudio) {
-          updateItemStep(itemIdx, 'Áudio/Imagem', { status: 'error', message: 'Áudio não gerado a tempo' });
-          updateItemStatus(itemIdx, 'error', 'Áudio não gerado');
-          continue; // pula salvar/playlist
+          // retry curto adicional
+          ensuredAudio = await waitForAudioUrl(30000);
+          if (!ensuredAudio) {
+            updateItemStep(itemIdx, 'Áudio/Imagem', { status: 'error', message: 'Áudio não gerado a tempo' });
+            updateItemStatus(itemIdx, 'error', 'Áudio não gerado');
+            continue; // pula salvar/playlist
+          }
         }
         // Aguardar imagem também (pode demorar mais)
-        await waitForImageUrl(60000);
+        await waitForImageUrl(90000);
         updateItemStep(itemIdx, 'Áudio/Imagem', { status: 'success' });
 
         // 4) Salvar
@@ -341,6 +378,8 @@ export default function GmPage() {
 
       // Respeitar pausa/cancelamento entre itens
       if (isCancelledRef.current) break;
+      // pequeno intervalo para aliviar rate limiting
+      await new Promise(r => setTimeout(r, 400));
     }
 
     setIsRunning(false);

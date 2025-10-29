@@ -1432,3 +1432,1186 @@ ps: em formato quadrado 1:1, photorealistic, soft warm lighting, peaceful atmosp
 📝 Prompt revisado pelo DALL-E 3: Render a flat design, minimalist vector illustration, with soft colors, simple shapes, and no texture. Illustrate a Middle-Eastern individual openly praying in a serene and welcoming environment, imbued with soft luminescence that radiates peace and confidence. In the background, depict the notion of divine provision which is symbolically illustrated by radiant hands blessing the scene, along with symbols of care and abundance such as wheat, flowers, and a simple table. Golden rays illuminating and warming the entire scenery should evoke feelings of comfort, hope, and faith. This scene is drawn in the style of a religious Christian painting with serene, peaceful atmosphere, and high quality. The composition layout should be in a square 1:1 format.
  POST /api/generate-image 200 in 19925ms
  POST /api/image-proxy 200 in 2304ms
+ ✓ Compiled in 582ms (1306 modules)
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ GET /login 200 in 89ms
+ GET /admin/go 200 in 110ms
+ GET /admin/gm 200 in 110ms
+ ✓ Compiled in 318ms (1306 modules)
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ GET /login 200 in 47ms
+ GET /admin/gm 200 in 88ms
+ GET /admin/go 200 in 96ms
+ ✓ Compiled in 472ms (1306 modules)
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ GET /login 200 in 33ms
+ GET /admin/go 200 in 54ms
+ GET /admin/gm 200 in 58ms
+ ✓ Compiled in 320ms (1306 modules)
+ GET /login 200 in 24ms
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ GET /admin/gm 200 in 32ms
+ GET /admin/go 200 in 32ms
+ ✓ Compiled in 132ms (646 modules)
+ GET /login 200 in 12ms
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ GET /admin/go 200 in 20ms
+ GET /admin/gm 200 in 19ms
+ ✓ Compiled in 530ms (1306 modules)
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ GET /login 200 in 30ms
+ GET /admin/go 200 in 41ms
+ GET /admin/gm 200 in 41ms
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+📊 AuthContext: Estado atual - User: false Loading: true
+ GET /admin/gm 200 in 114ms
+ ✓ Compiled /favicon.ico in 218ms (676 modules)
+ GET /favicon.ico 200 in 469ms
+ ✓ Compiled /api/gmanual/generate-field in 96ms (681 modules)
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ GET /login 200 in 53ms
+ GET /admin/gm 200 in 47ms
+ GET /admin/go 200 in 48ms
+ GET /favicon.ico 200 in 208ms
+ POST /api/gmanual/generate-field 200 in 4275ms
+ POST /api/gmanual/generate-field 200 in 1279ms
+ POST /api/gmanual/generate-field 200 in 1482ms
+ POST /api/gmanual/generate-field 200 in 2156ms
+ POST /api/gmanual/generate-field 200 in 2281ms
+ POST /api/gmanual/generate-field 200 in 2284ms
+ ✓ Compiled /api/generate-audio in 85ms (683 modules)
+🎵 API generate-audio: Iniciando processamento...
+📝 API generate-audio: Texto recebido: Olá, <break time="0.3s" /> seja bem-vindo a este momento de paz. <break time="0.8s" /> Silencie um p...
+🎤 API generate-audio: Voice ID recebido: 7i7dgyCkKt4c16dLtwT3
+🔍 API generate-audio: Verificando variáveis de ambiente...
+🔍 API generate-audio: ELEVENLABS_API_KEY existe? true
+🔍 API generate-audio: ELEVENLABS_API_KEY primeiros chars: sk_891e3...
+✅ API generate-audio: Chave da API encontrada
+🎯 API generate-audio: Voice ID final usado: 7i7dgyCkKt4c16dLtwT3
+📡 API generate-audio: Enviando requisição para ElevenLabs...
+🔗 API generate-audio: URL: https://api.elevenlabs.io/v1/text-to-speech/7i7dgyCkKt4c16dLtwT3
+ POST /api/gmanual/generate-field 200 in 3989ms
+ ✓ Compiled /api/generate-image in 87ms (685 modules)
+🖼️ Iniciando geração de imagem com DALL-E 3...
+📝 Prompt recebido: Religious Christian scene: Gere uma Ilustração vetorial minimalista em estilo flat design, com cores suaves e formas simples, sem textura, com luz suave e atmosfera calma. Estilo "The Bible Project" da cena: 
+
+Uma pessoa com expressão serena, ajoelhada em oração em um ambiente suave e iluminado por uma luz celestial dourada. Ao fundo, uma mão grande e luminosa estende-se do céu, transmitindo proteção e amparo. Elementos ao redor sugerem conforto e esperança, como raios de luz atravessando nuvens e um caminho suave à frente, representando fé e confiança mesmo diante da incerteza.
+
+ps: em formato quadrado 1:1, photorealistic, soft warm lighting, peaceful atmosphere, high quality, inspirational, beautiful composition
+🔑 Chave OpenAI encontrada
+🎨 Gerando imagem com DALL-E 3 (melhor versão)...
+🎯 Prompt final: Religious Christian scene: Gere uma Ilustração vetorial minimalista em estilo flat design, com cores suaves e formas simples, sem textura, com luz suave e atmosfera calma. Estilo "The Bible Project" da cena: 
+
+Uma pessoa com expressão serena, ajoelhada em oração em um ambiente suave e iluminado por uma luz celestial dourada. Ao fundo, uma mão grande e luminosa estende-se do céu, transmitindo proteção e amparo. Elementos ao redor sugerem conforto e esperança, como raios de luz atravessando nuvens e um caminho suave à frente, representando fé e confiança mesmo diante da incerteza.
+
+ps: em formato quadrado 1:1, photorealistic, soft warm lighting, peaceful atmosphere, high quality, inspirational, beautiful composition
+📦 Objeto de requisição DALL-E 3: {
+  model: 'dall-e-3',
+  prompt: 'Religious Christian scene: Gere uma Ilustração vetorial minimalista em estilo flat design, com cores suaves e formas simples, sem textura, com luz suave e atmosfera calma. Estilo "The Bible Project" da cena: \n' +
+    '\n' +
+    'Uma pessoa com expressão serena, ajoelhada em oração em um ambiente suave e iluminado por uma luz celestial dourada. Ao fundo, uma mão grande e luminosa estende-se do céu, transmitindo proteção e amparo. Elementos ao redor sugerem conforto e esperança, como raios de luz atravessando nuvens e um caminho suave à frente, representando fé e confiança mesmo diante da incerteza.\n' +
+    '\n' +
+    'ps: em formato quadrado 1:1, photorealistic, soft warm lighting, peaceful atmosphere, high quality, inspirational, beautiful composition',
+  n: 1,
+  size: '1024x1024',
+  quality: 'hd',
+  style: 'natural'
+}
+📡 API generate-audio: Status da resposta ElevenLabs: 200
+📡 API generate-audio: Headers da resposta: {
+  'access-control-allow-headers': '*',
+  'access-control-allow-methods': 'POST, PATCH, OPTIONS, DELETE, GET, PUT',
+  'access-control-allow-origin': '*',
+  'access-control-expose-headers': 'request-id, history-item-id, character-cost, regeneration-count, generation-info, current-concurrent-requests, maximum-concurrent-requests',
+  'access-control-max-age': '600',
+  'alt-svc': 'h3=":443"; ma=2592000,h3-29=":443"; ma=2592000',
+  'character-cost': '1596',
+  'content-encoding': 'gzip',
+  'content-type': 'audio/mpeg',
+  'current-concurrent-requests': '1',
+  date: 'Tue, 28 Oct 2025 21:09:48 GMT',
+  'history-item-id': 'r5yKIM6UCsA90NxsS16l',
+  'maximum-concurrent-requests': '10',
+  'request-id': 'Mq0GHUT7pITIueamjS9i',
+  server: 'uvicorn',
+  'strict-transport-security': 'max-age=31536000; includeSubDomains',
+  'transfer-encoding': 'chunked',
+  'tts-latency-ms': '3839',
+  vary: 'Accept-Encoding',
+  via: '1.1 google, 1.1 google',
+  'x-region': 'us-central1',
+  'x-trace-id': 'e54055c34bd2ae16296bb88dff473d2c'
+}
+✅ API generate-audio: Resposta OK da ElevenLabs
+📦 API generate-audio: Áudio recebido, tamanho: 1613785 bytes
+⬆️ API generate-audio: Fazendo upload para Supabase Storage...
+📁 Arquivo: generated/generated-1761685809577-tgsv08ggs7.mp3
+✅ API generate-audio: Áudio salvo no Storage: https://vvgqqlrujmyxzzygsizc.supabase.co/storage/v1/object/public/audios/generated/generated-1761685809577-tgsv08ggs7.mp3
+✅ API generate-audio: Áudio gerado com sucesso usando voice_id: 7i7dgyCkKt4c16dLtwT3
+ POST /api/generate-audio 200 in 22088ms
+📡 Status da resposta DALL-E 3: 200
+📡 Headers da resposta DALL-E 3: {
+  'alt-svc': 'h3=":443"; ma=86400',
+  'cf-cache-status': 'DYNAMIC',
+  'cf-ray': '995d6a9d1e446d74-GIG',
+  connection: 'keep-alive',
+  'content-encoding': 'br',
+  'content-type': 'application/json',
+  date: 'Tue, 28 Oct 2025 21:10:12 GMT',
+  'openai-organization': 'user-toxnjjbv5uhzgcd00xdmbxhh',
+  'openai-processing-ms': '22520',
+  'openai-project': 'proj_KWmjRDi2IgmlGrUmN9eOZhCr',
+  'openai-version': '2020-10-01',
+  server: 'cloudflare',
+  'set-cookie': '_cfuvid=SsBDmLFhZJtGGG5tgyfihi8QlOUePzV2COwuTq7S.Co-1761685812971-0.0.1.1-604800000; path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None',
+  'strict-transport-security': 'max-age=31536000; includeSubDomains; preload',
+  'transfer-encoding': 'chunked',
+  'x-content-type-options': 'nosniff',
+  'x-envoy-upstream-service-time': '22523',
+  'x-request-id': 'req_e090b02ebfdf4fbf9d64e1b421f20264'
+}
+📦 Dados recebidos da DALL-E 3: {
+  created: 1761685812,
+  data: [
+    {
+      revised_prompt: 'Generate a minimalist vector illustration in a flat design style, with soft colors and simple shapes, devoid of texture, with soft light and a serene atmosphere. Style reminiscent of religious artwork predating the year 1912. Scene description: A person of undefined gender and descent with a serene expression, kneeling in prayer within a gentle environment illuminated by a golden celestial light. In the background, a large, luminous hand stretches out from the sky, symbolizing protection and comfort. Surrounding elements such as rays of light penetrating clouds and a soft path spreading out ahead, represent faith and trust even amid uncertainty. Please make the image square, non-photorealistic, with gentle warm lighting, a peaceful atmosphere, visually inspiring, with a harmonious composition.',
+      url: 'https://oaidalleapiprodscus.blob.core.windows.net/private/org-ujC6kKfUFrm09T9tYS1RogpJ/user-toxNjJbv5uhZGcD00xDmBxHh/img-54WZ52Bj1sJ6LwFjsxPRXpG9.png?st=2025-10-28T20%3A10%3A12Z&se=2025-10-28T22%3A10%3A12Z&sp=r&sv=2024-08-04&sr=b&rscd=inline&rsct=image/png&skoid=8b33a531-2df9-46a3-bc02-d4b1430a422c&sktid=a48cca56-e6da-484e-a814-9c849652bcb3&skt=2025-10-28T17%3A44%3A22Z&ske=2025-10-29T17%3A44%3A22Z&sks=b&skv=2024-08-04&sig=5E1k8PtWYiejyDvvADthDDmd8/KzvXcyYS/B4kkq31M%3D'
+    }
+  ]
+}
+✅ Imagem gerada com sucesso (DALL-E 3): https://oaidalleapiprodscus.blob.core.windows.net/private/org-ujC6kKfUFrm09T9tYS1RogpJ/user-toxNjJbv5uhZGcD00xDmBxHh/img-54WZ52Bj1sJ6LwFjsxPRXpG9.png?st=2025-10-28T20%3A10%3A12Z&se=2025-10-28T22%3A10%3A12Z&sp=r&sv=2024-08-04&sr=b&rscd=inline&rsct=image/png&skoid=8b33a531-2df9-46a3-bc02-d4b1430a422c&sktid=a48cca56-e6da-484e-a814-9c849652bcb3&skt=2025-10-28T17%3A44%3A22Z&ske=2025-10-29T17%3A44%3A22Z&sks=b&skv=2024-08-04&sig=5E1k8PtWYiejyDvvADthDDmd8/KzvXcyYS/B4kkq31M%3D
+📝 Prompt revisado pelo DALL-E 3: Generate a minimalist vector illustration in a flat design style, with soft colors and simple shapes, devoid of texture, with soft light and a serene atmosphere. Style reminiscent of religious artwork predating the year 1912. Scene description: A person of undefined gender and descent with a serene expression, kneeling in prayer within a gentle environment illuminated by a golden celestial light. In the background, a large, luminous hand stretches out from the sky, symbolizing protection and comfort. Surrounding elements such as rays of light penetrating clouds and a soft path spreading out ahead, represent faith and trust even amid uncertainty. Please make the image square, non-photorealistic, with gentle warm lighting, a peaceful atmosphere, visually inspiring, with a harmonious composition.
+ POST /api/generate-image 200 in 22859ms
+ ✓ Compiled /api/image-proxy in 144ms (687 modules)
+ POST /api/image-proxy 200 in 1793ms
+ ✓ Compiled in 540ms (1306 modules)
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ GET /login 200 in 99ms
+ GET /admin/go 200 in 121ms
+ GET /admin/gm 200 in 122ms
+ ✓ Compiled /favicon.ico in 172ms (678 modules)
+ ✓ Compiled (680 modules)
+ POST /api/detect-biblical-base 200 in 304ms
+ GET /favicon.ico 200 in 419ms
+ ✓ Compiled in 344ms (1326 modules)
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ GET /login 200 in 56ms
+ GET /admin/gm 200 in 57ms
+ GET /admin/go 200 in 57ms
+ POST /api/detect-biblical-base 200 in 9ms
+ ✓ Compiled in 495ms (1326 modules)
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ ✓ Compiled in 0ms (680 modules)
+ ✓ Compiled in 1ms (680 modules)
+ ✓ Compiled in 1ms (680 modules)
+ POST /api/detect-biblical-base 200 in 348ms
+ GET /admin/gm 200 in 372ms
+ GET /login 200 in 384ms
+ GET /admin/go 200 in 375ms
+ ✓ Compiled in 335ms (1326 modules)
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ GET /login 200 in 33ms
+ GET /admin/go 200 in 48ms
+ GET /admin/gm 200 in 48ms
+ ✓ Compiled in 482ms (1324 modules)
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ GET /login 200 in 32ms
+ GET /admin/gm 200 in 42ms
+ GET /admin/go 200 in 43ms
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+📊 AuthContext: Estado atual - User: false Loading: true
+ GET /admin/gm 200 in 106ms
+ ✓ Compiled /api/detect-biblical-base in 175ms (676 modules)
+ ✓ Compiled (680 modules)
+ POST /api/detect-biblical-base 200 in 217ms
+ GET /favicon.ico 200 in 488ms
+ GET /favicon.ico 200 in 206ms
+ ✓ Compiled /api/gmanual/generate-field in 131ms (683 modules)
+ POST /api/gmanual/generate-field 200 in 7856ms
+ POST /api/gmanual/generate-field 200 in 1439ms
+ POST /api/gmanual/generate-field 200 in 1495ms
+ POST /api/gmanual/generate-field 200 in 2158ms
+ POST /api/gmanual/generate-field 200 in 2229ms
+ POST /api/gmanual/generate-field 200 in 2709ms
+ ✓ Compiled /api/generate-image in 84ms (685 modules)
+🖼️ Iniciando geração de imagem com DALL-E 3...
+📝 Prompt recebido: Religious Christian scene: Gere uma Ilustração vetorial minimalista em estilo flat design, com cores suaves e formas simples, sem textura, com luz suave e atmosfera calma. Estilo "The Bible Project" da cena: 
+
+Uma pessoa com expressão serena, ajoelhada em oração em um ambiente suave e iluminado por uma luz celestial dourada. Ao fundo, uma mão grande e luminosa estende-se do céu, transmitindo proteção e amparo. Elementos ao redor sugerem conforto e esperança, como raios de luz atravessando nuvens e um caminho suave à frente, representando fé e confiança mesmo diante da incerteza.
+
+ps: em formato quadrado 1:1, photorealistic, soft warm lighting, peaceful atmosphere, high quality, inspirational, beautiful composition
+🔑 Chave OpenAI encontrada
+🎨 Gerando imagem com DALL-E 3 (melhor versão)...
+🎯 Prompt final: Religious Christian scene: Gere uma Ilustração vetorial minimalista em estilo flat design, com cores suaves e formas simples, sem textura, com luz suave e atmosfera calma. Estilo "The Bible Project" da cena: 
+
+Uma pessoa com expressão serena, ajoelhada em oração em um ambiente suave e iluminado por uma luz celestial dourada. Ao fundo, uma mão grande e luminosa estende-se do céu, transmitindo proteção e amparo. Elementos ao redor sugerem conforto e esperança, como raios de luz atravessando nuvens e um caminho suave à frente, representando fé e confiança mesmo diante da incerteza.
+
+ps: em formato quadrado 1:1, photorealistic, soft warm lighting, peaceful atmosphere, high quality, inspirational, beautiful composition
+📦 Objeto de requisição DALL-E 3: {
+  model: 'dall-e-3',
+  prompt: 'Religious Christian scene: Gere uma Ilustração vetorial minimalista em estilo flat design, com cores suaves e formas simples, sem textura, com luz suave e atmosfera calma. Estilo "The Bible Project" da cena: \n' +
+    '\n' +
+    'Uma pessoa com expressão serena, ajoelhada em oração em um ambiente suave e iluminado por uma luz celestial dourada. Ao fundo, uma mão grande e luminosa estende-se do céu, transmitindo proteção e amparo. Elementos ao redor sugerem conforto e esperança, como raios de luz atravessando nuvens e um caminho suave à frente, representando fé e confiança mesmo diante da incerteza.\n' +
+    '\n' +
+    'ps: em formato quadrado 1:1, photorealistic, soft warm lighting, peaceful atmosphere, high quality, inspirational, beautiful composition',
+  n: 1,
+  size: '1024x1024',
+  quality: 'hd',
+  style: 'natural'
+}
+ POST /api/gmanual/generate-field 200 in 3583ms
+ ✓ Compiled /api/generate-audio in 88ms (687 modules)
+🎵 API generate-audio: Iniciando processamento...
+📝 API generate-audio: Texto recebido: Olá, <break time="0.3s" /> seja bem-vindo a este momento especial. <break time="0.8s" /> Silencie o ...
+🎤 API generate-audio: Voice ID recebido: 7i7dgyCkKt4c16dLtwT3
+🔍 API generate-audio: Verificando variáveis de ambiente...
+🔍 API generate-audio: ELEVENLABS_API_KEY existe? true
+🔍 API generate-audio: ELEVENLABS_API_KEY primeiros chars: sk_891e3...
+✅ API generate-audio: Chave da API encontrada
+🎯 API generate-audio: Voice ID final usado: 7i7dgyCkKt4c16dLtwT3
+📡 API generate-audio: Enviando requisição para ElevenLabs...
+🔗 API generate-audio: URL: https://api.elevenlabs.io/v1/text-to-speech/7i7dgyCkKt4c16dLtwT3
+📡 API generate-audio: Status da resposta ElevenLabs: 200
+📡 API generate-audio: Headers da resposta: {
+  'access-control-allow-headers': '*',
+  'access-control-allow-methods': 'POST, PATCH, OPTIONS, DELETE, GET, PUT',
+  'access-control-allow-origin': '*',
+  'access-control-expose-headers': 'request-id, history-item-id, character-cost, regeneration-count, generation-info, current-concurrent-requests, maximum-concurrent-requests',
+  'access-control-max-age': '600',
+  'alt-svc': 'h3=":443"; ma=2592000,h3-29=":443"; ma=2592000',
+  'character-cost': '1827',
+  'content-encoding': 'gzip',
+  'content-type': 'audio/mpeg',
+  'current-concurrent-requests': '1',
+  date: 'Tue, 28 Oct 2025 21:38:10 GMT',
+  'history-item-id': 'AQJrEadiDRglNT94r3Vj',
+  'maximum-concurrent-requests': '10',
+  'request-id': 'WAgtfzpj82BoAlkfiA9C',
+  server: 'uvicorn',
+  'strict-transport-security': 'max-age=31536000; includeSubDomains',
+  'transfer-encoding': 'chunked',
+  'tts-latency-ms': '4066',
+  vary: 'Accept-Encoding',
+  via: '1.1 google, 1.1 google',
+  'x-region': 'us-central1',
+  'x-trace-id': '458c43a7071117af992eafd905bd0ca0'
+}
+✅ API generate-audio: Resposta OK da ElevenLabs
+📦 API generate-audio: Áudio recebido, tamanho: 1849932 bytes
+⬆️ API generate-audio: Fazendo upload para Supabase Storage...
+📁 Arquivo: generated/generated-1761687514411-fy9jkuf911c.mp3
+✅ API generate-audio: Áudio salvo no Storage: https://vvgqqlrujmyxzzygsizc.supabase.co/storage/v1/object/public/audios/generated/generated-1761687514411-fy9jkuf911c.mp3
+✅ API generate-audio: Áudio gerado com sucesso usando voice_id: 7i7dgyCkKt4c16dLtwT3
+ POST /api/generate-audio 200 in 25102ms
+📡 Status da resposta DALL-E 3: 200
+📡 Headers da resposta DALL-E 3: {
+  'alt-svc': 'h3=":443"; ma=86400',
+  'cf-cache-status': 'DYNAMIC',
+  'cf-ray': '995d94196c27f1e7-GRU',
+  connection: 'keep-alive',
+  'content-encoding': 'br',
+  'content-type': 'application/json',
+  date: 'Tue, 28 Oct 2025 21:38:43 GMT',
+  'openai-organization': 'user-toxnjjbv5uhzgcd00xdmbxhh',
+  'openai-processing-ms': '32985',
+  'openai-project': 'proj_KWmjRDi2IgmlGrUmN9eOZhCr',
+  'openai-version': '2020-10-01',
+  server: 'cloudflare',
+  'set-cookie': '_cfuvid=VTnxw2pJD4.7sK1CfZiivCQnHqwOD09p1R5sb4wOjM0-1761687523295-0.0.1.1-604800000; path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None',
+  'strict-transport-security': 'max-age=31536000; includeSubDomains; preload',
+  'transfer-encoding': 'chunked',
+  'x-content-type-options': 'nosniff',
+  'x-envoy-upstream-service-time': '33008',
+  'x-request-id': 'req_d056808f80184c9ab428bebff0c3627d'
+}
+📦 Dados recebidos da DALL-E 3: {
+  created: 1761687522,
+  data: [
+    {
+      revised_prompt: 'Generate a minimalist vector illustration, showcasing a religious Christian scene, presented in a flat design style with soft colors, straightforward forms, and without any textures. The focus is on a peaceful individual, kneeling in prayer in a gentle environment, illuminated by a golden celestial light. In the background, a large, luminous hand extends from the heavens, emanating protection and care. The surrounding elements suggest comfort and hope, with light rays piercing through clouds and a gentle path stretching ahead, symbolic of faith and trust in the face of uncertainty. The image should bear soft, warm lighting, and a tranquil atmosphere, and it needs to be photorealistic, high-quality, and inspirational with a beautifully composed square (1:1) format.',
+      url: 'https://oaidalleapiprodscus.blob.core.windows.net/private/org-ujC6kKfUFrm09T9tYS1RogpJ/user-toxNjJbv5uhZGcD00xDmBxHh/img-YEEKMQXK4QJydn9Rp6PeTSKb.png?st=2025-10-28T20%3A38%3A42Z&se=2025-10-28T22%3A38%3A42Z&sp=r&sv=2024-08-04&sr=b&rscd=inline&rsct=image/png&skoid=77e5a8ec-6bd1-4477-8afc-16703a64f029&sktid=a48cca56-e6da-484e-a814-9c849652bcb3&skt=2025-10-28T21%3A28%3A54Z&ske=2025-10-29T21%3A28%3A54Z&sks=b&skv=2024-08-04&sig=ErkPB/swPJyPwFeD/0pgiCj8SEAxdKWRyPSSBy9q2AU%3D'
+    }
+  ]
+}
+✅ Imagem gerada com sucesso (DALL-E 3): https://oaidalleapiprodscus.blob.core.windows.net/private/org-ujC6kKfUFrm09T9tYS1RogpJ/user-toxNjJbv5uhZGcD00xDmBxHh/img-YEEKMQXK4QJydn9Rp6PeTSKb.png?st=2025-10-28T20%3A38%3A42Z&se=2025-10-28T22%3A38%3A42Z&sp=r&sv=2024-08-04&sr=b&rscd=inline&rsct=image/png&skoid=77e5a8ec-6bd1-4477-8afc-16703a64f029&sktid=a48cca56-e6da-484e-a814-9c849652bcb3&skt=2025-10-28T21%3A28%3A54Z&ske=2025-10-29T21%3A28%3A54Z&sks=b&skv=2024-08-04&sig=ErkPB/swPJyPwFeD/0pgiCj8SEAxdKWRyPSSBy9q2AU%3D
+📝 Prompt revisado pelo DALL-E 3: Generate a minimalist vector illustration, showcasing a religious Christian scene, presented in a flat design style with soft colors, straightforward forms, and without any textures. The focus is on a peaceful individual, kneeling in prayer in a gentle environment, illuminated by a golden celestial light. In the background, a large, luminous hand extends from the heavens, emanating protection and care. The surrounding elements suggest comfort and hope, with light rays piercing through clouds and a gentle path stretching ahead, symbolic of faith and trust in the face of uncertainty. The image should bear soft, warm lighting, and a tranquil atmosphere, and it needs to be photorealistic, high-quality, and inspirational with a beautifully composed square (1:1) format.
+ POST /api/generate-image 200 in 34423ms
+ ✓ Compiled /api/image-proxy in 136ms (689 modules)
+ POST /api/image-proxy 200 in 2008ms
+🖼️ Iniciando geração de imagem com DALL-E 3...
+📝 Prompt recebido: Religious Christian scene: Gere uma Ilustração vetorial minimalista em estilo flat design, com cores suaves e formas simples, sem textura, com luz suave e atmosfera calma. Estilo "The Bible Project" da cena: 
+
+A person kneeling in peaceful prayer, illuminated by soft, warm light, with visible signs of emotional healing and hope. In the background, gentle, abstract representations of financial struggles are transforming into symbols of restoration and tranquility. The scene conveys comfort, divine presence, and a sense of renewed strength and serenity, inspired by a biblical promise.
+
+ps: em formato quadrado 1:1, photorealistic, soft warm lighting, peaceful atmosphere, high quality, inspirational, beautiful composition
+🔑 Chave OpenAI encontrada
+🎨 Gerando imagem com DALL-E 3 (melhor versão)...
+🎯 Prompt final: Religious Christian scene: Gere uma Ilustração vetorial minimalista em estilo flat design, com cores suaves e formas simples, sem textura, com luz suave e atmosfera calma. Estilo "The Bible Project" da cena: 
+
+A person kneeling in peaceful prayer, illuminated by soft, warm light, with visible signs of emotional healing and hope. In the background, gentle, abstract representations of financial struggles are transforming into symbols of restoration and tranquility. The scene conveys comfort, divine presence, and a sense of renewed strength and serenity, inspired by a biblical promise.
+
+ps: em formato quadrado 1:1, photorealistic, soft warm lighting, peaceful atmosphere, high quality, inspirational, beautiful composition
+📦 Objeto de requisição DALL-E 3: {
+  model: 'dall-e-3',
+  prompt: 'Religious Christian scene: Gere uma Ilustração vetorial minimalista em estilo flat design, com cores suaves e formas simples, sem textura, com luz suave e atmosfera calma. Estilo "The Bible Project" da cena: \n' +
+    '\n' +
+    'A person kneeling in peaceful prayer, illuminated by soft, warm light, with visible signs of emotional healing and hope. In the background, gentle, abstract representations of financial struggles are transforming into symbols of restoration and tranquility. The scene conveys comfort, divine presence, and a sense of renewed strength and serenity, inspired by a biblical promise.\n' +
+    '\n' +
+    'ps: em formato quadrado 1:1, photorealistic, soft warm lighting, peaceful atmosphere, high quality, inspirational, beautiful composition',
+  n: 1,
+  size: '1024x1024',
+  quality: 'hd',
+  style: 'natural'
+}
+📡 Status da resposta DALL-E 3: 200
+📡 Headers da resposta DALL-E 3: {
+  'alt-svc': 'h3=":443"; ma=86400',
+  'cf-cache-status': 'DYNAMIC',
+  'cf-ray': '995d9501ed4bd59e-GIG',
+  connection: 'keep-alive',
+  'content-encoding': 'br',
+  'content-type': 'application/json',
+  date: 'Tue, 28 Oct 2025 21:39:09 GMT',
+  'openai-organization': 'user-toxnjjbv5uhzgcd00xdmbxhh',
+  'openai-processing-ms': '22392',
+  'openai-project': 'proj_KWmjRDi2IgmlGrUmN9eOZhCr',
+  'openai-version': '2020-10-01',
+  server: 'cloudflare',
+  'set-cookie': '_cfuvid=VhwIynLRn.dEdaFLPsHWTrR5AJgWZbnohnBTWPfHsU8-1761687549256-0.0.1.1-604800000; path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None',
+  'strict-transport-security': 'max-age=31536000; includeSubDomains; preload',
+  'transfer-encoding': 'chunked',
+  'x-content-type-options': 'nosniff',
+  'x-envoy-upstream-service-time': '22395',
+  'x-request-id': 'req_5412eb56decd4ea48a7a3d7d900a1187'
+}
+📦 Dados recebidos da DALL-E 3: {
+  created: 1761687549,
+  data: [
+    {
+      revised_prompt: 'Create a minimalist vector illustration with a flat design style, soft colors, and simple forms. There should be no texture, just soft light creating a calm atmosphere. The scene should portray a person of unspecified gender and race, kneeling in peaceful prayer. This person should be bathed in soft, warm light, and there should be visible signs of emotional healing and hope. The background should subtly depict abstract indications of past financial struggles transforming into symbols of restoration and tranquility. The overall feel of the image should be comforting, signifying divine presence, and conveying a sense of renewed strength and serenity, reminiscent of a biblical promise. The illustration should have a square 1:1 proportion, evoke a sense of photorealism with soft warm lighting, carry a peaceful atmosphere, and be high quality with an inspiring, well-structured composition.',
+      url: 'https://oaidalleapiprodscus.blob.core.windows.net/private/org-ujC6kKfUFrm09T9tYS1RogpJ/user-toxNjJbv5uhZGcD00xDmBxHh/img-pVsSQOiTE2DBCMpcoKrYlnzm.png?st=2025-10-28T20%3A39%3A09Z&se=2025-10-28T22%3A39%3A09Z&sp=r&sv=2024-08-04&sr=b&rscd=inline&rsct=image/png&skoid=8b33a531-2df9-46a3-bc02-d4b1430a422c&sktid=a48cca56-e6da-484e-a814-9c849652bcb3&skt=2025-10-28T12%3A32%3A22Z&ske=2025-10-29T12%3A32%3A22Z&sks=b&skv=2024-08-04&sig=HUfaC6TmfURfHBgNkUd94uP%2BhusFj/B9Qxs9yi68yXU%3D'
+    }
+  ]
+}
+✅ Imagem gerada com sucesso (DALL-E 3): https://oaidalleapiprodscus.blob.core.windows.net/private/org-ujC6kKfUFrm09T9tYS1RogpJ/user-toxNjJbv5uhZGcD00xDmBxHh/img-pVsSQOiTE2DBCMpcoKrYlnzm.png?st=2025-10-28T20%3A39%3A09Z&se=2025-10-28T22%3A39%3A09Z&sp=r&sv=2024-08-04&sr=b&rscd=inline&rsct=image/png&skoid=8b33a531-2df9-46a3-bc02-d4b1430a422c&sktid=a48cca56-e6da-484e-a814-9c849652bcb3&skt=2025-10-28T12%3A32%3A22Z&ske=2025-10-29T12%3A32%3A22Z&sks=b&skv=2024-08-04&sig=HUfaC6TmfURfHBgNkUd94uP%2BhusFj/B9Qxs9yi68yXU%3D
+📝 Prompt revisado pelo DALL-E 3: Create a minimalist vector illustration with a flat design style, soft colors, and simple forms. There should be no texture, just soft light creating a calm atmosphere. The scene should portray a person of unspecified gender and race, kneeling in peaceful prayer. This person should be bathed in soft, warm light, and there should be visible signs of emotional healing and hope. The background should subtly depict abstract indications of past financial struggles transforming into symbols of restoration and tranquility. The overall feel of the image should be comforting, signifying divine presence, and conveying a sense of renewed strength and serenity, reminiscent of a biblical promise. The illustration should have a square 1:1 proportion, evoke a sense of photorealism with soft warm lighting, carry a peaceful atmosphere, and be high quality with an inspiring, well-structured composition.
+ POST /api/generate-image 200 in 22682ms
+ POST /api/image-proxy 200 in 1580ms
+ ✓ Compiled in 533ms (1306 modules)
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ GET /login 200 in 75ms
+ GET /admin/gm 200 in 97ms
+ GET /admin/go 200 in 97ms
+ ✓ Compiled /favicon.ico in 77ms (676 modules)
+ GET /favicon.ico 200 in 331ms
+ ✓ Compiled in 250ms (1322 modules)
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ GET /login 200 in 51ms
+ GET /admin/gm 200 in 70ms
+ GET /admin/go 200 in 67ms
+ GET /favicon.ico 200 in 209ms
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+📊 AuthContext: Estado atual - User: false Loading: true
+ GET /admin/gm 200 in 111ms
+ ✓ Compiled /api/detect-biblical-base in 180ms (678 modules)
+ POST /api/detect-biblical-base 200 in 210ms
+ ✓ Compiled /favicon.ico in 84ms (680 modules)
+ GET /favicon.ico 200 in 308ms
+ ✓ Compiled /api/gmanual/generate-field in 144ms (683 modules)
+ POST /api/gmanual/generate-field 200 in 5260ms
+ POST /api/gmanual/generate-field 200 in 1142ms
+ POST /api/gmanual/generate-field 200 in 2018ms
+ POST /api/gmanual/generate-field 200 in 2790ms
+ POST /api/gmanual/generate-field 200 in 3052ms
+ POST /api/gmanual/generate-field 200 in 3076ms
+ ✓ Compiled /api/generate-image in 92ms (685 modules)
+🖼️ Iniciando geração de imagem com DALL-E 3...
+📝 Prompt recebido: Religious Christian scene: Gere uma Ilustração vetorial minimalista em estilo flat design, com cores suaves e formas simples, sem textura, com luz suave e atmosfera calma. Estilo "The Bible Project" da cena: 
+
+Uma pessoa com expressão serena, ajoelhada em oração em um ambiente suave e iluminado por uma luz celestial dourada. Ao fundo, uma mão grande e luminosa estende-se do céu, transmitindo proteção e amparo. Elementos ao redor sugerem conforto e esperança, como raios de luz atravessando nuvens e um caminho suave à frente, representando fé e confiança mesmo diante da incerteza.
+
+ps: em formato quadrado 1:1, photorealistic, soft warm lighting, peaceful atmosphere, high quality, inspirational, beautiful composition
+🔑 Chave OpenAI encontrada
+🎨 Gerando imagem com DALL-E 3 (melhor versão)...
+🎯 Prompt final: Religious Christian scene: Gere uma Ilustração vetorial minimalista em estilo flat design, com cores suaves e formas simples, sem textura, com luz suave e atmosfera calma. Estilo "The Bible Project" da cena: 
+
+Uma pessoa com expressão serena, ajoelhada em oração em um ambiente suave e iluminado por uma luz celestial dourada. Ao fundo, uma mão grande e luminosa estende-se do céu, transmitindo proteção e amparo. Elementos ao redor sugerem conforto e esperança, como raios de luz atravessando nuvens e um caminho suave à frente, representando fé e confiança mesmo diante da incerteza.
+
+ps: em formato quadrado 1:1, photorealistic, soft warm lighting, peaceful atmosphere, high quality, inspirational, beautiful composition
+📦 Objeto de requisição DALL-E 3: {
+  model: 'dall-e-3',
+  prompt: 'Religious Christian scene: Gere uma Ilustração vetorial minimalista em estilo flat design, com cores suaves e formas simples, sem textura, com luz suave e atmosfera calma. Estilo "The Bible Project" da cena: \n' +
+    '\n' +
+    'Uma pessoa com expressão serena, ajoelhada em oração em um ambiente suave e iluminado por uma luz celestial dourada. Ao fundo, uma mão grande e luminosa estende-se do céu, transmitindo proteção e amparo. Elementos ao redor sugerem conforto e esperança, como raios de luz atravessando nuvens e um caminho suave à frente, representando fé e confiança mesmo diante da incerteza.\n' +
+    '\n' +
+    'ps: em formato quadrado 1:1, photorealistic, soft warm lighting, peaceful atmosphere, high quality, inspirational, beautiful composition',
+  n: 1,
+  size: '1024x1024',
+  quality: 'hd',
+  style: 'natural'
+}
+ POST /api/gmanual/generate-field 200 in 3877ms
+ ✓ Compiled /api/generate-audio in 91ms (687 modules)
+🎵 API generate-audio: Iniciando processamento...
+📝 API generate-audio: Texto recebido: Olá, <break time="0.3s" /> seja bem-vindo a este momento de paz. <break time="0.8s" /> Respire fundo...
+🎤 API generate-audio: Voice ID recebido: 7i7dgyCkKt4c16dLtwT3
+🔍 API generate-audio: Verificando variáveis de ambiente...
+🔍 API generate-audio: ELEVENLABS_API_KEY existe? true
+🔍 API generate-audio: ELEVENLABS_API_KEY primeiros chars: sk_891e3...
+✅ API generate-audio: Chave da API encontrada
+🎯 API generate-audio: Voice ID final usado: 7i7dgyCkKt4c16dLtwT3
+📡 API generate-audio: Enviando requisição para ElevenLabs...
+🔗 API generate-audio: URL: https://api.elevenlabs.io/v1/text-to-speech/7i7dgyCkKt4c16dLtwT3
+📡 API generate-audio: Status da resposta ElevenLabs: 200
+📡 API generate-audio: Headers da resposta: {
+  'access-control-allow-headers': '*',
+  'access-control-allow-methods': 'POST, PATCH, OPTIONS, DELETE, GET, PUT',
+  'access-control-allow-origin': '*',
+  'access-control-expose-headers': 'request-id, history-item-id, character-cost, regeneration-count, generation-info, current-concurrent-requests, maximum-concurrent-requests',
+  'access-control-max-age': '600',
+  'alt-svc': 'h3=":443"; ma=2592000,h3-29=":443"; ma=2592000',
+  'character-cost': '1699',
+  'content-encoding': 'gzip',
+  'content-type': 'audio/mpeg',
+  'current-concurrent-requests': '1',
+  date: 'Tue, 28 Oct 2025 23:05:30 GMT',
+  'history-item-id': '7TGRFmICd79wBEx8qdxA',
+  'maximum-concurrent-requests': '10',
+  'request-id': 'oDVJc8HNzMrckvh9XFZH',
+  server: 'uvicorn',
+  'strict-transport-security': 'max-age=31536000; includeSubDomains',
+  'transfer-encoding': 'chunked',
+  'tts-latency-ms': '3828',
+  vary: 'Accept-Encoding',
+  via: '1.1 google, 1.1 google',
+  'x-region': 'us-central1',
+  'x-trace-id': '9114f90485b8597e5cecf5843e195979'
+}
+✅ API generate-audio: Resposta OK da ElevenLabs
+📦 API generate-audio: Áudio recebido, tamanho: 1721618 bytes
+⬆️ API generate-audio: Fazendo upload para Supabase Storage...
+📁 Arquivo: generated/generated-1761692752514-iyu58uytpjj.mp3
+📡 Status da resposta DALL-E 3: 200
+📡 Headers da resposta DALL-E 3: {
+  'alt-svc': 'h3=":443"; ma=86400',
+  'cf-cache-status': 'DYNAMIC',
+  'cf-ray': '995e14099e98ffa8-GRU',
+  connection: 'keep-alive',
+  'content-encoding': 'br',
+  'content-type': 'application/json',
+  date: 'Tue, 28 Oct 2025 23:05:53 GMT',
+  'openai-organization': 'user-toxnjjbv5uhzgcd00xdmbxhh',
+  'openai-processing-ms': '22631',
+  'openai-project': 'proj_KWmjRDi2IgmlGrUmN9eOZhCr',
+  'openai-version': '2020-10-01',
+  server: 'cloudflare',
+  'set-cookie': '_cfuvid=22NzP4MWTkHHZQtoaAj_zfzEsUYw7gY.2GjoSnLkeh0-1761692753274-0.0.1.1-604800000; path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None',
+  'strict-transport-security': 'max-age=31536000; includeSubDomains; preload',
+  'transfer-encoding': 'chunked',
+  'x-content-type-options': 'nosniff',
+  'x-envoy-upstream-service-time': '22904',
+  'x-request-id': 'req_0841dcc670d34144891dbfb510d9ad0b'
+}
+📦 Dados recebidos da DALL-E 3: {
+  created: 1761692753,
+  data: [
+    {
+      revised_prompt: 'Create an image that portrays a minimalist vector illustration in flat design style, with soft colors and simple shapes, without any texture. The setting should have a soft atmosphere illuminated by golden heavenly light indicating tranquility. Picture a serene individual, of undefined gender or descent, kneeling, engaged in prayer. A big luminous hand extends from the sky in the background, conveying protection and support. Surrounding elements such as rays of light piercing through clouds and a gentle path ahead symbolize comfort, hope, faith, and trust even amidst uncertainty. This should have a 1:1 square format, photorealistic, soft warm lighting, a peaceful atmosphere, high quality, and it should be inspirational with beautiful composition.',
+      url: 'https://oaidalleapiprodscus.blob.core.windows.net/private/org-ujC6kKfUFrm09T9tYS1RogpJ/user-toxNjJbv5uhZGcD00xDmBxHh/img-pv1xlgrDEhcxcifXzD8F8Z5l.png?st=2025-10-28T22%3A05%3A53Z&se=2025-10-29T00%3A05%3A53Z&sp=r&sv=2024-08-04&sr=b&rscd=inline&rsct=image/png&skoid=ed3ea2f9-5e38-44be-9a1b-7c1e65e4d54f&sktid=a48cca56-e6da-484e-a814-9c849652bcb3&skt=2025-10-28T14%3A16%3A14Z&ske=2025-10-29T14%3A16%3A14Z&sks=b&skv=2024-08-04&sig=gJAVoROu1nftzDfWK3t5o1X%2BjQp%2B0of2m3sGEBgr3F4%3D'
+    }
+  ]
+}
+✅ Imagem gerada com sucesso (DALL-E 3): https://oaidalleapiprodscus.blob.core.windows.net/private/org-ujC6kKfUFrm09T9tYS1RogpJ/user-toxNjJbv5uhZGcD00xDmBxHh/img-pv1xlgrDEhcxcifXzD8F8Z5l.png?st=2025-10-28T22%3A05%3A53Z&se=2025-10-29T00%3A05%3A53Z&sp=r&sv=2024-08-04&sr=b&rscd=inline&rsct=image/png&skoid=ed3ea2f9-5e38-44be-9a1b-7c1e65e4d54f&sktid=a48cca56-e6da-484e-a814-9c849652bcb3&skt=2025-10-28T14%3A16%3A14Z&ske=2025-10-29T14%3A16%3A14Z&sks=b&skv=2024-08-04&sig=gJAVoROu1nftzDfWK3t5o1X%2BjQp%2B0of2m3sGEBgr3F4%3D
+📝 Prompt revisado pelo DALL-E 3: Create an image that portrays a minimalist vector illustration in flat design style, with soft colors and simple shapes, without any texture. The setting should have a soft atmosphere illuminated by golden heavenly light indicating tranquility. Picture a serene individual, of undefined gender or descent, kneeling, engaged in prayer. A big luminous hand extends from the sky in the background, conveying protection and support. Surrounding elements such as rays of light piercing through clouds and a gentle path ahead symbolize comfort, hope, faith, and trust even amidst uncertainty. This should have a 1:1 square format, photorealistic, soft warm lighting, a peaceful atmosphere, high quality, and it should be inspirational with beautiful composition.
+ POST /api/generate-image 200 in 23566ms
+ ✓ Compiled /api/image-proxy in 94ms (689 modules)
+✅ API generate-audio: Áudio salvo no Storage: https://vvgqqlrujmyxzzygsizc.supabase.co/storage/v1/object/public/audios/generated/generated-1761692752514-iyu58uytpjj.mp3
+✅ API generate-audio: Áudio gerado com sucesso usando voice_id: 7i7dgyCkKt4c16dLtwT3
+ POST /api/generate-audio 200 in 23224ms
+ POST /api/image-proxy 200 in 1583ms
+🖼️ Iniciando geração de imagem com DALL-E 3...
+📝 Prompt recebido: Religious Christian scene: Gere uma Ilustração vetorial minimalista em estilo flat design, com cores suaves e formas simples, sem textura, com luz suave e atmosfera calma. Estilo "The Bible Project" da cena: 
+
+A person standing quietly in a soft, glowing light, surrounded by a sense of calm and peace, with gentle rays of warm light symbolizing divine presence and protection enveloping them. The background suggests a subtle challenge or uncertainty, but the person looks reassured and comforted, conveying hope, strength, and faith. The overall atmosphere is serene, reflecting spiritual trust and the overcoming of fear through faith.
+
+ps: em formato quadrado 1:1, photorealistic, soft warm lighting, peaceful atmosphere, high quality, inspirational, beautiful composition
+🔑 Chave OpenAI encontrada
+🎨 Gerando imagem com DALL-E 3 (melhor versão)...
+🎯 Prompt final: Religious Christian scene: Gere uma Ilustração vetorial minimalista em estilo flat design, com cores suaves e formas simples, sem textura, com luz suave e atmosfera calma. Estilo "The Bible Project" da cena: 
+
+A person standing quietly in a soft, glowing light, surrounded by a sense of calm and peace, with gentle rays of warm light symbolizing divine presence and protection enveloping them. The background suggests a subtle challenge or uncertainty, but the person looks reassured and comforted, conveying hope, strength, and faith. The overall atmosphere is serene, reflecting spiritual trust and the overcoming of fear through faith.
+
+ps: em formato quadrado 1:1, photorealistic, soft warm lighting, peaceful atmosphere, high quality, inspirational, beautiful composition
+📦 Objeto de requisição DALL-E 3: {
+  model: 'dall-e-3',
+  prompt: 'Religious Christian scene: Gere uma Ilustração vetorial minimalista em estilo flat design, com cores suaves e formas simples, sem textura, com luz suave e atmosfera calma. Estilo "The Bible Project" da cena: \n' +
+    '\n' +
+    'A person standing quietly in a soft, glowing light, surrounded by a sense of calm and peace, with gentle rays of warm light symbolizing divine presence and protection enveloping them. The background suggests a subtle challenge or uncertainty, but the person looks reassured and comforted, conveying hope, strength, and faith. The overall atmosphere is serene, reflecting spiritual trust and the overcoming of fear through faith.\n' +
+    '\n' +
+    'ps: em formato quadrado 1:1, photorealistic, soft warm lighting, peaceful atmosphere, high quality, inspirational, beautiful composition',
+  n: 1,
+  size: '1024x1024',
+  quality: 'hd',
+  style: 'natural'
+}
+📡 Status da resposta DALL-E 3: 200
+📡 Headers da resposta DALL-E 3: {
+  'alt-svc': 'h3=":443"; ma=86400',
+  'cf-cache-status': 'DYNAMIC',
+  'cf-ray': '995e14aaee9effa8-GRU',
+  connection: 'keep-alive',
+  'content-encoding': 'br',
+  'content-type': 'application/json',
+  date: 'Tue, 28 Oct 2025 23:06:15 GMT',
+  'openai-organization': 'user-toxnjjbv5uhzgcd00xdmbxhh',
+  'openai-processing-ms': '19550',
+  'openai-project': 'proj_KWmjRDi2IgmlGrUmN9eOZhCr',
+  'openai-version': '2020-10-01',
+  server: 'cloudflare',
+  'set-cookie': '_cfuvid=Kbi3iFtm3JiZ5H4oG23KpckBzqIwL_s6Gfu35pUOO9I-1761692775725-0.0.1.1-604800000; path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None',
+  'strict-transport-security': 'max-age=31536000; includeSubDomains; preload',
+  'transfer-encoding': 'chunked',
+  'x-content-type-options': 'nosniff',
+  'x-envoy-upstream-service-time': '19552',
+  'x-request-id': 'req_6f7d5909430a49e2bc42ef9ec140a8ee'
+}
+📦 Dados recebidos da DALL-E 3: {
+  created: 1761692775,
+  data: [
+    {
+      revised_prompt: 'Create a minimalist vector illustration in flat design style with gentle colors and basic shapes, no texture, with soft light and a serene atmosphere. The visual narrative depicts a serene scene of a person standing peacefully in a warm, glowing light that wraps around them, symbolizing divine presence and protection. In the background, subtle elements suggest a whisper of challenge or uncertainty without disturbing the calm ambience. The persona, despite the situation, appears comforted and filled with hope, strength, and faith. The entire scene emanates a sense of spiritual trust and overcoming fear through faith. The requested format is square 1:1, and should convey a photorealistic representation with soft warm lighting for a soothing, high-quality, and inspirational composition.',
+      url: 'https://oaidalleapiprodscus.blob.core.windows.net/private/org-ujC6kKfUFrm09T9tYS1RogpJ/user-toxNjJbv5uhZGcD00xDmBxHh/img-C4PR7PJt5tX0S658cNg3IpCS.png?st=2025-10-28T22%3A06%3A15Z&se=2025-10-29T00%3A06%3A15Z&sp=r&sv=2024-08-04&sr=b&rscd=inline&rsct=image/png&skoid=8b33a531-2df9-46a3-bc02-d4b1430a422c&sktid=a48cca56-e6da-484e-a814-9c849652bcb3&skt=2025-10-28T09%3A46%3A04Z&ske=2025-10-29T09%3A46%3A04Z&sks=b&skv=2024-08-04&sig=6KwtmPMp13xoJr%2BzC3rSRoYlAQPPtP7gquEqQuLzirg%3D'
+    }
+  ]
+}
+✅ Imagem gerada com sucesso (DALL-E 3): https://oaidalleapiprodscus.blob.core.windows.net/private/org-ujC6kKfUFrm09T9tYS1RogpJ/user-toxNjJbv5uhZGcD00xDmBxHh/img-C4PR7PJt5tX0S658cNg3IpCS.png?st=2025-10-28T22%3A06%3A15Z&se=2025-10-29T00%3A06%3A15Z&sp=r&sv=2024-08-04&sr=b&rscd=inline&rsct=image/png&skoid=8b33a531-2df9-46a3-bc02-d4b1430a422c&sktid=a48cca56-e6da-484e-a814-9c849652bcb3&skt=2025-10-28T09%3A46%3A04Z&ske=2025-10-29T09%3A46%3A04Z&sks=b&skv=2024-08-04&sig=6KwtmPMp13xoJr%2BzC3rSRoYlAQPPtP7gquEqQuLzirg%3D
+📝 Prompt revisado pelo DALL-E 3: Create a minimalist vector illustration in flat design style with gentle colors and basic shapes, no texture, with soft light and a serene atmosphere. The visual narrative depicts a serene scene of a person standing peacefully in a warm, glowing light that wraps around them, symbolizing divine presence and protection. In the background, subtle elements suggest a whisper of challenge or uncertainty without disturbing the calm ambience. The persona, despite the situation, appears comforted and filled with hope, strength, and faith. The entire scene emanates a sense of spiritual trust and overcoming fear through faith. The requested format is square 1:1, and should convey a photorealistic representation with soft warm lighting for a soothing, high-quality, and inspirational composition.
+ POST /api/generate-image 200 in 20092ms
+ POST /api/image-proxy 200 in 1715ms
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+📊 AuthContext: Estado atual - User: false Loading: true
+ GET /admin/gm 200 in 130ms
+ GET /favicon.ico 200 in 208ms
+ GET /favicon.ico 200 in 207ms
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+📊 AuthContext: Estado atual - User: false Loading: true
+ GET /admin/gm 200 in 31ms
+ GET /login 200 in 15ms
+ GET /favicon.ico 200 in 209ms
+ GET /favicon.ico 200 in 206ms
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ GET /admin 200 in 16ms
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+📊 AuthContext: Estado atual - User: false Loading: true
+ GET /admin/gm 200 in 32ms
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+📊 AuthContext: Estado atual - User: false Loading: true
+ GET /admin/go 200 in 38ms
+ GET /favicon.ico 200 in 207ms
+ GET /favicon.ico 200 in 206ms
+ POST /api/gmanual/generate-field 200 in 4745ms
+ POST /api/gmanual/generate-field 200 in 2184ms
+ POST /api/gmanual/generate-field 200 in 2185ms
+ POST /api/gmanual/generate-field 200 in 2187ms
+ POST /api/gmanual/generate-field 200 in 2187ms
+ POST /api/gmanual/generate-field 200 in 2184ms
+🎵 API generate-audio: Iniciando processamento...
+📝 API generate-audio: Texto recebido: Olá, <break time="0.3s" /> que bom ter você aqui. <break time="0.8s" /> Permita-se um instante de si...
+🎤 API generate-audio: Voice ID recebido: 7i7dgyCkKt4c16dLtwT3
+🔍 API generate-audio: Verificando variáveis de ambiente...
+🔍 API generate-audio: ELEVENLABS_API_KEY existe? true
+🔍 API generate-audio: ELEVENLABS_API_KEY primeiros chars: sk_891e3...
+✅ API generate-audio: Chave da API encontrada
+🎯 API generate-audio: Voice ID final usado: 7i7dgyCkKt4c16dLtwT3
+📡 API generate-audio: Enviando requisição para ElevenLabs...
+🔗 API generate-audio: URL: https://api.elevenlabs.io/v1/text-to-speech/7i7dgyCkKt4c16dLtwT3
+🖼️ Iniciando geração de imagem com DALL-E 3...
+📝 Prompt recebido: Religious Christian scene: Gere uma Ilustração vetorial minimalista em estilo flat design, com cores suaves e formas simples, sem textura, com luz suave e atmosfera calma. Estilo "The Bible Project" da cena: 
+
+A peaceful scene of a person praying in a tranquil room, with soft sunlight streaming through a window, a Bible open on a small table, clock in the background hinting at a specific time, and a gentle spiritual ambiance.
+
+ps: em formato quadrado 1:1, photorealistic, soft warm lighting, peaceful atmosphere, high quality, inspirational, beautiful composition
+🔑 Chave OpenAI encontrada
+🎨 Gerando imagem com DALL-E 3 (melhor versão)...
+🎯 Prompt final: Religious Christian scene: Gere uma Ilustração vetorial minimalista em estilo flat design, com cores suaves e formas simples, sem textura, com luz suave e atmosfera calma. Estilo "The Bible Project" da cena: 
+
+A peaceful scene of a person praying in a tranquil room, with soft sunlight streaming through a window, a Bible open on a small table, clock in the background hinting at a specific time, and a gentle spiritual ambiance.
+
+ps: em formato quadrado 1:1, photorealistic, soft warm lighting, peaceful atmosphere, high quality, inspirational, beautiful composition
+📦 Objeto de requisição DALL-E 3: {
+  model: 'dall-e-3',
+  prompt: 'Religious Christian scene: Gere uma Ilustração vetorial minimalista em estilo flat design, com cores suaves e formas simples, sem textura, com luz suave e atmosfera calma. Estilo "The Bible Project" da cena: \n' +
+    '\n' +
+    'A peaceful scene of a person praying in a tranquil room, with soft sunlight streaming through a window, a Bible open on a small table, clock in the background hinting at a specific time, and a gentle spiritual ambiance.\n' +
+    '\n' +
+    'ps: em formato quadrado 1:1, photorealistic, soft warm lighting, peaceful atmosphere, high quality, inspirational, beautiful composition',
+  n: 1,
+  size: '1024x1024',
+  quality: 'hd',
+  style: 'natural'
+}
+ POST /api/gmanual/generate-field 200 in 2616ms
+📡 API generate-audio: Status da resposta ElevenLabs: 200
+📡 API generate-audio: Headers da resposta: {
+  'access-control-allow-headers': '*',
+  'access-control-allow-methods': 'POST, PATCH, OPTIONS, DELETE, GET, PUT',
+  'access-control-allow-origin': '*',
+  'access-control-expose-headers': 'request-id, history-item-id, character-cost, regeneration-count, generation-info, current-concurrent-requests, maximum-concurrent-requests',
+  'access-control-max-age': '600',
+  'alt-svc': 'h3=":443"; ma=2592000,h3-29=":443"; ma=2592000',
+  'character-cost': '922',
+  'content-encoding': 'gzip',
+  'content-type': 'audio/mpeg',
+  'current-concurrent-requests': '1',
+  date: 'Tue, 28 Oct 2025 23:09:17 GMT',
+  'history-item-id': '9FgiFn54TFlql4Xi7Qwn',
+  'maximum-concurrent-requests': '10',
+  'request-id': '3i8Qopr47I5O2pLv3kfJ',
+  server: 'uvicorn',
+  'strict-transport-security': 'max-age=31536000; includeSubDomains',
+  'transfer-encoding': 'chunked',
+  'tts-latency-ms': '3990',
+  vary: 'Accept-Encoding',
+  via: '1.1 google, 1.1 google',
+  'x-region': 'us-central1',
+  'x-trace-id': '906d0677402367874bfe883d9b2b4e8f'
+}
+✅ API generate-audio: Resposta OK da ElevenLabs
+📦 API generate-audio: Áudio recebido, tamanho: 929586 bytes
+⬆️ API generate-audio: Fazendo upload para Supabase Storage...
+📁 Arquivo: generated/generated-1761692969844-ljv1fqv7k4.mp3
+✅ API generate-audio: Áudio salvo no Storage: https://vvgqqlrujmyxzzygsizc.supabase.co/storage/v1/object/public/audios/generated/generated-1761692969844-ljv1fqv7k4.mp3
+✅ API generate-audio: Áudio gerado com sucesso usando voice_id: 7i7dgyCkKt4c16dLtwT3
+ POST /api/generate-audio 200 in 12555ms
+📡 Status da resposta DALL-E 3: 200
+📡 Headers da resposta DALL-E 3: {
+  'alt-svc': 'h3=":443"; ma=86400',
+  'cf-cache-status': 'DYNAMIC',
+  'cf-ray': '995e199c3936cb55-GIG',
+  connection: 'keep-alive',
+  'content-encoding': 'br',
+  'content-type': 'application/json',
+  date: 'Tue, 28 Oct 2025 23:09:36 GMT',
+  'openai-organization': 'user-toxnjjbv5uhzgcd00xdmbxhh',
+  'openai-processing-ms': '18449',
+  'openai-project': 'proj_KWmjRDi2IgmlGrUmN9eOZhCr',
+  'openai-version': '2020-10-01',
+  server: 'cloudflare',
+  'set-cookie': '_cfuvid=bGYu4lnQKxxyH6XSGLQPvsUN9nMru5Cej1kveH18SPk-1761692976740-0.0.1.1-604800000; path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None',
+  'strict-transport-security': 'max-age=31536000; includeSubDomains; preload',
+  'transfer-encoding': 'chunked',
+  'x-content-type-options': 'nosniff',
+  'x-envoy-upstream-service-time': '18452',
+  'x-request-id': 'req_e52f53dbe2134f4eab4e5919d216219b'
+}
+📦 Dados recebidos da DALL-E 3: {
+  created: 1761692976,
+  data: [
+    {
+      revised_prompt: 'Create a minimalist vector illustration in flat design. Use soft colors and simple shapes, without texture, with soft light and a calm atmosphere. Picture a tranquil scene with a person of unspecified descent and gender, praying in a serene room. Depict soft sunlight streaming through a window, an open Bible on a small table. In the background, place a clock that hints at a specific time, indicating a spiritual ambiance. Design this in a square 1:1 format, with a photorealistic approach, soft warm lighting, tranquil atmosphere, high quality, and a beautiful composition.',
+      url: 'https://oaidalleapiprodscus.blob.core.windows.net/private/org-ujC6kKfUFrm09T9tYS1RogpJ/user-toxNjJbv5uhZGcD00xDmBxHh/img-se3GMScmFIPItyGocdsWAwOp.png?st=2025-10-28T22%3A09%3A36Z&se=2025-10-29T00%3A09%3A36Z&sp=r&sv=2024-08-04&sr=b&rscd=inline&rsct=image/png&skoid=8b33a531-2df9-46a3-bc02-d4b1430a422c&sktid=a48cca56-e6da-484e-a814-9c849652bcb3&skt=2025-10-28T23%3A09%3A36Z&ske=2025-10-29T23%3A09%3A36Z&sks=b&skv=2024-08-04&sig=6emXBzHNLF1v/6wLnjOWOD4QWr4zKVFkCm6bvSxcVdU%3D'
+    }
+  ]
+}
+✅ Imagem gerada com sucesso (DALL-E 3): https://oaidalleapiprodscus.blob.core.windows.net/private/org-ujC6kKfUFrm09T9tYS1RogpJ/user-toxNjJbv5uhZGcD00xDmBxHh/img-se3GMScmFIPItyGocdsWAwOp.png?st=2025-10-28T22%3A09%3A36Z&se=2025-10-29T00%3A09%3A36Z&sp=r&sv=2024-08-04&sr=b&rscd=inline&rsct=image/png&skoid=8b33a531-2df9-46a3-bc02-d4b1430a422c&sktid=a48cca56-e6da-484e-a814-9c849652bcb3&skt=2025-10-28T23%3A09%3A36Z&ske=2025-10-29T23%3A09%3A36Z&sks=b&skv=2024-08-04&sig=6emXBzHNLF1v/6wLnjOWOD4QWr4zKVFkCm6bvSxcVdU%3D
+📝 Prompt revisado pelo DALL-E 3: Create a minimalist vector illustration in flat design. Use soft colors and simple shapes, without texture, with soft light and a calm atmosphere. Picture a tranquil scene with a person of unspecified descent and gender, praying in a serene room. Depict soft sunlight streaming through a window, an open Bible on a small table. In the background, place a clock that hints at a specific time, indicating a spiritual ambiance. Design this in a square 1:1 format, with a photorealistic approach, soft warm lighting, tranquil atmosphere, high quality, and a beautiful composition.
+ POST /api/generate-image 200 in 18656ms
+ POST /api/image-proxy 200 in 1493ms
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+📊 AuthContext: Estado atual - User: false Loading: true
+ GET /admin/go 200 in 29ms
+ POST /api/detect-biblical-base 200 in 6ms
+ GET /favicon.ico 200 in 207ms
+ GET /favicon.ico 200 in 207ms
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+📊 AuthContext: Estado atual - User: false Loading: true
+ GET /admin/gm 200 in 32ms
+ POST /api/detect-biblical-base 200 in 5ms
+ GET /favicon.ico 200 in 207ms
+ GET /favicon.ico 200 in 205ms
+ POST /api/gmanual/generate-field 200 in 5654ms
+ POST /api/gmanual/generate-field 200 in 1457ms
+ POST /api/gmanual/generate-field 200 in 1543ms
+ POST /api/gmanual/generate-field 200 in 1868ms
+ POST /api/gmanual/generate-field 200 in 2058ms
+ POST /api/gmanual/generate-field 200 in 2420ms
+🖼️ Iniciando geração de imagem com DALL-E 3...
+📝 Prompt recebido: Religious Christian scene: Gere uma Ilustração vetorial minimalista em estilo flat design, com cores suaves e formas simples, sem textura, com luz suave e atmosfera calma. Estilo "The Bible Project" da cena: 
+
+A peaceful scene of a person praying in a tranquil room, with soft sunlight streaming through a window, a Bible open on a small table, clock in the background hinting at a specific time, and a gentle spiritual ambiance.
+
+ps: em formato quadrado 1:1, photorealistic, soft warm lighting, peaceful atmosphere, high quality, inspirational, beautiful composition
+🔑 Chave OpenAI encontrada
+🎨 Gerando imagem com DALL-E 3 (melhor versão)...
+🎯 Prompt final: Religious Christian scene: Gere uma Ilustração vetorial minimalista em estilo flat design, com cores suaves e formas simples, sem textura, com luz suave e atmosfera calma. Estilo "The Bible Project" da cena: 
+
+A peaceful scene of a person praying in a tranquil room, with soft sunlight streaming through a window, a Bible open on a small table, clock in the background hinting at a specific time, and a gentle spiritual ambiance.
+
+ps: em formato quadrado 1:1, photorealistic, soft warm lighting, peaceful atmosphere, high quality, inspirational, beautiful composition
+📦 Objeto de requisição DALL-E 3: {
+  model: 'dall-e-3',
+  prompt: 'Religious Christian scene: Gere uma Ilustração vetorial minimalista em estilo flat design, com cores suaves e formas simples, sem textura, com luz suave e atmosfera calma. Estilo "The Bible Project" da cena: \n' +
+    '\n' +
+    'A peaceful scene of a person praying in a tranquil room, with soft sunlight streaming through a window, a Bible open on a small table, clock in the background hinting at a specific time, and a gentle spiritual ambiance.\n' +
+    '\n' +
+    'ps: em formato quadrado 1:1, photorealistic, soft warm lighting, peaceful atmosphere, high quality, inspirational, beautiful composition',
+  n: 1,
+  size: '1024x1024',
+  quality: 'hd',
+  style: 'natural'
+}
+ POST /api/gmanual/generate-field 200 in 2760ms
+🎵 API generate-audio: Iniciando processamento...
+📝 API generate-audio: Texto recebido: Olá, <break time="0.3s" /> seja bem-vindo a este momento de entrega e confiança. <break time="0.8s" ...
+🎤 API generate-audio: Voice ID recebido: 7i7dgyCkKt4c16dLtwT3
+🔍 API generate-audio: Verificando variáveis de ambiente...
+🔍 API generate-audio: ELEVENLABS_API_KEY existe? true
+🔍 API generate-audio: ELEVENLABS_API_KEY primeiros chars: sk_891e3...
+✅ API generate-audio: Chave da API encontrada
+🎯 API generate-audio: Voice ID final usado: 7i7dgyCkKt4c16dLtwT3
+📡 API generate-audio: Enviando requisição para ElevenLabs...
+🔗 API generate-audio: URL: https://api.elevenlabs.io/v1/text-to-speech/7i7dgyCkKt4c16dLtwT3
+📡 API generate-audio: Status da resposta ElevenLabs: 200
+📡 API generate-audio: Headers da resposta: {
+  'access-control-allow-headers': '*',
+  'access-control-allow-methods': 'POST, PATCH, OPTIONS, DELETE, GET, PUT',
+  'access-control-allow-origin': '*',
+  'access-control-expose-headers': 'request-id, history-item-id, character-cost, regeneration-count, generation-info, current-concurrent-requests, maximum-concurrent-requests',
+  'access-control-max-age': '600',
+  'alt-svc': 'h3=":443"; ma=2592000,h3-29=":443"; ma=2592000',
+  'character-cost': '1698',
+  'content-encoding': 'gzip',
+  'content-type': 'audio/mpeg',
+  'current-concurrent-requests': '1',
+  date: 'Tue, 28 Oct 2025 23:22:23 GMT',
+  'history-item-id': 'c3sRAD2CE2qrIlu4PJpc',
+  'maximum-concurrent-requests': '10',
+  'request-id': 'ilBe4weMnWdkx1J2skCQ',
+  server: 'uvicorn',
+  'strict-transport-security': 'max-age=31536000; includeSubDomains',
+  'transfer-encoding': 'chunked',
+  'tts-latency-ms': '3973',
+  vary: 'Accept-Encoding',
+  via: '1.1 google, 1.1 google',
+  'x-region': 'us-central1',
+  'x-trace-id': '6cc7bdf3bc99f1dfde458b07100540f6'
+}
+✅ API generate-audio: Resposta OK da ElevenLabs
+📡 Status da resposta DALL-E 3: 200
+📡 Headers da resposta DALL-E 3: {
+  'alt-svc': 'h3=":443"; ma=86400',
+  'cf-cache-status': 'DYNAMIC',
+  'cf-ray': '995e2cc93a4dcaf4-GIG',
+  connection: 'keep-alive',
+  'content-encoding': 'br',
+  'content-type': 'application/json',
+  date: 'Tue, 28 Oct 2025 23:22:46 GMT',
+  'openai-organization': 'user-toxnjjbv5uhzgcd00xdmbxhh',
+  'openai-processing-ms': '22278',
+  'openai-project': 'proj_KWmjRDi2IgmlGrUmN9eOZhCr',
+  'openai-version': '2020-10-01',
+  server: 'cloudflare',
+  'set-cookie': '_cfuvid=1GmSwGHpiSwNLHhcuKCmgPB8e.sKG.Mb9RZoXeqKVBY-1761693766379-0.0.1.1-604800000; path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None',
+  'strict-transport-security': 'max-age=31536000; includeSubDomains; preload',
+  'transfer-encoding': 'chunked',
+  'x-content-type-options': 'nosniff',
+  'x-envoy-upstream-service-time': '22283',
+  'x-request-id': 'req_dbb2e74febb84946a7732ddeb49c91c3'
+}
+📦 Dados recebidos da DALL-E 3: {
+  created: 1761693766,
+  data: [
+    {
+      revised_prompt: 'Generate a minimalist vector illustration in flat design style, featuring soft colors and simple shapes, without texture, showcasing a serene religious Christian scene. The setting involves a person engrossed in prayer within a calm room filled with soft sunlight trickling in through a window. Besides the individual, an open Bible rests on a petite table. A clock situated in the backdrop subtly indicates a particular moment. The environment exudes a gentle spiritual ambiance. Note - this illustration should be square 1:1 in format, photorealistic, with soft warm lighting, a peaceful atmosphere, of high quality, inspirational, and boast an exquisite composition.',
+      url: 'https://oaidalleapiprodscus.blob.core.windows.net/private/org-ujC6kKfUFrm09T9tYS1RogpJ/user-toxNjJbv5uhZGcD00xDmBxHh/img-EgLVTlZK5YkR8xJWBzJKgUkh.png?st=2025-10-28T22%3A22%3A45Z&se=2025-10-29T00%3A22%3A45Z&sp=r&sv=2024-08-04&sr=b&rscd=inline&rsct=image/png&skoid=f1dafa11-a0c2-4092-91d4-10981fbda051&sktid=a48cca56-e6da-484e-a814-9c849652bcb3&skt=2025-10-28T23%3A22%3A45Z&ske=2025-10-29T23%3A22%3A45Z&sks=b&skv=2024-08-04&sig=qFfVQXkPjFrjo1o3tNyHxAkyTcyycI6Cl1kcwUn//9I%3D'
+    }
+  ]
+}
+✅ Imagem gerada com sucesso (DALL-E 3): https://oaidalleapiprodscus.blob.core.windows.net/private/org-ujC6kKfUFrm09T9tYS1RogpJ/user-toxNjJbv5uhZGcD00xDmBxHh/img-EgLVTlZK5YkR8xJWBzJKgUkh.png?st=2025-10-28T22%3A22%3A45Z&se=2025-10-29T00%3A22%3A45Z&sp=r&sv=2024-08-04&sr=b&rscd=inline&rsct=image/png&skoid=f1dafa11-a0c2-4092-91d4-10981fbda051&sktid=a48cca56-e6da-484e-a814-9c849652bcb3&skt=2025-10-28T23%3A22%3A45Z&ske=2025-10-29T23%3A22%3A45Z&sks=b&skv=2024-08-04&sig=qFfVQXkPjFrjo1o3tNyHxAkyTcyycI6Cl1kcwUn//9I%3D
+📝 Prompt revisado pelo DALL-E 3: Generate a minimalist vector illustration in flat design style, featuring soft colors and simple shapes, without texture, showcasing a serene religious Christian scene. The setting involves a person engrossed in prayer within a calm room filled with soft sunlight trickling in through a window. Besides the individual, an open Bible rests on a petite table. A clock situated in the backdrop subtly indicates a particular moment. The environment exudes a gentle spiritual ambiance. Note - this illustration should be square 1:1 in format, photorealistic, with soft warm lighting, a peaceful atmosphere, of high quality, inspirational, and boast an exquisite composition.
+ POST /api/generate-image 200 in 23546ms
+📦 API generate-audio: Áudio recebido, tamanho: 1747532 bytes
+⬆️ API generate-audio: Fazendo upload para Supabase Storage...
+📁 Arquivo: generated/generated-1761693766991-9im2e4ixrkv.mp3
+✅ API generate-audio: Áudio salvo no Storage: https://vvgqqlrujmyxzzygsizc.supabase.co/storage/v1/object/public/audios/generated/generated-1761693766991-9im2e4ixrkv.mp3
+✅ API generate-audio: Áudio gerado com sucesso usando voice_id: 7i7dgyCkKt4c16dLtwT3
+ POST /api/generate-audio 200 in 24275ms
+ POST /api/image-proxy 200 in 1849ms
+🖼️ Iniciando geração de imagem com DALL-E 3...
+📝 Prompt recebido: Religious Christian scene: Gere uma Ilustração vetorial minimalista em estilo flat design, com cores suaves e formas simples, sem textura, com luz suave e atmosfera calma. Estilo "The Bible Project" da cena: 
+
+A peaceful scene of a person praying in a cozy room near a window, gentle sunlight streaming in, surrounded by signs of daily life such as bills and notebooks. Outside the window, a serene landscape with green trees and a calm sky, symbolizing hope and trust. Subtle light envelops the person, suggesting divine protection and love. The overall atmosphere conveys surrender, faith, and inner peace, with warm and comforting tones.
+
+ps: em formato quadrado 1:1, photorealistic, soft warm lighting, peaceful atmosphere, high quality, inspirational, beautiful composition
+🔑 Chave OpenAI encontrada
+🎨 Gerando imagem com DALL-E 3 (melhor versão)...
+🎯 Prompt final: Religious Christian scene: Gere uma Ilustração vetorial minimalista em estilo flat design, com cores suaves e formas simples, sem textura, com luz suave e atmosfera calma. Estilo "The Bible Project" da cena: 
+
+A peaceful scene of a person praying in a cozy room near a window, gentle sunlight streaming in, surrounded by signs of daily life such as bills and notebooks. Outside the window, a serene landscape with green trees and a calm sky, symbolizing hope and trust. Subtle light envelops the person, suggesting divine protection and love. The overall atmosphere conveys surrender, faith, and inner peace, with warm and comforting tones.
+
+ps: em formato quadrado 1:1, photorealistic, soft warm lighting, peaceful atmosphere, high quality, inspirational, beautiful composition
+📦 Objeto de requisição DALL-E 3: {
+  model: 'dall-e-3',
+  prompt: 'Religious Christian scene: Gere uma Ilustração vetorial minimalista em estilo flat design, com cores suaves e formas simples, sem textura, com luz suave e atmosfera calma. Estilo "The Bible Project" da cena: \n' +
+    '\n' +
+    'A peaceful scene of a person praying in a cozy room near a window, gentle sunlight streaming in, surrounded by signs of daily life such as bills and notebooks. Outside the window, a serene landscape with green trees and a calm sky, symbolizing hope and trust. Subtle light envelops the person, suggesting divine protection and love. The overall atmosphere conveys surrender, faith, and inner peace, with warm and comforting tones.\n' +
+    '\n' +
+    'ps: em formato quadrado 1:1, photorealistic, soft warm lighting, peaceful atmosphere, high quality, inspirational, beautiful composition',
+  n: 1,
+  size: '1024x1024',
+  quality: 'hd',
+  style: 'natural'
+}
+📡 Status da resposta DALL-E 3: 500
+📡 Headers da resposta DALL-E 3: {
+  'alt-svc': 'h3=":443"; ma=86400',
+  'cf-cache-status': 'DYNAMIC',
+  'cf-ray': '995e2d6b8f4bcaf4-GIG',
+  connection: 'keep-alive',
+  'content-length': '359',
+  'content-type': 'application/json',
+  date: 'Tue, 28 Oct 2025 23:22:50 GMT',
+  'openai-organization': 'user-toxnjjbv5uhzgcd00xdmbxhh',
+  'openai-processing-ms': '354',
+  'openai-project': 'proj_KWmjRDi2IgmlGrUmN9eOZhCr',
+  'openai-version': '2020-10-01',
+  server: 'cloudflare',
+  'set-cookie': '_cfuvid=5ZhEkx92wLarCgFigc.70syD2mujpQH6_DQ3ZTQGIuA-1761693770060-0.0.1.1-604800000; path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None',
+  'strict-transport-security': 'max-age=31536000; includeSubDomains; preload',
+  'x-content-type-options': 'nosniff',
+  'x-envoy-upstream-service-time': '358',
+  'x-request-id': 'req_805e455129b14a7b94cf102497b1bf6a'
+}
+↻ Retry DALL-E 3 com quality=standard
+📡 Status retry DALL-E 3: 500
+❌ Erro da API DALL-E 3: {
+  "error": {
+    "message": "We were unable to process your prompt. Please try again later. You can retry your request, or contact us through our help center at help.openai.com if the error persists. (Please include the request ID req_e115648818e3413ebfe7fe21bdb11e16 in your message.)",
+    "type": "server_error",
+    "param": null,
+    "code": null
+  }
+}
+ POST /api/generate-image 500 in 1235ms
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+📊 AuthContext: Estado atual - User: false Loading: true
+ GET /admin/go 200 in 31ms
+ GET /favicon.ico 200 in 205ms
+ GET /favicon.ico 200 in 205ms
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+📊 AuthContext: Estado atual - User: false Loading: true
+ GET /admin/gm 200 in 27ms
+ GET /favicon.ico 200 in 208ms
+ GET /favicon.ico 200 in 204ms
+ POST /api/gmanual/generate-field 200 in 2636ms
+ POST /api/gmanual/generate-field 200 in 1823ms
+ POST /api/gmanual/generate-field 200 in 1824ms
+ POST /api/gmanual/generate-field 200 in 1822ms
+ POST /api/gmanual/generate-field 200 in 1851ms
+🖼️ Iniciando geração de imagem com DALL-E 3...
+📝 Prompt recebido: Religious Christian scene: Gere uma Ilustração vetorial minimalista em estilo flat design, com cores suaves e formas simples, sem textura, com luz suave e atmosfera calma. Estilo "The Bible Project" da cena: 
+
+A peaceful scene of a person praying quietly in a cozy, softly lit room at dawn, with rays of gentle sunlight streaming through a window, highlighting a Bible open on a small wooden table nearby, creating a serene and spiritual atmosphere.
+
+ps: em formato quadrado 1:1, photorealistic, soft warm lighting, peaceful atmosphere, high quality, inspirational, beautiful composition
+🔑 Chave OpenAI encontrada
+🎨 Gerando imagem com DALL-E 3 (melhor versão)...
+🎯 Prompt final: Religious Christian scene: Gere uma Ilustração vetorial minimalista em estilo flat design, com cores suaves e formas simples, sem textura, com luz suave e atmosfera calma. Estilo "The Bible Project" da cena: 
+
+A peaceful scene of a person praying quietly in a cozy, softly lit room at dawn, with rays of gentle sunlight streaming through a window, highlighting a Bible open on a small wooden table nearby, creating a serene and spiritual atmosphere.
+
+ps: em formato quadrado 1:1, photorealistic, soft warm lighting, peaceful atmosphere, high quality, inspirational, beautiful composition
+📦 Objeto de requisição DALL-E 3: {
+  model: 'dall-e-3',
+  prompt: 'Religious Christian scene: Gere uma Ilustração vetorial minimalista em estilo flat design, com cores suaves e formas simples, sem textura, com luz suave e atmosfera calma. Estilo "The Bible Project" da cena: \n' +
+    '\n' +
+    'A peaceful scene of a person praying quietly in a cozy, softly lit room at dawn, with rays of gentle sunlight streaming through a window, highlighting a Bible open on a small wooden table nearby, creating a serene and spiritual atmosphere.\n' +
+    '\n' +
+    'ps: em formato quadrado 1:1, photorealistic, soft warm lighting, peaceful atmosphere, high quality, inspirational, beautiful composition',
+  n: 1,
+  size: '1024x1024',
+  quality: 'hd',
+  style: 'natural'
+}
+ POST /api/gmanual/generate-field 200 in 2007ms
+ POST /api/gmanual/generate-field 200 in 3757ms
+🎵 API generate-audio: Iniciando processamento...
+📝 API generate-audio: Texto recebido: Olá, <break time="0.3s" /> é uma alegria compartilhar este momento com você. <break time="0.8s" /> F...
+🎤 API generate-audio: Voice ID recebido: 7i7dgyCkKt4c16dLtwT3
+🔍 API generate-audio: Verificando variáveis de ambiente...
+🔍 API generate-audio: ELEVENLABS_API_KEY existe? true
+🔍 API generate-audio: ELEVENLABS_API_KEY primeiros chars: sk_891e3...
+✅ API generate-audio: Chave da API encontrada
+🎯 API generate-audio: Voice ID final usado: 7i7dgyCkKt4c16dLtwT3
+📡 API generate-audio: Enviando requisição para ElevenLabs...
+🔗 API generate-audio: URL: https://api.elevenlabs.io/v1/text-to-speech/7i7dgyCkKt4c16dLtwT3
+📡 API generate-audio: Status da resposta ElevenLabs: 200
+📡 API generate-audio: Headers da resposta: {
+  'access-control-allow-headers': '*',
+  'access-control-allow-methods': 'POST, PATCH, OPTIONS, DELETE, GET, PUT',
+  'access-control-allow-origin': '*',
+  'access-control-expose-headers': 'request-id, history-item-id, character-cost, regeneration-count, generation-info, current-concurrent-requests, maximum-concurrent-requests',
+  'access-control-max-age': '600',
+  'alt-svc': 'h3=":443"; ma=2592000,h3-29=":443"; ma=2592000',
+  'character-cost': '1206',
+  'content-encoding': 'gzip',
+  'content-type': 'audio/mpeg',
+  'current-concurrent-requests': '1',
+  date: 'Tue, 28 Oct 2025 23:27:57 GMT',
+  'history-item-id': 'fRXHBuQoKCiDxI8Lza8F',
+  'maximum-concurrent-requests': '10',
+  'request-id': 'VsqXqgWPqJHyONpBQS8N',
+  server: 'uvicorn',
+  'strict-transport-security': 'max-age=31536000; includeSubDomains',
+  'transfer-encoding': 'chunked',
+  'tts-latency-ms': '3862',
+  vary: 'Accept-Encoding',
+  via: '1.1 google, 1.1 google',
+  'x-region': 'us-central1',
+  'x-trace-id': 'eb685e284b71607ec98fb424a6d94f35'
+}
+✅ API generate-audio: Resposta OK da ElevenLabs
+📦 API generate-audio: Áudio recebido, tamanho: 1281507 bytes
+⬆️ API generate-audio: Fazendo upload para Supabase Storage...
+📁 Arquivo: generated/generated-1761694095692-pwjq6eyakun.mp3
+📡 Status da resposta DALL-E 3: 200
+📡 Headers da resposta DALL-E 3: {
+  'alt-svc': 'h3=":443"; ma=86400',
+  'cf-cache-status': 'DYNAMIC',
+  'cf-ray': '995e34eb8ef7e2b3-GIG',
+  connection: 'keep-alive',
+  'content-encoding': 'br',
+  'content-type': 'application/json',
+  date: 'Tue, 28 Oct 2025 23:28:17 GMT',
+  'openai-organization': 'user-toxnjjbv5uhzgcd00xdmbxhh',
+  'openai-processing-ms': '20563',
+  'openai-project': 'proj_KWmjRDi2IgmlGrUmN9eOZhCr',
+  'openai-version': '2020-10-01',
+  server: 'cloudflare',
+  'set-cookie': '_cfuvid=G8NEj.4tjF_lK8F11StkNgfPb8YhYHA2LF8T0jhioOc-1761694097471-0.0.1.1-604800000; path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None',
+  'strict-transport-security': 'max-age=31536000; includeSubDomains; preload',
+  'transfer-encoding': 'chunked',
+  'x-content-type-options': 'nosniff',
+  'x-envoy-upstream-service-time': '20570',
+  'x-request-id': 'req_fcb694b4840c41c4a3fe796087c274b4'
+}
+✅ API generate-audio: Áudio salvo no Storage: https://vvgqqlrujmyxzzygsizc.supabase.co/storage/v1/object/public/audios/generated/generated-1761694095692-pwjq6eyakun.mp3
+✅ API generate-audio: Áudio gerado com sucesso usando voice_id: 7i7dgyCkKt4c16dLtwT3
+ POST /api/generate-audio 200 in 20404ms
+📦 Dados recebidos da DALL-E 3: {
+  created: 1761694096,
+  data: [
+    {
+      revised_prompt: 'Create a minimalist vector illustration in flat design style, with soft colors and simple shapes, no texture, soft lighting, and a peaceful atmosphere. The scene is inspired by religious Christian imagery: A person of unidentified descent and gender is praying quietly in a cozy, softly lit room at dawn. Rays of gentle sunlight are streaming through a window, highlighting a Bible open on a small wooden table nearby. The composition creates a serene and spiritual atmosphere. The artwork should be square (1:1 ratio), photorealistic, with soft warm lighting, peaceful atmosphere, high quality, and inspirational.',
+      url: 'https://oaidalleapiprodscus.blob.core.windows.net/private/org-ujC6kKfUFrm09T9tYS1RogpJ/user-toxNjJbv5uhZGcD00xDmBxHh/img-K0eT6vXft9zXzPgWyzgdLGOq.png?st=2025-10-28T22%3A28%3A16Z&se=2025-10-29T00%3A28%3A16Z&sp=r&sv=2024-08-04&sr=b&rscd=inline&rsct=image/png&skoid=f1dafa11-a0c2-4092-91d4-10981fbda051&sktid=a48cca56-e6da-484e-a814-9c849652bcb3&skt=2025-10-28T22%3A57%3A45Z&ske=2025-10-29T22%3A57%3A45Z&sks=b&skv=2024-08-04&sig=yWc2CEvA76cXtXm4SVpE6j6x1Vkh5Bo7iJm5WxMfMIY%3D'
+    }
+  ]
+}
+✅ Imagem gerada com sucesso (DALL-E 3): https://oaidalleapiprodscus.blob.core.windows.net/private/org-ujC6kKfUFrm09T9tYS1RogpJ/user-toxNjJbv5uhZGcD00xDmBxHh/img-K0eT6vXft9zXzPgWyzgdLGOq.png?st=2025-10-28T22%3A28%3A16Z&se=2025-10-29T00%3A28%3A16Z&sp=r&sv=2024-08-04&sr=b&rscd=inline&rsct=image/png&skoid=f1dafa11-a0c2-4092-91d4-10981fbda051&sktid=a48cca56-e6da-484e-a814-9c849652bcb3&skt=2025-10-28T22%3A57%3A45Z&ske=2025-10-29T22%3A57%3A45Z&sks=b&skv=2024-08-04&sig=yWc2CEvA76cXtXm4SVpE6j6x1Vkh5Bo7iJm5WxMfMIY%3D
+📝 Prompt revisado pelo DALL-E 3: Create a minimalist vector illustration in flat design style, with soft colors and simple shapes, no texture, soft lighting, and a peaceful atmosphere. The scene is inspired by religious Christian imagery: A person of unidentified descent and gender is praying quietly in a cozy, softly lit room at dawn. Rays of gentle sunlight are streaming through a window, highlighting a Bible open on a small wooden table nearby. The composition creates a serene and spiritual atmosphere. The artwork should be square (1:1 ratio), photorealistic, with soft warm lighting, peaceful atmosphere, high quality, and inspirational.
+ POST /api/generate-image 200 in 22280ms
+ POST /api/image-proxy 200 in 1931ms
+ ⚠ Fast Refresh had to perform a full reload due to a runtime error.
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ ✓ Compiled in 546ms (1306 modules)
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ ✓ Compiled in 0ms (660 modules)
+ ✓ Compiled in 0ms (660 modules)
+ ✓ Compiled in 0ms (660 modules)
+📊 AuthContext: Estado atual - User: false Loading: true
+ GET /admin/gm 200 in 515ms
+ GET /login 200 in 492ms
+ GET /admin/go 200 in 488ms
+ ✓ Compiled /favicon.ico in 149ms (676 modules)
+ GET /favicon.ico 200 in 413ms
+ GET /favicon.ico 200 in 205ms
+ ⚠ Fast Refresh had to perform a full reload due to a runtime error.
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ ✓ Compiled in 318ms (1322 modules)
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ ✓ Compiled in 0ms (676 modules)
+ ✓ Compiled in 0ms (676 modules)
+ ✓ Compiled in 0ms (676 modules)
+📊 AuthContext: Estado atual - User: false Loading: true
+ GET /admin/gm 200 in 423ms
+ GET /login 200 in 484ms
+ GET /admin/go 200 in 477ms
+ GET /favicon.ico 200 in 208ms
+ GET /favicon.ico 200 in 206ms
+ ⚠ Fast Refresh had to perform a full reload due to a runtime error.
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ ✓ Compiled in 307ms (1322 modules)
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ ✓ Compiled in 0ms (676 modules)
+ ✓ Compiled in 0ms (676 modules)
+ ✓ Compiled in 0ms (676 modules)
+📊 AuthContext: Estado atual - User: false Loading: true
+ GET /admin/gm 200 in 384ms
+ GET /login 200 in 445ms
+ GET /admin/go 200 in 441ms
+ GET /favicon.ico 200 in 208ms
+ ⚠ Fast Refresh had to perform a full reload due to a runtime error.
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ ✓ Compiled in 359ms (1324 modules)
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ ✓ Compiled in 0ms (677 modules)
+ ✓ Compiled in 1ms (677 modules)
+ ✓ Compiled in 0ms (677 modules)
+📊 AuthContext: Estado atual - User: false Loading: true
+ GET /admin/gm 200 in 413ms
+ GET /login 200 in 470ms
+ GET /admin/go 200 in 465ms
+ GET /favicon.ico 200 in 208ms
+ ⚠ Fast Refresh had to perform a full reload due to a runtime error.
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ ✓ Compiled in 275ms (1324 modules)
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ ✓ Compiled in 1ms (677 modules)
+ ✓ Compiled in 0ms (677 modules)
+ ✓ Compiled in 0ms (677 modules)
+📊 AuthContext: Estado atual - User: false Loading: true
+ GET /admin/gm 200 in 378ms
+ GET /login 200 in 470ms
+ GET /admin/go 200 in 463ms
+ GET /favicon.ico 200 in 210ms
+ GET /favicon.ico 200 in 206ms
+ ✓ Compiled in 331ms (1324 modules)
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ GET /login 200 in 46ms
+ GET /admin/go 200 in 84ms
+ GET /admin/gm 200 in 85ms
+ GET /favicon.ico 200 in 211ms
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ ✓ Compiled /_not-found in 481ms (1312 modules)
+📊 AuthContext: Estado atual - User: false Loading: true
+ GET /admin/gm 404 in 656ms
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ ⨯ [Error: ENOENT: no such file or directory, open '/Users/andregabriel/Library/CloudStorage/Dropbox/agapefy_code/agapefy/.next/server/app/login/page.js'] {
+  errno: -2,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: '/Users/andregabriel/Library/CloudStorage/Dropbox/agapefy_code/agapefy/.next/server/app/login/page.js',
+  page: '/login'
+}
+ ⨯ [Error: ENOENT: no such file or directory, open '/Users/andregabriel/Library/CloudStorage/Dropbox/agapefy_code/agapefy/.next/server/app/admin/gm/page.js'] {
+  errno: -2,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: '/Users/andregabriel/Library/CloudStorage/Dropbox/agapefy_code/agapefy/.next/server/app/admin/gm/page.js',
+  page: '/admin/gm'
+}
+ ⨯ [Error: ENOENT: no such file or directory, open '/Users/andregabriel/Library/CloudStorage/Dropbox/agapefy_code/agapefy/.next/server/app/admin/go/page.js'] {
+  errno: -2,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: '/Users/andregabriel/Library/CloudStorage/Dropbox/agapefy_code/agapefy/.next/server/app/admin/go/page.js',
+  page: '/admin/go'
+}
+ ○ Compiling /_error ...
+ ✓ Compiled /_error in 643ms (1627 modules)
+ GET /login 500 in 1260ms
+ GET /admin/gm 500 in 1088ms
+ GET /admin/go 500 in 1092ms
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ GET /login 200 in 54ms
+ GET /admin/go 200 in 73ms
+ GET /admin/gm 200 in 74ms
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ GET /login 200 in 38ms
+📊 AuthContext: Estado atual - User: false Loading: true
+ GET /admin/go 200 in 100ms
+📊 AuthContext: Estado atual - User: false Loading: true
+ GET /login 200 in 133ms
+ GET /admin/gm 200 in 135ms
+ GET /_next/static/css/app/layout.css?v=1761694785297 404 in 39ms
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+📊 AuthContext: Estado atual - User: false Loading: true
+📊 AuthContext: Estado atual - User: false Loading: true
+📊 AuthContext: Estado atual - User: false Loading: true
+ GET /_next/static/chunks/main-app.js?v=1761694785297 404 in 90ms
+ GET /_next/static/chunks/app/login/page.js 404 in 90ms
+ GET /_next/static/chunks/app-pages-internals.js 404 in 90ms
+📊 AuthContext: Estado atual - User: false Loading: true
+📊 AuthContext: Estado atual - User: false Loading: true
+📊 AuthContext: Estado atual - User: false Loading: true
+ GET /_next/static/css/app/layout.css?v=1761694785521 404 in 30ms
+📊 AuthContext: Estado atual - User: false Loading: true
+ GET /admin/gm 200 in 211ms
+ GET /admin/go 200 in 215ms
+📊 AuthContext: Estado atual - User: false Loading: true
+📊 AuthContext: Estado atual - User: false Loading: true
+ GET /_next/static/css/app/layout.css?v=1761694785555 404 in 43ms
+📊 AuthContext: Estado atual - User: false Loading: true
+ GET /_next/static/chunks/main-app.js?v=1761694785521 404 in 117ms
+📊 AuthContext: Estado atual - User: false Loading: true
+ GET /_next/static/chunks/app-pages-internals.js 404 in 87ms
+ GET /_next/static/chunks/main-app.js?v=1761694785555 404 in 88ms
+📊 AuthContext: Estado atual - User: false Loading: true
+ GET /_next/static/chunks/app-pages-internals.js 404 in 47ms
+📊 AuthContext: Estado atual - User: false Loading: true
+📊 AuthContext: Estado atual - User: false Loading: true
+📊 AuthContext: Estado atual - User: false Loading: true
+ GET /_next/static/chunks/app/admin/layout.js 404 in 83ms
+ GET /_next/static/chunks/app/admin/gm/page.js 404 in 65ms
+ GET /_next/static/chunks/app/admin/layout.js 404 in 43ms
+ GET /_next/static/chunks/app/admin/go/page.js 404 in 40ms
+ ✓ Compiled / in 350ms (791 modules)
+📊 AuthContext: Estado atual - User: false Loading: true
+ GET /?vscodeBrowserReqId=1761694814967 200 in 459ms
+📊 AuthContext: Estado atual - User: false Loading: true
+ GET /_next/static/css/app/layout.css?v=1761694815357 404 in 22ms
+📊 AuthContext: Estado atual - User: false Loading: true
+📊 AuthContext: Estado atual - User: false Loading: true
+📊 AuthContext: Estado atual - User: false Loading: true
+ GET /_next/static/chunks/main-app.js?v=1761694815357 404 in 70ms
+ GET /_next/static/chunks/app-pages-internals.js 404 in 67ms
+ GET /_next/static/chunks/app/page.js 404 in 67ms
+📊 AuthContext: Estado atual - User: false Loading: true
+ GET / 200 in 26ms
+📊 AuthContext: Estado atual - User: false Loading: true
+ GET /_next/static/css/app/layout.css?v=1761694822698 404 in 24ms
+📊 AuthContext: Estado atual - User: false Loading: true
+📊 AuthContext: Estado atual - User: false Loading: true
+📊 AuthContext: Estado atual - User: false Loading: true
+ GET /_next/static/chunks/app/page.js 404 in 61ms
+ GET /_next/static/chunks/app-pages-internals.js 404 in 61ms
+ GET /_next/static/chunks/main-app.js?v=1761694822698 404 in 61ms
+ ⨯ ./src/lib/services/batchPrayerGeneration.ts
+Error: Failed to read source code from /Users/andregabriel/Library/CloudStorage/Dropbox/agapefy_code/agapefy/src/lib/services/batchPrayerGeneration.ts
+
+Caused by:
+    No such file or directory (os error 2)
+
+Import trace for requested module:
+./src/lib/services/batchPrayerGeneration.ts
+./src/app/admin/gm/page.tsx
+ ✓ Compiled in 1036ms (1592 modules)
+<w> [webpack.cache.PackFileCacheStrategy] Caching failed for pack: Error: ENOENT: no such file or directory, rename '/Users/andregabriel/Library/CloudStorage/Dropbox/agapefy_code/agapefy/.next/cache/webpack/server-development/15.pack.gz_' -> '/Users/andregabriel/Library/CloudStorage/Dropbox/agapefy_code/agapefy/.next/cache/webpack/server-development/15.pack.gz'
+<w> [webpack.cache.PackFileCacheStrategy] Caching failed for pack: Error: ENOENT: no such file or directory, rename '/Users/andregabriel/Library/CloudStorage/Dropbox/agapefy_code/agapefy/.next/cache/webpack/client-development/8.pack.gz_' -> '/Users/andregabriel/Library/CloudStorage/Dropbox/agapefy_code/agapefy/.next/cache/webpack/client-development/8.pack.gz'
+ ✓ Compiled in 510ms (1592 modules)
+ ✓ Compiled in 384ms (1592 modules)
+ ✓ Compiled in 269ms (1592 modules)
+ ✓ Compiled in 395ms (1592 modules)
+<w> [webpack.cache.PackFileCacheStrategy] Caching failed for pack: Error: ENOENT: no such file or directory, rename '/Users/andregabriel/Library/CloudStorage/Dropbox/agapefy_code/agapefy/.next/cache/webpack/client-development/0.pack.gz_' -> '/Users/andregabriel/Library/CloudStorage/Dropbox/agapefy_code/agapefy/.next/cache/webpack/client-development/0.pack.gz'
+ ✓ Compiled in 510ms (1592 modules)
+<w> [webpack.cache.PackFileCacheStrategy] Caching failed for pack: Error: incorrect header check
+ ✓ Compiled in 610ms (1592 modules)

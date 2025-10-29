@@ -191,12 +191,21 @@ const AIGenerator = forwardRef<AIGeneratorHandle, AIGeneratorProps>(function AIG
     }
   };
 
-  const handleGenerateAllFields = async () => {
-    if (isGeneratingAll) return;
+  const handleGenerateAllFields = async (): Promise<boolean> => {
+    if (isGeneratingAll) return false;
     setIsGeneratingAll(true);
     try {
       // 1) texto
       const textContent = await generateForField('text');
+      
+      // Debug log
+      if (typeof window !== 'undefined' && window.localStorage.getItem('gm_debug') === '1') {
+        console.log('[handleGenerateAllFields] text gerado:', { 
+          length: (textContent || '').length,
+          preview: (textContent || '').substring(0, 100)
+        });
+      }
+      
       // 2) retorno da API já aguardado acima
       // 3) garantir flush de estado para {texto}
       const texto = (textContent?.trim() || prayerData?.prayer_text || '');
@@ -237,22 +246,45 @@ const AIGenerator = forwardRef<AIGeneratorHandle, AIGeneratorProps>(function AIG
         // já tratamos toast internamente em generateAudio
       }
 
-    // 7) Aguarda os demais campos de texto (título, subtítulo, descrição)
-    await Promise.all([titleP, subtitleP, descP]);
-    
-    // 8) CRÍTICO: Aguardar flush final do estado para garantir que todos os setPrayerData foram executados
-    // Isso é essencial para /admin/gm conseguir ler os valores via getPrayerData()
-    await new Promise((r) => setTimeout(r, 100));
-    
-    toast.success('Campos gerados (texto + campos + áudio). Imagem sendo gerada em paralelo.');
-  } catch (err) {
-    toast.error('Falha ao gerar todos os campos');
-  } finally {
-    setIsGeneratingAll(false);
-    // Garantir que o botão "Gerar imagem" fique clicável após o fluxo concluir
-    setIsGeneratingImage(false);
-  }
-};
+      // 7) Aguarda os demais campos de texto (título, subtítulo, descrição)
+      await Promise.all([titleP, subtitleP, descP]);
+
+      // 8) CRÍTICO: Aguardar flush final do estado para garantir que todos os setPrayerData foram executados
+      // Isso é essencial para /admin/gm conseguir ler os valores via getPrayerData()
+      await new Promise((r) => setTimeout(r, 100));
+
+      // 9) Validar essenciais localmente para retorno consistente ao /admin/gm
+      const prepOk = (prepText || prayerData?.preparation_text || '').trim().length > 0;
+      const textOk = (texto || '').trim().length > 0;
+      const finalOk = (finalText || prayerData?.final_message || '').trim().length > 0;
+      const ok = prepOk && textOk && finalOk;
+      
+      // Debug log de validação
+      if (typeof window !== 'undefined' && window.localStorage.getItem('gm_debug') === '1') {
+        console.log('[handleGenerateAllFields] validação final:', { 
+          prepOk, 
+          textOk, 
+          finalOk, 
+          ok,
+          prepLength: (prepText || prayerData?.preparation_text || '').length,
+          textLength: texto.length,
+          finalLength: (finalText || prayerData?.final_message || '').length
+        });
+      }
+      
+      if (ok) {
+        toast.success('Campos gerados (texto + campos + áudio). Imagem sendo gerada em paralelo.');
+      }
+      return ok;
+    } catch (err) {
+      toast.error('Falha ao gerar todos os campos');
+      return false;
+    } finally {
+      setIsGeneratingAll(false);
+      // Garantir que o botão "Gerar imagem" fique clicável após o fluxo concluir
+      setIsGeneratingImage(false);
+    }
+  };
 
   // Novo: Botão único que gera todos os campos e salva no banco
   const handleGenerateAndSave = async () => {
@@ -265,7 +297,11 @@ const AIGenerator = forwardRef<AIGeneratorHandle, AIGeneratorProps>(function AIG
     setIsGeneratingAndSaving(true);
     try {
       // 1) Gera todos os campos incluindo imagem e áudio
-      await handleGenerateAllFields();
+      const ok = await handleGenerateAllFields();
+      if (!ok) {
+        toast.error('Geração incompleta: texto/preparação/final ausentes');
+        return;
+      }
 
       // 2) Aguarda de fato o término de geração de imagem/áudio
       // (handleGenerateAllFields já aguarda todas as promises internas,
@@ -708,10 +744,22 @@ const AIGenerator = forwardRef<AIGeneratorHandle, AIGeneratorProps>(function AIG
       };
       const mergedCtx = { ...ctx, ...(overrideCtx || {}) };
 
-      // Garantia: estes campos só rodam se houver texto disponível
-      if ((field === 'subtitle' || field === 'description' || field === 'preparation' || field === 'final_message' || field === 'title' || field === 'image_prompt') && !(mergedCtx.texto || '').trim()) {
+      // Validação relaxada: permitir se override trouxer 'texto' OU se estamos no fluxo automático
+      const needsText = field === 'subtitle' || field === 'description' || field === 'preparation' || field === 'final_message' || field === 'title' || field === 'image_prompt';
+      const hasTextInOverride = overrideCtx?.texto && (overrideCtx.texto as string).trim().length > 0;
+      if (needsText && !isGeneratingAll && !hasTextInOverride && !(mergedCtx.texto || '').trim()) {
         toast.error('Gere primeiro o Texto da Oração para usar neste campo.');
         return;
+      }
+      
+      // Debug logs controlados por localStorage
+      if (typeof window !== 'undefined' && window.localStorage.getItem('gm_debug') === '1') {
+        console.log(`[generateForField] ${field}`, { 
+          hasTextInOverride, 
+          mergedCtxTextoLength: (mergedCtx.texto || '').length,
+          overrideCtx,
+          isGeneratingAll
+        });
       }
       const { ok, content, error } = await gmanualGenerateField(field, mergedCtx);
       if (!ok) {
@@ -1590,6 +1638,17 @@ const AIGenerator = forwardRef<AIGeneratorHandle, AIGeneratorProps>(function AIG
     setPrompt: (value: string) => { setPrompt(value || ''); },
     setBiblicalBase: (value: string) => { setAutoDetectBiblicalBase(false); setBiblicalBase(value || ''); },
     handleGenerateAllFields,
+    resetForBatchItem: () => {
+      // garantir que não haverá detecção automática competindo com o valor informado pelo /admin/gm
+      setAutoDetectBiblicalBase(false);
+      // limpar estados dependentes do item anterior
+      setPrayerData({ ...defaultPrayerData });
+      setAudioUrl('');
+      setImageUrl('');
+      setIsGeneratingAudio(false);
+      setIsGeneratingImage(false);
+      setIsGeneratingAll(false);
+    },
     setTitle: (value: string) => { setPrayerData(prev => ({ ...(prev || defaultPrayerData), title: value || '' })); },
     waitForAudioUrl,
     waitForImageUrl,

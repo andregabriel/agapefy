@@ -77,6 +77,12 @@ export async function POST(request: NextRequest) {
     }
 
     const rendered = applyPlaceholders(templateStr, context || {});
+    const url = new URL(request.url);
+    const debug = url.searchParams.get('debug') === '1';
+    const missingPlaceholders: string[] = [];
+    if ((field as FieldKey) === 'text') {
+      if (!/\{base_biblica\}/.test(templateStr)) missingPlaceholders.push('base_biblica');
+    }
 
     const candidateModels = ['gpt-5', 'gpt-4.1', 'gpt-4o', 'gpt-4o-mini'];
     const temperature = 1;
@@ -134,7 +140,12 @@ export async function POST(request: NextRequest) {
     }
 
     const content: string = finalData?.choices?.[0]?.message?.content || '';
-    return NextResponse.json({ content, model_used: finalModelUsed });
+    const body = debug ? { content, model_used: finalModelUsed, rendered_prompt: rendered } : { content, model_used: finalModelUsed };
+    const headers = new Headers();
+    if (missingPlaceholders.length > 0) {
+      headers.set('X-Missing-Placeholders', missingPlaceholders.join(','));
+    }
+    return new NextResponse(JSON.stringify(body), { status: 200, headers: headers });
   } catch (e) {
     const msg = e instanceof Error ? e.message : 'Erro desconhecido';
     return NextResponse.json({ error: msg }, { status: 500 });

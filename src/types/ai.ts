@@ -41,7 +41,10 @@ export interface AIGeneratorHandle {
   setCategoryById: (id: string) => void;
   setPrompt: (value: string) => void;
   setBiblicalBase: (value: string) => void;
-  handleGenerateAllFields: () => Promise<void>;
+  // Gera todos os campos e retorna true se os essenciais (preparação, texto, final) estiverem preenchidos
+  handleGenerateAllFields: () => Promise<boolean>;
+  // Limpa estado entre itens de lote, preservando preferências como categoria/voz
+  resetForBatchItem: () => void;
   setTitle: (value: string) => void;
   waitForAudioUrl: (timeoutMs?: number) => Promise<string | null>;
   waitForImageUrl: (timeoutMs?: number) => Promise<string | null>;
