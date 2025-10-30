@@ -19,7 +19,7 @@ interface AdminForm {
   name: string;
   description?: string;
   form_type?: string;
-  schema: Array<{ label: string; category_id: string }>;
+  schema: Array<{ label: string; category_id: string; playlist_id?: string }>;
   created_at: string;
   onboard_step?: number | null;
 }
@@ -38,7 +38,8 @@ export default function FormDetailPage() {
   const [form, setForm] = useState<AdminForm | null>(null);
   const [saving, setSaving] = useState(false);
   const { categories } = useCategories();
-  const [newOption, setNewOption] = useState<{ label: string; category_id: string }>({ label: '', category_id: '' });
+  const [playlists, setPlaylists] = useState<Array<{ id: string; title: string; category_id: string | null }>>([]);
+  const [newOption, setNewOption] = useState<{ label: string; category_id: string; playlist_id?: string }>({ label: '', category_id: '' });
   const [previewSelected, setPreviewSelected] = useState<number | null>(null);
   const [allSteps, setAllSteps] = useState<OnboardingStepSummary[]>([]);
   const [loadingSteps, setLoadingSteps] = useState<boolean>(false);
@@ -123,6 +124,26 @@ export default function FormDetailPage() {
     return () => { mounted = false; };
   }, [formId]);
 
+  // Carregar playlists públicas para seleção
+  useEffect(() => {
+    let mounted = true;
+    async function loadPlaylists() {
+      try {
+        const { data, error } = await supabase
+          .from('playlists')
+          .select('id,title,category_id')
+          .eq('is_public', true)
+          .order('created_at', { ascending: false });
+        if (error) throw error;
+        if (mounted) setPlaylists((data as any[])?.map(p => ({ id: p.id, title: p.title, category_id: p.category_id })) || []);
+      } catch (e) {
+        console.error('Erro ao carregar playlists', e);
+      }
+    }
+    void loadPlaylists();
+    return () => { mounted = false; };
+  }, []);
+
   // Carregar todas as etapas deste formulário (por parent_form_id)
   useEffect(() => {
     let mounted = true;
@@ -190,7 +211,7 @@ export default function FormDetailPage() {
   function addOption() {
     if (!form) return;
     if (!newOption.label.trim() || !newOption.category_id) {
-      toast.error('Informe o texto e a categoria');
+      toast.error('Informe o texto e a playlist');
       return;
     }
     setForm({ ...form, schema: [...(form.schema || []), { ...newOption }] });
@@ -239,7 +260,7 @@ export default function FormDetailPage() {
             </div>
           </div>
 
-          {/* Opções: Texto do botão + Categoria */}
+          {/* Opções: Texto do botão + Playlist (gravando a categoria da playlist para compatibilidade) */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <p className="font-semibold mb-2">Texto da caixa de seleção</p>
@@ -250,25 +271,25 @@ export default function FormDetailPage() {
               />
             </div>
             <div>
-              <p className="font-semibold mb-2">Selecionar Categoria</p>
+              <p className="font-semibold mb-2">Selecionar Playlist</p>
               <Input
-                list="categories-list"
-                placeholder="Busque pelo nome da categoria"
-                value={(() => categories.find(c => c.id === newOption.category_id)?.name || '')()}
+                list="playlists-list"
+                placeholder="Busque pelo nome da playlist"
+                value={(() => playlists.find(p => p.id === (newOption as any).playlist_id)?.title || '')()}
                 onChange={e => {
-                  const match = categories.find(c => (c.name || '').toLowerCase() === e.target.value.toLowerCase());
-                  setNewOption(prev => ({ ...prev, category_id: match?.id || '' }));
+                  const match = playlists.find(p => (p.title || '').toLowerCase() === e.target.value.toLowerCase());
+                  setNewOption(prev => ({ ...prev, category_id: match?.category_id || '', playlist_id: match?.id || '' }));
                 }}
               />
-              <datalist id="categories-list">
-                {categories.map(c => (
-                  <option key={c.id} value={c.name || ''} />
+              <datalist id="playlists-list">
+                {playlists.map(p => (
+                  <option key={p.id} value={p.title || ''} />
                 ))}
               </datalist>
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <Button type="button" variant="ghost" onClick={addOption}>Adicionar texto + categoria</Button>
+            <Button type="button" variant="ghost" onClick={addOption}>Adicionar texto + playlist</Button>
           </div>
 
           {/* Lista de opções adicionadas */}
@@ -278,7 +299,12 @@ export default function FormDetailPage() {
                 <div key={idx} className="flex items-center justify-between rounded border border-gray-800 p-3">
                   <div className="text-sm text-gray-300">
                     <span className="font-medium text-white mr-2">{opt.label}</span>
-                    <span className="text-gray-400">→ {categories.find(c => c.id === opt.category_id)?.name || 'Categoria'}</span>
+                    <span className="text-gray-400">→ {(() => {
+                      const pl = playlists.find(p => p.id === (opt as any).playlist_id);
+                      if (pl) return pl.title;
+                      const cat = categories.find(c => c.id === opt.category_id);
+                      return cat?.name || 'Playlist';
+                    })()}</span>
                   </div>
                   <Button variant="ghost" size="sm" onClick={() => removeOption(idx)}>Remover</Button>
                 </div>
