@@ -141,8 +141,8 @@ export default function OnboardingClient() {
             if (mounted) setCategory((cat as any) || null);
           }
         } else {
-          // Passos dinâmicos adicionais
-          const { data, error } = await supabase
+          // Passos dinâmicos adicionais (>= 4)
+          let { data, error } = await supabase
             .from('admin_forms')
             .select('*')
             .eq('form_type', 'onboarding')
@@ -150,6 +150,18 @@ export default function OnboardingClient() {
             .eq('onboard_step', desiredStep)
             .eq('parent_form_id', activeFormId || '-')
             .maybeSingle();
+          // Fallback se a coluna parent_form_id não existir: buscar apenas por onboard_step
+          if (error && (error.code === '42703' || /parent_form_id/i.test(String(error.message || '')))) {
+            const fb = await supabase
+              .from('admin_forms')
+              .select('*')
+              .eq('form_type', 'onboarding')
+              .eq('is_active', true)
+              .eq('onboard_step', desiredStep)
+              .maybeSingle();
+            data = fb.data as any;
+            error = fb.error as any;
+          }
           if (error) throw error;
           if (mounted) setForm((data as AdminForm) || null);
         }
@@ -179,8 +191,32 @@ export default function OnboardingClient() {
       console.error(e);
       toast.error('Não foi possível enviar. Seguimos para o próximo passo.');
     } finally {
-      // Ir direto para o preview (passo 2) com a categoria selecionada e carrying formId
-      router.replace(`/onboarding?step=2&categoryId=${encodeURIComponent(selected)}&formId=${encodeURIComponent(form.id)}`);
+      // Procurar próximo formulário encadeado (filho) e ir direto para ele se existir; caso contrário, ir para o preview (passo 2)
+      try {
+        let nextStep: number | null = null;
+        let resp = await supabase
+          .from('admin_forms')
+          .select('onboard_step')
+          .eq('form_type', 'onboarding')
+          .eq('is_active', true)
+          .eq('parent_form_id', form.id)
+          .order('onboard_step', { ascending: true })
+          .limit(1)
+          .maybeSingle();
+        if (resp.error && (resp.error.code === '42703' || /parent_form_id/i.test(String(resp.error.message || '')))) {
+          // Ambiente sem parent_form_id – não há encadeamento; mantém fluxo padrão
+          resp = null as any;
+        }
+        if (resp && resp.data && typeof (resp.data as any).onboard_step === 'number') {
+          nextStep = (resp.data as any).onboard_step as number;
+        }
+        const stepToGo = Number.isFinite(nextStep as any) ? (nextStep as number) : 2;
+        const categoryParam = `categoryId=${encodeURIComponent(selected)}`;
+        const formParam = `formId=${encodeURIComponent(form.id)}`;
+        router.replace(`/onboarding?step=${stepToGo}&${categoryParam}&${formParam}`);
+      } catch {
+        router.replace(`/onboarding?step=2&categoryId=${encodeURIComponent(selected)}&formId=${encodeURIComponent(form.id)}`);
+      }
       setSubmitting(false);
     }
   }
@@ -282,7 +318,51 @@ export default function OnboardingClient() {
           <CardContent className="space-y-6">
             <WhatsAppSetup variant="embedded" redirectIfNotLoggedIn={false} />
             <div className="flex justify-end">
-              <Button onClick={() => router.replace('/')}>Concluir</Button>
+              <Button
+                onClick={async () => {
+                  try {
+                    // Após configurar o WhatsApp, tentar seguir para a próxima etapa filha (ex.: Passo 4)
+                    const parentId = activeFormId || '';
+                    if (parentId) {
+                      let { data, error } = await supabase
+                        .from('admin_forms')
+                        .select('onboard_step')
+                        .eq('form_type', 'onboarding')
+                        .eq('is_active', true)
+                        .eq('parent_form_id', parentId)
+                        .gt('onboard_step', 3)
+                        .order('onboard_step', { ascending: true })
+                        .limit(1)
+                        .maybeSingle();
+                      // Fallback se a coluna parent_form_id não existir
+                      if (error && (error.code === '42703' || /parent_form_id/i.test(String(error.message || '')))) {
+                        const fb = await supabase
+                          .from('admin_forms')
+                          .select('onboard_step')
+                          .eq('form_type', 'onboarding')
+                          .eq('is_active', true)
+                          .gt('onboard_step', 3)
+                          .order('onboard_step', { ascending: true })
+                          .limit(1)
+                          .maybeSingle();
+                        data = fb.data as any;
+                        error = fb.error as any;
+                      }
+                      if (!error && data && typeof (data as any).onboard_step === 'number') {
+                        const next = (data as any).onboard_step as number;
+                        const cat = currentCategoryId ? `&categoryId=${encodeURIComponent(currentCategoryId)}` : '';
+                        router.replace(`/onboarding?step=${next}&formId=${encodeURIComponent(parentId)}${cat}`);
+                        return;
+                      }
+                    }
+                  } catch {
+                    // Ignorar e cair no redirecionamento padrão
+                  }
+                  router.replace('/');
+                }}
+              >
+                Concluir
+              </Button>
             </div>
           </CardContent>
         </Card>

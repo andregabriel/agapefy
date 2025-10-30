@@ -69,6 +69,11 @@ const nextConfig: NextConfig = {
   async redirects() {
     return [
       {
+        source: '/onboarding:id(\\d+)',
+        destination: '/onboarding?step=:id',
+        permanent: true,
+      },
+      {
         source: '/admin/gmanual',
         destination: '/admin/go',
         permanent: true,

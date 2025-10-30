@@ -176,7 +176,12 @@ export default function FormDetailPage() {
       toast.success('Formulário atualizado');
     } catch (e) {
       console.error(e);
-      toast.error('Não foi possível salvar');
+      const code = (e as any)?.code || (e as any)?.cause?.code;
+      if (String(code) === '23505') {
+        toast.error('Já existe outro formulário com o mesmo "Número do passo". Escolha outro número.');
+      } else {
+        toast.error('Não foi possível salvar');
+      }
     } finally {
       setSaving(false);
     }
