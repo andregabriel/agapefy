@@ -1,135 +1,32 @@
- ⚠ Port 3000 is in use, trying 3001 instead.
    ▲ Next.js 15.2.4
-   - Local:        http://localhost:3001
-   - Network:      http://172.30.0.2:3001
+   - Local:        http://localhost:3005
+   - Network:      http://10.111.122.210:3005
+   - Environments: .env.local
 
  ✓ Starting...
  ⚠ Invalid next.config.ts options detected: 
  ⚠     Unrecognized key(s) in object: 'swcMinify'
  ⚠ See more info here: https://nextjs.org/docs/messages/invalid-next-config
- ✓ Ready in 1084ms
- ○ Compiling /api/cron ...
- ✓ Compiled /api/cron in 1128ms (361 modules)
- ✓ Compiled /api/daily-quote in 115ms (365 modules)
- ⨯ Error: Missing Supabase Service Role configuration.
-    at getAdminSupabase (src/lib/supabase-admin.ts:13:12)
-    at eval (src/lib/supabase-admin.ts:22:29)
-    at <unknown> (rsc)/./src/lib/supabase-admin.ts (/workspace/.next/server/app/api/daily-quote/route.js:65:1)
-    at __webpack_require__ (.next/server/webpack-runtime.js:33:42)
-    at eval (webpack-internal:///(rsc)/./src/app/api/daily-quote/route.ts:8:77)
-    at <unknown> (rsc)/./src/app/api/daily-quote/route.ts (/workspace/.next/server/app/api/daily-quote/route.js:43:1)
-    at __webpack_require__ (.next/server/webpack-runtime.js:33:42)
-    at __webpack_require__ (.next/server/webpack-runtime.js:33:42)
-    at __webpack_exec__ (.next/server/app/api/daily-quote/route.js:162:39)
-    at <unknown> (.next/server/app/api/daily-quote/route.js:163:134)
-    at __webpack_require__.X (.next/server/webpack-runtime.js:121:21)
-    at <unknown> (.next/server/app/api/daily-quote/route.js:163:47)
-    at Object.<anonymous> (.next/server/app/api/daily-quote/route.js:166:3)
-  11 |   if (!adminClient) {
-  12 |     if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
-> 13 |       throw new Error('Missing Supabase Service Role configuration.');
-     |            ^
-  14 |     }
-  15 |     adminClient = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
-  16 |       auth: { autoRefreshToken: false, persistSession: false } {
-  page: '/api/daily-quote'
-}
- ○ Compiling /_error ...
- ✓ Compiled /_error in 755ms (695 modules)
- POST /api/daily-quote 500 in 1236ms
- GET /api/cron 500 in 3060ms
- ⨯ Error: Missing Supabase Service Role configuration.
-    at getAdminSupabase (src/lib/supabase-admin.ts:13:12)
-    at eval (src/lib/supabase-admin.ts:22:29)
-    at <unknown> (rsc)/./src/lib/supabase-admin.ts (/workspace/.next/server/app/api/daily-quote/route.js:65:1)
-    at __webpack_require__ (.next/server/webpack-runtime.js:33:42)
-    at eval (webpack-internal:///(rsc)/./src/app/api/daily-quote/route.ts:8:77)
-    at <unknown> (rsc)/./src/app/api/daily-quote/route.ts (/workspace/.next/server/app/api/daily-quote/route.js:43:1)
-    at __webpack_require__ (.next/server/webpack-runtime.js:33:42)
-    at __webpack_require__ (.next/server/webpack-runtime.js:33:42)
-    at __webpack_exec__ (.next/server/app/api/daily-quote/route.js:162:39)
-    at <unknown> (.next/server/app/api/daily-quote/route.js:163:134)
-    at __webpack_require__.X (.next/server/webpack-runtime.js:121:21)
-    at <unknown> (.next/server/app/api/daily-quote/route.js:163:47)
-    at Object.<anonymous> (.next/server/app/api/daily-quote/route.js:166:3)
-  11 |   if (!adminClient) {
-  12 |     if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
-> 13 |       throw new Error('Missing Supabase Service Role configuration.');
-     |            ^
-  14 |     }
-  15 |     adminClient = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
-  16 |       auth: { autoRefreshToken: false, persistSession: false } {
-  page: '/api/daily-quote'
-}
- POST /api/daily-quote?force=true 500 in 282ms
- ⨯ Error: Missing Supabase Service Role configuration.
-    at getAdminSupabase (src/lib/supabase-admin.ts:13:12)
-    at eval (src/lib/supabase-admin.ts:22:29)
-    at <unknown> (rsc)/./src/lib/supabase-admin.ts (/workspace/.next/server/app/api/daily-quote/route.js:65:1)
-    at __webpack_require__ (.next/server/webpack-runtime.js:33:42)
-    at eval (webpack-internal:///(rsc)/./src/app/api/daily-quote/route.ts:8:77)
-    at <unknown> (rsc)/./src/app/api/daily-quote/route.ts (/workspace/.next/server/app/api/daily-quote/route.js:43:1)
-    at __webpack_require__ (.next/server/webpack-runtime.js:33:42)
-    at __webpack_require__ (.next/server/webpack-runtime.js:33:42)
-    at __webpack_exec__ (.next/server/app/api/daily-quote/route.js:162:39)
-    at <unknown> (.next/server/app/api/daily-quote/route.js:163:134)
-    at __webpack_require__.X (.next/server/webpack-runtime.js:121:21)
-    at <unknown> (.next/server/app/api/daily-quote/route.js:163:47)
-    at Object.<anonymous> (.next/server/app/api/daily-quote/route.js:166:3)
-  11 |   if (!adminClient) {
-  12 |     if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
-> 13 |       throw new Error('Missing Supabase Service Role configuration.');
-     |            ^
-  14 |     }
-  15 |     adminClient = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
-  16 |       auth: { autoRefreshToken: false, persistSession: false } {
-  page: '/api/daily-quote'
-}
- POST /api/daily-quote?force=true 500 in 234ms
- ✓ Compiled in 100ms (54 modules)
- ✓ Compiled /api/daily-quote in 85ms (133 modules)
- POST /api/daily-quote?force=true 500 in 2329ms
- ✓ Compiled in 68ms (133 modules)
- POST /api/daily-quote?force=true 500 in 1824ms
- ✓ Compiled in 92ms (133 modules)
- POST /api/daily-quote?force=true 500 in 1460ms
- ⨯ ./src/lib/supabase-admin.ts
-Error:   [31mx[0m Expected ';', '}' or <eof>
-   ,-[[36;1;4m/workspace/src/lib/supabase-admin.ts[0m:1:1]
- [2m1[0m | THIS SHOULD BE A LINTER ERRORimport { createClient, type SupabaseClient } from '@supabase/supabase-js';
-   : [35;1m^^|^[0m[33;1m ^^^^^^[0m
-   :   [35;1m`-- [35;1mThis is the expression part of an expression statement[0m[0m
- [2m2[0m | 
- [2m3[0m | const FALLBACK_SUPABASE_URL = "https://vvgqqlrujmyxzzygsizc.supabase.co";
-   `----
-
-Caused by:
-    Syntax Error
-
-Import trace for requested module:
-./src/lib/supabase-admin.ts
-./src/app/api/daily-quote/route.ts
- ✓ Compiled in 50ms (133 modules)
- ✓ Compiled in 30ms (133 modules)
- ⨯ ./src/app/api/daily-quote/route.ts
-Error:   [31mx[0m Expected ';', '}' or <eof>
-   ,-[[36;1;4m/workspace/src/app/api/daily-quote/route.ts[0m:1:1]
- [2m1[0m | THIS SHOULD BE A LINTER ERRORimport { NextRequest, NextResponse } from 'next/server';
-   : [35;1m^^|^[0m[33;1m ^^^^^^[0m
-   :   [35;1m`-- [35;1mThis is the expression part of an expression statement[0m[0m
- [2m2[0m | import { supabase } from '@/lib/supabase';
- [2m3[0m | import { getBookName } from '@/lib/search';
- [2m4[0m | import { getAdminSupabase } from '@/lib/supabase-admin';
-   `----
-
-Caused by:
-    Syntax Error
-
-Import trace for requested module:
-./src/app/api/daily-quote/route.ts
- ✓ Compiled in 243ms (133 modules)
- ✓ Compiled in 55ms (133 modules)
- ✓ Compiled /api/cron in 121ms (131 modules)
- ✓ Compiled /api/daily-quote in 30ms (135 modules)
- POST /api/daily-quote 500 in 1177ms
- GET /api/cron 500 in 1597ms
+ ✓ Ready in 1389ms
+ ○ Compiling / ...
+ ✓ Compiled / in 1877ms (1135 modules)
+📊 AuthContext: Estado atual - User: false Loading: true
+📊 AuthContext: Estado atual - User: false Loading: true
+ GET /?vscodeBrowserReqId=1761839287391 200 in 2183ms
+ ✓ Compiled in 432ms (546 modules)
+📊 AuthContext: Estado atual - User: false Loading: true
+ GET / 200 in 31ms
+ ✓ Compiled /favicon.ico in 282ms (605 modules)
+ GET /favicon.ico 200 in 537ms
+ ✓ Compiled /middleware in 134ms (101 modules)
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ ✓ Compiled /admin in 344ms (1200 modules)
+ GET /admin 200 in 405ms
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ ✓ Compiled /admin/gm in 399ms (1319 modules)
+📊 AuthContext: Estado atual - User: false Loading: true
+ GET /admin/gm 200 in 540ms
+ ✓ Compiled /api/detect-biblical-base in 135ms (1324 modules)
+ POST /api/detect-biblical-base 200 in 156ms
+📊 AuthContext: Estado atual - User: false Loading: true
+ GET /?vscodeBrowserReqId=1761839530450 200 in 114ms

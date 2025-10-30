@@ -12,6 +12,7 @@ type ReqBody = {
   playlists?: string[];
   voice_id?: string;
   job_id?: string;
+  created_by?: string;
 };
 
 type FieldKey = 'title' | 'subtitle' | 'description' | 'preparation' | 'text' | 'final_message' | 'image_prompt';
@@ -33,7 +34,7 @@ function applyPlaceholders(template: string, context: Record<string, string | un
   });
 }
 
-async function generateField(field: FieldKey, context: Record<string, string>): Promise<{ value: string; model?: string }> {
+async function generateField(field: FieldKey, context: Record<string, string>, candidateModels?: string[]): Promise<{ value: string; model?: string }> {
   const admin = getAdminSupabase();
   const settingKey = FIELD_TO_SETTING_KEY[field];
   const { data } = await admin.from('app_settings').select('key,value').eq('key', settingKey).limit(1);
@@ -43,11 +44,13 @@ async function generateField(field: FieldKey, context: Record<string, string>): 
 
   const rendered = applyPlaceholders(templateStr, context || {});
   const openaiApiKey = process.env.OPENAI_API_KEY || '';
-  const candidateModels = ['gpt-5', 'gpt-4.1', 'gpt-4o', 'gpt-4o-mini'];
+  const models = (candidateModels && candidateModels.length > 0)
+    ? candidateModels
+    : ['gpt-5', 'gpt-4.1', 'gpt-4o', 'gpt-4o-mini'];
   const temperature = 1;
   const maxTokens = field === 'text' ? 900 : 250;
 
-  for (const model of candidateModels) {
+  for (const model of models) {
     const resp = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: { 'Authorization': `Bearer ${openaiApiKey}`, 'Content-Type': 'application/json' },
@@ -126,9 +129,24 @@ export async function POST(req: NextRequest) {
 
     if (!categoryId) return NextResponse.json({ ok: false, error: 'category_id obrigatório' }, { status: 400 });
 
+    const admin = getAdminSupabase();
+    // Buscar defaults relevantes em uma única query
+    const { data: settingsRows } = await admin
+      .from('app_settings')
+      .select('key,value')
+      .in('key', ['gmanual_default_voice_id', 'gmanual_default_ai_engine', 'gmanual_image_generate_template']);
+    const settingsMap: Record<string, string> = {};
+    (settingsRows || []).forEach((r: any) => { if (r?.key) settingsMap[r.key] = String(r.value ?? ''); });
+
+    const preferredModel = (settingsMap['gmanual_default_ai_engine'] || '').trim();
+    const modelCandidatesBase = ['gpt-5', 'gpt-4.1', 'gpt-4o', 'gpt-4o-mini'];
+    const candidateModels = preferredModel ? [preferredModel, ...modelCandidatesBase.filter(m => m !== preferredModel)] : modelCandidatesBase;
+
+  const defaultVoiceId = ((settingsMap['gmanual_default_voice_id'] || '').trim()) || '7i7dgyCkKt4c16dLtwT3';
+
     const ctxBase = { tema_central: tema, base_biblica: base } as Record<string,string>;
     // 1) texto
-    const textRes = await generateField('text', ctxBase);
+    const textRes = await generateField('text', ctxBase, candidateModels);
     const text = textRes.value;
     const modelUsed = textRes.model || null;
     if (!text.trim()) return NextResponse.json({ ok: false, error: 'Falha ao gerar texto' }, { status: 500 });
@@ -136,20 +154,21 @@ export async function POST(req: NextRequest) {
     const ctx = { ...ctxBase, texto: text };
     // 2) paralelos
     const [prepRes, finalMsgRes, genTitleRes, subtitleRes, descriptionRes, imagePromptRes] = await Promise.all([
-      generateField('preparation', ctx),
-      generateField('final_message', ctx),
-      generateField('title', ctx),
-      generateField('subtitle', ctx),
-      generateField('description', ctx),
-      generateField('image_prompt', ctx)
+      generateField('preparation', ctx, candidateModels),
+      generateField('final_message', ctx, candidateModels),
+      generateField('title', ctx, candidateModels),
+      generateField('subtitle', ctx, candidateModels),
+      generateField('description', ctx, candidateModels),
+      generateField('image_prompt', ctx, candidateModels)
     ]);
     const prep = prepRes.value, finalMsg = finalMsgRes.value, genTitle = genTitleRes.value, subtitle = subtitleRes.value, description = descriptionRes.value, imagePrompt = imagePromptRes.value;
 
     // 3) áudio
     const audioText = [prep, text, finalMsg].filter(Boolean).join('\n\n');
-    const audioGen = await generateAudio(origin, audioText, voiceId || undefined);
+    const chosenVoiceId = (voiceId || defaultVoiceId || undefined) as string | undefined;
+    const audioGen = await generateAudio(origin, audioText, chosenVoiceId);
     const audioUrl = audioGen.url;
-    const usedVoiceId = (voiceId || audioGen.voiceIdUsed || null) as string | null;
+    const usedVoiceId = (voiceId || defaultVoiceId || audioGen.voiceIdUsed || null) as string | null;
     const usedVoiceName = usedVoiceId ? (ELEVENLABS_VOICES.find(v => v.id === usedVoiceId)?.name || null) : null;
     const durationSeconds = (typeof audioGen.durationSeconds === 'number' ? Math.round(audioGen.durationSeconds) : null);
     if (!audioUrl) return NextResponse.json({ ok: false, error: 'Falha ao gerar áudio' }, { status: 500 });
@@ -157,15 +176,61 @@ export async function POST(req: NextRequest) {
     // 4) imagem (tolerante a falha)
     let imageUrl: string | null = null;
     if (typeof imagePrompt === 'string' && imagePrompt.trim().length >= 20) {
-      imageUrl = await generateImage(origin, imagePrompt.trim());
+      // Aplicar template de geração (mesma lógica do /admin/go)
+      const templateRaw = (settingsMap['gmanual_image_generate_template'] || '{imagem_descricao}') as string;
+      const templateCtx: Record<string,string> = {
+        imagem_descricao: imagePrompt.trim(),
+        titulo: (genTitle || title || ''),
+        subtitulo: (subtitle || ''),
+        descricao: (description || ''),
+        preparacao: (prep || ''),
+        texto: text,
+        mensagem_final: (finalMsg || ''),
+        tema_central: tema,
+        base_biblica: base,
+      };
+      const compiledPrompt = templateRaw.replace(/\{([a-zA-Z_]+)\}/g, (_, k) => templateCtx[k] || '');
+      const tmpUrl = await generateImage(origin, compiledPrompt);
+      if (tmpUrl) {
+        // Copiar para Storage para padronizar com /admin/go
+        try {
+          const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL as string;
+          const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY as string;
+          if (supabaseUrl && supabaseServiceKey) {
+            const res = await fetch(tmpUrl);
+            const buf = await res.arrayBuffer();
+            const contentType = res.headers.get('content-type') || 'image/png';
+            let ext = 'png';
+            if (contentType.includes('jpeg') || contentType.includes('jpg')) ext = 'jpg';
+            if (contentType.includes('webp')) ext = 'webp';
+            const { createClient } = await import('@supabase/supabase-js');
+            const s = createClient(supabaseUrl, supabaseServiceKey);
+            const BUCKET = 'media';
+            const PREFIX = 'app-26/images';
+            const fileName = `${PREFIX}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+            const { error: upErr } = await s.storage.from(BUCKET).upload(fileName, Buffer.from(buf), { contentType, cacheControl: '3600', upsert: false });
+            if (!upErr) {
+              const { data: pub } = s.storage.from(BUCKET).getPublicUrl(fileName);
+              imageUrl = pub?.publicUrl || tmpUrl;
+            } else {
+              imageUrl = tmpUrl;
+            }
+          } else {
+            imageUrl = tmpUrl; // sem credenciais, manter URL temporária
+          }
+        } catch {
+          imageUrl = tmpUrl;
+        }
+      }
     }
 
     // 5) salvar
-    const admin = getAdminSupabase();
-    const cookieStore = cookies();
+  const cookieStore = cookies();
     const userClient = createRouteHandlerClient({ cookies: () => cookieStore });
     const { data: auth } = await userClient.auth.getUser();
-    const createdBy = auth?.user?.id || null;
+  const createdBy = (body.created_by && typeof body.created_by === 'string' && body.created_by.trim())
+    ? body.created_by.trim()
+    : (auth?.user?.id || null);
     const insertRes = await admin.from('audios').insert({
       title: title || genTitle || '',
       subtitle: subtitle || null,
@@ -176,7 +241,7 @@ export async function POST(req: NextRequest) {
       category_id: categoryId,
       cover_url: imageUrl || null,
       created_by: createdBy,
-      ai_engine: modelUsed,
+      ai_engine: (preferredModel || 'gpt-5'),
       voice_id: usedVoiceId,
       voice_name: usedVoiceName,
       biblical_base: base || null,

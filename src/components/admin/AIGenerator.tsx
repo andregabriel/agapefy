@@ -1267,17 +1267,23 @@ const AIGenerator = forwardRef<AIGeneratorHandle, AIGeneratorProps>(function AIG
 
       if (data?.audio_url) {
         setAudioUrl(data.audio_url);
-
-        // 🎵 Obter duração do áudio de forma assíncrona para não bloquear o estado de carregamento do botão
+        // 🎵 Definir duração preferindo a enviada pelo servidor; se ausente, medir localmente
         (async () => {
+          const durationFromServer = typeof (data?.duration_seconds) === 'number' ? Math.round(data.duration_seconds) : null;
+          if (durationFromServer != null) {
+            setAudioDuration(durationFromServer);
+            console.log('✅ Duração (servidor):', durationFromServer, 'segundos');
+            toast.success(`🎵 Áudio gerado com ${selectedVoiceInfo?.name}! Duração: ${formatDuration(durationFromServer)}`);
+            return;
+          }
           try {
-            console.log('🕐 Iniciando análise de duração do áudio...');
+            console.log('🕐 Medindo duração localmente...');
             const duration = await Promise.race([
               getAudioDuration(data.audio_url),
               new Promise<number>((_, reject) => setTimeout(() => reject(new Error('timeout')), 7000))
             ]);
             setAudioDuration(duration);
-            console.log('✅ Duração obtida e salva:', duration, 'segundos');
+            console.log('✅ Duração (local):', duration, 'segundos');
             toast.success(`🎵 Áudio gerado com ${selectedVoiceInfo?.name}! Duração: ${formatDuration(duration)}`);
           } catch (durationError) {
             console.warn('⚠️ Duração do áudio indisponível:', durationError);
@@ -1290,6 +1296,11 @@ const AIGenerator = forwardRef<AIGeneratorHandle, AIGeneratorProps>(function AIG
         const voiceUsedInfo = ELEVENLABS_VOICES.find(v => v.id === voiceUsed);
         setLastVoiceIdUsed(voiceUsed);
         setLastVoiceNameUsed(voiceUsedInfo?.name || "");
+        // Persistir voz padrão para uso em /admin/gm
+        try {
+          await updateAppSetting('gmanual_default_voice_id' as any, voiceUsed || '');
+          await updateAppSetting('gmanual_default_voice_name' as any, voiceUsedInfo?.name || '');
+        } catch (_) {}
         
         console.log('✅ Áudio gerado com sucesso');
         try { onProgress && onProgress({ scope: 'audio', phase: 'success' }); } catch (_) {}

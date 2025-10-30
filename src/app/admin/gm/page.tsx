@@ -32,6 +32,8 @@ type ItemProgress = {
   status: 'pending' | 'running' | 'success' | 'error';
   error?: string;
   audioId?: string | null;
+  fieldSteps: Record<string, StepStatus>;
+  fieldOrder: string[];
 };
 
 const MAX_ITEMS = 30;
@@ -66,6 +68,49 @@ export default function GmPage() {
     items: ItemProgress[];
   }>({ total: 0, completed: 0, current: '', items: [] });
 
+  // Campos para progresso granular
+  const FIELD_ORDER = useMemo(() => (
+    ['title','subtitle','description','preparation','text','final_message','audio_url','cover_url','saved']
+  ), []);
+
+  const initFieldSteps = useCallback((): Record<string, StepStatus> => {
+    const map: Record<string, StepStatus> = {};
+    FIELD_ORDER.forEach(k => { map[k] = 'pending'; });
+    return map;
+  }, [FIELD_ORDER]);
+
+  const markField = useCallback((itemIdx: number, key: string, status: StepStatus) => {
+    setProgress(prev => ({
+      ...prev,
+      items: prev.items.map(it => it.idx === itemIdx ? ({
+        ...it,
+        fieldSteps: { ...it.fieldSteps, [key]: status }
+      }) : it)
+    }));
+  }, []);
+
+  const computeItemPercent = useCallback((it: ItemProgress): number => {
+    const total = it.fieldOrder.length;
+    const done = it.fieldOrder.filter(k => it.fieldSteps[k] === 'success').length;
+    return total > 0 ? Math.round((done / total) * 100) : 0;
+  }, []);
+
+  // Simulação visual enquanto o servidor processa (não altera backend)
+  const serverSimActiveRef = useRef<Record<number, boolean>>({});
+  const simulateServerProgress = useCallback(async (itemIdx: number) => {
+    serverSimActiveRef.current[itemIdx] = true;
+    const keys = FIELD_ORDER.slice(0, FIELD_ORDER.length - 1); // deixa 'saved' para o final
+    let i = 0;
+    while (serverSimActiveRef.current[itemIdx] && i < keys.length) {
+      const k = keys[i];
+      markField(itemIdx, k, 'running');
+      await new Promise(r => setTimeout(r, 180));
+      markField(itemIdx, k, 'success');
+      i += 1;
+      await new Promise(r => setTimeout(r, 80));
+    }
+  }, [FIELD_ORDER, markField]);
+
   // Progresso fino por evento do gerador
   const currentItemIdxRef = useRef<number | null>(null);
   const handleGeneratorProgress = useCallback((ev: AIGProgressEvent) => {
@@ -75,14 +120,25 @@ export default function GmPage() {
       if (ev.phase === 'start') updateItemStep(idx, 'Gerar campos', { status: 'running', message: `Gerando ${ev.name}` });
       if (ev.phase === 'success') updateItemStep(idx, 'Gerar campos', { status: 'success', message: `${ev.name} pronto` });
       if (ev.phase === 'error') updateItemStep(idx, 'Gerar campos', { status: 'error', message: `${ev.name}: ${ev.info || 'erro'}` });
+      if (typeof ev.name === 'string') {
+        const key = ev.name === 'preparation' ? 'preparation' : ev.name === 'final_message' ? 'final_message' : ev.name;
+        if (FIELD_ORDER.includes(key)) {
+          const s: StepStatus = ev.phase === 'start' ? 'running' : ev.phase === 'success' ? 'success' : 'error';
+          markField(idx, key, s);
+        }
+      }
     } else if (ev.scope === 'audio') {
       if (ev.phase === 'start') updateItemStep(idx, 'Áudio/Imagem', { status: 'running', message: 'Gerando áudio' });
       if (ev.phase === 'success') updateItemStep(idx, 'Áudio/Imagem', { status: 'success', message: 'Áudio ok' });
       if (ev.phase === 'error') updateItemStep(idx, 'Áudio/Imagem', { status: 'error', message: `Áudio: ${ev.info || 'erro'}` });
+      const s: StepStatus = ev.phase === 'start' ? 'running' : ev.phase === 'success' ? 'success' : 'error';
+      markField(idx, 'audio_url', s);
     } else if (ev.scope === 'image') {
       if (ev.phase === 'start') updateItemStep(idx, 'Áudio/Imagem', { status: 'running', message: 'Gerando imagem' });
       if (ev.phase === 'success') updateItemStep(idx, 'Áudio/Imagem', { status: 'success', message: 'Imagem ok' });
       if (ev.phase === 'error') updateItemStep(idx, 'Áudio/Imagem', { status: 'error', message: `Imagem indisponível (${ev.info || 'erro'})` });
+      const s: StepStatus = ev.phase === 'start' ? 'running' : ev.phase === 'success' ? 'success' : 'error';
+      markField(idx, 'cover_url', s);
     }
   }, []);
 
@@ -248,7 +304,9 @@ export default function GmPage() {
         idx: i + 1,
         titulo: l.titulo,
         steps: baseSteps.map(s => ({ ...s })),
-        status: 'pending'
+        status: 'pending',
+        fieldSteps: initFieldSteps(),
+        fieldOrder: FIELD_ORDER
       }))
     });
 
@@ -272,6 +330,11 @@ export default function GmPage() {
         if (USE_SERVER) {
           updateItemStep(itemIdx, 'Gerar campos', { status: 'running' });
           try {
+            // Iniciar simulação de progresso visual enquanto o servidor processa
+            simulateServerProgress(itemIdx);
+            // Identificar usuário autenticado para created_by do servidor
+            const { data: auth } = await supabase.auth.getUser();
+            const currentUserId = auth?.user?.id || null;
             const resp = await fetch('/api/generate-and-save', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
@@ -280,7 +343,8 @@ export default function GmPage() {
                 base_biblica: line.base,
                 tema_central: line.tema,
                 category_id: categoryId,
-                playlists: line.playlists || []
+                playlists: line.playlists || [],
+                created_by: currentUserId || undefined
               })
             });
             const data = await resp.json().catch(() => ({}));
@@ -290,10 +354,16 @@ export default function GmPage() {
               updateItemStatus(itemIdx, 'error', msg);
               continue;
             }
+            // Parar simulação e confirmar sucesso dos campos
+            serverSimActiveRef.current[itemIdx] = false;
             updateItemStep(itemIdx, 'Gerar campos', { status: 'success' });
             updateItemStep(itemIdx, 'Título ajustado', { status: 'success' });
             updateItemStep(itemIdx, 'Áudio/Imagem', { status: 'success' });
             updateItemStep(itemIdx, 'Salvar', { status: 'success' });
+            for (const key of FIELD_ORDER.slice(0, FIELD_ORDER.length - 1)) {
+              markField(itemIdx, key, 'success');
+            }
+            markField(itemIdx, 'saved', 'success');
             if (line.playlists && line.playlists.length > 0) {
               updateItemStep(itemIdx, 'Playlist', { status: 'success', message: `${line.playlists.length} playlists` });
             } else {
@@ -303,6 +373,7 @@ export default function GmPage() {
             setProgress(prev => ({ ...prev, completed: prev.completed + 1 }));
             continue;
           } catch (e: any) {
+            serverSimActiveRef.current[itemIdx] = false;
             const msg = e?.message || 'Falha no servidor';
             updateItemStep(itemIdx, 'Gerar campos', { status: 'error', message: msg });
             updateItemStatus(itemIdx, 'error', msg);
@@ -378,6 +449,7 @@ export default function GmPage() {
           continue; // pula playlist
         }
         updateItemStep(itemIdx, 'Salvar', { status: 'success' });
+        markField(itemIdx, 'saved', 'success');
 
         // 5) Playlist (opcional)
         updateItemStep(itemIdx, 'Playlist', { status: 'running' });
@@ -563,20 +635,27 @@ export default function GmPage() {
                     </div>
                     <div className="font-medium truncate">Oração {item.idx}: {item.titulo}</div>
                   </div>
-                  <div className="grid sm:grid-cols-5 gap-2">
-                    {item.steps.map(step => (
-                      <div key={step.name} className="flex items-center gap-2 text-xs p-2 rounded bg-gray-50">
-                        <div className="flex-shrink-0">
-                          {step.status === 'pending' && <div className="w-3 h-3 bg-gray-300 rounded-full" />}
-                          {step.status === 'running' && <Loader2 className="h-3 w-3 text-blue-600 animate-spin" />}
-                          {step.status === 'success' && <CheckCircle className="h-3 w-3 text-green-600" />}
-                          {step.status === 'error' && <XCircle className="h-3 w-3 text-red-600" />}
-                        </div>
-                        <div className="truncate">{step.name}</div>
-                        {step.message && <div className="truncate text-muted-foreground">• {step.message}</div>}
-                      </div>
-                    ))}
+                  {/* Barra percentual e chips por campo */}
+                  <div className="w-full bg-gray-100 rounded-full h-1.5 mb-3">
+                    <div className="bg-green-600 h-1.5 rounded-full transition-all" style={{ width: `${computeItemPercent(item)}%` }} />
                   </div>
+                  <div className="grid sm:grid-cols-3 lg:grid-cols-4 gap-2">
+                    {item.fieldOrder.map(key => {
+                      const st = item.fieldSteps[key];
+                      return (
+                        <div key={key} className="flex items-center gap-2 text-xs p-2 rounded bg-gray-50">
+                          <div className="flex-shrink-0">
+                            {st === 'pending' && <div className="w-3 h-3 bg-gray-300 rounded-full" />}
+                            {st === 'running' && <Loader2 className="h-3 w-3 text-blue-600 animate-spin" />}
+                            {st === 'success' && <CheckCircle className="h-3 w-3 text-green-600" />}
+                            {st === 'error' && <XCircle className="h-3 w-3 text-red-600" />}
+                          </div>
+                          <div className="truncate">{key === 'final_message' ? 'mensagem final' : key === 'preparation' ? 'preparação' : key === 'saved' ? 'salvo no supabase' : key}</div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                  {/* Passos macro foram mantidos internamente para telemetria, mas ocultos na UI conforme solicitado */}
                   {item.error && <div className="mt-2 text-xs text-red-600">{item.error}</div>}
                 </div>
               ))}
@@ -584,6 +663,76 @@ export default function GmPage() {
           </CardContent>
         </Card>
       )}
+
+      {/* Documentação da lógica por campo (go vs gm) */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Lógica dos campos (/admin/go vs /admin/gm)</CardTitle>
+          <CardDescription>Resumo de como cada campo é gerado, onde, e se há diferenças.</CardDescription>
+        </CardHeader>
+        <CardContent className="text-sm space-y-3">
+          <div>
+            <div className="font-semibold">biblical_base</div>
+            <div className="text-muted-foreground">/go: digitada ou auto‑detectada do “Texto da Oração”.</div>
+            <div className="text-muted-foreground">/gm: vem da linha (Base bíblica).</div>
+            <div className="">conclusão: diferente</div>
+          </div>
+          <div>
+            <div className="font-semibold">title</div>
+            <div className="text-muted-foreground">/go: IA com prompt editável (usa {`{texto}`}).</div>
+            <div className="text-muted-foreground">/gm: usa o título da linha; se ausente, IA com o mesmo template.</div>
+            <div className="">conclusão: diferente</div>
+          </div>
+          <div>
+            <div className="font-semibold">subtitle</div>
+            <div className="text-muted-foreground">/go: IA com template editável (usa {`{texto}`}).</div>
+            <div className="text-muted-foreground">/gm: IA no servidor com o mesmo template de app_settings.</div>
+            <div className="">conclusão: igual</div>
+          </div>
+          <div>
+            <div className="font-semibold">description</div>
+            <div className="text-muted-foreground">/go: IA com template editável (usa {`{texto}`}).</div>
+            <div className="text-muted-foreground">/gm: IA no servidor com o mesmo template.</div>
+            <div className="">conclusão: igual</div>
+          </div>
+          <div>
+            <div className="font-semibold">transcript</div>
+            <div className="text-muted-foreground">/go: composição de preparação + texto + mensagem final.</div>
+            <div className="text-muted-foreground">/gm: mesma composição no servidor.</div>
+            <div className="">conclusão: igual</div>
+          </div>
+          <div>
+            <div className="font-semibold">audio_url • voice_id • voice_name • duration</div>
+            <div className="text-muted-foreground">/go: TTS no cliente com voz escolhida; duração preferindo valor do servidor.</div>
+            <div className="text-muted-foreground">/gm: TTS no servidor usando a voz padrão salva em app_settings; duração do servidor.</div>
+            <div className="">conclusão: unificado (voz/duração agora alinhados)</div>
+          </div>
+          <div>
+            <div className="font-semibold">cover_url</div>
+            <div className="text-muted-foreground">/go: gera prompt da imagem (editável) e aplica template DALL‑E; copia para Storage.</div>
+            <div className="text-muted-foreground">/gm: aplica o mesmo template e também copia a imagem para o Storage.</div>
+            <div className="">conclusão: igual</div>
+          </div>
+          <div>
+            <div className="font-semibold">ai_engine</div>
+            <div className="text-muted-foreground">/go: engine escolhida na UI (salva como padrão).</div>
+            <div className="text-muted-foreground">/gm: usa o modelo padrão salvo em app_settings.</div>
+            <div className="">conclusão: unificado</div>
+          </div>
+          <div>
+            <div className="font-semibold">category_id • created_by • created_at</div>
+            <div className="text-muted-foreground">/go: UI/usuário • auth do cliente • automático.</div>
+            <div className="text-muted-foreground">/gm: definido antes do lote • auth do servidor • automático.</div>
+            <div className="">conclusão: igual</div>
+          </div>
+          <div>
+            <div className="font-semibold">time • spiritual_goal</div>
+            <div className="text-muted-foreground">/go: selecionados na UI e atualizados após o insert.</div>
+            <div className="text-muted-foreground">/gm: atualmente não definidos.</div>
+            <div className="">conclusão: diferente (mantido assim)</div>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }
