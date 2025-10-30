@@ -229,7 +229,7 @@ export default function OnboardingClient() {
       toast.success('Passo adiado');
       const nextStep = (form.onboard_step || desiredStep) + 1;
       const parentFormId = (form as any).parent_form_id || activeFormId || form.id;
-      const { data } = await supabase
+      let { data, error } = await supabase
         .from('admin_forms')
         .select('id')
         .eq('form_type', 'onboarding')
@@ -237,6 +237,18 @@ export default function OnboardingClient() {
         .eq('onboard_step', nextStep)
         .eq('parent_form_id', parentFormId)
         .maybeSingle();
+      // Fallback: coluna ausente ou não vinculado
+      if ((error && (error.code === '42703' || /parent_form_id/i.test(String(error.message || '')))) || (!error && !data)) {
+        const fb = await supabase
+          .from('admin_forms')
+          .select('id')
+          .eq('form_type', 'onboarding')
+          .eq('is_active', true)
+          .eq('onboard_step', nextStep)
+          .maybeSingle();
+        data = fb.data as any;
+        error = fb.error as any;
+      }
       if (data) {
         router.replace(`/onboarding?step=${nextStep}&formId=${encodeURIComponent(parentFormId)}${currentCategoryId ? `&categoryId=${encodeURIComponent(currentCategoryId)}` : ''}`);
       } else {
@@ -264,7 +276,7 @@ export default function OnboardingClient() {
     } finally {
       const nextStep = (form.onboard_step || desiredStep) + 1;
       const parentFormId = (form as any).parent_form_id || activeFormId || form.id;
-      const { data } = await supabase
+      let { data, error } = await supabase
         .from('admin_forms')
         .select('id')
         .eq('form_type', 'onboarding')
@@ -272,6 +284,18 @@ export default function OnboardingClient() {
         .eq('onboard_step', nextStep)
         .eq('parent_form_id', parentFormId)
         .maybeSingle();
+      // Fallback quando parent_form_id não existe ou quando não foi vinculado
+      if ((error && (error.code === '42703' || /parent_form_id/i.test(String(error.message || '')))) || (!error && !data)) {
+        const fb = await supabase
+          .from('admin_forms')
+          .select('id')
+          .eq('form_type', 'onboarding')
+          .eq('is_active', true)
+          .eq('onboard_step', nextStep)
+          .maybeSingle();
+        data = fb.data as any;
+        error = fb.error as any;
+      }
       if (data) {
         router.replace(`/onboarding?step=${nextStep}&formId=${encodeURIComponent(parentFormId)}${currentCategoryId ? `&categoryId=${encodeURIComponent(currentCategoryId)}` : ''}`);
       } else {
