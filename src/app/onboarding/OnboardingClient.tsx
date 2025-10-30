@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Checkbox } from '@/components/ui/checkbox';
 import { toast } from 'sonner';
 import { supabase } from '@/lib/supabase';
 import { saveFormResponse } from '@/lib/services/forms';
@@ -15,6 +16,7 @@ import Link from 'next/link';
 import { getPlaylistsByCategoryFast } from '@/lib/supabase-queries';
 import WhatsAppSetup from '@/components/whatsapp/WhatsAppSetup';
 import { useAppSettings } from '@/hooks/useAppSettings';
+import { buildRoutinePlaylistFromOnboarding } from '@/lib/services/routine';
 
 interface FormOption { label: string; category_id: string }
 interface AdminForm { id: string; name: string; description?: string; schema: FormOption[]; onboard_step?: number | null }
@@ -37,6 +39,8 @@ export default function OnboardingClient() {
   const [selected, setSelected] = useState<string>(''); // stores selected category_id
   const [selectedKey, setSelectedKey] = useState<string>(''); // stores unique option key (index)
   const [shortText, setShortText] = useState<string>('');
+  const [multiKeys, setMultiKeys] = useState<string[]>([]); // for step 4
+  const [multiLabels, setMultiLabels] = useState<string[]>([]); // labels for step 4
   const [submitting, setSubmitting] = useState(false);
   const [loading, setLoading] = useState<boolean>(true);
   const [category, setCategory] = useState<{ id: string; name: string; description?: string | null; image_url?: string | null } | null>(null);
@@ -276,6 +280,18 @@ export default function OnboardingClient() {
     } finally {
       const nextStep = (form.onboard_step || desiredStep) + 1;
       const parentFormId = (form as any).parent_form_id || activeFormId || form.id;
+
+      // Após finalizar o Passo 5, construir/atualizar a playlist pessoal "Minha Rotina"
+      try {
+        const currentStep = form.onboard_step || desiredStep;
+        if (currentStep === 5 && user?.id) {
+          await buildRoutinePlaylistFromOnboarding({ userId: user.id, rootFormId: parentFormId });
+        }
+      } catch (err) {
+        // Não bloquear o fluxo de navegação por erro aqui
+        // eslint-disable-next-line no-console
+        console.error('buildRoutinePlaylistFromOnboarding error:', err);
+      }
       let { data, error } = await supabase
         .from('admin_forms')
         .select('id')
@@ -509,6 +525,67 @@ export default function OnboardingClient() {
               <div className="flex justify-between">
                 <Button variant="ghost" onClick={skip} disabled={submitting}>Agora não</Button>
                 <Button onClick={() => submitAndGoNext({ text: shortText })} disabled={submitting || !shortText.trim()}>Enviar</Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      );
+    }
+
+    // Passo 4: múltipla seleção (checkbox)
+    if (desiredStep === 4) {
+      return (
+        <div className="min-h-[calc(100vh-0rem)] flex items-center justify-center px-4">
+          <Card className="w-full max-w-3xl">
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-2xl">{form.name}</CardTitle>
+                <span className="px-2 py-0.5 rounded bg-gray-800 text-gray-200 text-xs">Passo {desiredStep}</span>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              {form.description && (
+                <p className="text-black text-lg">{form.description}</p>
+              )}
+
+              <div className="space-y-3">
+                {(form.schema as any[])?.map((opt: any, idx: number) => {
+                  const checked = multiKeys.includes(String(idx));
+                  return (
+                    <div key={idx}>
+                      <label
+                        htmlFor={`chk-${idx}`}
+                        className="flex items-center gap-4 w-full p-4 rounded-lg border border-gray-800 hover:bg-gray-800/40 cursor-pointer"
+                        onClick={(e) => {
+                          // allow label click to toggle
+                          e.preventDefault();
+                          const key = String(idx);
+                          const label = opt.label as string;
+                          setMultiKeys(prev => prev.includes(key) ? prev.filter(k => k !== key) : [...prev, key]);
+                          setMultiLabels(prev => {
+                            const exists = prev.includes(label);
+                            if (exists) return prev.filter(l => l !== label);
+                            return [...prev, label];
+                          });
+                        }}
+                      >
+                        <Checkbox id={`chk-${idx}`} checked={checked} onCheckedChange={(state) => {
+                          const key = String(idx);
+                          const label = opt.label as string;
+                          const nextChecked = Boolean(state);
+                          setMultiKeys(prev => nextChecked ? [...prev, key] : prev.filter(k => k !== key));
+                          setMultiLabels(prev => nextChecked ? [...prev, label] : prev.filter(l => l !== label));
+                        }} />
+                        <span className="text-base">{opt.label}</span>
+                      </label>
+                    </div>
+                  );
+                })}
+              </div>
+
+              <div className="flex justify-between">
+                <Button variant="ghost" onClick={skip} disabled={submitting}>Agora não</Button>
+                <Button onClick={() => submitAndGoNext({ options: multiLabels })} disabled={multiLabels.length === 0 || submitting}>{submitting ? 'Enviando...' : 'Enviar'}</Button>
               </div>
             </CardContent>
           </Card>
