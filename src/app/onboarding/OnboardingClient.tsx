@@ -17,6 +17,7 @@ import { getPlaylistsByCategoryFast } from '@/lib/supabase-queries';
 import WhatsAppSetup from '@/components/whatsapp/WhatsAppSetup';
 import { useAppSettings } from '@/hooks/useAppSettings';
 import { buildRoutinePlaylistFromOnboarding } from '@/lib/services/routine';
+import { useRoutinePlaylist } from '@/hooks/useRoutinePlaylist';
 
 interface FormOption { label: string; category_id: string }
 interface AdminForm { id: string; name: string; description?: string; schema: FormOption[]; onboard_step?: number | null }
@@ -27,6 +28,7 @@ export default function OnboardingClient() {
   const { settings } = useAppSettings();
   const searchParams = useSearchParams();
   const router = useRouter();
+  const { routinePlaylist, loading: routineLoading } = useRoutinePlaylist();
   const desiredStep = useMemo(() => {
     const stepParam = searchParams?.get('step');
     const parsed = stepParam ? Number(stepParam) : NaN;
@@ -225,6 +227,87 @@ export default function OnboardingClient() {
     }
   }
 
+  // Passo 6: Mostrar playlist da rotina criada
+  if (desiredStep === 6) {
+    const formatDuration = (seconds?: number | null): string | null => {
+      if (!seconds && seconds !== 0) return null;
+      const mins = Math.floor(seconds / 60);
+      const rem = seconds % 60;
+      if (!Number.isFinite(mins)) return null;
+      if (rem === 0) return `${mins} min`;
+      return `${mins}:${String(rem).padStart(2, '0')}`;
+    };
+
+    return (
+      <div className="max-w-2xl mx-auto p-4">
+        <Card>
+          <CardHeader>
+            <div className="relative">
+              <span className="absolute right-0 top-0 px-2 py-0.5 rounded bg-gray-800 text-gray-200 text-xs">Passo 6</span>
+              <div className="mt-10 md:mt-12 text-center px-2 md:px-6">
+                <CardTitle className="text-2xl md:text-3xl leading-tight max-w-4xl mx-auto">Sua rotina está pronta</CardTitle>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            {routineLoading ? (
+              <div className="space-y-3">
+                <div className="h-6 w-40 bg-gray-800 rounded animate-pulse" />
+                <div className="space-y-3">
+                  {[...Array(3)].map((_, i) => (
+                    <div key={i} className="flex items-center gap-3 p-3 border border-gray-800 rounded-lg">
+                      <div className="w-16 h-16 bg-gray-800 rounded" />
+                      <div className="flex-1 space-y-2">
+                        <div className="h-4 w-2/3 bg-gray-800 rounded" />
+                        <div className="h-3 w-1/3 bg-gray-800 rounded" />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                <h3 className="text-lg font-semibold text-black">Minha Rotina</h3>
+                {routinePlaylist && routinePlaylist.audios.length > 0 ? (
+                  <div className="space-y-3">
+                    {routinePlaylist.audios.map((audio: any) => (
+                      <div key={audio.id} className="flex items-center gap-3 p-3 border border-gray-800 rounded-lg bg-white/5">
+                        <div className="w-16 h-16 rounded overflow-hidden bg-gray-800">
+                          {audio.cover_url ? (
+                            <img src={audio.cover_url} alt={audio.title} className="w-full h-full object-cover" />
+                          ) : (
+                            <div className="w-full h-full bg-gradient-to-br from-blue-600 to-purple-600" />
+                          )}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="font-medium text-black truncate">{audio.title}</div>
+                          <div className="text-sm text-gray-500 truncate">{audio.subtitle || audio.category?.name}</div>
+                        </div>
+                        <div className="text-sm text-gray-500 ml-2">{formatDuration(audio.duration) || ''}</div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-black">Sua rotina foi criada, mas ainda está vazia.</p>
+                )}
+              </div>
+            )}
+
+            <div className="flex items-center justify-between">
+              <Button variant="ghost" onClick={() => router.replace('/')}>Pular</Button>
+              <Link href="/eu">
+                <Button>
+                  Ver minha rotina
+                  <ArrowRight className="ml-2 h-4 w-4" />
+                </Button>
+              </Link>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
   async function skip() {
     if (!form) return;
     try {
@@ -315,8 +398,8 @@ export default function OnboardingClient() {
       if (data) {
         router.replace(`/onboarding?step=${nextStep}&formId=${encodeURIComponent(parentFormId)}${currentCategoryId ? `&categoryId=${encodeURIComponent(currentCategoryId)}` : ''}`);
       } else {
-        // considerar passos virtuais 2 e 3
-        if (nextStep === 2 || nextStep === 3) {
+        // considerar passos virtuais 2, 3 e 6 (playlist da rotina)
+        if (nextStep === 2 || nextStep === 3 || nextStep === 6) {
           router.replace(`/onboarding?step=${nextStep}&formId=${encodeURIComponent(parentFormId)}${currentCategoryId ? `&categoryId=${encodeURIComponent(currentCategoryId)}` : ''}`);
         } else {
           router.replace('/');
