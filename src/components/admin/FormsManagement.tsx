@@ -33,7 +33,9 @@ export default function FormsManagement() {
         const { data, error } = await supabase
           .from('admin_forms')
           .select('*')
-          .order('created_at', { ascending: false });
+          // Ordena primeiro por passo do onboard (nulos primeiro), depois por data de criação mais antiga
+          .order('onboard_step', { ascending: true, nullsFirst: true })
+          .order('created_at', { ascending: true });
         if (error) throw error;
         if (isMounted) setForms((data || []) as unknown as OnboardForm[]);
       } catch (e) {

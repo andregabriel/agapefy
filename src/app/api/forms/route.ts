@@ -7,7 +7,8 @@ export async function GET() {
     const { data, error } = await supabase
       .from('admin_forms')
       .select('*')
-      .order('created_at', { ascending: false });
+      .order('onboard_step', { ascending: true, nullsFirst: true })
+      .order('created_at', { ascending: true });
     if (error) throw error;
     return NextResponse.json({ data });
   } catch (e) {

@@ -56,6 +56,10 @@ interface AppSettings {
   prayer_quote_history?: string; // JSON string: [{verse_id,date}]
   // Lista de motores de IA para geração de áudio (string JSON: string[])
   audio_ai_engines?: string;
+  // Onboarding texts
+  onboarding_step2_title?: string;
+  onboarding_step2_subtitle?: string;
+  onboarding_step3_title?: string;
 }
 
 const DEFAULT_SETTINGS: AppSettings = {
@@ -103,6 +107,11 @@ const DEFAULT_SETTINGS: AppSettings = {
   ,
   // Lista padrão com pelo menos um motor conhecido
   audio_ai_engines: JSON.stringify(["ElevenLabs", "OpenAI Audio"]) 
+  ,
+  // Onboarding defaults
+  onboarding_step2_title: 'Parabéns pela coragem e pela abertura de dar as mãos à Jesus neste momento difícil.',
+  onboarding_step2_subtitle: 'Sua playlist foi criada, em breve você poderá escutar essas orações.',
+  onboarding_step3_title: 'Conecte seu WhatsApp para receber uma mensagem diária para {category}.',
 };
 
 export function useAppSettings() {

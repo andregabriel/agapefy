@@ -14,6 +14,7 @@ import { ArrowRight } from 'lucide-react';
 import Link from 'next/link';
 import { getPlaylistsByCategoryFast } from '@/lib/supabase-queries';
 import WhatsAppSetup from '@/components/whatsapp/WhatsAppSetup';
+import { useAppSettings } from '@/hooks/useAppSettings';
 
 interface FormOption { label: string; category_id: string }
 interface AdminForm { id: string; name: string; description?: string; schema: FormOption[]; onboard_step?: number | null }
@@ -21,6 +22,7 @@ interface AudioPreview { id: string; title: string; subtitle?: string | null; du
 
 export default function OnboardingClient() {
   const { user } = useAuth();
+  const { settings } = useAppSettings();
   const searchParams = useSearchParams();
   const router = useRouter();
   const desiredStep = useMemo(() => {
@@ -29,10 +31,12 @@ export default function OnboardingClient() {
     return Number.isFinite(parsed) && parsed > 0 ? parsed : 1;
   }, [searchParams]);
   const currentCategoryId = useMemo(() => searchParams?.get('categoryId') || '', [searchParams]);
+  const activeFormId = useMemo(() => searchParams?.get('formId') || '', [searchParams]);
 
   const [form, setForm] = useState<AdminForm | null>(null);
   const [selected, setSelected] = useState<string>(''); // stores selected category_id
   const [selectedKey, setSelectedKey] = useState<string>(''); // stores unique option key (index)
+  const [shortText, setShortText] = useState<string>('');
   const [submitting, setSubmitting] = useState(false);
   const [loading, setLoading] = useState<boolean>(true);
   const [category, setCategory] = useState<{ id: string; name: string; description?: string | null; image_url?: string | null } | null>(null);
@@ -69,15 +73,30 @@ export default function OnboardingClient() {
           if (primary.data) {
             if (mounted) setForm((primary.data as AdminForm) || null);
           } else {
-            // Fallback: pegar o primeiro formulário ativo de onboarding
-            const fallback = await supabase
-              .from('admin_forms')
-              .select('*')
-              .eq('form_type', 'onboarding')
-              .eq('is_active', true)
-              .order('created_at', { ascending: false })
-              .limit(1)
-              .maybeSingle();
+            // Fallback: preferir o formulário raiz mais antigo (sem parent_form_id), depois o mais antigo geral
+            const tryFetchOldestRoot = async () =>
+              supabase
+                .from('admin_forms')
+                .select('*')
+                .eq('form_type', 'onboarding')
+                .eq('is_active', true)
+                .is('parent_form_id', null)
+                .order('created_at', { ascending: true })
+                .limit(1)
+                .maybeSingle();
+
+            let fallback = await tryFetchOldestRoot();
+            if (fallback.error && (fallback.error.code === '42703' || /parent_form_id/i.test(String(fallback.error.message || '')))) {
+              // Coluna parent_form_id pode não existir — buscar sem esse filtro
+              fallback = await supabase
+                .from('admin_forms')
+                .select('*')
+                .eq('form_type', 'onboarding')
+                .eq('is_active', true)
+                .order('created_at', { ascending: true })
+                .limit(1)
+                .maybeSingle();
+            }
             if (fallback.error) throw fallback.error;
             if (mounted) setForm((fallback.data as AdminForm) || null);
           }
@@ -121,6 +140,18 @@ export default function OnboardingClient() {
               .maybeSingle();
             if (mounted) setCategory((cat as any) || null);
           }
+        } else {
+          // Passos dinâmicos adicionais
+          const { data, error } = await supabase
+            .from('admin_forms')
+            .select('*')
+            .eq('form_type', 'onboarding')
+            .eq('is_active', true)
+            .eq('onboard_step', desiredStep)
+            .eq('parent_form_id', activeFormId || '-')
+            .maybeSingle();
+          if (error) throw error;
+          if (mounted) setForm((data as AdminForm) || null);
         }
       } catch (e) {
         // eslint-disable-next-line no-console
@@ -148,8 +179,8 @@ export default function OnboardingClient() {
       console.error(e);
       toast.error('Não foi possível enviar. Seguimos para o próximo passo.');
     } finally {
-      // Ir direto para o preview (passo 2) com a categoria selecionada
-      router.replace(`/onboarding?step=2&categoryId=${encodeURIComponent(selected)}`);
+      // Ir direto para o preview (passo 2) com a categoria selecionada e carrying formId
+      router.replace(`/onboarding?step=2&categoryId=${encodeURIComponent(selected)}&formId=${encodeURIComponent(form.id)}`);
       setSubmitting(false);
     }
   }
@@ -161,15 +192,17 @@ export default function OnboardingClient() {
       await saveFormResponse({ formId: form.id, answers: { skipped: true }, userId: user?.id ?? null });
       toast.success('Passo adiado');
       const nextStep = (form.onboard_step || desiredStep) + 1;
+      const parentFormId = (form as any).parent_form_id || activeFormId || form.id;
       const { data } = await supabase
         .from('admin_forms')
         .select('id')
         .eq('form_type', 'onboarding')
         .eq('is_active', true)
         .eq('onboard_step', nextStep)
+        .eq('parent_form_id', parentFormId)
         .maybeSingle();
       if (data) {
-        router.replace(`/onboarding?step=${nextStep}`);
+        router.replace(`/onboarding?step=${nextStep}&formId=${encodeURIComponent(parentFormId)}${currentCategoryId ? `&categoryId=${encodeURIComponent(currentCategoryId)}` : ''}`);
       } else {
         router.replace('/');
       }
@@ -178,6 +211,41 @@ export default function OnboardingClient() {
       console.error(e);
       toast.error('Não foi possível adiar este passo');
     } finally {
+      setSubmitting(false);
+    }
+  }
+
+  async function submitAndGoNext(recordedAnswers: Record<string, any>) {
+    if (!form) return;
+    try {
+      setSubmitting(true);
+      await saveFormResponse({ formId: form.id, answers: recordedAnswers, userId: user?.id ?? null });
+      toast.success('Resposta enviada');
+    } catch (e) {
+      // eslint-disable-next-line no-console
+      console.error(e);
+      toast.error('Não foi possível enviar. Seguimos para o próximo passo.');
+    } finally {
+      const nextStep = (form.onboard_step || desiredStep) + 1;
+      const parentFormId = (form as any).parent_form_id || activeFormId || form.id;
+      const { data } = await supabase
+        .from('admin_forms')
+        .select('id')
+        .eq('form_type', 'onboarding')
+        .eq('is_active', true)
+        .eq('onboard_step', nextStep)
+        .eq('parent_form_id', parentFormId)
+        .maybeSingle();
+      if (data) {
+        router.replace(`/onboarding?step=${nextStep}&formId=${encodeURIComponent(parentFormId)}${currentCategoryId ? `&categoryId=${encodeURIComponent(currentCategoryId)}` : ''}`);
+      } else {
+        // considerar passos virtuais 2 e 3
+        if (nextStep === 2 || nextStep === 3) {
+          router.replace(`/onboarding?step=${nextStep}&formId=${encodeURIComponent(parentFormId)}${currentCategoryId ? `&categoryId=${encodeURIComponent(currentCategoryId)}` : ''}`);
+        } else {
+          router.replace('/');
+        }
+      }
       setSubmitting(false);
     }
   }
@@ -203,7 +271,11 @@ export default function OnboardingClient() {
             <div className="relative">
               <span className="absolute right-0 top-0 px-2 py-0.5 rounded bg-gray-800 text-gray-200 text-xs">Passo 3</span>
               <div className="mt-10 md:mt-12 text-center px-2 md:px-6">
-                <CardTitle className="text-xl md:text-2xl leading-snug break-words max-w-3xl mx-auto">Conecte seu WhatsApp para receber uma mensagem diária para {category?.name || 'sua dificuldade selecionada'}.</CardTitle>
+                <CardTitle className="text-xl md:text-2xl leading-snug break-words max-w-3xl mx-auto">{(() => {
+                  const raw = settings.onboarding_step3_title || 'Conecte seu WhatsApp para receber uma mensagem diária para {category}.';
+                  const replacement = category?.name || 'sua dificuldade selecionada';
+                  return raw.replace('{category}', replacement);
+                })()}</CardTitle>
               </div>
             </div>
           </CardHeader>
@@ -236,8 +308,8 @@ export default function OnboardingClient() {
             <div className="relative">
               <span className="absolute right-0 top-0 px-2 py-0.5 rounded bg-gray-800 text-gray-200 text-xs">Passo 2</span>
               <div className="mt-10 md:mt-12 text-center px-2 md:px-6">
-                <CardTitle className="text-2xl md:text-3xl leading-tight line-clamp-2 max-w-4xl mx-auto">Parabéns pela coragem e pela abertura de dar as mãos à Jesus neste momento difícil.</CardTitle>
-                <p className="mt-3 text-black text-base md:text-lg max-w-3xl mx-auto">Sua playlist foi criada, em breve você poderá escutar essas orações.</p>
+                <CardTitle className="text-2xl md:text-3xl leading-tight line-clamp-2 max-w-4xl mx-auto">{settings.onboarding_step2_title || 'Parabéns pela coragem e pela abertura de dar as mãos à Jesus neste momento difícil.'}</CardTitle>
+                <p className="mt-3 text-black text-base md:text-lg max-w-3xl mx-auto">{settings.onboarding_step2_subtitle || 'Sua playlist foi criada, em breve você poderá escutar essas orações.'}</p>
               </div>
             </div>
           </CardHeader>
@@ -301,10 +373,85 @@ export default function OnboardingClient() {
             })()}
 
             <div className="flex justify-end">
-              <Button onClick={() => router.replace(`/onboarding?step=3${currentCategoryId ? `&categoryId=${encodeURIComponent(currentCategoryId)}` : ''}`)}>
+              <Button onClick={() => router.replace(`/onboarding?step=3${currentCategoryId ? `&categoryId=${encodeURIComponent(currentCategoryId)}` : ''}${activeFormId ? `&formId=${encodeURIComponent(activeFormId)}` : ''}`)}>
                 Avançar
                 <ArrowRight className="ml-2 h-4 w-4" />
               </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  // Passos dinâmicos (>= 4 ou personalizados)
+  if (desiredStep !== 1 && desiredStep !== 2 && desiredStep !== 3 && form) {
+    const isShortText = Array.isArray((form as any).schema) && (form as any).schema[0]?.type === 'short_text';
+    if (isShortText) {
+      return (
+        <div className="max-w-2xl mx-auto p-4">
+          <Card>
+            <CardHeader>
+              <div className="relative">
+                <span className="absolute right-0 top-0 px-2 py-0.5 rounded bg-gray-800 text-gray-200 text-xs">Passo {desiredStep}</span>
+                <div className="mt-10 md:mt-12 text-center px-2 md:px-6">
+                  <CardTitle className="text-2xl md:text-3xl leading-tight line-clamp-2 max-w-4xl mx-auto">{form.name}</CardTitle>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              {form.description && <p className="text-black text-lg">{form.description}</p>}
+              <Input placeholder="Digite sua resposta..." value={shortText} onChange={(e) => setShortText(e.target.value)} />
+              <div className="flex justify-between">
+                <Button variant="ghost" onClick={skip} disabled={submitting}>Agora não</Button>
+                <Button onClick={() => submitAndGoNext({ text: shortText })} disabled={submitting || !shortText.trim()}>Enviar</Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      );
+    }
+
+    return (
+      <div className="min-h-[calc(100vh-0rem)] flex items-center justify-center px-4">
+        <Card className="w-full max-w-3xl">
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-2xl">{form.name}</CardTitle>
+              <span className="px-2 py-0.5 rounded bg-gray-800 text-gray-200 text-xs">Passo {desiredStep}</span>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            {form.description && (
+              <p className="text-black text-lg">{form.description}</p>
+            )}
+
+            <RadioGroup
+              value={selectedKey}
+              onValueChange={(key) => {
+                setSelectedKey(key);
+                const index = Number(key);
+                const chosen = (form.schema as any)?.[index];
+                if (chosen) setSelected(chosen.label || '');
+              }}
+              className="space-y-3"
+            >
+              {(form.schema as any[])?.map((opt: any, idx: number) => (
+                <div key={idx}>
+                  <label
+                    htmlFor={`opt-${idx}`}
+                    className="flex items-center gap-4 w-full p-4 rounded-lg border border-gray-800 hover:bg-gray-800/40 cursor-pointer"
+                  >
+                    <RadioGroupItem className="h-5 w-5" value={`${idx}`} id={`opt-${idx}`} />
+                    <span className="text-base">{opt.label}</span>
+                  </label>
+                </div>
+              ))}
+            </RadioGroup>
+
+            <div className="flex justify-between">
+              <Button variant="ghost" onClick={skip} disabled={submitting}>Agora não</Button>
+              <Button onClick={() => submitAndGoNext({ option: selected })} disabled={!selected || submitting}>{submitting ? 'Enviando...' : 'Enviar'}</Button>
             </div>
           </CardContent>
         </Card>
