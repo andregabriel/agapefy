@@ -268,6 +268,47 @@ export default function GmPage() {
       updateItemStatus(itemIdx, 'running');
 
       try {
+        const USE_SERVER = true;
+        if (USE_SERVER) {
+          updateItemStep(itemIdx, 'Gerar campos', { status: 'running' });
+          try {
+            const resp = await fetch('/api/generate-and-save', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                title: line.titulo,
+                base_biblica: line.base,
+                tema_central: line.tema,
+                category_id: categoryId,
+                playlists: line.playlists || []
+              })
+            });
+            const data = await resp.json().catch(() => ({}));
+            if (!resp.ok || !data?.ok) {
+              const msg = data?.error || 'Falha no servidor';
+              updateItemStep(itemIdx, 'Gerar campos', { status: 'error', message: msg });
+              updateItemStatus(itemIdx, 'error', msg);
+              continue;
+            }
+            updateItemStep(itemIdx, 'Gerar campos', { status: 'success' });
+            updateItemStep(itemIdx, 'Título ajustado', { status: 'success' });
+            updateItemStep(itemIdx, 'Áudio/Imagem', { status: 'success' });
+            updateItemStep(itemIdx, 'Salvar', { status: 'success' });
+            if (line.playlists && line.playlists.length > 0) {
+              updateItemStep(itemIdx, 'Playlist', { status: 'success', message: `${line.playlists.length} playlists` });
+            } else {
+              updateItemStep(itemIdx, 'Playlist', { status: 'success', message: 'Sem playlist' });
+            }
+            updateItemStatus(itemIdx, 'success');
+            setProgress(prev => ({ ...prev, completed: prev.completed + 1 }));
+            continue;
+          } catch (e: any) {
+            const msg = e?.message || 'Falha no servidor';
+            updateItemStep(itemIdx, 'Gerar campos', { status: 'error', message: msg });
+            updateItemStatus(itemIdx, 'error', msg);
+            continue;
+          }
+        }
         // 1) Gerar todos os campos
         updateItemStep(itemIdx, 'Gerar campos', { status: 'running' });
         // garantir que não herdaremos dados de item anterior

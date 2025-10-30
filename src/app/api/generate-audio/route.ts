@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { parseBuffer } from 'music-metadata';
 
 export async function POST(request: NextRequest) {
   try {
@@ -110,6 +111,16 @@ export async function POST(request: NextRequest) {
     
     console.log('📦 API generate-audio: Áudio recebido, tamanho:', audioBuffer.byteLength, 'bytes');
 
+    // Tentar extrair duração do MP3 a partir do buffer
+    let durationSeconds: number | null = null;
+    try {
+      const meta = await parseBuffer(Buffer.from(audioBuffer), 'audio/mpeg');
+      durationSeconds = meta?.format?.duration ? Math.round(meta.format.duration) : null;
+      console.log('⏱️ API generate-audio: Duração detectada (s):', durationSeconds);
+    } catch (e) {
+      console.warn('⚠️ API generate-audio: Falha ao obter duração do áudio via metadata. Prosseguindo sem duração.');
+    }
+
     // Inicializar cliente Supabase para upload
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
     const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -170,6 +181,7 @@ export async function POST(request: NextRequest) {
       audio_url: publicUrlData.publicUrl,
       content_type: 'audio/mpeg',
       voice_id_used: finalVoiceId,
+      duration_seconds: durationSeconds,
       success: true,
       storage_path: filePath
     });
