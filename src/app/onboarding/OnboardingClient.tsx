@@ -18,6 +18,7 @@ import WhatsAppSetup from '@/components/whatsapp/WhatsAppSetup';
 import { useAppSettings } from '@/hooks/useAppSettings';
 import { buildRoutinePlaylistFromOnboarding } from '@/lib/services/routine';
 import { useRoutinePlaylist } from '@/hooks/useRoutinePlaylist';
+import { Switch } from '@/components/ui/switch';
 
 interface FormOption { label: string; category_id: string }
 interface AdminForm { id: string; name: string; description?: string; schema: FormOption[]; onboard_step?: number | null }
@@ -48,6 +49,10 @@ export default function OnboardingClient() {
   const [category, setCategory] = useState<{ id: string; name: string; description?: string | null; image_url?: string | null } | null>(null);
   const [audios, setAudios] = useState<AudioPreview[]>([]);
   const [playlists, setPlaylists] = useState<{ id: string; title: string; description?: string | null; cover_url?: string | null }[]>([]);
+  const [hasWhatsApp, setHasWhatsApp] = useState<boolean | null>(null);
+  const [phoneForWhatsApp, setPhoneForWhatsApp] = useState<string>('');
+  const [dailyVerseEnabled, setDailyVerseEnabled] = useState<boolean>(true);
+  const [savingVersePref, setSavingVersePref] = useState<boolean>(false);
 
   // Carrossel da categoria (preview sem play)
   const carouselRef = useRef<HTMLDivElement | null>(null);
@@ -183,6 +188,35 @@ export default function OnboardingClient() {
     return () => { mounted = false; };
   }, [desiredStep, searchParams]);
 
+  // Verificação para o Passo 7: se o WhatsApp já estiver configurado, redirecionar para a Home
+  useEffect(() => {
+    let mounted = true;
+    async function checkWhatsApp() {
+      try {
+        if (desiredStep !== 7 && desiredStep !== 8) return;
+        const { data } = await supabase
+          .from('whatsapp_users')
+          .select('phone_number, receives_daily_verse')
+          .eq('user_id', user?.id ?? '-')
+          .maybeSingle();
+        if (!mounted) return;
+        const hasPhone = Boolean(data?.phone_number);
+        setHasWhatsApp(hasPhone);
+        setPhoneForWhatsApp(data?.phone_number || '');
+        if (typeof (data as any)?.receives_daily_verse === 'boolean') {
+          setDailyVerseEnabled(Boolean((data as any).receives_daily_verse));
+        } else {
+          setDailyVerseEnabled(true);
+        }
+        if (desiredStep === 7 && hasPhone) router.replace('/');
+      } catch {
+        if (mounted) setHasWhatsApp(false);
+      }
+    }
+    void checkWhatsApp();
+    return () => { mounted = false; };
+  }, [desiredStep, user?.id, router]);
+
   async function submit() {
     if (!form || !selected) {
       toast.error('Selecione uma opção');
@@ -294,7 +328,12 @@ export default function OnboardingClient() {
             )}
 
             <div className="flex items-center justify-between">
-              <Button variant="ghost" onClick={() => router.replace('/')}>Pular</Button>
+              <Button
+                variant="ghost"
+                onClick={() => router.replace(`/onboarding?step=7${currentCategoryId ? `&categoryId=${encodeURIComponent(currentCategoryId)}` : ''}${activeFormId ? `&formId=${encodeURIComponent(activeFormId)}` : ''}`)}
+              >
+                Pular
+              </Button>
               <Link href="/eu">
                 <Button>
                   Ver minha rotina
@@ -314,8 +353,11 @@ export default function OnboardingClient() {
       setSubmitting(true);
       await saveFormResponse({ formId: form.id, answers: { skipped: true }, userId: user?.id ?? null });
       toast.success('Passo adiado');
-      const nextStep = (form.onboard_step || desiredStep) + 1;
+      const currentStep = form.onboard_step || desiredStep;
+      const nextStep = currentStep + 1;
       const parentFormId = (form as any).parent_form_id || activeFormId || form.id;
+
+      // 1) Tentar ir exatamente para o próximo formulário encadeado
       let { data, error } = await supabase
         .from('admin_forms')
         .select('id')
@@ -324,23 +366,61 @@ export default function OnboardingClient() {
         .eq('onboard_step', nextStep)
         .eq('parent_form_id', parentFormId)
         .maybeSingle();
-      // Fallback: coluna ausente ou não vinculado
+
+      // 2) Se a coluna parent_form_id não existir OU não houver formulário no próximo passo,
+      //    tentar encontrar o próximo passo disponível (> passo atual)
       if ((error && (error.code === '42703' || /parent_form_id/i.test(String(error.message || '')))) || (!error && !data)) {
-        const fb = await supabase
+        let fb2 = await supabase
           .from('admin_forms')
-          .select('id')
+          .select('id, onboard_step')
           .eq('form_type', 'onboarding')
           .eq('is_active', true)
-          .eq('onboard_step', nextStep)
+          .eq('parent_form_id', parentFormId)
+          .gt('onboard_step', currentStep)
+          .order('onboard_step', { ascending: true })
+          .limit(1)
           .maybeSingle();
-        data = fb.data as any;
-        error = fb.error as any;
+        // Se parent_form_id não existir, buscar globalmente o próximo passo disponível
+        if (fb2.error && (fb2.error.code === '42703' || /parent_form_id/i.test(String(fb2.error.message || '')))) {
+          fb2 = await supabase
+            .from('admin_forms')
+            .select('id, onboard_step')
+            .eq('form_type', 'onboarding')
+            .eq('is_active', true)
+            .gt('onboard_step', currentStep)
+            .order('onboard_step', { ascending: true })
+            .limit(1)
+            .maybeSingle();
+        }
+        if (!fb2.error && fb2.data) {
+          const nextAvailable = (fb2.data as any).onboard_step as number;
+          const cat = currentCategoryId ? `&categoryId=${encodeURIComponent(currentCategoryId)}` : '';
+          router.replace(`/onboarding?step=${nextAvailable}&formId=${encodeURIComponent(parentFormId)}${cat}`);
+          return;
+        }
       }
-      if (data) {
-        router.replace(`/onboarding?step=${nextStep}&formId=${encodeURIComponent(parentFormId)}${currentCategoryId ? `&categoryId=${encodeURIComponent(currentCategoryId)}` : ''}`);
-      } else {
-        router.replace('/');
+
+      // 3) Fallback final: seguir para o próximo passo "estático" conhecido
+      const cat = currentCategoryId ? `&categoryId=${encodeURIComponent(currentCategoryId)}` : '';
+      const formParam = parentFormId ? `&formId=${encodeURIComponent(parentFormId)}` : '';
+      let fallbackStep = nextStep;
+      if (fallbackStep <= 3) {
+        router.replace(`/onboarding?step=${fallbackStep}${formParam}${cat}`);
+        return;
       }
+      if (fallbackStep <= 5) {
+        router.replace(`/onboarding?step=6${formParam}${cat}`);
+        return;
+      }
+      if (fallbackStep === 6) {
+        router.replace(`/onboarding?step=7${formParam}${cat}`);
+        return;
+      }
+      if (fallbackStep === 7) {
+        router.replace(`/onboarding?step=8${formParam}${cat}`);
+        return;
+      }
+      router.replace('/');
     } catch (e) {
       // eslint-disable-next-line no-console
       console.error(e);
@@ -417,6 +497,122 @@ export default function OnboardingClient() {
           <div className="h-32 w-full bg-gray-900 border border-gray-800 rounded animate-pulse" />
           <div className="h-10 w-32 bg-gray-800 rounded ml-auto animate-pulse" />
         </div>
+      </div>
+    );
+  }
+
+  // Passo 7: Relembrar cadastro do WhatsApp (apenas para quem não concluiu no passo 3)
+  if (desiredStep === 7) {
+    if (hasWhatsApp === null) {
+      return (
+        <div className="max-w-2xl mx-auto p-4">
+          <div className="space-y-4">
+            <div className="h-6 w-48 bg-gray-800 rounded animate-pulse" />
+            <div className="h-32 w-full bg-gray-900 border border-gray-800 rounded animate-pulse" />
+            <div className="h-10 w-32 bg-gray-800 rounded ml-auto animate-pulse" />
+          </div>
+        </div>
+      );
+    }
+    return (
+      <div className="max-w-2xl mx-auto p-4">
+        <Card>
+          <CardHeader>
+            <div className="relative">
+              <span className="absolute right-0 top-0 px-2 py-0.5 rounded bg-gray-800 text-gray-200 text-xs">Passo 7</span>
+              <div className="mt-10 md:mt-12 text-center px-2 md:px-6">
+                <CardTitle className="text-xl md:text-2xl leading-snug break-words max-w-3xl mx-auto">
+                  Conecte seu WhatsApp para receber suas mensagens diárias.
+                </CardTitle>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <WhatsAppSetup
+              variant="embedded"
+              redirectIfNotLoggedIn={false}
+              onSavedPhone={() => setHasWhatsApp(true)}
+            />
+            <div className="flex justify-between">
+              <Button
+                variant="ghost"
+                onClick={() => router.replace(`/onboarding?step=8${currentCategoryId ? `&categoryId=${encodeURIComponent(currentCategoryId)}` : ''}${activeFormId ? `&formId=${encodeURIComponent(activeFormId)}` : ''}`)}
+              >
+                Pular
+              </Button>
+              {hasWhatsApp && (
+                <Button onClick={() => router.replace('/')}>Concluir</Button>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  // Passo 8: Opt-in de Versículo Diário
+  if (desiredStep === 8) {
+    return (
+      <div className="max-w-2xl mx-auto p-4">
+        <Card>
+          <CardHeader>
+            <div className="relative">
+              <span className="absolute right-0 top-0 px-2 py-0.5 rounded bg-gray-800 text-gray-200 text-xs">Passo 8</span>
+              <div className="mt-10 md:mt-12 text-center px-2 md:px-6">
+                <CardTitle className="text-[clamp(18px,4.5vw,28px)] leading-snug break-words max-w-3xl mx-auto">
+                  Receba um versículo diário para fortalecer sua fé.
+                </CardTitle>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <div className="space-y-4">
+              {/* Card de configuração do WhatsApp oculto no passo 8 */}
+
+              <div className="flex items-center justify-between p-3 rounded-md border border-gray-800">
+                <div>
+                  <div className="font-medium text-black">Ativar versículo diário</div>
+                  <p className="text-sm text-gray-500">Receba 1 versículo por dia no seu WhatsApp.</p>
+                </div>
+                <Switch checked={dailyVerseEnabled} onCheckedChange={setDailyVerseEnabled} />
+              </div>
+
+              {/* Preview simples de como a mensagem chega no WhatsApp */}
+              <div className="p-4 rounded-lg border border-gray-800 bg-white/40">
+                <div className="text-sm text-gray-600 mb-2">Prévia no WhatsApp</div>
+                <div className="max-w-xs bg-white border border-gray-200 rounded-2xl p-3 shadow-sm">
+                  <div className="text-gray-800 text-sm">“O Senhor é o meu pastor; nada me faltará.”</div>
+                  <div className="text-gray-500 text-xs mt-1">Salmos 23:1 • Agapefy</div>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex justify-end">
+              <Button
+                onClick={async () => {
+                  try {
+                    if (hasWhatsApp && phoneForWhatsApp) {
+                      setSavingVersePref(true);
+                      const { error } = await supabase
+                        .from('whatsapp_users')
+                        .upsert({ phone_number: phoneForWhatsApp, receives_daily_verse: dailyVerseEnabled, updated_at: new Date().toISOString() } as any, { onConflict: 'phone_number' });
+                      if (error) throw error;
+                    }
+                  } catch (e) {
+                    // eslint-disable-next-line no-console
+                    console.warn('Falha ao salvar preferência de versículo diário', e);
+                  } finally {
+                    setSavingVersePref(false);
+                    router.replace('/');
+                  }
+                }}
+                disabled={savingVersePref}
+              >
+                {savingVersePref ? 'Salvando...' : 'Concluir'}
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
       </div>
     );
   }

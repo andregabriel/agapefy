@@ -8,6 +8,7 @@ import { BottomNavigation } from '@/components/layout/BottomNavigation';
 import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useMemo, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
+import { supabase } from '@/lib/supabase';
 
 export default function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -29,6 +30,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
       if (pathname.startsWith('/onboarding')) return; // já no fluxo de onboarding
 
       try {
+        const alreadyRedirected = typeof window !== 'undefined' && sessionStorage.getItem('onboardingRedirected') === '1';
         const res = await fetch('/api/onboarding/status', {
           headers: { 'x-user-id': user.id }
         });
@@ -36,7 +38,25 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
         const json = await res.json();
         if (aborted) return;
         if (json?.pending && typeof json?.nextStep === 'number') {
-          router.replace(`/onboarding?step=${json.nextStep}`);
+          if (!alreadyRedirected) {
+            router.replace(`/onboarding?step=${json.nextStep}`);
+            try { sessionStorage.setItem('onboardingRedirected', '1'); } catch {}
+          }
+          return;
+        }
+
+        // Sem passos pendentes: verificar se o WhatsApp foi configurado; se não, enviar para o passo 7
+        const { data } = await supabase
+          .from('whatsapp_users')
+          .select('phone_number')
+          .eq('user_id', user.id)
+          .maybeSingle();
+        if (aborted) return;
+        if (!data?.phone_number) {
+          if (!alreadyRedirected) {
+            router.replace('/onboarding?step=7');
+            try { sessionStorage.setItem('onboardingRedirected', '1'); } catch {}
+          }
         }
       } catch {
         // Ignora erros silenciosamente para não afetar UX

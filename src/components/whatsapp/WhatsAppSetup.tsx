@@ -14,16 +14,17 @@ import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Switch } from "@/components/ui/switch";
 
-import { CheckCircle, AlertCircle } from "lucide-react";
+import { CheckCircle, AlertCircle, Sunrise, Utensils, Sunset, Moon } from "lucide-react";
 
 type Variant = "standalone" | "embedded";
 
 interface WhatsAppSetupProps {
   variant?: Variant;
   redirectIfNotLoggedIn?: boolean;
+  onSavedPhone?: (phone: string) => void;
 }
 
-export default function WhatsAppSetup({ variant = "standalone", redirectIfNotLoggedIn = true }: WhatsAppSetupProps) {
+export default function WhatsAppSetup({ variant = "standalone", redirectIfNotLoggedIn = true, onSavedPhone }: WhatsAppSetupProps) {
   const { user, loading } = useAuth();
   const router = useRouter();
   const { settings } = useAppSettings();
@@ -36,6 +37,10 @@ export default function WhatsAppSetup({ variant = "standalone", redirectIfNotLog
   const [dailyVerse, setDailyVerse] = useState(false); // Versículo Diário
   const [dailyPrayer, setDailyPrayer] = useState(false); // Caminho Selecionado
   const [dailyRoutine, setDailyRoutine] = useState(false); // Minha Rotina
+  const [wakeTime, setWakeTime] = useState("");
+  const [lunchTime, setLunchTime] = useState("");
+  const [dinnerTime, setDinnerTime] = useState("");
+  const [sleepTime, setSleepTime] = useState("");
 
   useEffect(() => {
     if (!redirectIfNotLoggedIn) return;
@@ -47,20 +52,45 @@ export default function WhatsAppSetup({ variant = "standalone", redirectIfNotLog
   useEffect(() => {
     const fetchExisting = async () => {
       try {
-        const { data, error } = await supabase
-          .from("whatsapp_users")
-          .select("phone_number, is_active, receives_daily_verse, receives_daily_prayer, receives_daily_routine")
-          .eq("user_id", user?.id ?? "-")
-          .maybeSingle();
-        if (error) return;
-        if (data?.phone_number) setPhone(data.phone_number);
-        if (typeof data?.is_active === 'boolean') setIsActive(Boolean(data.is_active));
-        if (typeof data?.receives_daily_verse === 'boolean') setDailyVerse(Boolean(data.receives_daily_verse));
-        if (typeof data?.receives_daily_prayer === 'boolean') setDailyPrayer(Boolean(data.receives_daily_prayer));
-        if (typeof data?.receives_daily_routine === 'boolean') setDailyRoutine(Boolean(data.receives_daily_routine));
+        // Prefer the last phone used on this device
+        const localPhone = typeof window !== 'undefined' ? window.localStorage.getItem('agape_whatsapp_phone') : null;
+        if (localPhone) setPhone(localPhone);
+
+        let row: any = null;
+        if (localPhone) {
+          const { data } = await supabase
+            .from('whatsapp_users')
+            .select('phone_number, is_active, receives_daily_verse, receives_daily_prayer, receives_daily_routine, prayer_time_wakeup, prayer_time_lunch, prayer_time_dinner, prayer_time_sleep')
+            .eq('phone_number', localPhone)
+            .maybeSingle();
+          row = data || null;
+        }
+
+        if (!row) {
+          // Fallback: get most recent record (best-effort prefill if user used a different device)
+          const res = await supabase
+            .from('whatsapp_users')
+            .select('phone_number, is_active, receives_daily_verse, receives_daily_prayer, receives_daily_routine, prayer_time_wakeup, prayer_time_lunch, prayer_time_dinner, prayer_time_sleep')
+            .order('updated_at', { ascending: false })
+            .limit(1);
+          row = (res.data && res.data[0]) || null;
+        }
+
+        if (!row) return;
+        if (row.phone_number) setPhone(row.phone_number);
+        if (typeof row.is_active === 'boolean') setIsActive(Boolean(row.is_active));
+        if (typeof row.receives_daily_verse === 'boolean') setDailyVerse(Boolean(row.receives_daily_verse));
+        if (typeof row.receives_daily_prayer === 'boolean') setDailyPrayer(Boolean(row.receives_daily_prayer));
+        if (typeof row.receives_daily_routine === 'boolean') setDailyRoutine(Boolean(row.receives_daily_routine));
+        // Times may come as 'HH:MM:SS' from Postgres time; normalize to 'HH:MM'
+        const slice5 = (t: any) => (typeof t === 'string' && t.length >= 5 ? t.slice(0, 5) : "");
+        setWakeTime(slice5(row.prayer_time_wakeup));
+        setLunchTime(slice5(row.prayer_time_lunch));
+        setDinnerTime(slice5(row.prayer_time_dinner));
+        setSleepTime(slice5(row.prayer_time_sleep));
       } catch {}
     };
-    if (user?.id) fetchExisting();
+    fetchExisting();
   }, [user?.id]);
 
   const formattedExample = useMemo(() => "+55 11 99999-9999", []);
@@ -86,15 +116,23 @@ export default function WhatsAppSetup({ variant = "standalone", redirectIfNotLog
       if (error) throw error;
       toast.success("Número salvo com sucesso. Envie /start no seu WhatsApp.");
       setIsActive(true);
+      try {
+        if (typeof window !== 'undefined') window.localStorage.setItem('agape_whatsapp_phone', clean);
+      } catch {}
+      if (typeof onSavedPhone === 'function') onSavedPhone(clean);
 
       const welcome = settings.whatsapp_welcome_message?.trim();
       if (welcome) {
         try {
-          void fetch("/api/whatsapp/test-message", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ phone: clean, message: welcome })
-          });
+          // Só tenta enviar se a instância Z-API estiver OK
+          const status = await fetch('/api/whatsapp/status');
+          if (status.ok) {
+            void fetch("/api/whatsapp/test-message", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ phone: clean, message: welcome })
+            });
+          }
         } catch (e) {
           // eslint-disable-next-line no-console
           console.warn("Falha ao agendar envio de mensagem de boas-vindas", e);
@@ -127,6 +165,28 @@ export default function WhatsAppSetup({ variant = "standalone", redirectIfNotLog
     } catch (e) {
       console.warn(e);
       toast.error('Não foi possível atualizar a preferência');
+    }
+  }
+
+  async function updatePrayerTime(field: "prayer_time_wakeup" | "prayer_time_lunch" | "prayer_time_dinner" | "prayer_time_sleep", value: string) {
+    const clean = phone.replace(/\D/g, "");
+    if (!clean) {
+      toast.error("Cadastre um número válido primeiro");
+      return;
+    }
+    try {
+      // Persist as time (HH:MM); Postgres will cast string to time
+      const payload: any = { phone_number: clean, updated_at: new Date().toISOString() };
+      // If empty, set null
+      (payload as any)[field] = value && value.length >= 4 ? value : null;
+      const { error } = await supabase
+        .from('whatsapp_users')
+        .upsert(payload, { onConflict: 'phone_number' });
+      if (error) throw error;
+      toast.success('Horário atualizado');
+    } catch (e) {
+      console.warn(e);
+      toast.error('Não foi possível salvar o horário');
     }
   }
 
@@ -223,6 +283,84 @@ export default function WhatsAppSetup({ variant = "standalone", redirectIfNotLog
               </div>
               <Switch checked={dailyRoutine} onCheckedChange={(v) => updatePreference('receives_daily_routine', v)} />
             </div>
+
+            {(dailyPrayer || dailyRoutine) && (
+              <div className="p-3 rounded-md bg-muted/40 space-y-3">
+                <div>
+                  <div className="font-medium">Horários das orações</div>
+                  <p className="text-sm text-muted-foreground">Defina os melhores horários para receber as orações da sua rotina.</p>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="flex items-center justify-between gap-3 p-3 rounded-md border bg-background">
+                    <div className="flex items-center gap-2">
+                      <Sunrise className="h-4 w-4 text-muted-foreground" />
+                      <span className="text-sm">Ao acordar</span>
+                    </div>
+                    <Input
+                      type="time"
+                      value={wakeTime}
+                      onChange={(e) => {
+                        const v = e.target.value;
+                        setWakeTime(v);
+                        updatePrayerTime('prayer_time_wakeup', v);
+                      }}
+                      className="w-[120px]"
+                    />
+                  </div>
+
+                  <div className="flex items-center justify-between gap-3 p-3 rounded-md border bg-background">
+                    <div className="flex items-center gap-2">
+                      <Utensils className="h-4 w-4 text-muted-foreground" />
+                      <span className="text-sm">No almoço</span>
+                    </div>
+                    <Input
+                      type="time"
+                      value={lunchTime}
+                      onChange={(e) => {
+                        const v = e.target.value;
+                        setLunchTime(v);
+                        updatePrayerTime('prayer_time_lunch', v);
+                      }}
+                      className="w-[120px]"
+                    />
+                  </div>
+
+                  <div className="flex items-center justify-between gap-3 p-3 rounded-md border bg-background">
+                    <div className="flex items-center gap-2">
+                      <Sunset className="h-4 w-4 text-muted-foreground" />
+                      <span className="text-sm">No jantar</span>
+                    </div>
+                    <Input
+                      type="time"
+                      value={dinnerTime}
+                      onChange={(e) => {
+                        const v = e.target.value;
+                        setDinnerTime(v);
+                        updatePrayerTime('prayer_time_dinner', v);
+                      }}
+                      className="w-[120px]"
+                    />
+                  </div>
+
+                  <div className="flex items-center justify-between gap-3 p-3 rounded-md border bg-background">
+                    <div className="flex items-center gap-2">
+                      <Moon className="h-4 w-4 text-muted-foreground" />
+                      <span className="text-sm">Ao dormir</span>
+                    </div>
+                    <Input
+                      type="time"
+                      value={sleepTime}
+                      onChange={(e) => {
+                        const v = e.target.value;
+                        setSleepTime(v);
+                        updatePrayerTime('prayer_time_sleep', v);
+                      }}
+                      className="w-[120px]"
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         )}
 

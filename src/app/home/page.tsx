@@ -17,6 +17,7 @@ import { EmptyState } from './_components/EmptyState';
 import { CategorySection } from './_components/CategorySection';
 import { LoadingIndicator } from './_components/LoadingIndicator';
 import { PrayerStatsSection } from './_components/PrayerStatsSection';
+import OnboardingChecklist from './_components/OnboardingChecklist';
 import { PrayerQuoteSection } from '@/components/PrayerQuoteSection';
 import { useAppSettings } from '@/hooks/useAppSettings';
 import { useUserActivity } from '@/hooks/useUserActivity';
@@ -242,6 +243,8 @@ export default function HomePage() {
 
   return (
     <div className="px-4 py-6 pt-6 space-y-8">
+      {/* Checklist de onboarding no topo (aparece apenas se houver pendências) */}
+      <OnboardingChecklist />
       {/* A seção Minha Rotina será mostrada como categoria quando existir a categoria "Rotina".
           Para evitar duplicidade, só mostramos no topo se não houver categoria "Rotina" configurada. */}
       {!categoriesWithContent.some(c => isRotinaCategoryName(c.name)) && (
