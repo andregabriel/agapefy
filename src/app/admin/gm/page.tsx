@@ -13,12 +13,14 @@ import { getCategories, type Category, ensurePlaylistByTitleInsensitive, addAudi
 import AIGenerator from '@/components/admin/AIGenerator';
 import type { AIGeneratorHandle, AIGeneratorProps } from '@/types/ai';
 import type { AIGProgressEvent } from '@/types/ai';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 type BatchLine = {
   titulo: string;
   base: string;
   tema: string;
   playlists: string[];
+  orderMap?: Record<string, number>;
   raw: string;
   error?: string;
 };
@@ -37,6 +39,26 @@ type ItemProgress = {
 };
 
 const MAX_ITEMS = 30;
+
+function TruncatedWithTooltip({
+  text,
+  emptyAsDash = true,
+}: {
+  text: string | undefined | null;
+  emptyAsDash?: boolean;
+}) {
+  if (!text || text.length === 0) {
+    return emptyAsDash ? <span className="text-red-600">-</span> : <span />;
+  }
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <div className="truncate cursor-help">{text}</div>
+      </TooltipTrigger>
+      <TooltipContent className="max-w-[520px] whitespace-pre-wrap break-words">{text}</TooltipContent>
+    </Tooltip>
+  );
+}
 
 export default function GmPage() {
   const aiRef = useRef<AIGeneratorHandle | null>(null);
@@ -164,7 +186,7 @@ export default function GmPage() {
         const titulo = obj['Título da Oração'] ?? obj['Titulo da Oração'] ?? obj['Titulo'] ?? obj['Título'];
         const base = obj['Base bíblica'] ?? obj['Base Biblica'] ?? obj['Base'] ?? '';
         const tema = obj['Tema central'] ?? obj['Tema'] ?? '';
-        const playlistVal = obj['Playlist'] ?? '';
+        const playlistVal = (obj['Playlist'] ?? obj['Playlists'] ?? '');
         let playlists: string[] = [];
         if (Array.isArray(playlistVal)) {
           playlists = (playlistVal as any[])
@@ -173,11 +195,29 @@ export default function GmPage() {
         } else if (typeof playlistVal === 'string' && playlistVal.trim().length > 0) {
           playlists = [playlistVal.trim()];
         }
+
+        // Novo: Ordem por playlist (aceita "Ordem nas Playlists" e "Ordem das orações")
+        const orderRaw = (obj['Ordem nas Playlists'] ?? obj['Ordem das orações'] ?? obj['Ordem das oracoes']) as any;
+        let orderMap: Record<string, number> | undefined = undefined;
+        if (orderRaw && typeof orderRaw === 'object' && !Array.isArray(orderRaw)) {
+          const tmp: Record<string, number> = {};
+          for (const [k, v] of Object.entries(orderRaw)) {
+            const key = typeof k === 'string' ? k.trim() : '';
+            const n = typeof v === 'number' ? v : Number(v);
+            if (key && Number.isFinite(n) && n >= 1) tmp[key] = Math.trunc(n);
+          }
+          if (Object.keys(tmp).length > 0) orderMap = tmp;
+        }
+        // Se playlists vieram vazias, mas há ordem por playlist, inferir pelos nomes do mapa
+        if ((!playlists || playlists.length === 0) && orderMap && Object.keys(orderMap).length > 0) {
+          playlists = Object.keys(orderMap);
+        }
+
         if (!titulo || !base || !tema) {
-          out.push({ raw, titulo: titulo || '', base: base || '', tema: tema || '', playlists, error: 'Campos obrigatórios ausentes' });
+          out.push({ raw, titulo: titulo || '', base: base || '', tema: tema || '', playlists, orderMap, error: 'Campos obrigatórios ausentes' });
           continue;
         }
-        out.push({ raw, titulo: String(titulo), base: String(base), tema: String(tema), playlists });
+        out.push({ raw, titulo: String(titulo), base: String(base), tema: String(tema), playlists, orderMap });
       } catch (e) {
         out.push({ raw, titulo: '', base: '', tema: '', playlists: [], error: 'JSON inválido' });
       }
@@ -344,6 +384,7 @@ export default function GmPage() {
                 tema_central: line.tema,
                 category_id: categoryId,
                 playlists: line.playlists || [],
+                order_map: line.orderMap || undefined,
                 created_by: currentUserId || undefined
               })
             });
@@ -589,23 +630,25 @@ export default function GmPage() {
             <CardDescription>Linhas válidas: {validLines.length} / {lines.length}</CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
-            <div className="grid grid-cols-1 sm:grid-cols-4 gap-2 text-sm font-medium">
-              <div>Título</div>
-              <div>Base bíblica</div>
-              <div>Tema central</div>
-              <div>Playlist</div>
-            </div>
-            <div className="max-h-72 overflow-y-auto space-y-2">
-              {lines.map((l, idx) => (
-                <div key={idx} className="grid grid-cols-1 sm:grid-cols-4 gap-2 text-sm p-2 border rounded-md">
-                  <div className="truncate">{l.titulo || <span className="text-red-600">-</span>}</div>
-                  <div className="truncate">{l.base || <span className="text-red-600">-</span>}</div>
-                  <div className="truncate">{l.tema || <span className="text-red-600">-</span>}</div>
-                  <div className="truncate">{l.playlists && l.playlists.length ? l.playlists.join(', ') : ''}</div>
-                  {l.error && <div className="sm:col-span-4 text-xs text-red-600">{l.error}</div>}
-                </div>
-              ))}
-            </div>
+            <TooltipProvider delayDuration={150}>
+              <div className="grid grid-cols-1 sm:grid-cols-4 gap-2 text-sm font-medium">
+                <div>Título</div>
+                <div>Base bíblica</div>
+                <div>Tema central</div>
+                <div>Playlist</div>
+              </div>
+              <div className="max-h-72 overflow-y-auto space-y-2">
+                {lines.map((l, idx) => (
+                  <div key={idx} className="grid grid-cols-1 sm:grid-cols-4 gap-2 text-sm p-2 border rounded-md">
+                    <TruncatedWithTooltip text={l.titulo} />
+                    <TruncatedWithTooltip text={l.base} />
+                    <TruncatedWithTooltip text={l.tema} />
+                    <TruncatedWithTooltip text={l.playlists && l.playlists.length ? l.playlists.join(', ') : ''} emptyAsDash={false} />
+                    {l.error && <div className="sm:col-span-4 text-xs text-red-600">{l.error}</div>}
+                  </div>
+                ))}
+              </div>
+            </TooltipProvider>
           </CardContent>
         </Card>
       )}

@@ -10,6 +10,7 @@ type ReqBody = {
   tema_central?: string;
   category_id?: string;
   playlists?: string[];
+  order_map?: Record<string, number>;
   voice_id?: string;
   job_id?: string;
   created_by?: string;
@@ -125,6 +126,16 @@ export async function POST(req: NextRequest) {
     const tema = (body.tema_central || '').trim();
     const categoryId = (body.category_id || '').trim();
     const playlists = Array.isArray(body.playlists) ? body.playlists.filter(s => typeof s === 'string' && s.trim()) : [];
+    // Normalizar mapa de posições
+    const orderMapRaw = body.order_map as any;
+    const orderMap: Record<string, number> = {};
+    if (orderMapRaw && typeof orderMapRaw === 'object' && !Array.isArray(orderMapRaw)) {
+      for (const [k, v] of Object.entries(orderMapRaw)) {
+        const key = typeof k === 'string' ? k.trim() : '';
+        const n = typeof v === 'number' ? v : Number(v);
+        if (key && Number.isFinite(n) && n >= 1) orderMap[key] = Math.trunc(n);
+      }
+    }
     const voiceId = body.voice_id || '';
 
     if (!categoryId) return NextResponse.json({ ok: false, error: 'category_id obrigatório' }, { status: 400 });
@@ -249,18 +260,54 @@ export async function POST(req: NextRequest) {
     if (insertRes.error) return NextResponse.json({ ok: false, error: insertRes.error.message }, { status: 500 });
     const audioId = insertRes.data?.id as string;
 
-    // 6) playlists
-    for (const p of playlists) {
-      const plId = await ensurePlaylist(admin, p, categoryId);
-      if (plId) {
-        const { error: paErr } = await admin
+    // 6) playlists com posição
+    const allPlaylists = Array.from(new Set([...(playlists || []), ...Object.keys(orderMap || {})]));
+    const applied: Array<{ playlist: string; position?: number; action: 'inserted' | 'updated' | 'noop' | 'skipped' }> = [];
+    for (const pTitle of allPlaylists) {
+      const plId = await ensurePlaylist(admin, pTitle, categoryId);
+      if (!plId) {
+        applied.push({ playlist: pTitle, action: 'skipped' });
+        continue;
+      }
+
+      const desired = orderMap[pTitle]; // pode ser undefined
+
+      // Verificar vínculo existente
+      const { data: existing, error: selErr } = await admin
+        .from('playlist_audios')
+        .select('id, position')
+        .eq('playlist_id', plId)
+        .eq('audio_id', audioId)
+        .maybeSingle();
+      if (selErr) {
+        applied.push({ playlist: pTitle, action: 'skipped' });
+        continue;
+      }
+
+      if (!existing) {
+        // Inserir com position, se fornecido
+        const payload: any = { audio_id: audioId, playlist_id: plId };
+        if (Number.isFinite(desired) && desired >= 1) payload.position = Math.trunc(desired);
+        const { error: insErr } = await admin.from('playlist_audios').insert(payload);
+        if (!insErr) applied.push({ playlist: pTitle, position: payload.position, action: 'inserted' });
+        else applied.push({ playlist: pTitle, action: 'skipped' });
+        continue;
+      }
+
+      // Já existe: atualizar position se necessário
+      if (Number.isFinite(desired) && desired >= 1 && existing.position !== Math.trunc(desired)) {
+        const { error: updErr } = await admin
           .from('playlist_audios')
-          .insert({ audio_id: audioId, playlist_id: plId });
-        // Não falhar o job por erro de playlist; apenas continue
+          .update({ position: Math.trunc(desired) })
+          .eq('id', existing.id);
+        if (!updErr) applied.push({ playlist: pTitle, position: Math.trunc(desired), action: 'updated' });
+        else applied.push({ playlist: pTitle, action: 'skipped' });
+      } else {
+        applied.push({ playlist: pTitle, position: existing.position, action: 'noop' });
       }
     }
 
-    return NextResponse.json({ ok: true, audio_id: audioId }, { status: 200 });
+    return NextResponse.json({ ok: true, audio_id: audioId, applied }, { status: 200 });
   } catch (e: any) {
     return NextResponse.json({ ok: false, error: e?.message || 'Erro desconhecido' }, { status: 500 });
   }
