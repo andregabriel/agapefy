@@ -911,3 +911,82 @@ Cadastre seu número de WhatsApp e comece a conversar comigo. Você poderá envi
  ✓ Compiled in 4.3s (851 modules)
 🔍 Middleware: Permitindo acesso temporário ao admin para debug
  GET /admin/playlists 200 in 58ms
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+📊 AuthContext: Estado atual - User: false Loading: true
+ GET /admin/playlists 200 in 467ms
+ ✓ Compiled in 6.8s (1522 modules)
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ GET /admin/playlists 200 in 490ms
+ ✓ Compiled in 772ms (1522 modules)
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ GET /admin/playlists 200 in 52ms
+ GET / 200 in 400ms
+ ○ Compiling /api/onboarding/checklist ...
+ ✓ Compiled /api/onboarding/checklist in 2.6s (690 modules)
+ GET /api/onboarding/checklist 500 in 3491ms
+📊 AuthContext: Estado atual - User: false Loading: true
+ GET / 200 in 2785ms
+ GET /api/onboarding/checklist 500 in 170ms
+ GET /api/onboarding/checklist 500 in 55ms
+📊 AuthContext: Estado atual - User: false Loading: true
+ GET / 200 in 118ms
+ GET /api/onboarding/checklist 500 in 107ms
+ GET /api/onboarding/checklist 500 in 44ms
+ GET / 200 in 58ms
+ GET /api/onboarding/checklist 500 in 221ms
+ GET /api/onboarding/checklist 500 in 136ms
+ GET /api/onboarding/checklist 500 in 221ms
+ GET /api/onboarding/checklist 500 in 203ms
+ GET /api/onboarding/checklist 500 in 159ms
+ GET /api/onboarding/checklist 500 in 183ms
+ GET /api/onboarding/checklist 500 in 261ms
+ GET /api/onboarding/checklist 500 in 58ms
+ ✓ Compiled in 7.8s (1527 modules)
+ GET /api/onboarding/checklist 500 in 562ms
+ GET /api/onboarding/checklist 500 in 60ms
+ ✓ Compiled in 3s (1541 modules)
+ GET / 200 in 81ms
+ GET /api/onboarding/checklist 500 in 485ms
+ GET /api/onboarding/checklist 500 in 245ms
+ ✓ Compiled in 1111ms (1541 modules)
+ GET / 200 in 67ms
+ ✓ Compiled in 3.1s (1541 modules)
+ GET /api/onboarding/checklist 500 in 3168ms
+ GET /api/onboarding/checklist 500 in 132ms
+ GET / 200 in 137ms
+ GET /api/onboarding/checklist 500 in 84ms
+ GET /api/onboarding/checklist 500 in 214ms
+ GET /api/onboarding/checklist 500 in 712ms
+ GET /api/onboarding/checklist 500 in 58ms
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ GET /admin 200 in 110ms
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ ○ Compiling /admin/categorias ...
+ ✓ Compiled /admin/categorias in 3s (785 modules)
+📊 AuthContext: Estado atual - User: false Loading: true
+ GET /admin/categorias 200 in 3362ms
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ GET /admin/playlists 200 in 140ms
+ ✓ Compiled in 2.5s (1604 modules)
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ GET /admin/playlists 200 in 579ms
+ ✓ Compiled in 656ms (1604 modules)
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ GET /admin/playlists 200 in 57ms
+ GET / 200 in 214ms
+ ○ Compiling /api/onboarding/checklist ...
+ ✓ Compiled /api/onboarding/checklist in 1666ms (772 modules)
+ GET /api/onboarding/checklist 500 in 2318ms
+ GET /api/onboarding/checklist 500 in 43ms
+ GET /whatsapp 200 in 96ms
+ ✓ Compiled in 3s (1609 modules)
+ ✓ Compiled in 3.3s (1604 modules)
+ GET /whatsapp 200 in 507ms
+ ✓ Compiled in 677ms (1604 modules)
+ GET /whatsapp 200 in 45ms
+ ✓ Compiled in 1695ms (1604 modules)
+ GET /whatsapp 200 in 148ms
+ ✓ Compiled in 757ms (1604 modules)
+ GET /whatsapp 200 in 47ms
+ ✓ Compiled in 4.9s (1604 modules)
+ GET /whatsapp 200 in 108ms

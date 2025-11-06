@@ -18,6 +18,7 @@ export default function PlaylistModal({ playlist, isOpen, onClose, onSave }: Pla
     cover_url: '',
     category_id: '',
     is_public: true,
+    is_challenge: false,
   });
   const [categories, setCategories] = useState<any[]>([]);
   const [audios, setAudios] = useState<any[]>([]);
@@ -44,8 +45,23 @@ export default function PlaylistModal({ playlist, isOpen, onClose, onSave }: Pla
         cover_url: playlist.cover_url || '',
         category_id: playlist.category_id || '',
         is_public: playlist.is_public ?? true,
+        is_challenge: false,
       });
       fetchPlaylistAudios();
+      // Buscar flag de desafio para a playlist atual
+      (async () => {
+        try {
+          if (!playlist?.id) return;
+          const { data: ch } = await supabase
+            .from('challenge')
+            .select('playlist_id')
+            .eq('playlist_id', playlist.id)
+            .maybeSingle();
+          setFormData(prev => ({ ...prev, is_challenge: !!ch }));
+        } catch {
+          // ignore
+        }
+      })();
     } else {
       setFormData({
         title: '',
@@ -53,6 +69,7 @@ export default function PlaylistModal({ playlist, isOpen, onClose, onSave }: Pla
         cover_url: '',
         category_id: '',
         is_public: true,
+        is_challenge: false,
       });
       setSelectedAudios([]);
     }
@@ -262,6 +279,33 @@ export default function PlaylistModal({ playlist, isOpen, onClose, onSave }: Pla
 
         console.log('✅ Playlist criada com sucesso:', insertResult);
         playlistId = insertResult.id;
+      }
+
+      // Atualizar flag de desafio (tabela challenge)
+      if (playlistId) {
+        try {
+          if (formData.is_challenge) {
+            const { error: chErr } = await supabase
+              .from('challenge')
+              .upsert(
+                [{ playlist_id: playlistId, created_by: user.id }],
+                { onConflict: 'playlist_id' }
+              );
+            if (chErr) {
+              console.warn('Falha ao marcar playlist como desafio (ignorando):', chErr);
+            }
+          } else {
+            const { error: delErr } = await supabase
+              .from('challenge')
+              .delete()
+              .eq('playlist_id', playlistId);
+            if (delErr) {
+              console.warn('Falha ao desmarcar playlist como desafio (ignorando):', delErr);
+            }
+          }
+        } catch (e) {
+          console.warn('Exceção ao sincronizar flag de desafio (ignorada):', e);
+        }
       }
 
       // Atualizar áudios da playlist
@@ -491,18 +535,32 @@ export default function PlaylistModal({ playlist, isOpen, onClose, onSave }: Pla
                 </select>
               </div>
 
-              <div className="flex items-center">
-                <input
-                  type="checkbox"
-                  id="is_public"
-                  checked={formData.is_public}
-                  onChange={(e) => setFormData({ ...formData, is_public: e.target.checked })}
-                  className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                />
-                <label htmlFor="is_public" className="ml-2 block text-sm text-gray-900">
-                  Playlist pública
-                </label>
-              </div>
+          <div className="flex items-center space-x-6">
+            <div className="flex items-center">
+              <input
+                type="checkbox"
+                id="is_public"
+                checked={formData.is_public}
+                onChange={(e) => setFormData({ ...formData, is_public: e.target.checked })}
+                className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+              />
+              <label htmlFor="is_public" className="ml-2 block text-sm text-gray-900">
+                Playlist pública
+              </label>
+            </div>
+            <div className="flex items-center">
+              <input
+                type="checkbox"
+                id="is_challenge"
+                checked={formData.is_challenge}
+                onChange={(e) => setFormData({ ...formData, is_challenge: e.target.checked })}
+                className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+              />
+              <label htmlFor="is_challenge" className="ml-2 block text-sm text-gray-900">
+                Desafio
+              </label>
+            </div>
+          </div>
             </div>
 
             {/* Gerenciamento de Áudios */}

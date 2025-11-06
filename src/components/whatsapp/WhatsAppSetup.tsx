@@ -35,7 +35,7 @@ export default function WhatsAppSetup({ variant = "standalone", redirectIfNotLog
   const [status, setStatus] = useState<null | { ok: boolean; details?: any }>(null);
   const [isActive, setIsActive] = useState(false); // Biblicus
   const [dailyVerse, setDailyVerse] = useState(false); // Versículo Diário
-  const [dailyPrayer, setDailyPrayer] = useState(false); // Caminho Selecionado
+  const [dailyPrayer, setDailyPrayer] = useState(false); // Jornada
   const [dailyRoutine, setDailyRoutine] = useState(false); // Minha Rotina
   const [wakeTime, setWakeTime] = useState("");
   const [lunchTime, setLunchTime] = useState("");
@@ -338,7 +338,7 @@ export default function WhatsAppSetup({ variant = "standalone", redirectIfNotLog
 
             <div className="flex items-start justify-between gap-4 p-3 rounded-md bg-muted/40">
               <div>
-                <div className="font-medium">Caminho Selecionado</div>
+                <div className="font-medium">Jornada</div>
                 <p className="text-sm text-muted-foreground">Você receberá orações diariamente para superar sua dificuldade selecionada.</p>
               </div>
               <Switch checked={dailyPrayer} onCheckedChange={(v) => updatePreference('receives_daily_prayer', v)} />
@@ -352,7 +352,7 @@ export default function WhatsAppSetup({ variant = "standalone", redirectIfNotLog
               <Switch checked={dailyRoutine} onCheckedChange={(v) => updatePreference('receives_daily_routine', v)} />
             </div>
 
-            {(dailyPrayer || dailyRoutine) && (
+            {dailyRoutine && (
               <div className="p-3 rounded-md bg-muted/40 space-y-3">
                 <div>
                   <div className="font-medium">Horários das orações</div>

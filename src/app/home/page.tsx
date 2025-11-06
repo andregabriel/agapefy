@@ -241,26 +241,6 @@ export default function HomePage() {
     return <ErrorState error={error} onRetry={() => loadCategoriesWithContent(true)} />;
   }
 
-  // Derivar o áudio do dia (mais recente criado hoje em São Paulo)
-  const dailyAudioId = (() => {
-    try {
-      const tz = 'America/Sao_Paulo';
-      const now = new Date();
-      const todayStr = new Intl.DateTimeFormat('en-CA', { timeZone: tz, year: 'numeric', month: '2-digit', day: '2-digit' }).format(now);
-      const allAudios: Audio[] = categoriesWithContent.flatMap(c => c.audios || []);
-      const todays = allAudios.filter(a => {
-        const d = new Date(a.created_at as any);
-        const dStr = new Intl.DateTimeFormat('en-CA', { timeZone: tz, year: 'numeric', month: '2-digit', day: '2-digit' }).format(d);
-        return dStr === todayStr;
-      });
-      if (todays.length === 0) return undefined;
-      const sorted = [...todays].sort((a, b) => new Date(b.created_at as any).getTime() - new Date(a.created_at as any).getTime());
-      return sorted[0]?.id;
-    } catch {
-      return undefined;
-    }
-  })();
-
   return (
     <div className="px-4 py-6 pt-6 space-y-8">
       {/* Checklist de onboarding no topo (aparece apenas se houver pendências) */}
@@ -345,7 +325,9 @@ export default function HomePage() {
                     <CategorySection
                       category={category}
                       index={index}
-                      dailyAudioId={dailyAudioId}
+                      // Mostrar o selo "Versículo do dia" apenas na Categoria Fixa (primeira na Home),
+                      // e somente no item mais recente criado dentro dessa categoria
+                      dailyAudioId={index === 0 ? (category.audios?.[0]?.id) : undefined}
                     />
                   )}
 
