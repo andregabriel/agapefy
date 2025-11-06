@@ -1,0 +1,434 @@
+
+> next-template@0.1.0 dev /Users/juliorodrigues/Desktop/agapefy/agapefy
+> next dev
+
+   ▲ Next.js 15.2.4
+   - Local:        http://localhost:3000
+   - Network:      http://10.111.122.71:3000
+
+ ✓ Starting...
+ ✓ Ready in 1508ms
+ ○ Compiling / ...
+ ✓ Compiled / in 4.3s (1154 modules)
+📊 AuthContext: Estado atual - User: false Loading: true
+ GET / 200 in 4736ms
+ ✓ Compiled in 489ms (551 modules)
+📊 AuthContext: Estado atual - User: false Loading: true
+ GET / 200 in 105ms
+ ○ Compiling /login ...
+ ✓ Compiled /login in 639ms (1154 modules)
+ GET /login 200 in 738ms
+📊 AuthContext: Estado atual - User: false Loading: true
+ GET /login 200 in 133ms
+ ✓ Compiled /middleware in 257ms (101 modules)
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ ✓ Compiled /admin in 340ms (1215 modules)
+ GET /admin 200 in 392ms
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ ✓ Compiled /admin/forms in 351ms (1234 modules)
+📊 AuthContext: Estado atual - User: false Loading: true
+ GET /admin/forms 200 in 530ms
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ ○ Compiling /admin/forms/[id] ...
+ ✓ Compiled /admin/forms/[id] in 550ms (1245 modules)
+ GET /admin/forms/a1106a5a-17a0-44d9-bd44-f4988d865a82 200 in 1078ms
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ GET /admin 200 in 15ms
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+📊 AuthContext: Estado atual - User: false Loading: true
+ GET /admin/forms 200 in 90ms
+ ✓ Compiled /_not-found in 289ms (1198 modules)
+📊 AuthContext: Estado atual - User: false Loading: true
+ GET /onborading 404 in 398ms
+📊 AuthContext: Estado atual - User: false Loading: true
+ GET /onbording 404 in 34ms
+📊 AuthContext: Estado atual - User: false Loading: true
+ GET /onbord 404 in 28ms
+📊 AuthContext: Estado atual - User: false Loading: true
+ GET /onboard 404 in 50ms
+ ○ Compiling /onboarding ...
+ ✓ Compiled /onboarding in 820ms (1249 modules)
+📊 AuthContext: Estado atual - User: false Loading: true
+ GET /onboarding 200 in 926ms
+ GET /onboarding?step=2&categoryId=fa3f752d-927d-4fda-be39-b79d9b536e22&formId=506dfd3a-ffaa-435e-bc38-2f067092e540 200 in 22ms
+ GET /onboarding?step=3&categoryId=fa3f752d-927d-4fda-be39-b79d9b536e22&formId=506dfd3a-ffaa-435e-bc38-2f067092e540 200 in 18ms
+ GET /onboarding?step=4&formId=506dfd3a-ffaa-435e-bc38-2f067092e540&categoryId=fa3f752d-927d-4fda-be39-b79d9b536e22 200 in 12ms
+ GET /onboarding?step=5&formId=506dfd3a-ffaa-435e-bc38-2f067092e540&categoryId=fa3f752d-927d-4fda-be39-b79d9b536e22 200 in 12ms
+ GET /onboarding?step=6&formId=506dfd3a-ffaa-435e-bc38-2f067092e540&categoryId=fa3f752d-927d-4fda-be39-b79d9b536e22 200 in 11ms
+ GET /onboarding?step=7&categoryId=fa3f752d-927d-4fda-be39-b79d9b536e22&formId=506dfd3a-ffaa-435e-bc38-2f067092e540 200 in 14ms
+ GET /onboarding?step=8&categoryId=fa3f752d-927d-4fda-be39-b79d9b536e22&formId=506dfd3a-ffaa-435e-bc38-2f067092e540 200 in 20ms
+ ✓ Compiled / in 447ms (684 modules)
+ GET / 200 in 489ms
+ ✓ Compiled /api/onboarding/checklist in 376ms (1313 modules)
+ GET /api/onboarding/checklist 500 in 544ms
+ GET /api/onboarding/checklist 500 in 35ms
+📊 AuthContext: Estado atual - User: false Loading: true
+ GET / 200 in 216ms
+ GET /api/onboarding/checklist 500 in 94ms
+ GET /api/onboarding/checklist 500 in 45ms
+📊 AuthContext: Estado atual - User: false Loading: true
+ GET / 200 in 42ms
+ GET /api/onboarding/checklist 500 in 161ms
+ GET /api/onboarding/checklist 500 in 49ms
+📊 AuthContext: Estado atual - User: false Loading: true
+ GET /onboarding 200 in 87ms
+ GET /onboarding?step=2&categoryId=fa3f752d-927d-4fda-be39-b79d9b536e22&formId=506dfd3a-ffaa-435e-bc38-2f067092e540 200 in 14ms
+ GET /onboarding?step=3&categoryId=fa3f752d-927d-4fda-be39-b79d9b536e22&formId=506dfd3a-ffaa-435e-bc38-2f067092e540 200 in 15ms
+ ✓ Compiled in 1026ms (1295 modules)
+ GET /onboarding?step=3&categoryId=fa3f752d-927d-4fda-be39-b79d9b536e22&formId=506dfd3a-ffaa-435e-bc38-2f067092e540 200 in 102ms
+ ✓ Compiled in 612ms (1295 modules)
+ GET /onboarding?step=3&categoryId=fa3f752d-927d-4fda-be39-b79d9b536e22&formId=506dfd3a-ffaa-435e-bc38-2f067092e540 200 in 80ms
+ GET /onboarding?step=4&formId=506dfd3a-ffaa-435e-bc38-2f067092e540&categoryId=fa3f752d-927d-4fda-be39-b79d9b536e22 200 in 19ms
+ GET /onboarding?step=5&formId=506dfd3a-ffaa-435e-bc38-2f067092e540&categoryId=fa3f752d-927d-4fda-be39-b79d9b536e22 200 in 47ms
+📊 AuthContext: Estado atual - User: false Loading: true
+ GET /onboarding?step=4 200 in 196ms
+ GET /onboarding?step=5&formId=b807d4b2-c325-4b73-b8a4-c3e3c56c8e27 200 in 13ms
+ GET /onboarding?step=6&formId=b807d4b2-c325-4b73-b8a4-c3e3c56c8e27 200 in 16ms
+ ○ Compiling /eu ...
+ ✓ Compiled /eu in 1176ms (1332 modules)
+ GET /eu 200 in 1290ms
+📊 AuthContext: Estado atual - User: false Loading: true
+ GET /eu 200 in 134ms
+ GET /onboarding?step=6&formId=b807d4b2-c325-4b73-b8a4-c3e3c56c8e27 200 in 28ms
+📊 AuthContext: Estado atual - User: false Loading: true
+ GET /onboarding?step=5&formId=506dfd3a-ffaa-435e-bc38-2f067092e540&categoryId=fa3f752d-927d-4fda-be39-b79d9b536e22 200 in 49ms
+ GET /onboarding?step=6&formId=506dfd3a-ffaa-435e-bc38-2f067092e540&categoryId=fa3f752d-927d-4fda-be39-b79d9b536e22 200 in 19ms
+ GET /eu 200 in 10ms
+ GET /onboarding?step=7&categoryId=fa3f752d-927d-4fda-be39-b79d9b536e22&formId=506dfd3a-ffaa-435e-bc38-2f067092e540 200 in 31ms
+📊 AuthContext: Estado atual - User: false Loading: true
+ GET / 200 in 147ms
+ ✓ Compiled /api/onboarding/checklist in 412ms (709 modules)
+ GET /api/onboarding/checklist 500 in 650ms
+ GET /api/onboarding/checklist 500 in 38ms
+ ✓ Compiled in 730ms (1357 modules)
+ GET / 200 in 58ms
+📊 AuthContext: Estado atual - User: false Loading: true
+ GET / 200 in 160ms
+ GET /api/onboarding/checklist 500 in 232ms
+ GET /api/onboarding/checklist 500 in 42ms
+ ✓ Compiled in 473ms (1357 modules)
+ GET / 200 in 55ms
+ GET /api/onboarding/checklist 500 in 256ms
+ GET /api/onboarding/checklist 500 in 113ms
+ ✓ Compiled in 654ms (1357 modules)
+ ✓ Compiled in 1041ms (1338 modules)
+ ✓ Compiled in 538ms (1338 modules)
+ ✓ Compiled in 819ms (1338 modules)
+ ✓ Compiled in 541ms (1338 modules)
+📊 AuthContext: Estado atual - User: false Loading: true
+ GET / 200 in 391ms
+ ○ Compiling /api/onboarding/checklist ...
+ ✓ Compiled /api/onboarding/checklist in 782ms (709 modules)
+ GET /api/onboarding/checklist 500 in 913ms
+ GET /api/onboarding/checklist 500 in 35ms
+📊 AuthContext: Estado atual - User: false Loading: true
+ GET / 200 in 174ms
+ GET /api/onboarding/checklist 500 in 221ms
+ GET /api/onboarding/checklist 500 in 35ms
+ ✓ Compiled in 808ms (1338 modules)
+ ✓ Compiled in 550ms (1338 modules)
+📊 AuthContext: Estado atual - User: false Loading: true
+ GET / 200 in 287ms
+📊 AuthContext: Estado atual - User: false Loading: true
+ GET / 200 in 40ms
+ ○ Compiling /api/onboarding/checklist ...
+ ✓ Compiled /api/onboarding/checklist in 683ms (709 modules)
+ GET /api/onboarding/checklist 500 in 874ms
+ GET /api/onboarding/checklist 500 in 36ms
+📊 AuthContext: Estado atual - User: false Loading: true
+ GET /onboarding 200 in 214ms
+ GET /onboarding?step=2&categoryId=fa3f752d-927d-4fda-be39-b79d9b536e22&formId=506dfd3a-ffaa-435e-bc38-2f067092e540 200 in 12ms
+ GET /onboarding?step=3&categoryId=fa3f752d-927d-4fda-be39-b79d9b536e22&formId=506dfd3a-ffaa-435e-bc38-2f067092e540 200 in 21ms
+ GET /onboarding?step=4&formId=506dfd3a-ffaa-435e-bc38-2f067092e540&categoryId=fa3f752d-927d-4fda-be39-b79d9b536e22 200 in 17ms
+ GET /onboarding?step=5&formId=506dfd3a-ffaa-435e-bc38-2f067092e540&categoryId=fa3f752d-927d-4fda-be39-b79d9b536e22 200 in 15ms
+ GET /onboarding?step=6&formId=506dfd3a-ffaa-435e-bc38-2f067092e540&categoryId=fa3f752d-927d-4fda-be39-b79d9b536e22 200 in 13ms
+ ✓ Compiled in 1006ms (1338 modules)
+ GET /onboarding?step=6&formId=506dfd3a-ffaa-435e-bc38-2f067092e540&categoryId=fa3f752d-927d-4fda-be39-b79d9b536e22 200 in 111ms
+ GET /onboarding?step=7&categoryId=fa3f752d-927d-4fda-be39-b79d9b536e22&formId=506dfd3a-ffaa-435e-bc38-2f067092e540 200 in 29ms
+ GET /onboarding?step=8&categoryId=fa3f752d-927d-4fda-be39-b79d9b536e22&formId=506dfd3a-ffaa-435e-bc38-2f067092e540 200 in 10ms
+ GET / 200 in 65ms
+ ✓ Compiled /api/onboarding/checklist in 266ms (709 modules)
+ GET /api/onboarding/checklist 500 in 515ms
+ GET /api/onboarding/checklist 500 in 39ms
+📊 AuthContext: Estado atual - User: false Loading: true
+ GET / 200 in 188ms
+ GET /api/onboarding/checklist 500 in 77ms
+ GET /api/onboarding/checklist 500 in 35ms
+📊 AuthContext: Estado atual - User: false Loading: true
+ GET / 200 in 41ms
+ GET /api/onboarding/checklist 500 in 266ms
+ GET /api/onboarding/checklist 500 in 40ms
+📊 AuthContext: Estado atual - User: false Loading: true
+ GET /onboarding 200 in 99ms
+ GET /onboarding?step=2&categoryId=6c1d5bf1-6aa9-48a0-97d1-2b20d0a518d9&formId=506dfd3a-ffaa-435e-bc38-2f067092e540 200 in 21ms
+ GET /onboarding?step=3&categoryId=6c1d5bf1-6aa9-48a0-97d1-2b20d0a518d9&formId=506dfd3a-ffaa-435e-bc38-2f067092e540 200 in 15ms
+ GET /onboarding?step=4&formId=506dfd3a-ffaa-435e-bc38-2f067092e540&categoryId=6c1d5bf1-6aa9-48a0-97d1-2b20d0a518d9 200 in 11ms
+ GET /onboarding?step=5&formId=506dfd3a-ffaa-435e-bc38-2f067092e540&categoryId=6c1d5bf1-6aa9-48a0-97d1-2b20d0a518d9 200 in 11ms
+ GET /onboarding?step=6&formId=506dfd3a-ffaa-435e-bc38-2f067092e540&categoryId=6c1d5bf1-6aa9-48a0-97d1-2b20d0a518d9 200 in 11ms
+📊 AuthContext: Estado atual - User: false Loading: true
+ GET / 200 in 65ms
+ GET /api/onboarding/checklist 500 in 251ms
+ GET /api/onboarding/checklist 500 in 114ms
+📊 AuthContext: Estado atual - User: false Loading: true
+ GET /onboarding 200 in 75ms
+ GET /onboarding?step=2&categoryId=6c1d5bf1-6aa9-48a0-97d1-2b20d0a518d9&formId=506dfd3a-ffaa-435e-bc38-2f067092e540 200 in 10ms
+ GET /onboarding?step=3&categoryId=6c1d5bf1-6aa9-48a0-97d1-2b20d0a518d9&formId=506dfd3a-ffaa-435e-bc38-2f067092e540 200 in 10ms
+ GET /onboarding?step=4&formId=506dfd3a-ffaa-435e-bc38-2f067092e540&categoryId=6c1d5bf1-6aa9-48a0-97d1-2b20d0a518d9 200 in 10ms
+ GET /onboarding?step=5&formId=506dfd3a-ffaa-435e-bc38-2f067092e540&categoryId=6c1d5bf1-6aa9-48a0-97d1-2b20d0a518d9 200 in 9ms
+ GET /onboarding?step=6&formId=506dfd3a-ffaa-435e-bc38-2f067092e540&categoryId=6c1d5bf1-6aa9-48a0-97d1-2b20d0a518d9 200 in 12ms
+ GET /onboarding?step=7&categoryId=6c1d5bf1-6aa9-48a0-97d1-2b20d0a518d9&formId=506dfd3a-ffaa-435e-bc38-2f067092e540 200 in 30ms
+ GET /onboarding?step=8&categoryId=6c1d5bf1-6aa9-48a0-97d1-2b20d0a518d9&formId=506dfd3a-ffaa-435e-bc38-2f067092e540 200 in 11ms
+📊 AuthContext: Estado atual - User: false Loading: true
+ GET /onboarding?step=7 200 in 83ms
+ ○ Compiling /api/whatsapp/status ...
+ ✓ Compiled /api/whatsapp/status in 601ms (1342 modules)
+ GET /api/whatsapp/status 200 in 818ms
+ ✓ Compiled /api/whatsapp/test-message in 176ms (1344 modules)
+Enviando mensagem de teste para 5521980636787: 📖 Olá! Eu sou o Biblicus
+
+Um assistente virtual da Agapefy para te acompanhar na sua jornada espiritual. ✨
+
+🙌 O que posso fazer:
+
+• Obter respostas baseadas na Bíblia
+• Enviar versículos diariamente
+• Lembrar você dos horários de oração
+• Montar orações personalizadas para você
+
+💬 Comandos disponíveis:
+
+• **/conversa** – Tire dúvidas e converse sobre a Bíblia
+• **/versículos** – Receba mensagens com passagens todos os dias
+• **/lembretes** – Ative lembretes nos horários de oração
+• **/oração** – Tenha uma oração feita especialmente para você
+
+✨ Como usar:
+Cadastre seu número de WhatsApp e comece a conversar comigo. Você poderá enviar mensagens e receber respostas, versículos, lembretes e orações diretamente no seu celular.
+
+🚀 Pronto para começar?
+ POST /api/whatsapp/test-message 400 in 238ms
+ GET / 200 in 48ms
+ ✓ Compiled /api/onboarding/checklist in 244ms (713 modules)
+ GET /api/onboarding/checklist 500 in 372ms
+ GET /api/onboarding/checklist 500 in 65ms
+📊 AuthContext: Estado atual - User: false Loading: true
+ GET /onboarding?step=8&categoryId=6c1d5bf1-6aa9-48a0-97d1-2b20d0a518d9&formId=506dfd3a-ffaa-435e-bc38-2f067092e540 200 in 225ms
+📊 AuthContext: Estado atual - User: false Loading: true
+ GET /onboarding?step=7 200 in 91ms
+ GET /api/whatsapp/status 200 in 256ms
+Enviando mensagem de teste para 5521980636787: 📖 Olá! Eu sou o Biblicus
+
+Um assistente virtual da Agapefy para te acompanhar na sua jornada espiritual. ✨
+
+🙌 O que posso fazer:
+
+• Obter respostas baseadas na Bíblia
+• Enviar versículos diariamente
+• Lembrar você dos horários de oração
+• Montar orações personalizadas para você
+
+💬 Comandos disponíveis:
+
+• **/conversa** – Tire dúvidas e converse sobre a Bíblia
+• **/versículos** – Receba mensagens com passagens todos os dias
+• **/lembretes** – Ative lembretes nos horários de oração
+• **/oração** – Tenha uma oração feita especialmente para você
+
+✨ Como usar:
+Cadastre seu número de WhatsApp e comece a conversar comigo. Você poderá enviar mensagens e receber respostas, versículos, lembretes e orações diretamente no seu celular.
+
+🚀 Pronto para começar?
+ POST /api/whatsapp/test-message 400 in 50ms
+ ✓ Compiled in 1026ms (1338 modules)
+ GET /onboarding?step=7 200 in 126ms
+ ✓ Compiled in 693ms (1338 modules)
+ GET /onboarding?step=7 200 in 73ms
+ ✓ Compiled /api/whatsapp/status in 316ms (708 modules)
+ GET /api/whatsapp/status 200 in 568ms
+ ✓ Compiled /api/whatsapp/test-message in 105ms (710 modules)
+Enviando mensagem de teste para 5521980636787: 📖 Olá! Eu sou o Biblicus
+
+Um assistente virtual da Agapefy para te acompanhar na sua jornada espiritual. ✨
+
+🙌 O que posso fazer:
+
+• Obter respostas baseadas na Bíblia
+• Enviar versículos diariamente
+• Lembrar você dos horários de oração
+• Montar orações personalizadas para você
+
+💬 Comandos disponíveis:
+
+• **/conversa** – Tire dúvidas e converse sobre a Bíblia
+• **/versículos** – Receba mensagens com passagens todos os dias
+• **/lembretes** – Ative lembretes nos horários de oração
+• **/oração** – Tenha uma oração feita especialmente para você
+
+✨ Como usar:
+Cadastre seu número de WhatsApp e comece a conversar comigo. Você poderá enviar mensagens e receber respostas, versículos, lembretes e orações diretamente no seu celular.
+
+🚀 Pronto para começar?
+ POST /api/whatsapp/test-message 400 in 160ms
+ GET /onboarding?step=8 200 in 41ms
+ GET / 200 in 30ms
+ ○ Compiling /api/onboarding/checklist ...
+ ✓ Compiled /api/onboarding/checklist in 618ms (713 modules)
+ GET /api/onboarding/checklist 500 in 712ms
+ GET /api/onboarding/checklist 500 in 37ms
+ GET /eu 200 in 65ms
+📊 AuthContext: Estado atual - User: false Loading: true
+ GET /eu 200 in 155ms
+📊 AuthContext: Estado atual - User: false Loading: true
+ GET /onboarding 200 in 84ms
+ GET /onboarding?step=2&categoryId=fa3f752d-927d-4fda-be39-b79d9b536e22&formId=506dfd3a-ffaa-435e-bc38-2f067092e540 200 in 13ms
+📊 AuthContext: Estado atual - User: false Loading: true
+ GET /onboarding?step=7 200 in 73ms
+ GET /onboarding?step=8 200 in 14ms
+ GET / 200 in 45ms
+ GET /api/onboarding/checklist 500 in 169ms
+ GET /api/onboarding/checklist 500 in 49ms
+ GET /eu 200 in 12ms
+ ✓ Compiled in 1227ms (1338 modules)
+ GET /eu 200 in 265ms
+ ✓ Compiled in 1287ms (1338 modules)
+ GET /eu 200 in 56ms
+ ✓ Compiled in 1322ms (1338 modules)
+ GET /eu 200 in 71ms
+ ✓ Compiled in 1085ms (1338 modules)
+ GET /eu 200 in 46ms
+📊 AuthContext: Estado atual - User: false Loading: true
+ GET /onboarding 200 in 283ms
+ GET /onboarding?step=2&categoryId=fa3f752d-927d-4fda-be39-b79d9b536e22&formId=506dfd3a-ffaa-435e-bc38-2f067092e540 200 in 67ms
+📊 AuthContext: Estado atual - User: false Loading: true
+ GET /onboarding?step=8 200 in 83ms
+ ✓ Compiled in 1046ms (1338 modules)
+ GET /onboarding?step=8 200 in 32ms
+ ✓ Compiled in 609ms (1338 modules)
+ GET /onboarding?step=8 200 in 30ms
+ GET / 200 in 87ms
+ ○ Compiling /api/onboarding/checklist ...
+ ✓ Compiled /api/onboarding/checklist in 766ms (709 modules)
+ GET /api/onboarding/checklist 500 in 1028ms
+ GET /api/onboarding/checklist 500 in 33ms
+ GET /eu 200 in 51ms
+📊 AuthContext: Estado atual - User: false Loading: true
+ GET /onboarding 200 in 259ms
+ GET /onboarding?step=2&categoryId=fa3f752d-927d-4fda-be39-b79d9b536e22&formId=506dfd3a-ffaa-435e-bc38-2f067092e540 200 in 89ms
+📊 AuthContext: Estado atual - User: false Loading: true
+ GET /onboarding?step=8 200 in 92ms
+ ○ Compiling /login ...
+ ✓ Compiled /login in 697ms (703 modules)
+ GET /login 200 in 931ms
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ ✓ Compiled /admin in 303ms (703 modules)
+ GET /admin 200 in 427ms
+ ✓ Compiled in 925ms (1345 modules)
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ GET /admin 200 in 48ms
+ ✓ Compiled in 710ms (1345 modules)
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ GET /admin 200 in 73ms
+ GET /eu 200 in 22ms
+ ✓ Compiled in 703ms (1345 modules)
+ GET /eu 200 in 52ms
+📊 AuthContext: Estado atual - User: false Loading: true
+ GET /onboarding 200 in 185ms
+ GET /onboarding?step=2&categoryId=fa3f752d-927d-4fda-be39-b79d9b536e22&formId=506dfd3a-ffaa-435e-bc38-2f067092e540 200 in 18ms
+ GET /onboarding?step=3&categoryId=fa3f752d-927d-4fda-be39-b79d9b536e22&formId=506dfd3a-ffaa-435e-bc38-2f067092e540 200 in 13ms
+ GET /onboarding?step=4&formId=506dfd3a-ffaa-435e-bc38-2f067092e540&categoryId=fa3f752d-927d-4fda-be39-b79d9b536e22 200 in 12ms
+ GET /onboarding?step=5&formId=506dfd3a-ffaa-435e-bc38-2f067092e540&categoryId=fa3f752d-927d-4fda-be39-b79d9b536e22 200 in 9ms
+ GET /onboarding?step=6&formId=506dfd3a-ffaa-435e-bc38-2f067092e540&categoryId=fa3f752d-927d-4fda-be39-b79d9b536e22 200 in 28ms
+ GET /onboarding?step=7&categoryId=fa3f752d-927d-4fda-be39-b79d9b536e22&formId=506dfd3a-ffaa-435e-bc38-2f067092e540 200 in 31ms
+ ✓ Compiled /api/whatsapp/status in 181ms (715 modules)
+ GET /api/whatsapp/status 200 in 435ms
+ ✓ Compiled /api/whatsapp/test-message in 212ms (717 modules)
+Enviando mensagem de teste para 5521980636787: 📖 Olá! Eu sou o Biblicus
+
+Um assistente virtual da Agapefy para te acompanhar na sua jornada espiritual. ✨
+
+🙌 O que posso fazer:
+
+• Obter respostas baseadas na Bíblia
+• Enviar versículos diariamente
+• Lembrar você dos horários de oração
+• Montar orações personalizadas para você
+
+💬 Comandos disponíveis:
+
+• **/conversa** – Tire dúvidas e converse sobre a Bíblia
+• **/versículos** – Receba mensagens com passagens todos os dias
+• **/lembretes** – Ative lembretes nos horários de oração
+• **/oração** – Tenha uma oração feita especialmente para você
+
+✨ Como usar:
+Cadastre seu número de WhatsApp e comece a conversar comigo. Você poderá enviar mensagens e receber respostas, versículos, lembretes e orações diretamente no seu celular.
+
+🚀 Pronto para começar?
+ POST /api/whatsapp/test-message 400 in 289ms
+ GET /onboarding?step=8&categoryId=fa3f752d-927d-4fda-be39-b79d9b536e22&formId=506dfd3a-ffaa-435e-bc38-2f067092e540 200 in 37ms
+ GET / 200 in 60ms
+ ✓ Compiled /api/onboarding/checklist in 374ms (720 modules)
+ GET /api/onboarding/checklist 500 in 469ms
+ GET /api/onboarding/checklist 500 in 33ms
+ GET /eu 200 in 35ms
+ ✓ Compiled in 1037ms (1345 modules)
+ GET /eu 200 in 102ms
+ ✓ Compiled in 597ms (1345 modules)
+ GET /eu 200 in 48ms
+ ✓ Compiled in 564ms (1345 modules)
+ GET /eu 200 in 49ms
+ ✓ Compiled in 873ms (1345 modules)
+ GET /eu 200 in 39ms
+📊 AuthContext: Estado atual - User: false Loading: true
+ GET /eu 200 in 200ms
+ ✓ Compiled in 1270ms (1345 modules)
+ GET /eu 200 in 227ms
+ ✓ Compiled in 519ms (1345 modules)
+ GET /eu 200 in 44ms
+ ✓ Compiled in 779ms (1345 modules)
+ GET /eu 200 in 114ms
+ ✓ Compiled in 441ms (1345 modules)
+ GET /eu 200 in 31ms
+ ✓ Compiled in 858ms (1345 modules)
+ GET /eu 200 in 117ms
+ ✓ Compiled in 627ms (1345 modules)
+ GET /eu 200 in 31ms
+ ✓ Compiled in 841ms (1345 modules)
+ GET /eu 200 in 118ms
+ ✓ Compiled in 531ms (1345 modules)
+ GET /eu 200 in 33ms
+ ✓ Compiled in 653ms (1345 modules)
+ GET /eu 200 in 70ms
+ ✓ Compiled in 842ms (1345 modules)
+ GET /eu 200 in 92ms
+ ✓ Compiled in 693ms (1345 modules)
+ GET /eu 200 in 61ms
+ ✓ Compiled in 751ms (1345 modules)
+ GET /eu 200 in 66ms
+ ✓ Compiled in 821ms (1345 modules)
+ GET /eu 200 in 282ms
+ ✓ Compiled in 755ms (1345 modules)
+ GET /eu 200 in 55ms
+ ✓ Compiled in 592ms (1345 modules)
+ GET /eu 200 in 39ms
+ GET / 200 in 41ms
+ ○ Compiling /api/onboarding/checklist ...
+ ✓ Compiled /api/onboarding/checklist in 657ms (716 modules)
+ GET /api/onboarding/checklist 500 in 899ms
+ GET /api/onboarding/checklist 500 in 41ms
+ GET /api/onboarding/checklist 500 in 233ms
+ GET /api/onboarding/checklist 500 in 76ms
+ GET /eu 200 in 90ms
+ GET / 200 in 17ms
+ GET /api/onboarding/checklist 500 in 86ms
+ GET /api/onboarding/checklist 500 in 33ms
+ ○ Compiling /busca ...
+ ✓ Compiled /busca in 1316ms (1377 modules)
+ GET /busca 200 in 1462ms
+ ✓ Compiled /categoria/[id] in 405ms (1362 modules)
+ GET /categoria/93b0e66a-a34f-4cec-bc04-58e0169b181b 200 in 960ms
+ ○ Compiling /biblia ...
+ ✓ Compiled /biblia in 799ms (1416 modules)
+ GET /biblia 200 in 878ms
+ ✓ Compiled /whatsapp in 371ms (1430 modules)
+ GET /whatsapp 200 in 419ms

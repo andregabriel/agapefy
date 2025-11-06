@@ -54,6 +54,35 @@ export default function OnboardingClient() {
   const [dailyVerseEnabled, setDailyVerseEnabled] = useState<boolean>(true);
   const [savingVersePref, setSavingVersePref] = useState<boolean>(false);
 
+  // Persistir preferência de versículo diário imediatamente quando o usuário alternar no passo 8.
+  // Isso garante que o toggle em `/eu` já apareça sincronizado sem exigir novo clique em "Salvar".
+  async function persistDailyVersePreference(nextValue: boolean) {
+    try {
+      let phone = phoneForWhatsApp;
+      if ((!hasWhatsApp || !phone) && typeof window !== 'undefined') {
+        try {
+          const localPhone = window.localStorage.getItem('agape_whatsapp_phone');
+          if (localPhone) phone = localPhone;
+        } catch {}
+      }
+      if (!phone) return; // precisa de telefone para persistir a preferência
+      await supabase
+        .from('whatsapp_users')
+        .upsert(
+          {
+            phone_number: phone,
+            user_id: user?.id || null,
+            receives_daily_verse: nextValue,
+            updated_at: new Date().toISOString(),
+          } as any,
+          { onConflict: 'phone_number' }
+        );
+    } catch (e) {
+      // eslint-disable-next-line no-console
+      console.warn('persistDailyVersePreference error:', e);
+    }
+  }
+
   // Carrossel da categoria (preview sem play)
   const carouselRef = useRef<HTMLDivElement | null>(null);
   const scrollCarousel = (direction: 'left' | 'right') => {
@@ -200,9 +229,22 @@ export default function OnboardingClient() {
           .eq('user_id', user?.id ?? '-')
           .maybeSingle();
         if (!mounted) return;
-        const hasPhone = Boolean(data?.phone_number);
+        let hasPhone = Boolean(data?.phone_number);
+        let phone = data?.phone_number || '';
+
+        // Fallback: usar o último número salvo no dispositivo
+        if (!hasPhone && typeof window !== 'undefined') {
+          try {
+            const localPhone = window.localStorage.getItem('agape_whatsapp_phone');
+            if (localPhone) {
+              phone = localPhone;
+              hasPhone = true;
+            }
+          } catch {}
+        }
+
         setHasWhatsApp(hasPhone);
-        setPhoneForWhatsApp(data?.phone_number || '');
+        setPhoneForWhatsApp(phone);
         if (typeof (data as any)?.receives_daily_verse === 'boolean') {
           setDailyVerseEnabled(Boolean((data as any).receives_daily_verse));
         } else {
@@ -334,12 +376,14 @@ export default function OnboardingClient() {
               >
                 Pular
               </Button>
-              <Link href="/eu">
-                <Button>
-                  Ver minha rotina
-                  <ArrowRight className="ml-2 h-4 w-4" />
-                </Button>
-              </Link>
+              <Button
+                onClick={() => {
+                  router.replace(`/onboarding?step=7${currentCategoryId ? `&categoryId=${encodeURIComponent(currentCategoryId)}` : ''}${activeFormId ? `&formId=${encodeURIComponent(activeFormId)}` : ''}`);
+                }}
+              >
+                Ver minha rotina
+                <ArrowRight className="ml-2 h-4 w-4" />
+              </Button>
             </div>
           </CardContent>
         </Card>
@@ -541,7 +585,7 @@ export default function OnboardingClient() {
                 Pular
               </Button>
               {hasWhatsApp && (
-                <Button onClick={() => router.replace('/')}>Concluir</Button>
+                <Button onClick={() => router.replace(`/onboarding?step=8${currentCategoryId ? `&categoryId=${encodeURIComponent(currentCategoryId)}` : ''}${activeFormId ? `&formId=${encodeURIComponent(activeFormId)}` : ''}`)}>Concluir</Button>
               )}
             </div>
           </CardContent>
@@ -574,7 +618,13 @@ export default function OnboardingClient() {
                   <div className="font-medium text-black">Ativar versículo diário</div>
                   <p className="text-sm text-gray-500">Receba 1 versículo por dia no seu WhatsApp.</p>
                 </div>
-                <Switch checked={dailyVerseEnabled} onCheckedChange={setDailyVerseEnabled} />
+                <Switch
+                  checked={dailyVerseEnabled}
+                  onCheckedChange={(v) => {
+                    setDailyVerseEnabled(v);
+                    void persistDailyVersePreference(v);
+                  }}
+                />
               </div>
 
               {/* Preview simples de como a mensagem chega no WhatsApp */}
@@ -591,11 +641,23 @@ export default function OnboardingClient() {
               <Button
                 onClick={async () => {
                   try {
-                    if (hasWhatsApp && phoneForWhatsApp) {
+                    if (true) {
                       setSavingVersePref(true);
+                      let phone = phoneForWhatsApp;
+                      if ((!hasWhatsApp || !phone) && typeof window !== 'undefined') {
+                        try {
+                          const localPhone = window.localStorage.getItem('agape_whatsapp_phone');
+                          if (localPhone) phone = localPhone;
+                        } catch {}
+                      }
+                      if (!phone) {
+                        // sem telefone, apenas concluir sem gravar
+                        router.replace('/');
+                        return;
+                      }
                       const { error } = await supabase
                         .from('whatsapp_users')
-                        .upsert({ phone_number: phoneForWhatsApp, receives_daily_verse: dailyVerseEnabled, updated_at: new Date().toISOString() } as any, { onConflict: 'phone_number' });
+                        .upsert({ phone_number: phone, user_id: user?.id || null, receives_daily_verse: dailyVerseEnabled, updated_at: new Date().toISOString() } as any, { onConflict: 'phone_number' });
                       if (error) throw error;
                     }
                   } catch (e) {
@@ -636,7 +698,53 @@ export default function OnboardingClient() {
           </CardHeader>
           <CardContent className="space-y-6">
             <WhatsAppSetup variant="embedded" redirectIfNotLoggedIn={false} />
-            <div className="flex justify-end">
+            <div className="flex justify-between">
+              <Button
+                variant="ghost"
+                onClick={async () => {
+                  try {
+                    // Pular este passo: tentar encontrar o próximo formulário encadeado (> 3)
+                    const parentId = activeFormId || '';
+                    if (parentId) {
+                      let { data, error } = await supabase
+                        .from('admin_forms')
+                        .select('onboard_step')
+                        .eq('form_type', 'onboarding')
+                        .eq('is_active', true)
+                        .eq('parent_form_id', parentId)
+                        .gt('onboard_step', 3)
+                        .order('onboard_step', { ascending: true })
+                        .limit(1)
+                        .maybeSingle();
+                      if (error && (error.code === '42703' || /parent_form_id/i.test(String(error.message || '')))) {
+                        const fb = await supabase
+                          .from('admin_forms')
+                          .select('onboard_step')
+                          .eq('form_type', 'onboarding')
+                          .eq('is_active', true)
+                          .gt('onboard_step', 3)
+                          .order('onboard_step', { ascending: true })
+                          .limit(1)
+                          .maybeSingle();
+                        data = fb.data as any;
+                        error = fb.error as any;
+                      }
+                      if (!error && data && typeof (data as any).onboard_step === 'number') {
+                        const next = (data as any).onboard_step as number;
+                        const cat = currentCategoryId ? `&categoryId=${encodeURIComponent(currentCategoryId)}` : '';
+                        router.replace(`/onboarding?step=${next}&formId=${encodeURIComponent(parentId)}${cat}`);
+                        return;
+                      }
+                    }
+                  } catch {
+                    // Ignorar e cair no redirecionamento padrão
+                  }
+                  router.replace('/');
+                }}
+              >
+                Pular
+              </Button>
+
               <Button
                 onClick={async () => {
                   try {

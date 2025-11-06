@@ -117,7 +117,7 @@ export function AddAudioToRoutineModal({ open, onOpenChange }: AddAudioToRoutine
                 variant={selectedCategory === '' ? 'default' : 'outline'}
                 size="sm"
                 onClick={() => setSelectedCategory('')}
-                className="border-gray-700"
+                className={`border-gray-700 ${selectedCategory === '' ? 'text-white' : 'text-black'}`}
               >
                 Todas
               </Button>
@@ -127,7 +127,7 @@ export function AddAudioToRoutineModal({ open, onOpenChange }: AddAudioToRoutine
                   variant={selectedCategory === category.id ? 'default' : 'outline'}
                   size="sm"
                   onClick={() => setSelectedCategory(category.id)}
-                  className="border-gray-700"
+                  className={`border-gray-700 ${selectedCategory === category.id ? 'text-white' : 'text-black'}`}
                 >
                   {category.name}
                 </Button>
@@ -225,7 +225,7 @@ export function AddAudioToRoutineModal({ open, onOpenChange }: AddAudioToRoutine
             <Button
               variant="outline"
               onClick={() => onOpenChange(false)}
-              className="border-gray-700 text-gray-300 hover:bg-gray-800"
+              className="border-gray-700 text-black hover:bg-gray-800 hover:text-white"
             >
               Fechar
             </Button>
