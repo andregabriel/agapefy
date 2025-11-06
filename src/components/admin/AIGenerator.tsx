@@ -511,6 +511,24 @@ const AIGenerator = forwardRef<AIGeneratorHandle, AIGeneratorProps>(function AIG
       // Se uma imagem for uma URL direta, apenas persistimos; manteremos a já existente se o campo estiver vazio
       const coverPublicUrl = imageUrl || (editingAudio as any)?.cover_url || null;
 
+      // Medir duração se ausente (fallback defensivo)
+      let effectiveDuration: number | null = (audioDuration ? Math.round(audioDuration) : (editingAudio as any)?.duration || null);
+      if (!effectiveDuration && (audioUrl || (editingAudio as any)?.audio_url)) {
+        const urlToMeasure = audioUrl || (editingAudio as any)?.audio_url;
+        try {
+          const measured = await Promise.race([
+            getAudioDuration(urlToMeasure),
+            new Promise<number>((_, reject) => setTimeout(() => reject(new Error('timeout')), 7000))
+          ]) as number;
+          if (typeof measured === 'number' && Number.isFinite(measured)) {
+            effectiveDuration = Math.round(measured);
+            setAudioDuration(effectiveDuration);
+          }
+        } catch (_) {
+          // mantém null se não conseguir medir
+        }
+      }
+
       const { error: updateError } = await supabase
         .from('audios')
         .update({
@@ -519,10 +537,10 @@ const AIGenerator = forwardRef<AIGeneratorHandle, AIGeneratorProps>(function AIG
           description: finalDescription || null,
           audio_url: audioUrl || (editingAudio as any)?.audio_url || null,
           transcript: transcriptFull || null,
-          duration: audioDuration ? Math.round(audioDuration) : (editingAudio as any)?.duration || null,
+          duration: effectiveDuration,
           category_id: selectedCategory || null,
           cover_url: coverPublicUrl,
-          ai_engine: selectedAiEngine || null,
+          ai_engine: 'gpt-5',
           voice_id: (lastVoiceIdUsed || selectedVoice) || null,
           voice_name: (lastVoiceNameUsed || selectedVoiceInfo?.name) || null,
           biblical_base: biblicalBase || null,
@@ -539,7 +557,7 @@ const AIGenerator = forwardRef<AIGeneratorHandle, AIGeneratorProps>(function AIG
 
       toast.success('✅ Oração atualizada com sucesso');
       // Atualizar snapshot local
-      setEditingAudio((prev) => prev ? ({ ...prev, title: prayerData.title, subtitle: prayerData.subtitle || null, description: finalDescription || null, audio_url: audioUrl || prev.audio_url, duration: audioDuration ? Math.round(audioDuration) : (prev.duration as any) || null, category_id: selectedCategory || null, cover_url: coverPublicUrl as any, voice_id: (lastVoiceIdUsed || selectedVoice) || null, voice_name: (lastVoiceNameUsed || selectedVoiceInfo?.name) || null } as any) : prev);
+      setEditingAudio((prev) => prev ? ({ ...prev, title: prayerData.title, subtitle: prayerData.subtitle || null, description: finalDescription || null, audio_url: audioUrl || prev.audio_url, duration: (effectiveDuration as any) ?? (prev.duration as any) ?? null, category_id: selectedCategory || null, cover_url: coverPublicUrl as any, voice_id: (lastVoiceIdUsed || selectedVoice) || null, voice_name: (lastVoiceNameUsed || selectedVoiceInfo?.name) || null } as any) : prev);
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido';
       console.error('❌ Erro ao atualizar:', errorMessage);
@@ -1600,6 +1618,35 @@ const AIGenerator = forwardRef<AIGeneratorHandle, AIGeneratorProps>(function AIG
           ensureField('subtitle'),
           ensureField('description')
         ]);
+
+        // Garantir segmentos de preparação e mensagem final para compor a transcrição completa
+        const ensureSegment = async (seg: 'preparation' | 'final_message') => {
+          const currentVal = seg === 'preparation'
+            ? (snapshotPrayer.preparation_text || '')
+            : (snapshotPrayer.final_message || '');
+          if ((currentVal || '').trim()) return;
+          const generated = await generateForField(seg, {
+            texto: ensuredTexto || snapshotPrayer.prayer_text || '',
+            base_biblica: snapshotBiblicalBase || '',
+            tema_central: snapshotPrompt || '',
+            categoria_nome: snapshotCategoryName || ''
+          });
+          if (generated && generated.trim()) {
+            const clean = generated.trim();
+            if (seg === 'preparation') {
+              snapshotPrayer.preparation_text = clean;
+              setPrayerData(prev => prev ? { ...prev, preparation_text: clean } : prev);
+            } else {
+              snapshotPrayer.final_message = clean;
+              setPrayerData(prev => prev ? { ...prev, final_message: clean } : prev);
+            }
+          }
+        };
+
+        await Promise.all([
+          ensureSegment('preparation'),
+          ensureSegment('final_message')
+        ]);
       }
 
       // Obter usuário atual para preencher created_by
@@ -1646,6 +1693,23 @@ const AIGenerator = forwardRef<AIGeneratorHandle, AIGeneratorProps>(function AIG
         return null;
       })();
 
+      // Medir duração se ausente (fallback defensivo)
+      let effectiveDuration: number | null = (snapshotAudioDuration ? Math.round(snapshotAudioDuration) : null);
+      if (!effectiveDuration && snapshotAudioUrl) {
+        try {
+          const measured = await Promise.race([
+            getAudioDuration(snapshotAudioUrl),
+            new Promise<number>((_, reject) => setTimeout(() => reject(new Error('timeout')), 7000))
+          ]) as number;
+          if (typeof measured === 'number' && Number.isFinite(measured)) {
+            effectiveDuration = Math.round(measured);
+            setAudioDuration(effectiveDuration);
+          }
+        } catch (_) {
+          // mantém null se não conseguir medir
+        }
+      }
+
       console.log('💾 Salvando oração no banco de dados...');
       console.log('📝 Dados a serem salvos:', {
         title: ensuredPrayer?.title,
@@ -1653,7 +1717,7 @@ const AIGenerator = forwardRef<AIGeneratorHandle, AIGeneratorProps>(function AIG
         description: finalDescription,
         audio_url: snapshotAudioUrl,
         transcript: transcriptFull?.substring(0, 120) + (transcriptFull.length > 120 ? '...' : ''),
-        duration: snapshotAudioDuration ? Math.round(snapshotAudioDuration) : null,
+        duration: effectiveDuration,
         category_id: snapshotCategory,
         biblical_base: snapshotBiblicalBase,
         image_present: !!snapshotImageUrl,
@@ -1678,11 +1742,11 @@ const AIGenerator = forwardRef<AIGeneratorHandle, AIGeneratorProps>(function AIG
           description: finalDescription,
           audio_url: snapshotAudioUrl,
           transcript: transcriptFull,
-          duration: snapshotAudioDuration ? Math.round(snapshotAudioDuration) : null,
+          duration: effectiveDuration,
           category_id: snapshotCategory,
           cover_url: coverPublicUrl,
           created_by: currentUserId,
-          ai_engine: selectedAiEngine || null,
+          ai_engine: 'gpt-5',
           voice_id: (lastVoiceIdUsed || selectedVoice) || null,
           voice_name: (lastVoiceNameUsed || selectedVoiceInfo?.name) || null,
           biblical_base: snapshotBiblicalBase,
@@ -1709,7 +1773,7 @@ const AIGenerator = forwardRef<AIGeneratorHandle, AIGeneratorProps>(function AIG
       try {
         const { error: updateError } = await supabase
           .from('audios')
-          .update({ time: dayPart || 'Any', spiritual_goal: spiritualGoal || null, ai_engine: selectedAiEngine || null, voice_id: (lastVoiceIdUsed || selectedVoice) || null, voice_name: (lastVoiceNameUsed || (ELEVENLABS_VOICES.find(v => v.id === (lastVoiceIdUsed || selectedVoice))?.name)) || null, biblical_base: snapshotBiblicalBase })
+          .update({ time: dayPart || 'Any', spiritual_goal: spiritualGoal || null, ai_engine: 'gpt-5', voice_id: (lastVoiceIdUsed || selectedVoice) || null, voice_name: (lastVoiceNameUsed || (ELEVENLABS_VOICES.find(v => v.id === (lastVoiceIdUsed || selectedVoice))?.name)) || null, biblical_base: snapshotBiblicalBase })
           .eq('id', audioData.id);
         if (!updateError) {
           savedDirectlyInTable = true;
