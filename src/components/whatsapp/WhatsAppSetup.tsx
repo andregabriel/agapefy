@@ -45,6 +45,8 @@ export default function WhatsAppSetup({ variant = "standalone", redirectIfNotLog
   const [lunchEnabled, setLunchEnabled] = useState(false);
   const [dinnerEnabled, setDinnerEnabled] = useState(false);
   const [sleepEnabled, setSleepEnabled] = useState(false);
+  const [challengePlaylists, setChallengePlaylists] = useState<Array<{ id: string; title: string }>>([]);
+  const [selectedChallenges, setSelectedChallenges] = useState<string[]>([]);
 
   useEffect(() => {
     if (!redirectIfNotLoggedIn) return;
@@ -107,6 +109,72 @@ export default function WhatsAppSetup({ variant = "standalone", redirectIfNotLog
 
   const formattedExample = useMemo(() => "+55 11 99999-9999", []);
 
+  // Load challenge playlists (admin-managed in /admin/playlists)
+  useEffect(() => {
+    const loadChallenges = async () => {
+      try {
+        console.log('🔍 Carregando desafios disponíveis...');
+        const { data: pls, error: pErr } = await supabase
+          .from('playlists')
+          .select('id,title')
+          .eq('is_challenge', true)
+          .order('created_at', { ascending: false });
+        
+        if (pErr) {
+          console.error('❌ Erro ao buscar playlists de desafio:', pErr);
+          setChallengePlaylists([]);
+          return;
+        }
+        
+        const challengePlaylists = ((pls || []) as any[]).map((p: any) => ({ 
+          id: p.id as string, 
+          title: (p.title || '') as string 
+        }));
+        console.log('✅ Desafios carregados:', challengePlaylists.length);
+        setChallengePlaylists(challengePlaylists);
+      } catch (error) {
+        console.error('❌ Erro inesperado ao carregar desafios:', error);
+        setChallengePlaylists([]);
+      }
+    };
+    loadChallenges();
+  }, []);
+
+  // Load current user's selected challenge playlists
+  useEffect(() => {
+    const fetchUserChallenges = async () => {
+      try {
+        const clean = phone.replace(/\D/g, "");
+        if (!clean) {
+          console.log('ℹ️ Número não informado, limpando desafios selecionados');
+          setSelectedChallenges([]);
+          return;
+        }
+        console.log('🔍 Carregando desafios selecionados para:', clean);
+        const { data, error } = await supabase
+          .from('whatsapp_user_challenges')
+          .select('playlist_id')
+          .eq('phone_number', clean);
+        if (error) {
+          console.error('❌ Erro ao buscar desafios selecionados:', error);
+          // Se a tabela não existe, apenas logar e continuar sem desafios selecionados
+          if (error.message?.includes('Could not find the table') || error.message?.includes('schema cache') || error.code === 'PGRST204') {
+            console.warn('⚠️ Tabela whatsapp_user_challenges não existe ainda. Execute a migração SQL: supabase/sql/2025-11-06_create_whatsapp_user_challenges.sql');
+          }
+          setSelectedChallenges([]);
+          return;
+        }
+        const selected = ((data || []) as any[]).map(r => r.playlist_id as string);
+        console.log('✅ Desafios selecionados carregados:', selected.length);
+        setSelectedChallenges(selected);
+      } catch (error) {
+        console.error('❌ Erro inesperado ao carregar desafios selecionados:', error);
+        setSelectedChallenges([]);
+      }
+    };
+    fetchUserChallenges();
+  }, [phone]);
+
   async function save() {
     const clean = phone.replace(/\D/g, "");
     if (!clean) {
@@ -155,6 +223,63 @@ export default function WhatsAppSetup({ variant = "standalone", redirectIfNotLog
       toast.error("Não foi possível salvar o número");
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function toggleChallenge(playlistId: string, checked: boolean) {
+    const clean = phone.replace(/\D/g, "");
+    if (!clean) {
+      toast.error("Cadastre um número válido primeiro");
+      return;
+    }
+    try {
+      console.log('🔄 Alternando desafio:', { playlistId, checked, phone: clean });
+      if (checked) {
+        const { data, error } = await supabase
+          .from('whatsapp_user_challenges')
+          .upsert({ phone_number: clean, playlist_id: playlistId }, { onConflict: 'phone_number,playlist_id' })
+          .select();
+        if (error) {
+          console.error('❌ Erro ao adicionar desafio:', error);
+          // Verificar se o erro é porque a tabela não existe
+          if (error.message?.includes('Could not find the table') || error.message?.includes('schema cache') || error.code === 'PGRST204') {
+            const errorMsg = '⚠️ A tabela whatsapp_user_challenges não foi criada ainda.\n\nPor favor, execute a migração SQL:\n\n1. Acesse o Supabase Dashboard\n2. Vá em SQL Editor\n3. Execute o conteúdo do arquivo:\n   supabase/sql/2025-11-06_create_whatsapp_user_challenges.sql\n\nOu execute via CLI:\n   supabase db push';
+            alert(errorMsg);
+            throw new Error('Tabela whatsapp_user_challenges não encontrada. Execute a migração SQL primeiro.');
+          }
+          throw error;
+        }
+        console.log('✅ Desafio adicionado:', data);
+        setSelectedChallenges(prev => Array.from(new Set([...prev, playlistId])));
+        toast.success('Desafio adicionado');
+      } else {
+        const { error } = await supabase
+          .from('whatsapp_user_challenges')
+          .delete()
+          .eq('phone_number', clean)
+          .eq('playlist_id', playlistId);
+        if (error) {
+          console.error('❌ Erro ao remover desafio:', error);
+          // Verificar se o erro é porque a tabela não existe
+          if (error.message?.includes('Could not find the table') || error.message?.includes('schema cache') || error.code === 'PGRST204') {
+            // Se a tabela não existe e estamos tentando remover, não há problema
+            console.log('ℹ️ Tabela whatsapp_user_challenges não existe, mas não há problema ao remover');
+            setSelectedChallenges(prev => prev.filter(id => id !== playlistId));
+            return;
+          }
+          throw error;
+        }
+        console.log('✅ Desafio removido');
+        setSelectedChallenges(prev => prev.filter(id => id !== playlistId));
+        toast.success('Desafio removido');
+      }
+    } catch (error: any) {
+      console.error('❌ Erro ao atualizar desafio:', error);
+      // Se já mostramos um alert, não mostrar toast também
+      if (error?.message?.includes('Tabela whatsapp_user_challenges não encontrada')) {
+        return;
+      }
+      toast.error(`Não foi possível atualizar seus desafios: ${error?.message || 'Erro desconhecido'}`);
     }
   }
 
@@ -343,6 +468,32 @@ export default function WhatsAppSetup({ variant = "standalone", redirectIfNotLog
               </div>
               <Switch checked={dailyPrayer} onCheckedChange={(v) => updatePreference('receives_daily_prayer', v)} />
             </div>
+
+            {dailyPrayer && (
+              <div className="p-3 rounded-md bg-muted/40 space-y-3">
+                <div>
+                  <div className="font-medium">Desafios</div>
+                  <p className="text-sm text-muted-foreground">Selecione os desafios que você deseja acompanhar.</p>
+                </div>
+                {challengePlaylists.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">Nenhum desafio disponível no momento.</p>
+                ) : (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    {challengePlaylists.map(p => (
+                      <label key={p.id} className="flex items-center justify-between gap-3 p-3 rounded-md border bg-background cursor-pointer">
+                        <span className="text-sm">{p.title}</span>
+                        <input
+                          type="checkbox"
+                          className="h-4 w-4"
+                          checked={selectedChallenges.includes(p.id)}
+                          onChange={(e) => toggleChallenge(p.id, e.target.checked)}
+                        />
+                      </label>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
 
             <div className="flex items-start justify-between gap-4 p-3 rounded-md bg-muted/40">
               <div>

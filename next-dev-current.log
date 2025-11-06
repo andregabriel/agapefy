@@ -990,3 +990,106 @@ Cadastre seu número de WhatsApp e comece a conversar comigo. Você poderá envi
  GET /whatsapp 200 in 47ms
  ✓ Compiled in 4.9s (1604 modules)
  GET /whatsapp 200 in 108ms
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ GET /admin 200 in 106ms
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ GET /admin/playlists 200 in 195ms
+ ✓ Compiled in 3.9s (1604 modules)
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ GET /admin/playlists 200 in 252ms
+ ✓ Compiled in 1041ms (1604 modules)
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ GET /admin/playlists 200 in 61ms
+ ✓ Compiled in 979ms (1604 modules)
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ GET /admin/playlists 200 in 65ms
+ GET /whatsapp 200 in 53ms
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ GET /admin 200 in 36ms
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ GET /admin/playlists 200 in 16ms
+ GET /whatsapp 200 in 380ms
+📊 AuthContext: Estado atual - User: false Loading: true
+ GET /whatsapp 200 in 290ms
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ GET /admin/playlists 200 in 19ms
+ ✓ Compiled in 6.2s (1604 modules)
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ GET /admin/playlists 200 in 113ms
+ GET /whatsapp 200 in 134ms
+ ✓ Compiled in 10.2s (1604 modules)
+ GET /whatsapp 200 in 92ms
+ ✓ Compiled in 811ms (1604 modules)
+ GET /whatsapp 200 in 57ms
+ ✓ Compiled in 672ms (1604 modules)
+ GET /whatsapp 200 in 37ms
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ GET /admin 200 in 68ms
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ GET /admin/playlists 200 in 30ms
+ ✓ Compiled in 3.2s (1604 modules)
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ GET /admin/playlists 200 in 98ms
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ ✓ Compiled in 1243ms (1705 modules)
+ GET /admin/playlists 200 in 708ms
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ GET /admin/playlists 200 in 26ms
+ ✓ Compiled in 990ms (1604 modules)
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ GET /admin/playlists 200 in 48ms
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ ✓ Compiled in 925ms (1691 modules)
+ GET /admin/playlists 200 in 542ms
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ GET /admin/playlists 200 in 12ms
+ ✓ Compiled in 1250ms (1604 modules)
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ GET /admin/playlists 200 in 67ms
+ ✓ Compiled in 4.2s (1604 modules)
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ GET /admin/playlists 200 in 314ms
+ ✓ Compiled in 1052ms (1604 modules)
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ GET /admin/playlists 200 in 35ms
+ ✓ Compiled in 7.4s (1604 modules)
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ GET /admin/playlists 200 in 137ms
+ ✓ Compiled in 11.3s (1604 modules)
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ GET /admin/playlists 200 in 130ms
+ ✓ Compiled in 1183ms (1604 modules)
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ GET /admin/playlists 200 in 136ms
+ ✓ Compiled in 8s (1590 modules)
+ ✓ Compiled in 743ms (1590 modules)
+ ✓ Compiled in 1184ms (1590 modules)
+ ✓ Compiled in 13s (1604 modules)
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ GET /admin/playlists 200 in 144ms
+ ✓ Compiled in 6.3s (1604 modules)
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ GET /admin/playlists 200 in 138ms
+ GET /whatsapp 200 in 165ms
+📊 AuthContext: Estado atual - User: false Loading: true
+ GET /whatsapp 200 in 310ms
+ ✓ Compiled in 4.4s (1604 modules)
+ GET /whatsapp 200 in 124ms
+ ✓ Compiled in 1021ms (1604 modules)
+ GET /whatsapp 200 in 47ms
+📊 AuthContext: Estado atual - User: false Loading: true
+ GET /whatsapp 200 in 331ms
+ ○ Compiling /eu ...
+ ✓ Compiled /eu in 2.3s (777 modules)
+ GET /eu 200 in 2466ms
+ GET / 200 in 93ms
+ ○ Compiling /api/onboarding/checklist ...
+ ✓ Compiled /api/onboarding/checklist in 1047ms (796 modules)
+ GET /api/onboarding/checklist 500 in 1990ms
+ GET /api/onboarding/checklist 500 in 94ms
+ ○ Compiling /busca ...
+ ✓ Compiled /busca in 1786ms (811 modules)
+ GET /busca 200 in 1980ms
+ GET /whatsapp 200 in 93ms
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ GET /admin 200 in 47ms
