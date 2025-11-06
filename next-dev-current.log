@@ -1229,3 +1229,20 @@ Cadastre seu número de WhatsApp e comece a conversar comigo. Você poderá envi
  GET /api/onboarding/checklist 500 in 53ms
  GET /api/onboarding/checklist 500 in 581ms
  GET /api/onboarding/checklist 500 in 58ms
+ GET /api/onboarding/checklist 500 in 669ms
+ GET /api/onboarding/checklist 500 in 108ms
+ ✓ Compiled in 6s (1541 modules)
+ GET / 200 in 863ms
+ GET /whatsapp 200 in 868ms
+ ✓ Compiled in 822ms (854 modules)
+ GET / 200 in 145ms
+ GET /whatsapp 200 in 147ms
+ ✓ Compiled in 519ms (854 modules)
+ GET / 200 in 75ms
+ GET /whatsapp 200 in 84ms
+ ○ Compiling /api/onboarding/checklist ...
+ ✓ Compiled /api/onboarding/checklist in 4.2s (706 modules)
+ GET /api/onboarding/checklist 500 in 4994ms
+ GET /api/onboarding/checklist 500 in 134ms
+ GET / 200 in 857ms
+ GET /whatsapp 200 in 154ms

@@ -38,7 +38,7 @@ export async function GET(request: NextRequest) {
     if (respError) throw respError;
     const answeredIds = new Set((responses || []).map((r: any) => r.form_id));
 
-    // WhatsApp - primeiro busca por user_id, depois fallback para registros sem user_id (para compatibilidade com registros antigos)
+    // WhatsApp - busca por user_id primeiro
     let wa: any = null;
     const { data: waByUserId } = await supabase
       .from('whatsapp_users')
@@ -47,22 +47,28 @@ export async function GET(request: NextRequest) {
       .maybeSingle();
     wa = waByUserId;
     
-    // Se não encontrou por user_id, busca registros sem user_id como fallback (para registros antigos)
-    if (!wa) {
+    // Se não encontrou por user_id, busca registros sem user_id (para compatibilidade com registros antigos)
+    // Considera que se o usuário salvou o WhatsApp antes da correção, pode não ter user_id
+    if (!wa || !wa.phone_number) {
       const { data: waWithoutUserId } = await supabase
         .from('whatsapp_users')
-        .select('phone_number, receives_daily_verse')
+        .select('phone_number, receives_daily_verse, user_id')
         .is('user_id', null)
+        .not('phone_number', 'is', null)
         .order('updated_at', { ascending: false })
-        .limit(1)
-        .maybeSingle();
-      wa = waWithoutUserId;
+        .limit(10);
+      
+      // Se encontrou registros sem user_id, usa o mais recente
+      // Isso assume que registros antigos sem user_id podem ser do usuário atual
+      if (waWithoutUserId && waWithoutUserId.length > 0) {
+        wa = waWithoutUserId[0];
+      }
     }
     
-    const hasPhone = Boolean(wa?.phone_number);
+    const hasPhone = Boolean(wa?.phone_number && String(wa.phone_number).trim().length > 0);
     const versePrefSet = typeof (wa as any)?.receives_daily_verse === 'boolean';
 
-    // Rotina
+    // Rotina - verifica se existe playlist E se tem áudios
     const { data: playlist } = await supabase
       .from('playlists')
       .select('id')
@@ -70,7 +76,16 @@ export async function GET(request: NextRequest) {
       .eq('title', 'Minha Rotina')
       .eq('is_public', false)
       .maybeSingle();
-    const hasRoutine = Boolean(playlist?.id);
+    
+    let hasRoutine = false;
+    if (playlist?.id) {
+      // Verificar se a playlist tem pelo menos um áudio
+      const { count } = await supabase
+        .from('playlist_audios')
+        .select('*', { count: 'exact', head: true })
+        .eq('playlist_id', playlist.id);
+      hasRoutine = (count || 0) > 0;
+    }
 
     const steps: StepItem[] = [];
 
