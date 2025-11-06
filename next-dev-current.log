@@ -432,3 +432,432 @@ Cadastre seu número de WhatsApp e comece a conversar comigo. Você poderá envi
  GET /biblia 200 in 878ms
  ✓ Compiled /whatsapp in 371ms (1430 modules)
  GET /whatsapp 200 in 419ms
+ GET / 200 in 48ms
+ GET /api/onboarding/checklist 500 in 210ms
+ GET /api/onboarding/checklist 500 in 106ms
+ GET /api/onboarding/checklist 500 in 419ms
+ GET /api/onboarding/checklist 500 in 39ms
+ GET /api/onboarding/checklist 500 in 439ms
+ GET /api/onboarding/checklist 500 in 54ms
+ ✓ Compiled in 1791ms (1377 modules)
+ GET / 200 in 646ms
+ ✓ Compiled in 975ms (690 modules)
+ GET / 200 in 17ms
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ GET /admin 200 in 33ms
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ ○ Compiling /admin/webhook-test ...
+ ✓ Compiled /admin/webhook-test in 1417ms (1378 modules)
+ GET /admin/webhook-test 200 in 1487ms
+ ○ Compiling /api/webhook/whatsapp/test ...
+ ✓ Compiled /api/webhook/whatsapp/test in 564ms (1377 modules)
+🧪 Testando webhook: receive
+ ✓ Compiled /api/webhook/whatsapp/receive in 250ms (1380 modules)
+🔔 Webhook RECEIVE recebido: {
+  "phone": "5521980636787",
+  "message": {
+    "conversation": "Olá, teste do sistema!"
+  },
+  "senderName": "Teste Sistema",
+  "fromMe": false,
+  "timestamp": 1762442545172
+}
+📱 Processando mensagem de Teste Sistema (5521980636787): "Olá, teste do sistema!"
+👤 Registrando usuário...
+📤 Enviando mensagem para 5521980636787: Buscando a resposta na Bíblia, aguarde alguns segundos…
+✅ Mensagem enviada para 5521980636787: {
+  zaapId: '019A59C30F83783AA23B7FA31FD16FB9',
+  messageId: 'E5D93AB3E72718EA47F8',
+  id: 'E5D93AB3E72718EA47F8'
+}
+🤖 Gerando resposta inteligente...
+🧠 Iniciando geração de resposta IA...
+💬 Resposta gerada: "Olá Teste Sistema, como você está? Sou o Agape, seu companheiro espiritual. 🙏"
+💾 Salvando conversa...
+📤 Enviando resposta via Z-API...
+📤 Enviando mensagem para 5521980636787: Olá Teste Sistema, como você está? Sou o Agape, seu companheiro espiritual. 🙏
+✅ Mensagem enviada para 5521980636787: {
+  zaapId: '019A59C312EC7BC2BF80AB707D76D385',
+  messageId: 'DE6475A9986C5F6CE0DF',
+  id: 'DE6475A9986C5F6CE0DF'
+}
+✅ Mensagem enviada com sucesso!
+ POST /api/webhook/whatsapp/receive 200 in 2899ms
+ POST /api/webhook/whatsapp/test 200 in 3519ms
+🧪 Testando webhook: delivery
+ ✓ Compiled /api/webhook/whatsapp/delivery in 469ms (1382 modules)
+📬 Webhook DELIVERY recebido: {
+  "phone": "5521980636787",
+  "status": "delivered",
+  "timestamp": 1762442549100
+}
+📋 Status de entrega: delivered para 5521980636787
+ POST /api/webhook/whatsapp/delivery 200 in 489ms
+ POST /api/webhook/whatsapp/test 200 in 499ms
+🧪 Testando webhook: status
+ ✓ Compiled /api/webhook/whatsapp/status in 198ms (1384 modules)
+📊 Webhook STATUS recebido: {
+  "phone": "5521980636787",
+  "status": "read",
+  "timestamp": 1762442550606
+}
+📱 Status da mensagem: read - 5521980636787
+ POST /api/webhook/whatsapp/status 200 in 215ms
+ POST /api/webhook/whatsapp/test 200 in 226ms
+🧪 Testando webhook: connect
+ ✓ Compiled /api/webhook/whatsapp/connect in 212ms (1386 modules)
+🔗 Webhook CONNECT recebido: {
+  "status": "connected",
+  "timestamp": 1762442551837
+}
+✅ WhatsApp conectado com sucesso!
+ POST /api/webhook/whatsapp/connect 200 in 227ms
+ POST /api/webhook/whatsapp/test 200 in 239ms
+🧪 Testando webhook: disconnect
+ ✓ Compiled /api/webhook/whatsapp/disconnect in 198ms (1388 modules)
+🔌 Webhook DISCONNECT recebido: {
+  "status": "disconnected",
+  "timestamp": 1762442553075
+}
+❌ WhatsApp desconectado!
+ POST /api/webhook/whatsapp/disconnect 200 in 216ms
+ POST /api/webhook/whatsapp/test 200 in 223ms
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ ○ Compiling /admin/configuracoes ...
+ ✓ Compiled /admin/configuracoes in 2.4s (1374 modules)
+ GET /admin/configuracoes 200 in 3005ms
+ GET /whatsapp 200 in 113ms
+ ✓ Compiled in 2.8s (1373 modules)
+ ✓ Compiled in 739ms (1373 modules)
+ ✓ Compiled in 1330ms (1474 modules)
+ ✓ Compiled in 750ms (1373 modules)
+📊 AuthContext: Estado atual - User: false Loading: true
+ GET /whatsapp 200 in 315ms
+ ○ Compiling /api/whatsapp/status ...
+ ✓ Compiled /api/whatsapp/status in 826ms (686 modules)
+ GET /api/whatsapp/status 200 in 1318ms
+ ✓ Compiled /api/whatsapp/test-message in 114ms (688 modules)
+Enviando mensagem de teste para 5521980636787: 📖 Olá! Eu sou o Biblicus
+
+Um assistente virtual da Agapefy para te acompanhar na sua jornada espiritual. ✨
+
+🙌 O que posso fazer:
+
+• Obter respostas baseadas na Bíblia
+• Enviar versículos diariamente
+• Lembrar você dos horários de oração
+• Montar orações personalizadas para você
+
+💬 Comandos disponíveis:
+
+• **/conversa** – Tire dúvidas e converse sobre a Bíblia
+• **/versículos** – Receba mensagens com passagens todos os dias
+• **/lembretes** – Ative lembretes nos horários de oração
+• **/oração** – Tenha uma oração feita especialmente para você
+
+✨ Como usar:
+Cadastre seu número de WhatsApp e comece a conversar comigo. Você poderá enviar mensagens e receber respostas, versículos, lembretes e orações diretamente no seu celular.
+
+🚀 Pronto para começar?
+ POST /api/whatsapp/test-message 400 in 193ms
+📊 AuthContext: Estado atual - User: false Loading: true
+ GET /whatsapp 200 in 253ms
+ ○ Compiling /login ...
+ ✓ Compiled /login in 684ms (701 modules)
+ GET /login 200 in 952ms
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ ✓ Compiled /admin in 482ms (701 modules)
+ GET /admin 200 in 557ms
+ GET /whatsapp 200 in 50ms
+ ○ Compiling /_not-found ...
+ ✓ Compiled /_not-found in 2.1s (1347 modules)
+📊 AuthContext: Estado atual - User: false Loading: true
+ GET /.well-known/appspecific/com.chrome.devtools.json 404 in 2271ms
+ GET /whatsapp 200 in 320ms
+ GET /whatsapp 200 in 274ms
+ ✓ Compiled in 2.1s (1438 modules)
+ ✓ Compiled in 916ms (1337 modules)
+ ✓ Compiled in 480ms (1337 modules)
+ ✓ Compiled in 1591ms (1438 modules)
+ ✓ Compiled in 750ms (1337 modules)
+ ✓ Compiled in 714ms (1337 modules)
+ ○ Compiling /eu ...
+ ✓ Compiled /eu in 1020ms (674 modules)
+ GET /eu 200 in 1333ms
+ GET /eu 200 in 56ms
+ GET /eu 200 in 27ms
+ GET /eu 200 in 31ms
+ GET /eu 200 in 16ms
+ GET /eu 200 in 31ms
+ GET /eu 200 in 13ms
+ GET /eu 200 in 16ms
+ ✓ Compiled in 3.2s (1336 modules)
+ ✓ Compiled in 998ms (704 modules)
+ ✓ Compiled /eu in 465ms (673 modules)
+📊 AuthContext: Estado atual - User: false Loading: true
+ GET /eu 200 in 775ms
+ GET /whatsapp 200 in 36ms
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ GET /admin 200 in 49ms
+ GET /whatsapp 200 in 39ms
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ GET /admin 200 in 48ms
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ ○ Compiling /admin/go ...
+ ✓ Compiled /admin/go in 3.7s (1445 modules)
+ GET /admin/go 200 in 3849ms
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ GET /admin/configuracoes 200 in 71ms
+ GET /eu 200 in 171ms
+ GET /eu 200 in 66ms
+ GET /eu 200 in 38ms
+ GET /eu 200 in 21ms
+ GET /eu 200 in 27ms
+ GET /eu 200 in 19ms
+ GET /eu 200 in 14ms
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ GET /eu 200 in 230ms
+ GET /admin 200 in 49ms
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ GET /admin/go 200 in 40ms
+ ○ Compiling /api/gmanual/generate-field ...
+ ✓ Compiled /api/gmanual/generate-field in 1021ms (1451 modules)
+ POST /api/gmanual/generate-field 500 in 1451ms
+ POST /api/gmanual/generate-field 500 in 26ms
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+📊 AuthContext: Estado atual - User: false Loading: true
+ GET /admin/go 200 in 348ms
+ ○ Compiling /_not-found ...
+ ✓ Compiled /_not-found in 1313ms (1436 modules)
+📊 AuthContext: Estado atual - User: false Loading: true
+ GET /.well-known/appspecific/com.chrome.devtools.json 404 in 1853ms
+ ✓ Compiled /favicon.ico in 394ms (720 modules)
+ GET /favicon.ico 200 in 761ms
+ GET /favicon.ico 200 in 207ms
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ GET /admin 200 in 99ms
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ GET /admin/go 200 in 22ms
+ ✓ Compiled /api/gmanual/generate-field in 171ms (725 modules)
+ POST /api/gmanual/generate-field 500 in 207ms
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ GET /admin/go 200 in 55ms
+ POST /api/gmanual/generate-field 500 in 18ms
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+📊 AuthContext: Estado atual - User: false Loading: true
+ GET /admin/go 200 in 261ms
+ GET /favicon.ico 200 in 353ms
+ ○ Compiling /login ...
+ ✓ Compiled /login in 856ms (737 modules)
+ GET /login 200 in 1111ms
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ GET /admin 200 in 29ms
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ GET /admin/go 200 in 40ms
+ POST /api/gmanual/generate-field 500 in 53ms
+ ○ Compiling / ...
+ ✓ Compiled / in 1161ms (736 modules)
+ GET / 200 in 1540ms
+ ○ Compiling /api/onboarding/checklist ...
+ ✓ Compiled /api/onboarding/checklist in 536ms (755 modules)
+ GET /api/onboarding/checklist 500 in 949ms
+ GET /api/onboarding/checklist 500 in 43ms
+ GET /api/onboarding/checklist 500 in 121ms
+ GET /api/onboarding/checklist 500 in 74ms
+ ○ Compiling /player/[playlistId] ...
+ ✓ Compiled /player/[playlistId] in 1341ms (1489 modules)
+ GET /player/5ff93ade-147e-4ca3-b4e3-26417a9644e5 200 in 3337ms
+ GET /api/onboarding/checklist 500 in 149ms
+ GET /api/onboarding/checklist 500 in 42ms
+ GET / 200 in 66ms
+ GET /api/onboarding/checklist 500 in 92ms
+ GET /api/onboarding/checklist 500 in 73ms
+ GET /player/5ff93ade-147e-4ca3-b4e3-26417a9644e5 200 in 92ms
+ GET /api/onboarding/checklist 500 in 377ms
+ GET /api/onboarding/checklist 500 in 155ms
+ ✓ Compiled in 2.3s (1455 modules)
+ ✓ Compiled in 529ms (1455 modules)
+ ○ Compiling /api/onboarding/checklist ...
+ ✓ Compiled /api/onboarding/checklist in 1835ms (731 modules)
+ GET /api/onboarding/checklist 500 in 2144ms
+ GET /api/onboarding/checklist 500 in 36ms
+ GET /api/onboarding/checklist 500 in 130ms
+ GET /api/onboarding/checklist 500 in 55ms
+ GET /api/onboarding/checklist 500 in 440ms
+ GET /api/onboarding/checklist 500 in 85ms
+ GET /api/onboarding/checklist 500 in 1112ms
+ GET /api/onboarding/checklist 500 in 71ms
+ ✓ Compiled in 2.7s (1455 modules)
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ GET /admin 200 in 332ms
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ ○ Compiling /admin/categorias ...
+ ✓ Compiled /admin/categorias in 5.3s (1629 modules)
+📊 AuthContext: Estado atual - User: false Loading: true
+ GET /admin/categorias 200 in 5590ms
+ GET / 200 in 250ms
+ ✓ Compiled /api/onboarding/checklist in 276ms (809 modules)
+ GET /api/onboarding/checklist 500 in 1099ms
+ GET /api/onboarding/checklist 500 in 40ms
+ ✓ Compiled in 841ms (1635 modules)
+ GET /api/onboarding/checklist 500 in 272ms
+ GET /api/onboarding/checklist 500 in 36ms
+📊 AuthContext: Estado atual - User: false Loading: true
+ GET / 200 in 254ms
+ ○ Compiling /favicon.ico ...
+ ✓ Compiled /favicon.ico in 704ms (811 modules)
+ GET /api/onboarding/checklist 500 in 396ms
+ GET /api/onboarding/checklist 500 in 35ms
+ GET /favicon.ico 200 in 1188ms
+ ○ Compiling /_not-found ...
+ ✓ Compiled /_not-found in 1678ms (1641 modules)
+📊 AuthContext: Estado atual - User: false Loading: true
+ GET /.well-known/appspecific/com.chrome.devtools.json 404 in 1855ms
+ GET /api/onboarding/checklist 500 in 164ms
+ GET /api/onboarding/checklist 500 in 41ms
+ GET /api/onboarding/checklist 500 in 185ms
+ GET /api/onboarding/checklist 500 in 312ms
+ GET / 200 in 211ms
+ GET /api/onboarding/checklist 500 in 196ms
+ GET /api/onboarding/checklist 500 in 66ms
+ GET /api/onboarding/checklist 500 in 219ms
+ GET /api/onboarding/checklist 500 in 410ms
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ GET /admin 200 in 66ms
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+📊 AuthContext: Estado atual - User: false Loading: true
+ GET /admin/categorias 200 in 235ms
+📊 AuthContext: Estado atual - User: false Loading: true
+ GET /.well-known/appspecific/com.chrome.devtools.json 404 in 96ms
+ GET /api/onboarding/checklist 500 in 151ms
+ GET /api/onboarding/checklist 500 in 282ms
+ GET /api/onboarding/checklist 500 in 980ms
+ GET /api/onboarding/checklist 500 in 57ms
+ GET /api/onboarding/checklist 500 in 96ms
+ GET /api/onboarding/checklist 500 in 35ms
+ ✓ Compiled in 4.2s (1649 modules)
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ GET / 200 in 126ms
+ GET /admin/categorias 200 in 146ms
+ ✓ Compiled in 886ms (1649 modules)
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ GET / 200 in 64ms
+ GET /admin/categorias 200 in 91ms
+ GET /api/onboarding/checklist 500 in 325ms
+ GET /api/onboarding/checklist 500 in 36ms
+ ✓ Compiled in 1210ms (1649 modules)
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ GET / 200 in 316ms
+ GET /admin/categorias 200 in 235ms
+ ✓ Compiled in 861ms (1649 modules)
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ GET / 200 in 62ms
+ GET /admin/categorias 200 in 79ms
+ ○ Compiling /player/audio/[audioId] ...
+ ✓ Compiled /player/audio/[audioId] in 2.4s (1645 modules)
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ GET /admin/categorias 200 in 49ms
+ GET /player/audio/c976e38e-76a0-4d4d-9c9c-8bfeb224ae44 200 in 4057ms
+ GET /player/audio/c976e38e-76a0-4d4d-9c9c-8bfeb224ae44 200 in 44ms
+ ✓ Compiled /api/onboarding/checklist in 307ms (811 modules)
+ GET /api/onboarding/checklist 500 in 1444ms
+ GET /api/onboarding/checklist 500 in 45ms
+ GET /player/audio/c976e38e-76a0-4d4d-9c9c-8bfeb224ae44 200 in 102ms
+ GET /api/onboarding/checklist 500 in 365ms
+ GET /api/onboarding/checklist 500 in 41ms
+ GET /player/audio/c976e38e-76a0-4d4d-9c9c-8bfeb224ae44 200 in 83ms
+ GET /api/onboarding/checklist 500 in 324ms
+ GET /api/onboarding/checklist 500 in 41ms
+ ✓ Compiled in 1306ms (1656 modules)
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ GET / 200 in 130ms
+ GET /admin/categorias 200 in 199ms
+ ✓ Compiled in 699ms (1656 modules)
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ GET / 200 in 117ms
+ GET /admin/categorias 200 in 110ms
+ GET /api/onboarding/checklist 500 in 139ms
+ GET /api/onboarding/checklist 500 in 58ms
+ GET /api/onboarding/checklist 500 in 196ms
+ GET /api/onboarding/checklist 500 in 208ms
+ GET /api/onboarding/checklist 500 in 132ms
+ GET /api/onboarding/checklist 500 in 47ms
+ GET /api/onboarding/checklist 500 in 144ms
+ GET /api/onboarding/checklist 500 in 48ms
+ GET /api/onboarding/checklist 500 in 253ms
+ GET /api/onboarding/checklist 500 in 75ms
+ GET /api/onboarding/checklist 500 in 303ms
+ GET /api/onboarding/checklist 500 in 186ms
+ GET /api/onboarding/checklist 500 in 129ms
+ GET /api/onboarding/checklist 500 in 62ms
+ GET /api/onboarding/checklist 500 in 129ms
+ GET /api/onboarding/checklist 500 in 105ms
+ GET /api/onboarding/checklist 500 in 193ms
+ GET /api/onboarding/checklist 500 in 105ms
+ GET /api/onboarding/checklist 500 in 178ms
+ GET /api/onboarding/checklist 500 in 137ms
+ GET /api/onboarding/checklist 500 in 942ms
+ GET /api/onboarding/checklist 500 in 113ms
+ GET /api/onboarding/checklist 500 in 108ms
+ GET /api/onboarding/checklist 500 in 59ms
+ GET /api/onboarding/checklist 500 in 159ms
+ GET /api/onboarding/checklist 500 in 71ms
+ GET /api/onboarding/checklist 500 in 114ms
+ GET /api/onboarding/checklist 500 in 62ms
+ GET /player/audio/4246af30-8643-4256-9669-e767a2e33793 200 in 245ms
+ GET /api/onboarding/checklist 500 in 1525ms
+ GET /api/onboarding/checklist 500 in 80ms
+ ✓ Compiled in 6.7s (1623 modules)
+ ○ Compiling /api/onboarding/checklist ...
+ ✓ Compiled /api/onboarding/checklist in 1026ms (811 modules)
+ ○ Compiling /login ...
+ ✓ Compiled /login in 1939ms (824 modules)
+ GET /api/onboarding/checklist 500 in 3690ms
+ GET /login 200 in 2767ms
+ GET /api/onboarding/checklist 500 in 167ms
+ ✓ Compiled in 3.7s (1655 modules)
+ ✓ Compiled in 1593ms (1648 modules)
+ ✓ Compiled in 448ms (1648 modules)
+ ✓ Compiled in 2s (1648 modules)
+ GET /api/onboarding/checklist 500 in 171ms
+ GET /api/onboarding/checklist 500 in 41ms
+ ✓ Compiled in 1748ms (1662 modules)
+ GET / 200 in 115ms
+ GET /login 200 in 139ms
+ ○ Compiling /whatsapp ...
+ ✓ Compiled /whatsapp in 1209ms (832 modules)
+ GET /whatsapp 200 in 1368ms
+ ✓ Compiled in 1482ms (1632 modules)
+ GET /whatsapp 200 in 75ms
+ GET /login 200 in 75ms
+ ✓ Compiled in 3.7s (1618 modules)
+ ✓ Compiled in 1883ms (1632 modules)
+ GET /whatsapp 200 in 105ms
+ GET /login 200 in 98ms
+ ✓ Compiled in 679ms (1613 modules)
+ GET /whatsapp 200 in 361ms
+ GET /login 200 in 361ms
+ GET / 200 in 109ms
+ ✓ Compiled /api/onboarding/checklist in 445ms (787 modules)
+ GET /api/onboarding/checklist 500 in 1049ms
+ GET /api/onboarding/checklist 500 in 53ms
+ GET /api/onboarding/checklist 500 in 278ms
+ GET /api/onboarding/checklist 500 in 78ms
+ GET /api/onboarding/checklist 500 in 72ms
+ GET /api/onboarding/checklist 500 in 46ms
+ GET /api/onboarding/checklist 500 in 59ms
+ GET /api/onboarding/checklist 500 in 40ms
+ GET /api/onboarding/checklist 500 in 150ms
+ GET /api/onboarding/checklist 500 in 54ms
+ GET /api/onboarding/checklist 500 in 33ms
+ GET /api/onboarding/checklist 500 in 84ms
+ ✓ Compiled in 1790ms (1632 modules)
+ GET / 200 in 267ms
+ GET /login 200 in 266ms
+ ✓ Compiled in 2.4s (1632 modules)
+ GET / 200 in 132ms
+ GET /login 200 in 147ms
+ GET /whatsapp 200 in 139ms
+ ○ Compiling /eu ...
+ ✓ Compiled /eu in 2.4s (790 modules)
+ GET /eu 200 in 2976ms

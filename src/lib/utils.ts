@@ -40,3 +40,22 @@ export function isRotinaCategoryName(name?: string | null): boolean {
   const normalized = normalizeText(name);
   return normalized === 'rotina' || normalized === 'minha rotina';
 }
+
+// Database error helpers
+export function extractDbError(error: any): { message: string; code?: string; details?: string; hint?: string } {
+  const message =
+    (error && (error.message || error.msg)) ||
+    (error?.error && (error.error.message || error.error.msg)) ||
+    (typeof error === 'string' ? error : '') ||
+    'unknown_error';
+  const code = error?.code || error?.error?.code;
+  const details = error?.details || error?.error?.details;
+  const hint = error?.hint || error?.error?.hint;
+  return { message: String(message), code, details, hint };
+}
+
+export function logDbError(context: string, error: any) {
+  const info = extractDbError(error);
+  // Use warn to avoid noisy red overlays while still surfacing details in dev tools
+  console.warn(`${context}: ${info.message}${info.code ? ` [${info.code}]` : ''}`, { details: info.details, hint: info.hint });
+}

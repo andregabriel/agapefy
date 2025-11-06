@@ -45,7 +45,8 @@ export function useRoutinePlaylist() {
           console.log('📝 useRoutinePlaylist: Criando playlist Rotina');
           playlist = await createRoutinePlaylist();
         } else {
-          console.error('❌ useRoutinePlaylist: Erro ao buscar playlist:', fetchError);
+          const { logDbError } = await import('@/lib/utils');
+          logDbError('❌ useRoutinePlaylist: Erro ao buscar playlist', fetchError);
           setError('Erro ao carregar sua rotina');
           return;
         }
@@ -85,14 +86,16 @@ export function useRoutinePlaylist() {
         .single();
 
       if (error) {
-        console.error('❌ useRoutinePlaylist: Erro ao criar playlist:', error);
+        const { logDbError } = await import('@/lib/utils');
+        logDbError('❌ useRoutinePlaylist: Erro ao criar playlist', error);
         return null;
       }
 
       console.log('✅ useRoutinePlaylist: Playlist Rotina criada:', data);
       return data;
     } catch (err) {
-      console.error('💥 useRoutinePlaylist: Erro ao criar playlist:', err);
+      const { logDbError } = await import('@/lib/utils');
+      logDbError('💥 useRoutinePlaylist: Erro ao criar playlist', err);
       return null;
     }
   };
@@ -113,13 +116,15 @@ export function useRoutinePlaylist() {
         .order('position', { ascending: true });
 
       if (error) {
-        console.error('❌ useRoutinePlaylist: Erro ao buscar áudios:', error);
+        const { logDbError } = await import('@/lib/utils');
+        logDbError('❌ useRoutinePlaylist: Erro ao buscar áudios', error);
         return [];
       }
 
       return data?.map(item => item.audio).filter(Boolean) || [];
     } catch (err) {
-      console.error('💥 useRoutinePlaylist: Erro ao buscar áudios:', err);
+      const { logDbError } = await import('@/lib/utils');
+      logDbError('💥 useRoutinePlaylist: Erro ao buscar áudios', err);
       return [];
     }
   };
@@ -153,7 +158,8 @@ export function useRoutinePlaylist() {
         });
 
       if (error) {
-        console.error('❌ useRoutinePlaylist: Erro ao adicionar áudio:', error);
+        const { logDbError } = await import('@/lib/utils');
+        logDbError('❌ useRoutinePlaylist: Erro ao adicionar áudio', error);
         return false;
       }
 
@@ -164,7 +170,8 @@ export function useRoutinePlaylist() {
       
       return true;
     } catch (err) {
-      console.error('💥 useRoutinePlaylist: Erro ao adicionar áudio:', err);
+      const { logDbError } = await import('@/lib/utils');
+      logDbError('💥 useRoutinePlaylist: Erro ao adicionar áudio', err);
       return false;
     }
   };
@@ -183,7 +190,8 @@ export function useRoutinePlaylist() {
         .eq('audio_id', audioId);
 
       if (error) {
-        console.error('❌ useRoutinePlaylist: Erro ao remover áudio:', error);
+        const { logDbError } = await import('@/lib/utils');
+        logDbError('❌ useRoutinePlaylist: Erro ao remover áudio', error);
         return false;
       }
 
@@ -194,7 +202,8 @@ export function useRoutinePlaylist() {
       
       return true;
     } catch (err) {
-      console.error('💥 useRoutinePlaylist: Erro ao remover áudio:', err);
+      const { logDbError } = await import('@/lib/utils');
+      logDbError('💥 useRoutinePlaylist: Erro ao remover áudio', err);
       return false;
     }
   };
