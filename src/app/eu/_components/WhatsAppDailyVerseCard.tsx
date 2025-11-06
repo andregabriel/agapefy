@@ -25,6 +25,8 @@ export function WhatsAppDailyVerseCard({ defaultSendTime = '09:00' }: { defaultS
       try {
         setLoading(true);
         let row: any = null;
+        
+        // Only load WhatsApp number for the logged-in user
         if (user?.id) {
           const { data } = await supabase
             .from('whatsapp_users')
@@ -33,14 +35,7 @@ export function WhatsAppDailyVerseCard({ defaultSendTime = '09:00' }: { defaultS
             .maybeSingle();
           row = data || null;
         }
-        if (!row) {
-          const { data } = await supabase
-            .from('whatsapp_users')
-            .select('phone_number, receives_daily_verse')
-            .order('updated_at', { ascending: false })
-            .limit(1);
-          row = (data && data[0]) || null;
-        }
+        
         if (row) {
           setPhone(row.phone_number || '');
           setEnabled(Boolean(row.receives_daily_verse));

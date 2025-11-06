@@ -1185,3 +1185,47 @@ Cadastre seu número de WhatsApp e comece a conversar comigo. Você poderá envi
  ✓ Compiled in 551ms (854 modules)
  GET /whatsapp 200 in 47ms
  GET /whatsapp 200 in 48ms
+ GET / 200 in 414ms
+ ○ Compiling /api/onboarding/checklist ...
+ ✓ Compiled /api/onboarding/checklist in 6.8s (706 modules)
+ GET /api/onboarding/checklist 500 in 7496ms
+ GET /api/onboarding/checklist 500 in 36ms
+ GET /api/onboarding/checklist 500 in 65ms
+ GET /api/onboarding/checklist 500 in 40ms
+ GET /api/onboarding/checklist 500 in 126ms
+ GET /api/onboarding/checklist 500 in 225ms
+📊 AuthContext: Estado atual - User: false Loading: true
+ GET / 200 in 462ms
+ GET /api/onboarding/checklist 500 in 248ms
+ GET /api/onboarding/checklist 500 in 49ms
+ GET /api/onboarding/checklist 500 in 179ms
+ GET /api/onboarding/checklist 500 in 43ms
+ GET /api/onboarding/checklist 500 in 749ms
+ GET /api/onboarding/checklist 500 in 77ms
+ GET /api/onboarding/checklist 500 in 528ms
+ ✓ Compiled in 11s (1560 modules)
+ GET /api/onboarding/checklist 500 in 5366ms
+ GET / 200 in 231ms
+ GET /whatsapp 200 in 234ms
+ GET /api/onboarding/checklist 500 in 483ms
+ GET /api/onboarding/checklist 500 in 66ms
+ ✓ Compiled in 966ms (1560 modules)
+ GET / 200 in 112ms
+ GET /whatsapp 200 in 116ms
+ ✓ Compiled in 1600ms (1560 modules)
+ GET / 200 in 213ms
+ GET /whatsapp 200 in 211ms
+ GET /whatsapp 200 in 37ms
+ ✓ Compiled in 5.9s (1541 modules)
+ GET /whatsapp 200 in 728ms
+ GET /whatsapp 200 in 724ms
+ ✓ Compiled in 837ms (1541 modules)
+ GET /whatsapp 200 in 129ms
+ GET /whatsapp 200 in 102ms
+ GET / 200 in 127ms
+ ○ Compiling /api/onboarding/checklist ...
+ ✓ Compiled /api/onboarding/checklist in 842ms (706 modules)
+ GET /api/onboarding/checklist 500 in 1692ms
+ GET /api/onboarding/checklist 500 in 53ms
+ GET /api/onboarding/checklist 500 in 581ms
+ GET /api/onboarding/checklist 500 in 58ms

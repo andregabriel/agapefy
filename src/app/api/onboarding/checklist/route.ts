@@ -38,12 +38,27 @@ export async function GET(request: NextRequest) {
     if (respError) throw respError;
     const answeredIds = new Set((responses || []).map((r: any) => r.form_id));
 
-    // WhatsApp
-    const { data: wa } = await supabase
+    // WhatsApp - primeiro busca por user_id, depois fallback para registros sem user_id (para compatibilidade com registros antigos)
+    let wa: any = null;
+    const { data: waByUserId } = await supabase
       .from('whatsapp_users')
       .select('phone_number, receives_daily_verse')
       .eq('user_id', userId)
       .maybeSingle();
+    wa = waByUserId;
+    
+    // Se não encontrou por user_id, busca registros sem user_id como fallback (para registros antigos)
+    if (!wa) {
+      const { data: waWithoutUserId } = await supabase
+        .from('whatsapp_users')
+        .select('phone_number, receives_daily_verse')
+        .is('user_id', null)
+        .order('updated_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      wa = waWithoutUserId;
+    }
+    
     const hasPhone = Boolean(wa?.phone_number);
     const versePrefSet = typeof (wa as any)?.receives_daily_verse === 'boolean';
 

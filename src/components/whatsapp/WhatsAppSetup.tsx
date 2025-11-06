@@ -70,28 +70,36 @@ export default function WhatsAppSetup({ variant = "standalone", redirectIfNotLog
   useEffect(() => {
     const fetchExisting = async () => {
       try {
-        // Prefer the last phone used on this device
-        const localPhone = typeof window !== 'undefined' ? window.localStorage.getItem('agape_whatsapp_phone') : null;
-        if (localPhone) setPhone(localPhone);
-
         let row: any = null;
-        if (localPhone) {
+
+        // First, try to get the user's WhatsApp number by user_id
+        if (user?.id) {
           const { data } = await supabase
             .from('whatsapp_users')
             .select('phone_number, is_active, receives_daily_verse, receives_daily_prayer, receives_daily_routine, prayer_time_wakeup, prayer_time_lunch, prayer_time_dinner, prayer_time_sleep')
-            .eq('phone_number', localPhone)
+            .eq('user_id', user.id)
             .maybeSingle();
           row = data || null;
         }
 
+        // If not found by user_id, try by phone number from localStorage (but only if it belongs to this user)
         if (!row) {
-          // Fallback: get most recent record (best-effort prefill if user used a different device)
-          const res = await supabase
-            .from('whatsapp_users')
-            .select('phone_number, is_active, receives_daily_verse, receives_daily_prayer, receives_daily_routine, prayer_time_wakeup, prayer_time_lunch, prayer_time_dinner, prayer_time_sleep')
-            .order('updated_at', { ascending: false })
-            .limit(1);
-          row = (res.data && res.data[0]) || null;
+          const localPhone = typeof window !== 'undefined' ? window.localStorage.getItem('agape_whatsapp_phone') : null;
+          if (localPhone && user?.id) {
+            const { data } = await supabase
+              .from('whatsapp_users')
+              .select('phone_number, is_active, receives_daily_verse, receives_daily_prayer, receives_daily_routine, prayer_time_wakeup, prayer_time_lunch, prayer_time_dinner, prayer_time_sleep')
+              .eq('phone_number', localPhone)
+              .eq('user_id', user.id)
+              .maybeSingle();
+            row = data || null;
+            if (row && row.phone_number) {
+              setPhone(row.phone_number);
+            }
+          } else if (localPhone && !user?.id) {
+            // If user is not logged in, just set the phone from localStorage for display
+            setPhone(localPhone);
+          }
         }
 
         if (!row) return;
@@ -218,6 +226,7 @@ export default function WhatsAppSetup({ variant = "standalone", redirectIfNotLog
       const { error } = await supabase.from("whatsapp_users").upsert(
         {
           phone_number: clean,
+          user_id: user?.id || null,
           name: user?.email?.split("@")[0] ?? "Irmão(ã)",
           is_active: true,
           receives_daily_verse: false,
@@ -299,7 +308,7 @@ export default function WhatsAppSetup({ variant = "standalone", redirectIfNotLog
     try {
       const { error } = await supabase
         .from('whatsapp_users')
-        .upsert({ phone_number: clean, [field]: value, updated_at: new Date().toISOString() } as any, { onConflict: 'phone_number' });
+        .upsert({ phone_number: clean, user_id: user?.id || null, [field]: value, updated_at: new Date().toISOString() } as any, { onConflict: 'phone_number' });
       if (error) throw error;
       if (field === 'is_active') setIsActive(value);
       if (field === 'receives_daily_verse') setDailyVerse(value);
@@ -320,7 +329,7 @@ export default function WhatsAppSetup({ variant = "standalone", redirectIfNotLog
     }
     try {
       // Persist as time (HH:MM); Postgres will cast string to time
-      const payload: any = { phone_number: clean, updated_at: new Date().toISOString() };
+      const payload: any = { phone_number: clean, user_id: user?.id || null, updated_at: new Date().toISOString() };
       // If empty, set null
       (payload as any)[field] = value && value.length >= 4 ? value : null;
       const { error } = await supabase
