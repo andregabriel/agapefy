@@ -861,3 +861,50 @@ Cadastre seu número de WhatsApp e comece a conversar comigo. Você poderá envi
  ○ Compiling /eu ...
  ✓ Compiled /eu in 2.4s (790 modules)
  GET /eu 200 in 2976ms
+ GET / 200 in 114ms
+ ○ Compiling /api/onboarding/checklist ...
+ ✓ Compiled /api/onboarding/checklist in 1282ms (691 modules)
+ GET /api/onboarding/checklist 500 in 1574ms
+ GET /api/onboarding/checklist 500 in 35ms
+ GET /player/audio/968602b2-c0a5-4506-a5b7-033d4462c5b0 200 in 141ms
+ GET /api/onboarding/checklist 500 in 200ms
+ GET /api/onboarding/checklist 500 in 104ms
+ GET /api/onboarding/checklist 500 in 265ms
+ GET /api/onboarding/checklist 500 in 138ms
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ ○ Compiling /admin ...
+ ✓ Compiled /admin in 2.5s (723 modules)
+ GET /admin 200 in 2630ms
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ ○ Compiling /admin/categorias ...
+ ✓ Compiled /admin/categorias in 1722ms (817 modules)
+📊 AuthContext: Estado atual - User: false Loading: true
+ GET /admin/categorias 200 in 2083ms
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ ○ Compiling /admin/playlists ...
+ ✓ Compiled /admin/playlists in 2.8s (1594 modules)
+ GET /admin/playlists 200 in 3214ms
+ GET /login 200 in 250ms
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ GET /admin 200 in 74ms
+ GET /whatsapp 200 in 94ms
+ ✓ Compiled in 6s (1556 modules)
+ ✓ Compiled in 1400ms (837 modules)
+ ✓ Compiled in 551ms (1556 modules)
+ ○ Compiling / ...
+ ✓ Compiled / in 1272ms (766 modules)
+ GET / 200 in 1483ms
+ GET / 200 in 85ms
+ GET /login 200 in 50ms
+ GET / 200 in 20ms
+📊 AuthContext: Estado atual - User: false Loading: true
+ GET /whatsapp 200 in 346ms
+ GET / 200 in 28ms
+ ○ Compiling /api/onboarding/checklist ...
+ ✓ Compiled /api/onboarding/checklist in 2s (785 modules)
+ GET /api/onboarding/checklist 500 in 2404ms
+ GET /api/onboarding/checklist 500 in 37ms
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ GET /admin 200 in 69ms
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ GET /admin/playlists 200 in 17ms

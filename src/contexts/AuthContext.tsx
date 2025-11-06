@@ -41,7 +41,16 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         const { data: { session }, error } = await supabase.auth.getSession();
         
         if (error) {
-          console.error('❌ AuthContext: Erro ao obter sessão:', error);
+          const message = (error as any)?.message || '';
+          // Silencia e corrige o caso comum de token inválido/ausente (ex.: usuário limpou cookies/localStorage)
+          if (/invalid refresh token/i.test(message) || /refresh token not found/i.test(message)) {
+            console.warn('⚠️ AuthContext: Token inválido/ausente detectado, limpando sessão local.');
+            try {
+              await supabase.auth.signOut();
+            } catch {}
+          } else {
+            console.error('❌ AuthContext: Erro ao obter sessão:', error);
+          }
         } else {
           console.log('✅ AuthContext: Sessão inicial obtida:', !!session, session?.user?.email);
         }
