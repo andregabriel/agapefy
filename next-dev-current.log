@@ -908,3 +908,6 @@ Cadastre seu número de WhatsApp e comece a conversar comigo. Você poderá envi
  GET /admin 200 in 69ms
 🔍 Middleware: Permitindo acesso temporário ao admin para debug
  GET /admin/playlists 200 in 17ms
+ ✓ Compiled in 4.3s (851 modules)
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ GET /admin/playlists 200 in 58ms
