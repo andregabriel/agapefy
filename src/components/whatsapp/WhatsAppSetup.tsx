@@ -41,6 +41,10 @@ export default function WhatsAppSetup({ variant = "standalone", redirectIfNotLog
   const [lunchTime, setLunchTime] = useState("");
   const [dinnerTime, setDinnerTime] = useState("");
   const [sleepTime, setSleepTime] = useState("");
+  const [wakeEnabled, setWakeEnabled] = useState(false);
+  const [lunchEnabled, setLunchEnabled] = useState(false);
+  const [dinnerEnabled, setDinnerEnabled] = useState(false);
+  const [sleepEnabled, setSleepEnabled] = useState(false);
 
   useEffect(() => {
     if (!redirectIfNotLoggedIn) return;
@@ -84,10 +88,18 @@ export default function WhatsAppSetup({ variant = "standalone", redirectIfNotLog
         if (typeof row.receives_daily_routine === 'boolean') setDailyRoutine(Boolean(row.receives_daily_routine));
         // Times may come as 'HH:MM:SS' from Postgres time; normalize to 'HH:MM'
         const slice5 = (t: any) => (typeof t === 'string' && t.length >= 5 ? t.slice(0, 5) : "");
-        setWakeTime(slice5(row.prayer_time_wakeup));
-        setLunchTime(slice5(row.prayer_time_lunch));
-        setDinnerTime(slice5(row.prayer_time_dinner));
-        setSleepTime(slice5(row.prayer_time_sleep));
+        const wt = slice5(row.prayer_time_wakeup);
+        const lt = slice5(row.prayer_time_lunch);
+        const dt = slice5(row.prayer_time_dinner);
+        const st = slice5(row.prayer_time_sleep);
+        setWakeTime(wt);
+        setLunchTime(lt);
+        setDinnerTime(dt);
+        setSleepTime(st);
+        setWakeEnabled(!!wt);
+        setLunchEnabled(!!lt);
+        setDinnerEnabled(!!dt);
+        setSleepEnabled(!!st);
       } catch {}
     };
     fetchExisting();
@@ -187,6 +199,62 @@ export default function WhatsAppSetup({ variant = "standalone", redirectIfNotLog
     } catch (e) {
       console.warn(e);
       toast.error('Não foi possível salvar o horário');
+    }
+  }
+
+  function defaultTimeFor(slot: 'wakeup' | 'lunch' | 'dinner' | 'sleep'): string {
+    switch (slot) {
+      case 'wakeup': return '07:00';
+      case 'lunch': return '12:00';
+      case 'dinner': return '19:00';
+      case 'sleep': return '22:00';
+      default: return '09:00';
+    }
+  }
+
+  async function toggleSlot(slot: 'wakeup' | 'lunch' | 'dinner' | 'sleep', enabled: boolean) {
+    if (slot === 'wakeup') setWakeEnabled(enabled);
+    if (slot === 'lunch') setLunchEnabled(enabled);
+    if (slot === 'dinner') setDinnerEnabled(enabled);
+    if (slot === 'sleep') setSleepEnabled(enabled);
+
+    // When disabling, persist null (empty string)
+    if (!enabled) {
+      if (slot === 'wakeup') {
+        setWakeTime("");
+        await updatePrayerTime('prayer_time_wakeup', "");
+      } else if (slot === 'lunch') {
+        setLunchTime("");
+        await updatePrayerTime('prayer_time_lunch', "");
+      } else if (slot === 'dinner') {
+        setDinnerTime("");
+        await updatePrayerTime('prayer_time_dinner', "");
+      } else if (slot === 'sleep') {
+        setSleepTime("");
+        await updatePrayerTime('prayer_time_sleep', "");
+      }
+      return;
+    }
+
+    // When enabling with empty time, set a sensible default and persist
+    if (enabled) {
+      if (slot === 'wakeup') {
+        const v = wakeTime && wakeTime.length >= 4 ? wakeTime : defaultTimeFor('wakeup');
+        setWakeTime(v);
+        await updatePrayerTime('prayer_time_wakeup', v);
+      } else if (slot === 'lunch') {
+        const v = lunchTime && lunchTime.length >= 4 ? lunchTime : defaultTimeFor('lunch');
+        setLunchTime(v);
+        await updatePrayerTime('prayer_time_lunch', v);
+      } else if (slot === 'dinner') {
+        const v = dinnerTime && dinnerTime.length >= 4 ? dinnerTime : defaultTimeFor('dinner');
+        setDinnerTime(v);
+        await updatePrayerTime('prayer_time_dinner', v);
+      } else if (slot === 'sleep') {
+        const v = sleepTime && sleepTime.length >= 4 ? sleepTime : defaultTimeFor('sleep');
+        setSleepTime(v);
+        await updatePrayerTime('prayer_time_sleep', v);
+      }
     }
   }
 
@@ -296,16 +364,21 @@ export default function WhatsAppSetup({ variant = "standalone", redirectIfNotLog
                       <Sunrise className="h-4 w-4 text-muted-foreground" />
                       <span className="text-sm">Ao acordar</span>
                     </div>
-                    <Input
-                      type="time"
-                      value={wakeTime}
-                      onChange={(e) => {
-                        const v = e.target.value;
-                        setWakeTime(v);
-                        updatePrayerTime('prayer_time_wakeup', v);
-                      }}
-                      className="w-[120px]"
-                    />
+                    <div className="flex items-center gap-2">
+                      <Switch checked={wakeEnabled} onCheckedChange={(v) => toggleSlot('wakeup', v)} />
+                      <Input
+                        type="time"
+                        value={wakeTime}
+                        disabled={!wakeEnabled}
+                        step={300}
+                        onChange={(e) => {
+                          const v = e.target.value;
+                          setWakeTime(v);
+                          updatePrayerTime('prayer_time_wakeup', v);
+                        }}
+                        className="w-[120px]"
+                      />
+                    </div>
                   </div>
 
                   <div className="flex items-center justify-between gap-3 p-3 rounded-md border bg-background">
@@ -313,16 +386,21 @@ export default function WhatsAppSetup({ variant = "standalone", redirectIfNotLog
                       <Utensils className="h-4 w-4 text-muted-foreground" />
                       <span className="text-sm">No almoço</span>
                     </div>
-                    <Input
-                      type="time"
-                      value={lunchTime}
-                      onChange={(e) => {
-                        const v = e.target.value;
-                        setLunchTime(v);
-                        updatePrayerTime('prayer_time_lunch', v);
-                      }}
-                      className="w-[120px]"
-                    />
+                    <div className="flex items-center gap-2">
+                      <Switch checked={lunchEnabled} onCheckedChange={(v) => toggleSlot('lunch', v)} />
+                      <Input
+                        type="time"
+                        value={lunchTime}
+                        disabled={!lunchEnabled}
+                        step={300}
+                        onChange={(e) => {
+                          const v = e.target.value;
+                          setLunchTime(v);
+                          updatePrayerTime('prayer_time_lunch', v);
+                        }}
+                        className="w-[120px]"
+                      />
+                    </div>
                   </div>
 
                   <div className="flex items-center justify-between gap-3 p-3 rounded-md border bg-background">
@@ -330,16 +408,21 @@ export default function WhatsAppSetup({ variant = "standalone", redirectIfNotLog
                       <Sunset className="h-4 w-4 text-muted-foreground" />
                       <span className="text-sm">No jantar</span>
                     </div>
-                    <Input
-                      type="time"
-                      value={dinnerTime}
-                      onChange={(e) => {
-                        const v = e.target.value;
-                        setDinnerTime(v);
-                        updatePrayerTime('prayer_time_dinner', v);
-                      }}
-                      className="w-[120px]"
-                    />
+                    <div className="flex items-center gap-2">
+                      <Switch checked={dinnerEnabled} onCheckedChange={(v) => toggleSlot('dinner', v)} />
+                      <Input
+                        type="time"
+                        value={dinnerTime}
+                        disabled={!dinnerEnabled}
+                        step={300}
+                        onChange={(e) => {
+                          const v = e.target.value;
+                          setDinnerTime(v);
+                          updatePrayerTime('prayer_time_dinner', v);
+                        }}
+                        className="w-[120px]"
+                      />
+                    </div>
                   </div>
 
                   <div className="flex items-center justify-between gap-3 p-3 rounded-md border bg-background">
@@ -347,16 +430,21 @@ export default function WhatsAppSetup({ variant = "standalone", redirectIfNotLog
                       <Moon className="h-4 w-4 text-muted-foreground" />
                       <span className="text-sm">Ao dormir</span>
                     </div>
-                    <Input
-                      type="time"
-                      value={sleepTime}
-                      onChange={(e) => {
-                        const v = e.target.value;
-                        setSleepTime(v);
-                        updatePrayerTime('prayer_time_sleep', v);
-                      }}
-                      className="w-[120px]"
-                    />
+                    <div className="flex items-center gap-2">
+                      <Switch checked={sleepEnabled} onCheckedChange={(v) => toggleSlot('sleep', v)} />
+                      <Input
+                        type="time"
+                        value={sleepTime}
+                        disabled={!sleepEnabled}
+                        step={300}
+                        onChange={(e) => {
+                          const v = e.target.value;
+                          setSleepTime(v);
+                          updatePrayerTime('prayer_time_sleep', v);
+                        }}
+                        className="w-[120px]"
+                      />
+                    </div>
                   </div>
                 </div>
               </div>

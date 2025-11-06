@@ -60,7 +60,8 @@ export function useMessages() {
         .order('last_message_at', { ascending: false });
 
       if (error) {
-        console.error('❌ Erro ao buscar conversas:', error);
+        const { logDbError } = await import('@/lib/utils');
+        logDbError('❌ Erro ao buscar conversas', error);
         return;
       }
 
@@ -111,7 +112,8 @@ export function useMessages() {
       setTotalUnreadCount(total);
 
     } catch (error) {
-      console.error('💥 Erro ao buscar conversas:', error);
+      const { logDbError } = await import('@/lib/utils');
+      logDbError('💥 Erro ao buscar conversas', error);
       toast.error('Erro ao carregar conversas');
     } finally {
       setLoading(false);
@@ -149,7 +151,8 @@ export function useMessages() {
         .single();
 
       if (error) {
-        console.error('❌ Erro ao criar conversa:', error);
+        const { logDbError } = await import('@/lib/utils');
+        logDbError('❌ Erro ao criar conversa', error);
         toast.error('Erro ao iniciar conversa');
         return null;
       }
@@ -162,7 +165,8 @@ export function useMessages() {
       return newConv.id;
 
     } catch (error) {
-      console.error('💥 Erro ao criar conversa:', error);
+      const { logDbError } = await import('@/lib/utils');
+      logDbError('💥 Erro ao criar conversa', error);
       toast.error('Erro ao iniciar conversa');
       return null;
     }
@@ -237,7 +241,8 @@ export function useConversationMessages(conversationId: string | null) {
         .order('created_at', { ascending: true });
 
       if (error) {
-        console.error('❌ Erro ao buscar mensagens:', error);
+        const { logDbError } = await import('@/lib/utils');
+        logDbError('❌ Erro ao buscar mensagens', error);
         return;
       }
 
@@ -248,7 +253,8 @@ export function useConversationMessages(conversationId: string | null) {
       await markMessagesAsRead();
 
     } catch (error) {
-      console.error('💥 Erro ao buscar mensagens:', error);
+      const { logDbError } = await import('@/lib/utils');
+      logDbError('💥 Erro ao buscar mensagens', error);
     } finally {
       setLoading(false);
     }
@@ -270,7 +276,8 @@ export function useConversationMessages(conversationId: string | null) {
         });
 
       if (error) {
-        console.error('❌ Erro ao enviar mensagem:', error);
+        const { logDbError } = await import('@/lib/utils');
+        logDbError('❌ Erro ao enviar mensagem', error);
         toast.error('Erro ao enviar mensagem');
         return false;
       }
@@ -289,7 +296,8 @@ export function useConversationMessages(conversationId: string | null) {
       return true;
 
     } catch (error) {
-      console.error('💥 Erro ao enviar mensagem:', error);
+      const { logDbError } = await import('@/lib/utils');
+      logDbError('💥 Erro ao enviar mensagem', error);
       toast.error('Erro ao enviar mensagem');
       return false;
     }
@@ -308,7 +316,8 @@ export function useConversationMessages(conversationId: string | null) {
         .neq('sender_id', user.id);
 
     } catch (error) {
-      console.error('❌ Erro ao marcar mensagens como lidas:', error);
+      const { logDbError } = await import('@/lib/utils');
+      logDbError('❌ Erro ao marcar mensagens como lidas', error);
     }
   };
 

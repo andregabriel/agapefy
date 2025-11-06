@@ -18,6 +18,7 @@ export interface Playlist {
   cover_url?: string;
   total_duration?: number;
   audio_count?: number;
+  is_challenge?: boolean;
   category?: {
     id: string;
     name: string;

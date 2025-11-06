@@ -18,7 +18,7 @@ import { ActivitiesSection } from './_components/ActivitiesSection';
 import { FavoritesSection } from './_components/FavoritesSection';
 import { DownloadsSection } from './_components/DownloadsSection';
 import { IntentionsSection } from './_components/IntentionsSection';
-import { WhatsAppDailyVerseCard } from './_components/WhatsAppDailyVerseCard';
+// import { WhatsAppDailyVerseCard } from './_components/WhatsAppDailyVerseCard';
 
 // Modais e componentes existentes
 import { AddAudioToRoutineModal } from '@/components/AddAudioToRoutineModal';
@@ -388,8 +388,8 @@ export default function EuPage() {
         {/* Cabeçalho compacto do perfil */}
         <ProfileHeader user={user} />
 
-        {/* Preferências rápidas */}
-        <WhatsAppDailyVerseCard defaultSendTime="09:00" />
+        {/* Preferências rápidas - card de Versículo diário ocultado */}
+        {/* <WhatsAppDailyVerseCard defaultSendTime="09:00" /> */}
 
         {/* Dashboard de Métricas Espirituais ocultado */}
 

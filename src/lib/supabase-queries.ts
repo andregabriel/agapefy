@@ -1,4 +1,5 @@
 import { supabase } from '@/lib/supabase';
+import { logDbError } from '@/lib/utils';
 
 export interface Category {
   id: string;
@@ -45,25 +46,37 @@ export interface Playlist {
   audios?: Audio[];
   total_duration?: number;
   audio_count?: number;
+  is_challenge?: boolean;
 }
 
 // Buscar todas as categorias ordenadas com categoria fixa primeiro
 export async function getCategories(): Promise<Category[]> {
   console.log('🔍 Buscando categorias com ordem: fixa primeiro, depois manual...');
   
-  const { data, error } = await supabase
+  // Query principal (usa colunas modernas)
+  let { data, error } = await supabase
     .from('categories')
     .select('*')
     .order('is_featured', { ascending: false }) // Categoria fixa primeiro
     .order('order_position', { ascending: true }); // Depois ordem manual
 
+  // Fallback se coluna ainda não existir no banco do ambiente
   if (error) {
-    console.error('❌ Erro ao buscar categorias:', error);
-    return [];
+    logDbError('❌ Erro ao buscar categorias (tentativa principal)', error);
+    const fallback = await supabase
+      .from('categories')
+      .select('*')
+      .order('is_featured', { ascending: false })
+      .order('created_at', { ascending: true });
+    if (fallback.error) {
+      logDbError('❌ Erro ao buscar categorias (fallback)', fallback.error);
+      return [];
+    }
+    data = fallback.data as any[];
   }
 
   console.log('✅ Categorias encontradas:', data?.length || 0);
-  console.log('📋 Lista de categorias ordenadas:', data?.map(cat => ({ 
+  console.log('📋 Lista de categorias ordenadas:', data?.map((cat: any) => ({ 
     id: cat.id, 
     name: cat.name, 
     position: cat.order_position,
@@ -83,7 +96,7 @@ export async function getCategoryBannerLinks(): Promise<Record<string, string>> 
       .like('key', 'category_banner_link:%');
 
     if (error) {
-      console.error('Erro ao buscar links de banner:', error);
+      logDbError('Erro ao buscar links de banner', error);
       return {};
     }
 
@@ -96,7 +109,7 @@ export async function getCategoryBannerLinks(): Promise<Record<string, string>> 
     });
     return map;
   } catch (err) {
-    console.error('Erro inesperado ao buscar links de banner:', err);
+    logDbError('Erro inesperado ao buscar links de banner', err);
     return {};
   }
 }
@@ -148,8 +161,20 @@ export async function getPublicPlaylists(): Promise<Playlist[]> {
     console.error('Erro ao buscar playlists:', error);
     return [];
   }
-
-  return (data as Playlist[]) || [];
+  const rows = (data as Playlist[]) || [];
+  if (!rows.length) return rows;
+  try {
+    const playlistIds = rows.map((p) => p.id);
+    const { data: chRows, error: chErr } = await supabase
+      .from('challenge')
+      .select('playlist_id')
+      .in('playlist_id', playlistIds);
+    if (chErr) return rows;
+    const chSet = new Set((chRows || []).map((r: any) => r.playlist_id as string));
+    return rows.map((p) => ({ ...p, is_challenge: chSet.has(p.id) }));
+  } catch {
+    return rows;
+  }
 }
 
 // Buscar áudios por categoria
@@ -320,6 +345,20 @@ export async function getPlaylistsByCategory(categoryId: string): Promise<Playli
     })
   );
 
+  // Anexar flag de desafio
+  try {
+    const playlistIds = playlistsWithData.map((p: any) => p.id);
+    if (playlistIds.length) {
+      const { data: chRows } = await supabase
+        .from('challenge')
+        .select('playlist_id')
+        .in('playlist_id', playlistIds);
+      const chSet = new Set((chRows || []).map((r: any) => r.playlist_id as string));
+      const withFlag = playlistsWithData.map((p: any) => ({ ...p, is_challenge: chSet.has(p.id) }));
+      console.log('✅ Playlists encontradas na categoria:', withFlag?.length || 0);
+      return withFlag as Playlist[];
+    }
+  } catch {}
   console.log('✅ Playlists encontradas na categoria:', playlistsWithData?.length || 0);
   return playlistsWithData as Playlist[];
 }
@@ -338,7 +377,43 @@ export async function getPlaylistsByCategoryFast(categoryId: string): Promise<Pl
     return [];
   }
 
-  return (data as Playlist[]) || [];
+  const rows = (data as Playlist[]) || [];
+  if (!rows.length) return rows;
+
+  // Anexar contagem de áudios de forma leve (1 query adicional, agrupada)
+  try {
+    const playlistIds = rows.map((p) => p.id);
+    const { data: paRows, error: paErr } = await supabase
+      .from('playlist_audios')
+      .select('playlist_id')
+      .in('playlist_id', playlistIds);
+
+    if (paErr) {
+      console.warn('Falha ao buscar contagem de áudios (fast):', paErr);
+      return rows;
+    }
+
+    const counts: Record<string, number> = {};
+    (paRows || []).forEach((r: any) => {
+      const pid = r.playlist_id as string;
+      counts[pid] = (counts[pid] || 0) + 1;
+    });
+
+    // Buscar flags de challenge
+    let chSet = new Set<string>();
+    try {
+      const { data: chRows } = await supabase
+        .from('challenge')
+        .select('playlist_id')
+        .in('playlist_id', playlistIds);
+      chSet = new Set((chRows || []).map((r: any) => r.playlist_id as string));
+    } catch {}
+
+    return rows.map((p) => ({ ...p, audio_count: counts[p.id] || 0, is_challenge: chSet.has(p.id) }));
+  } catch (e) {
+    console.warn('Erro inesperado ao anexar contagem de áudios (fast):', e);
+    return rows;
+  }
 }
 
 // Buscar playlists para várias categorias em uma única requisição (fast)
@@ -357,14 +432,56 @@ export async function getPlaylistsByCategoryBulkFast(categoryIds: string[]): Pro
     return {};
   }
 
-  const map: Record<string, Playlist[]> = {};
-  ((data as any[]) || []).forEach((row) => {
-    const cid = row.category_id as string | null;
-    if (!cid) return;
-    if (!map[cid]) map[cid] = [];
-    map[cid].push(row as Playlist);
-  });
-  return map;
+  const rows = ((data as any[]) || []) as Playlist[];
+  if (!rows.length) return {};
+
+  // Buscar contagens de áudios para todas as playlists envolvidas em uma única query
+  try {
+    const playlistIds = rows.map((p) => p.id);
+    const { data: paRows, error: paErr } = await supabase
+      .from('playlist_audios')
+      .select('playlist_id')
+      .in('playlist_id', playlistIds);
+
+    if (paErr) {
+      console.warn('Falha ao buscar contagem de áudios (bulk fast):', paErr);
+    }
+
+    const counts: Record<string, number> = {};
+    (paRows || []).forEach((r: any) => {
+      const pid = r.playlist_id as string;
+      counts[pid] = (counts[pid] || 0) + 1;
+    });
+
+    // Fetch challenge flags for all playlists in one go
+    let chSet = new Set<string>();
+    try {
+      const { data: chRows } = await supabase
+        .from('challenge')
+        .select('playlist_id')
+        .in('playlist_id', playlistIds);
+      chSet = new Set((chRows || []).map((r: any) => r.playlist_id as string));
+    } catch {}
+
+    const map: Record<string, Playlist[]> = {};
+    rows.forEach((row) => {
+      const cid = (row as any).category_id as string | null;
+      if (!cid) return;
+      if (!map[cid]) map[cid] = [];
+      map[cid].push({ ...row, audio_count: counts[row.id] || 0, is_challenge: chSet.has(row.id) });
+    });
+    return map;
+  } catch (e) {
+    console.warn('Erro inesperado ao anexar contagem de áudios (bulk fast):', e);
+    const map: Record<string, Playlist[]> = {};
+    rows.forEach((row) => {
+      const cid = (row as any).category_id as string | null;
+      if (!cid) return;
+      if (!map[cid]) map[cid] = [];
+      map[cid].push(row as Playlist);
+    });
+    return map;
+  }
 }
 
 // Buscar áudios E playlists por categoria (função combinada)
@@ -495,7 +612,18 @@ export async function searchPlaylists(searchTerm: string, categoryId?: string): 
       };
     })
   );
-
+  // Anexar flag de desafio
+  try {
+    const playlistIds = playlistsWithData.map((p: any) => p.id);
+    if (playlistIds.length) {
+      const { data: chRows } = await supabase
+        .from('challenge')
+        .select('playlist_id')
+        .in('playlist_id', playlistIds);
+      const chSet = new Set((chRows || []).map((r: any) => r.playlist_id as string));
+      return playlistsWithData.map((p: any) => ({ ...p, is_challenge: chSet.has(p.id) })) as Playlist[];
+    }
+  } catch {}
   return playlistsWithData as Playlist[];
 }
 
@@ -574,8 +702,20 @@ export async function getPlaylistWithAudios(playlistId: string): Promise<(Playli
     ?.sort((a: any, b: any) => a.position - b.position)
     .map((pa: any) => pa.audio) || [];
 
+  // Attach challenge flag
+  let isChallenge = false;
+  try {
+    const { data: ch } = await supabase
+      .from('challenge')
+      .select('playlist_id')
+      .eq('playlist_id', playlistId)
+      .maybeSingle();
+    isChallenge = !!ch;
+  } catch {}
+
   return {
     ...data,
+    is_challenge: isChallenge,
     audios
   } as Playlist & { audios: Audio[] };
 }
@@ -692,4 +832,52 @@ export async function ensurePlaylistByTitleInsensitive(title: string, categoryId
   const existing = await findPlaylistByTitleInsensitive(title);
   if (existing) return existing;
   return await createPlaylist(title, categoryId || null);
+}
+
+// --- Challenge helpers ---
+export async function markPlaylistAsChallenge(playlistId: string): Promise<{ success: boolean; error?: string }> {
+  if (!playlistId) return { success: false, error: 'playlistId inválido' };
+  try {
+    // Ensure idempotency via unique constraint
+    const { data: auth } = await supabase.auth.getUser();
+    const createdBy = auth?.user?.id || null;
+    const { error } = await supabase
+      .from('challenge')
+      .insert({ playlist_id: playlistId, created_by: createdBy })
+      .select()
+      .single();
+    if (error && !/duplicate key/i.test(error.message)) {
+      return { success: false, error: error.message };
+    }
+    return { success: true };
+  } catch (e: any) {
+    return { success: false, error: e?.message || 'Falha ao marcar challenge' };
+  }
+}
+
+export async function unmarkPlaylistAsChallenge(playlistId: string): Promise<{ success: boolean; error?: string }> {
+  if (!playlistId) return { success: false, error: 'playlistId inválido' };
+  try {
+    const { error } = await supabase
+      .from('challenge')
+      .delete()
+      .eq('playlist_id', playlistId);
+    if (error) return { success: false, error: error.message };
+    return { success: true };
+  } catch (e: any) {
+    return { success: false, error: e?.message || 'Falha ao desmarcar challenge' };
+  }
+}
+
+export async function isPlaylistChallenge(playlistId: string): Promise<boolean> {
+  try {
+    const { data } = await supabase
+      .from('challenge')
+      .select('playlist_id')
+      .eq('playlist_id', playlistId)
+      .maybeSingle();
+    return !!data;
+  } catch {
+    return false;
+  }
 }

@@ -15,9 +15,10 @@ interface CategoryWithContent extends Category {
 interface CategorySectionProps {
   category: CategoryWithContent;
   index: number;
+  dailyAudioId?: string;
 }
 
-export function CategorySection({ category, index }: CategorySectionProps) {
+export function CategorySection({ category, index, dailyAudioId }: CategorySectionProps) {
   const carouselRef = useRef<HTMLDivElement | null>(null);
   const [currentIndex, setCurrentIndex] = useState(0);
 
@@ -122,6 +123,7 @@ export function CategorySection({ category, index }: CategorySectionProps) {
                 item={item}
                 category={category}
                 layoutClasses={layoutClasses}
+                showDailyVerseBadge={item.type === 'audio' && item.id === dailyAudioId}
               />
             ))}
           </div>

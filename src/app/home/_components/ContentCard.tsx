@@ -14,9 +14,10 @@ interface ContentCardProps {
     subtitleClass?: string;
     metaClass?: string;
   };
+  showDailyVerseBadge?: boolean;
 }
 
-export function ContentCard({ item, category, layoutClasses }: ContentCardProps) {
+export function ContentCard({ item, category, layoutClasses, showDailyVerseBadge }: ContentCardProps) {
   const isPlaylist = item.type === 'playlist';
   
   // Determinar URL da imagem com prioridade correta
@@ -82,6 +83,13 @@ export function ContentCard({ item, category, layoutClasses }: ContentCardProps)
             fallbackContent
           )}
         </div>
+        {showDailyVerseBadge && (
+          <div className="absolute top-2 left-2 z-10">
+            <span className="px-2 py-1 text-lg md:text-xl font-bold uppercase tracking-wide text-white bg-black/60 rounded">
+              Versículo do dia
+            </span>
+          </div>
+        )}
         
         {/* Play Button Overlay */}
         <div className="absolute bottom-2 right-2 opacity-0 group-hover:opacity-100 transition-all duration-300 transform translate-y-2 group-hover:translate-y-0">

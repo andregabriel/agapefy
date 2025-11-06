@@ -97,8 +97,9 @@ export function useNotifications() {
         .limit(20);
 
       if (error) {
-        console.error('Erro na query de notificações:', error);
-        toast.error('Erro ao carregar notificações');
+        const { logDbError } = await import('@/lib/utils');
+        logDbError('Erro na query de notificações', error);
+        // Evitar poluir UX com toast quando a tabela não existir/sem dados
         return;
       }
 
@@ -135,8 +136,9 @@ export function useNotifications() {
 
       console.log(`✅ ${notificationsWithUsers.length} notificações carregadas, ${unread} não lidas`);
     } catch (error) {
-      console.error('Erro geral ao buscar notificações:', error);
-      toast.error('Erro ao carregar notificações');
+      const { logDbError } = await import('@/lib/utils');
+      logDbError('Erro geral ao buscar notificações', error);
+      // Evitar toast ruidoso
     } finally {
       setLoading(false);
     }
@@ -154,7 +156,8 @@ export function useNotifications() {
         .eq('user_id', user.id);
 
       if (error) {
-        console.error('Erro ao marcar notificação como lida:', error);
+        const { logDbError } = await import('@/lib/utils');
+        logDbError('Erro ao marcar notificação como lida', error);
         return;
       }
 
@@ -170,7 +173,8 @@ export function useNotifications() {
 
       console.log('✅ Notificação marcada como lida');
     } catch (error) {
-      console.error('Erro ao marcar notificação como lida:', error);
+      const { logDbError } = await import('@/lib/utils');
+      logDbError('Erro ao marcar notificação como lida', error);
     }
   }, [user]);
 
@@ -186,7 +190,8 @@ export function useNotifications() {
         .eq('read', false);
 
       if (error) {
-        console.error('Erro ao marcar todas como lidas:', error);
+        const { logDbError } = await import('@/lib/utils');
+        logDbError('Erro ao marcar todas como lidas', error);
         return;
       }
 
@@ -198,7 +203,8 @@ export function useNotifications() {
       setUnreadCount(0);
       console.log('✅ Todas as notificações marcadas como lidas');
     } catch (error) {
-      console.error('Erro ao marcar todas como lidas:', error);
+      const { logDbError } = await import('@/lib/utils');
+      logDbError('Erro ao marcar todas como lidas', error);
     }
   }, [user]);
 

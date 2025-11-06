@@ -7,6 +7,10 @@
     {
       "path": "/api/cron-send-verse",
       "schedule": "1 12 * * *"
+    },
+    {
+      "path": "/api/cron-prayers",
+      "schedule": "*/5 * * * *"
     }
   ]
 }
