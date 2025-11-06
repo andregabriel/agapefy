@@ -836,48 +836,18 @@ export async function ensurePlaylistByTitleInsensitive(title: string, categoryId
 
 // --- Challenge helpers ---
 export async function markPlaylistAsChallenge(playlistId: string): Promise<{ success: boolean; error?: string }> {
+  // Feature desativada: não usar tabela challenge
   if (!playlistId) return { success: false, error: 'playlistId inválido' };
-  try {
-    // Ensure idempotency via unique constraint
-    const { data: auth } = await supabase.auth.getUser();
-    const createdBy = auth?.user?.id || null;
-    const { error } = await supabase
-      .from('challenge')
-      .insert({ playlist_id: playlistId, created_by: createdBy })
-      .select()
-      .single();
-    if (error && !/duplicate key/i.test(error.message)) {
-      return { success: false, error: error.message };
-    }
-    return { success: true };
-  } catch (e: any) {
-    return { success: false, error: e?.message || 'Falha ao marcar challenge' };
-  }
+  return { success: true };
 }
 
 export async function unmarkPlaylistAsChallenge(playlistId: string): Promise<{ success: boolean; error?: string }> {
+  // Feature desativada: não usar tabela challenge
   if (!playlistId) return { success: false, error: 'playlistId inválido' };
-  try {
-    const { error } = await supabase
-      .from('challenge')
-      .delete()
-      .eq('playlist_id', playlistId);
-    if (error) return { success: false, error: error.message };
-    return { success: true };
-  } catch (e: any) {
-    return { success: false, error: e?.message || 'Falha ao desmarcar challenge' };
-  }
+  return { success: true };
 }
 
 export async function isPlaylistChallenge(playlistId: string): Promise<boolean> {
-  try {
-    const { data } = await supabase
-      .from('challenge')
-      .select('playlist_id')
-      .eq('playlist_id', playlistId)
-      .maybeSingle();
-    return !!data;
-  } catch {
-    return false;
-  }
+  // Feature desativada: sempre não-desafio
+  return false;
 }
