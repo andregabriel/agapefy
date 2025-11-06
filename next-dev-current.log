@@ -1093,3 +1093,95 @@ Cadastre seu número de WhatsApp e comece a conversar comigo. Você poderá envi
  GET /whatsapp 200 in 93ms
 🔍 Middleware: Permitindo acesso temporário ao admin para debug
  GET /admin 200 in 47ms
+ GET /whatsapp 200 in 363ms
+ GET / 200 in 162ms
+ GET /api/onboarding/checklist 500 in 962ms
+ GET /api/onboarding/checklist 500 in 70ms
+ GET /eu 200 in 132ms
+ GET /whatsapp 200 in 10ms
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ GET /admin 200 in 21ms
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ GET /admin/playlists 200 in 59ms
+ GET /whatsapp 200 in 14ms
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ GET /admin 200 in 34ms
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ GET /admin/playlists 200 in 77ms
+ GET /whatsapp 200 in 94ms
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ GET /admin 200 in 45ms
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ GET /admin/playlists 200 in 15ms
+ GET /whatsapp 200 in 102ms
+ ✓ Compiled in 7.2s (1601 modules)
+ ✓ Compiled in 1074ms (1601 modules)
+📊 AuthContext: Estado atual - User: false Loading: true
+ GET /whatsapp 200 in 950ms
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ GET /admin 200 in 59ms
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ ○ Compiling /admin/playlists ...
+ ✓ Compiled /admin/playlists in 1500ms (759 modules)
+ GET /admin/playlists 200 in 1724ms
+ GET /whatsapp 200 in 100ms
+ ✓ Compiled in 3.7s (1601 modules)
+ GET /whatsapp 200 in 79ms
+ ✓ Compiled in 818ms (1601 modules)
+ GET /whatsapp 200 in 50ms
+ ✓ Compiled in 17.1s (1613 modules)
+ GET /whatsapp 200 in 390ms
+ ○ Compiling / ...
+ ✓ Compiled / in 3.8s (796 modules)
+📊 AuthContext: Estado atual - User: false Loading: true
+ GET / 200 in 4364ms
+ ○ Compiling /login ...
+ ✓ Compiled /login in 4.9s (715 modules)
+ GET /login 200 in 5913ms
+ GET /login 200 in 97ms
+🔍 Middleware: Permitindo acesso temporário ao admin para debug
+ ○ Compiling /admin ...
+ ✓ Compiled /admin in 1866ms (700 modules)
+ GET /admin 200 in 2703ms
+ GET /whatsapp 200 in 95ms
+ ○ Compiling /_not-found ...
+ ✓ Compiled /_not-found in 5.1s (1525 modules)
+📊 AuthContext: Estado atual - User: false Loading: true
+ GET /.well-known/appspecific/com.chrome.devtools.json 404 in 5336ms
+ ✓ Compiled in 12.9s (1541 modules)
+ GET /whatsapp 200 in 171ms
+ GET /whatsapp 200 in 177ms
+ ✓ Compiled in 3.2s (1541 modules)
+ GET /whatsapp 200 in 123ms
+ GET /whatsapp 200 in 134ms
+ ✓ Compiled in 5s (1541 modules)
+ GET /whatsapp 200 in 155ms
+ GET /whatsapp 200 in 153ms
+ ○ Compiling /_not-found ...
+ ✓ Compiled /_not-found in 7.8s (1531 modules)
+📊 AuthContext: Estado atual - User: false Loading: true
+ GET /.well-known/appspecific/com.chrome.devtools.json 404 in 8308ms
+ ✓ Compiled in 1153ms (1545 modules)
+ GET /whatsapp 200 in 96ms
+ GET /whatsapp 200 in 99ms
+ ✓ Compiled in 2.5s (854 modules)
+ GET /whatsapp 200 in 125ms
+ GET /whatsapp 200 in 132ms
+ ✓ Compiled in 495ms (854 modules)
+ GET /whatsapp 200 in 34ms
+ GET /whatsapp 200 in 37ms
+ ✓ Compiled in 502ms (854 modules)
+ GET /whatsapp 200 in 51ms
+ GET /whatsapp 200 in 52ms
+ ✓ Compiled in 3.7s (854 modules)
+ GET /whatsapp 200 in 123ms
+ GET /whatsapp 200 in 130ms
+ ✓ Compiled in 538ms (854 modules)
+ GET /whatsapp 200 in 40ms
+ GET /whatsapp 200 in 46ms
+ ✓ Compiled in 415ms (854 modules)
+ GET /whatsapp 200 in 44ms
+ GET /whatsapp 200 in 49ms
+ ✓ Compiled in 551ms (854 modules)
+ GET /whatsapp 200 in 47ms
+ GET /whatsapp 200 in 48ms

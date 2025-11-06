@@ -93,10 +93,14 @@ async function inlineSend(test: boolean, limit?: number) {
   const adminSupabase = getWritableClient();
   const { timeStr, dateStr } = getNowInSaoPaulo();
   const [hStr, mStr] = timeStr.split(':');
-  const timeHHMM = `${hStr.padStart(2,'0')}:${mStr.padStart(2,'0')}`;
-
-  // Gather candidates across slots; we will send if user time <= now and not yet sent today
-  // This allows cron to run every 5 minutes without missing off-minute selections.
+  const currentMinutes = parseInt(hStr) * 60 + parseInt(mStr);
+  
+  // We check if the user's selected time is in the past (within the last 5 minutes)
+  // This ensures we only send once when the selected time arrives, even though cron runs every 5 minutes
+  // The idempotency check prevents duplicate sends on the same day
+  const windowStartMinutes = currentMinutes - 5; // Look back 5 minutes
+  const windowEndMinutes = currentMinutes; // Up to current time
+  
   const slots: Array<{ slot: PrayerSlot; column: string; label: string }> = [
     { slot: 'wakeup', column: 'prayer_time_wakeup', label: 'ao acordar' },
     { slot: 'lunch', column: 'prayer_time_lunch', label: 'no almoço' },
@@ -110,27 +114,49 @@ async function inlineSend(test: boolean, limit?: number) {
 
   for (const s of slots) {
     // Fetch users eligible for this slot
+    // Only users with receives_daily_routine = true (Minha Rotina) should receive routine prayers
     const q = adminSupabase
       .from('whatsapp_users')
-      .select(`phone_number, is_active, receives_daily_prayer, receives_daily_routine, ${s.column}`)
+      .select(`phone_number, is_active, receives_daily_routine, ${s.column}`)
       .eq('is_active', true)
-      .or('receives_daily_prayer.eq.true,receives_daily_routine.eq.true')
-      .not(s.column as any, 'is', null)
-      .lte(s.column as any, `${timeHHMM}:59`);
+      .eq('receives_daily_routine', true) // Only send to users who have "Minha Rotina" enabled
+      .not(s.column as any, 'is', null);
 
     let { data: users, error } = await q;
     if (error) continue;
     users = users || [];
 
+    // Filter users whose selected prayer time has just passed (within last 5 minutes)
+    // This ensures we send only once when the selected time arrives, not every 5 minutes
+    const eligibleUsers = users.filter((u: any) => {
+      const userTimeStr = (u[s.column] as string) || '';
+      if (!userTimeStr || userTimeStr.length < 5) return false;
+      
+      const [uh, um] = userTimeStr.slice(0, 5).split(':').map(Number);
+      const userMinutes = uh * 60 + um;
+      
+      // Check if user's selected time is in the past (within last 5 minutes) but not too far back
+      // This way, if user selected 07:00 and cron runs at 07:00, 07:05, 07:10...
+      // It will only send when the time matches (07:00-07:05 window) and idempotency prevents duplicates
+      if (windowStartMinutes < 0) {
+        // Window crosses midnight (e.g., current time is 00:02, checking 23:57-00:02)
+        return userMinutes >= (1440 + windowStartMinutes) || userMinutes <= windowEndMinutes;
+      } else {
+        // Normal case: window is within the same day
+        // User's time must be >= (current - 5min) and <= current time
+        return userMinutes >= windowStartMinutes && userMinutes <= windowEndMinutes;
+      }
+    });
+
     // Apply limit per whole run
-    if (limit && totalCandidates + users.length > limit) {
-      users = users.slice(0, Math.max(0, limit - totalCandidates));
+    if (limit && totalCandidates + eligibleUsers.length > limit) {
+      eligibleUsers.splice(limit - totalCandidates);
     }
 
-    totalCandidates += users.length;
+    totalCandidates += eligibleUsers.length;
     perSlotResults[s.slot] = 0;
 
-    for (const u of users) {
+    for (const u of eligibleUsers) {
       const phone = (u as any).phone_number as string;
 
       // Idempotency per user/slot/day

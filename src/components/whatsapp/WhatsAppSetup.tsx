@@ -13,6 +13,10 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Switch } from "@/components/ui/switch";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem } from "@/components/ui/command";
+import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from "@/components/ui/drawer";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 import { CheckCircle, AlertCircle, Sunrise, Utensils, Sunset, Moon } from "lucide-react";
 
@@ -46,7 +50,15 @@ export default function WhatsAppSetup({ variant = "standalone", redirectIfNotLog
   const [dinnerEnabled, setDinnerEnabled] = useState(false);
   const [sleepEnabled, setSleepEnabled] = useState(false);
   const [challengePlaylists, setChallengePlaylists] = useState<Array<{ id: string; title: string }>>([]);
-  const [selectedChallenges, setSelectedChallenges] = useState<string[]>([]);
+  const [selectedChallengeId, setSelectedChallengeId] = useState<string | null>(null);
+  const [challengeTime, setChallengeTime] = useState<string>("");
+  const [challengeOpen, setChallengeOpen] = useState(false);
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const selectedChallengeTitle = useMemo(
+    () => (challengePlaylists.find(p => p.id === selectedChallengeId)?.title || ""),
+    [challengePlaylists, selectedChallengeId]
+  );
+  const isMobile = useIsMobile();
 
   useEffect(() => {
     if (!redirectIfNotLoggedIn) return;
@@ -109,67 +121,87 @@ export default function WhatsAppSetup({ variant = "standalone", redirectIfNotLog
 
   const formattedExample = useMemo(() => "+55 11 99999-9999", []);
 
-  // Load challenge playlists (admin-managed in /admin/playlists)
+  // Load challenge playlists (admin-managed in /admin/playlists via table public.challenge)
   useEffect(() => {
     const loadChallenges = async () => {
       try {
-        console.log('🔍 Carregando desafios disponíveis...');
+        const { data: chRows, error: chErr } = await supabase
+          .from('challenge')
+          .select('playlist_id')
+          .order('created_at', { ascending: false });
+        if (chErr) {
+          // Fallback if table doesn't exist in the environment yet
+          const { data: pls, error: fbErr } = await supabase
+            .from('playlists')
+            .select('id,title,is_public')
+            .ilike('title', '%desafio%')
+            .eq('is_public', true)
+            .order('created_at', { ascending: false })
+            .limit(50);
+          if (fbErr) { setChallengePlaylists([]); return; }
+          setChallengePlaylists(((pls || []) as any[]).map((p: any) => ({ id: p.id as string, title: (p.title || '') as string })));
+          return;
+        }
+        const ids = (chRows || []).map((r: any) => r.playlist_id).filter(Boolean);
+        if (!ids.length) {
+          // Fallback to title heuristic if no challenge rows yet
+          const { data: pls, error: fbErr } = await supabase
+            .from('playlists')
+            .select('id,title,is_public')
+            .ilike('title', '%desafio%')
+            .eq('is_public', true)
+            .order('created_at', { ascending: false })
+            .limit(50);
+          if (fbErr) { setChallengePlaylists([]); return; }
+          setChallengePlaylists(((pls || []) as any[]).map((p: any) => ({ id: p.id as string, title: (p.title || '') as string })));
+          return;
+        }
         const { data: pls, error: pErr } = await supabase
           .from('playlists')
           .select('id,title')
-          .eq('is_challenge', true)
-          .order('created_at', { ascending: false });
-        
+          .in('id', ids);
         if (pErr) {
-          console.error('❌ Erro ao buscar playlists de desafio:', pErr);
           setChallengePlaylists([]);
           return;
         }
-        
-        const challengePlaylists = ((pls || []) as any[]).map((p: any) => ({ 
-          id: p.id as string, 
-          title: (p.title || '') as string 
-        }));
-        console.log('✅ Desafios carregados:', challengePlaylists.length);
-        setChallengePlaylists(challengePlaylists);
+        setChallengePlaylists(((pls || []) as any[]).map((p: any) => ({ id: p.id as string, title: (p.title || '') as string })));
       } catch (error) {
-        console.error('❌ Erro inesperado ao carregar desafios:', error);
         setChallengePlaylists([]);
       }
     };
     loadChallenges();
   }, []);
 
-  // Load current user's selected challenge playlists
+  // Load current user's selected challenge + preferred time
   useEffect(() => {
     const fetchUserChallenges = async () => {
       try {
         const clean = phone.replace(/\D/g, "");
         if (!clean) {
-          console.log('ℹ️ Número não informado, limpando desafios selecionados');
-          setSelectedChallenges([]);
+          setSelectedChallengeId(null);
+          setChallengeTime("");
           return;
         }
-        console.log('🔍 Carregando desafios selecionados para:', clean);
         const { data, error } = await supabase
           .from('whatsapp_user_challenges')
-          .select('playlist_id')
+          .select('playlist_id, send_time, created_at')
           .eq('phone_number', clean);
-        if (error) {
-          console.error('❌ Erro ao buscar desafios selecionados:', error);
-          // Se a tabela não existe, apenas logar e continuar sem desafios selecionados
-          if (error.message?.includes('Could not find the table') || error.message?.includes('schema cache') || error.code === 'PGRST204') {
-            console.warn('⚠️ Tabela whatsapp_user_challenges não existe ainda. Execute a migração SQL: supabase/sql/2025-11-06_create_whatsapp_user_challenges.sql');
-          }
-          setSelectedChallenges([]);
+        if (error) return;
+        const rows = (data || []) as any[];
+        if (rows.length === 0) {
+          setSelectedChallengeId(null);
+          setChallengeTime("");
           return;
         }
-        const selected = ((data || []) as any[]).map(r => r.playlist_id as string);
-        console.log('✅ Desafios selecionados carregados:', selected.length);
-        setSelectedChallenges(selected);
+        // pick the most recent selection
+        rows.sort((a, b) => new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime());
+        const row = rows[0];
+        setSelectedChallengeId(row.playlist_id as string);
+        const t = typeof row.send_time === 'string' && row.send_time.length >= 5 ? String(row.send_time).slice(0, 5) : '';
+        setChallengeTime(t);
       } catch (error) {
-        console.error('❌ Erro inesperado ao carregar desafios selecionados:', error);
-        setSelectedChallenges([]);
+        setSelectedChallengeId(null);
+        setChallengeTime("");
       }
     };
     fetchUserChallenges();
@@ -226,60 +258,35 @@ export default function WhatsAppSetup({ variant = "standalone", redirectIfNotLog
     }
   }
 
-  async function toggleChallenge(playlistId: string, checked: boolean) {
+  async function saveChallengeSelection() {
     const clean = phone.replace(/\D/g, "");
     if (!clean) {
       toast.error("Cadastre um número válido primeiro");
       return;
     }
     try {
-      console.log('🔄 Alternando desafio:', { playlistId, checked, phone: clean });
-      if (checked) {
-        const { data, error } = await supabase
-          .from('whatsapp_user_challenges')
-          .upsert({ phone_number: clean, playlist_id: playlistId }, { onConflict: 'phone_number,playlist_id' })
-          .select();
-        if (error) {
-          console.error('❌ Erro ao adicionar desafio:', error);
-          // Verificar se o erro é porque a tabela não existe
-          if (error.message?.includes('Could not find the table') || error.message?.includes('schema cache') || error.code === 'PGRST204') {
-            const errorMsg = '⚠️ A tabela whatsapp_user_challenges não foi criada ainda.\n\nPor favor, execute a migração SQL:\n\n1. Acesse o Supabase Dashboard\n2. Vá em SQL Editor\n3. Execute o conteúdo do arquivo:\n   supabase/sql/2025-11-06_create_whatsapp_user_challenges.sql\n\nOu execute via CLI:\n   supabase db push';
-            alert(errorMsg);
-            throw new Error('Tabela whatsapp_user_challenges não encontrada. Execute a migração SQL primeiro.');
-          }
-          throw error;
-        }
-        console.log('✅ Desafio adicionado:', data);
-        setSelectedChallenges(prev => Array.from(new Set([...prev, playlistId])));
-        toast.success('Desafio adicionado');
-      } else {
-        const { error } = await supabase
-          .from('whatsapp_user_challenges')
-          .delete()
-          .eq('phone_number', clean)
-          .eq('playlist_id', playlistId);
-        if (error) {
-          console.error('❌ Erro ao remover desafio:', error);
-          // Verificar se o erro é porque a tabela não existe
-          if (error.message?.includes('Could not find the table') || error.message?.includes('schema cache') || error.code === 'PGRST204') {
-            // Se a tabela não existe e estamos tentando remover, não há problema
-            console.log('ℹ️ Tabela whatsapp_user_challenges não existe, mas não há problema ao remover');
-            setSelectedChallenges(prev => prev.filter(id => id !== playlistId));
-            return;
-          }
-          throw error;
-        }
-        console.log('✅ Desafio removido');
-        setSelectedChallenges(prev => prev.filter(id => id !== playlistId));
-        toast.success('Desafio removido');
-      }
-    } catch (error: any) {
-      console.error('❌ Erro ao atualizar desafio:', error);
-      // Se já mostramos um alert, não mostrar toast também
-      if (error?.message?.includes('Tabela whatsapp_user_challenges não encontrada')) {
+      if (!selectedChallengeId) {
+        toast.error('Selecione um desafio');
         return;
       }
-      toast.error(`Não foi possível atualizar seus desafios: ${error?.message || 'Erro desconhecido'}`);
+      if (!challengeTime || challengeTime.length < 4) {
+        toast.error('Defina um horário');
+        return;
+      }
+      // Keep only one selection: delete others first
+      await supabase
+        .from('whatsapp_user_challenges')
+        .delete()
+        .eq('phone_number', clean)
+        .neq('playlist_id', selectedChallengeId);
+      // Upsert current selection with time
+      const { error } = await supabase
+        .from('whatsapp_user_challenges')
+        .upsert({ phone_number: clean, playlist_id: selectedChallengeId, send_time: challengeTime }, { onConflict: 'phone_number,playlist_id' });
+      if (error) throw error;
+      toast.success('Jornada salva');
+    } catch (e: any) {
+      toast.error('Não foi possível salvar sua jornada');
     }
   }
 
@@ -472,25 +479,101 @@ export default function WhatsAppSetup({ variant = "standalone", redirectIfNotLog
             {dailyPrayer && (
               <div className="p-3 rounded-md bg-muted/40 space-y-3">
                 <div>
-                  <div className="font-medium">Desafios</div>
-                  <p className="text-sm text-muted-foreground">Selecione os desafios que você deseja acompanhar.</p>
+                  <div className="font-medium">Jornada • Desafios</div>
+                  <p className="text-sm text-muted-foreground">Escolha um desafio e defina um horário diário.</p>
                 </div>
                 {challengePlaylists.length === 0 ? (
                   <p className="text-sm text-muted-foreground">Nenhum desafio disponível no momento.</p>
                 ) : (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    {challengePlaylists.map(p => (
-                      <label key={p.id} className="flex items-center justify-between gap-3 p-3 rounded-md border bg-background cursor-pointer">
-                        <span className="text-sm">{p.title}</span>
-                        <input
-                          type="checkbox"
-                          className="h-4 w-4"
-                          checked={selectedChallenges.includes(p.id)}
-                          onChange={(e) => toggleChallenge(p.id, e.target.checked)}
+                  <>
+                    <div className="max-w-2xl">
+                      <label className="block text-sm font-medium mb-2">Desafio</label>
+                      {isMobile ? (
+                        <Drawer open={drawerOpen} onOpenChange={setDrawerOpen}>
+                          <Button variant="outline" role="combobox" aria-expanded={drawerOpen} className="w-full justify-between" onClick={() => setDrawerOpen(true)}>
+                            {selectedChallengeTitle || "Selecione ou pesquise um desafio..."}
+                          </Button>
+                          <DrawerContent className="h-[85vh]">
+                            <DrawerHeader className="pb-2">
+                              <DrawerTitle>Selecionar desafio</DrawerTitle>
+                            </DrawerHeader>
+                            <div className="p-4">
+                              <Command>
+                                <CommandInput placeholder="Digite para filtrar..." />
+                                <CommandEmpty>Nenhum desafio encontrado.</CommandEmpty>
+                                <CommandGroup>
+                                  {challengePlaylists.map((p) => (
+                                    <CommandItem
+                                      key={p.id}
+                                      onSelect={() => {
+                                        setSelectedChallengeId(p.id);
+                                        setDrawerOpen(false);
+                                      }}
+                                    >
+                                      {p.title}
+                                    </CommandItem>
+                                  ))}
+                                </CommandGroup>
+                              </Command>
+                            </div>
+                          </DrawerContent>
+                        </Drawer>
+                      ) : (
+                        <Popover open={challengeOpen} onOpenChange={setChallengeOpen}>
+                          <PopoverTrigger asChild>
+                            <Button variant="outline" role="combobox" aria-expanded={challengeOpen} className="w-full justify-between">
+                              {selectedChallengeTitle || "Selecione ou pesquise um desafio..."}
+                            </Button>
+                          </PopoverTrigger>
+                          <PopoverContent
+                            side="bottom"
+                            align="start"
+                            sideOffset={6}
+                            avoidCollisions={false}
+                            collisionPadding={8}
+                            className="w-[--radix-popover-trigger-width] p-0 shadow-lg max-h-80 overflow-hidden"
+                          >
+                            <Command>
+                              <CommandInput placeholder="Digite para filtrar..." />
+                              <CommandEmpty>Nenhum desafio encontrado.</CommandEmpty>
+                              <CommandGroup>
+                                {challengePlaylists.map((p) => (
+                                  <CommandItem
+                                    key={p.id}
+                                    onSelect={() => {
+                                      setSelectedChallengeId(p.id);
+                                      setChallengeOpen(false);
+                                    }}
+                                  >
+                                    {p.title}
+                                  </CommandItem>
+                                ))}
+                              </CommandGroup>
+                            </Command>
+                          </PopoverContent>
+                        </Popover>
+                      )}
+                    </div>
+
+                    <div className="flex items-center justify-between gap-3 p-3 rounded-md border bg-background">
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm">Horário do desafio</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Input
+                          type="time"
+                          value={challengeTime}
+                          onChange={(e) => setChallengeTime(e.target.value)}
+                          step={300}
+                          disabled={!selectedChallengeId}
+                          className="w-[120px]"
                         />
-                      </label>
-                    ))}
-                  </div>
+                        <Button disabled={!selectedChallengeId || !challengeTime} onClick={saveChallengeSelection}>
+                          Salvar
+                        </Button>
+                      </div>
+                    </div>
+                  </>
                 )}
               </div>
             )}

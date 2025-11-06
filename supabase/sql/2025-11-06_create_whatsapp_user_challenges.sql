@@ -3,6 +3,7 @@ create table if not exists public.whatsapp_user_challenges (
   id bigserial primary key,
   phone_number text not null,
   playlist_id uuid not null references public.playlists(id) on delete cascade,
+  send_time time, -- horário preferido para a jornada deste desafio
   created_at timestamptz not null default now(),
   unique (phone_number, playlist_id)
 );
