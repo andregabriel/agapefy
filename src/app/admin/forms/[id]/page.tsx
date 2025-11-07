@@ -7,6 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
+import { Switch } from '@/components/ui/switch';
 import { useCategories } from '@/hooks/useCategories';
 import { toast } from 'sonner';
 import { supabase } from '@/lib/supabase';
@@ -22,6 +23,8 @@ interface AdminForm {
   schema: Array<{ label: string; category_id: string; playlist_id?: string }>;
   created_at: string;
   onboard_step?: number | null;
+  allow_other_option?: boolean;
+  other_option_label?: string | null;
 }
 
 interface OnboardingStepSummary {
@@ -191,19 +194,63 @@ export default function FormDetailPage() {
     if (!form) return;
     try {
       setSaving(true);
+      
+      // Preparar dados para update, tentando incluir os novos campos apenas se existirem
+      const updateData: any = {
+        name: form.name,
+        description: form.description,
+        schema: form.schema,
+        onboard_step: form.onboard_step,
+      };
+
+      // Tentar adicionar os novos campos (pode falhar se as migrations não foram executadas)
+      try {
+        updateData.allow_other_option = form.allow_other_option || false;
+        updateData.other_option_label = form.other_option_label || null;
+      } catch {
+        // Ignorar se os campos não existirem ainda
+      }
+
       const { error } = await supabase
         .from('admin_forms')
-        .update({ name: form.name, description: form.description, schema: form.schema, onboard_step: form.onboard_step })
+        .update(updateData)
         .eq('id', form.id);
-      if (error) throw error;
+        
+      if (error) {
+        // Se o erro for sobre coluna não existente, tentar sem os novos campos
+        if (error.code === '42703' || error.message?.includes('allow_other_option') || error.message?.includes('other_option_label')) {
+          console.warn('Campos allow_other_option/other_option_label não encontrados, salvando sem eles');
+          const { error: retryError } = await supabase
+            .from('admin_forms')
+            .update({
+              name: form.name,
+              description: form.description,
+              schema: form.schema,
+              onboard_step: form.onboard_step,
+            })
+            .eq('id', form.id);
+          
+          if (retryError) throw retryError;
+          toast.success('Formulário atualizado (alguns campos não estão disponíveis ainda)');
+          return;
+        }
+        throw error;
+      }
+      
       toast.success('Formulário atualizado');
-    } catch (e) {
-      console.error(e);
-      const code = (e as any)?.code || (e as any)?.cause?.code;
+    } catch (e: any) {
+      console.error('Erro ao salvar formulário:', e);
+      const code = e?.code || e?.cause?.code || (e as any)?.code;
+      const message = e?.message || String(e);
+      
       if (String(code) === '23505') {
         toast.error('Já existe outro formulário com o mesmo "Número do passo". Escolha outro número.');
+      } else if (code === '42703' || message?.includes('column') || message?.includes('does not exist')) {
+        toast.error('Alguns campos não estão disponíveis. Execute as migrations SQL primeiro.');
+        console.error('Detalhes do erro:', { code, message, error: e });
       } else {
-        toast.error('Não foi possível salvar');
+        toast.error(`Não foi possível salvar: ${message || 'Erro desconhecido'}`);
+        console.error('Erro completo:', e);
       }
     } finally {
       setSaving(false);
@@ -306,6 +353,31 @@ export default function FormDetailPage() {
                 onChange={e => setForm(prev => prev ? { ...prev, onboard_step: e.target.value ? Number(e.target.value) : null } : prev)}
               />
             </div>
+          </div>
+
+          {/* Campo "Outros" */}
+          <div className="space-y-4 border-t pt-4">
+            <div className="flex items-center justify-between">
+              <div className="space-y-0.5">
+                <p className="font-semibold">Permitir campo "Outros"</p>
+                <p className="text-sm text-gray-500">Permite que usuários preencham manualmente uma opção customizada</p>
+              </div>
+              <Switch
+                checked={form?.allow_other_option || false}
+                onCheckedChange={(checked) => setForm(prev => prev ? { ...prev, allow_other_option: checked } : prev)}
+              />
+            </div>
+            {form?.allow_other_option && (
+              <div>
+                <p className="font-semibold mb-2">Label do campo "Outros"</p>
+                <Input
+                  placeholder="Outros"
+                  value={form?.other_option_label || ''}
+                  onChange={e => setForm(prev => prev ? { ...prev, other_option_label: e.target.value || null } : prev)}
+                />
+                <p className="text-xs text-gray-500 mt-1">Deixe em branco para usar "Outros" como padrão</p>
+              </div>
+            )}
           </div>
 
           {/* Opções: Texto do botão + Playlist (gravando a categoria da playlist para compatibilidade) */}
@@ -452,6 +524,19 @@ export default function FormDetailPage() {
                     </button>
                   );
                 })}
+                {form?.allow_other_option && (
+                  <div className="w-full rounded-md border border-gray-300 bg-white px-4 py-3">
+                    <div className="flex items-center gap-3">
+                      <span className="h-5 w-5 rounded-full border-2 border-gray-400 flex-shrink-0"></span>
+                      <span className="text-base font-medium text-gray-900">{form?.other_option_label || 'Outros'}</span>
+                    </div>
+                    <Input 
+                      placeholder="Digite sua opção..." 
+                      className="mt-2" 
+                      disabled 
+                    />
+                  </div>
+                )}
               </div>
             </CardContent>
           </Card>

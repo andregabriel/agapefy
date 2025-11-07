@@ -120,6 +120,28 @@ export default function NPSWidget({ onClose }: NPSWidgetProps) {
       } else {
         console.log('✅ NPS salvo com sucesso:', insertedData);
         toast.success('Avaliação enviada com sucesso!');
+
+        // Se houver comentário, salvar como sugestão
+        if (comment && comment.trim()) {
+          try {
+            const { error: suggestionError } = await supabase
+              .from('user_suggestions')
+              .insert({
+                user_id: user?.id || null,
+                suggestion_text: comment.trim(),
+                source: 'nps',
+                source_id: insertedData.id,
+                form_id: null
+              });
+            
+            if (suggestionError) {
+              console.error('Erro ao salvar sugestão do NPS:', suggestionError);
+              // Não bloquear o fluxo se falhar ao salvar sugestão
+            }
+          } catch (suggestionErr) {
+            console.error('Erro ao salvar sugestão do NPS:', suggestionErr);
+          }
+        }
       }
 
       // Track do evento (independente do erro de salvamento)

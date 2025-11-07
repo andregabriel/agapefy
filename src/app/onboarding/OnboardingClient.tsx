@@ -21,7 +21,15 @@ import { useRoutinePlaylist } from '@/hooks/useRoutinePlaylist';
 import { Switch } from '@/components/ui/switch';
 
 interface FormOption { label: string; category_id: string }
-interface AdminForm { id: string; name: string; description?: string; schema: FormOption[]; onboard_step?: number | null }
+interface AdminForm { 
+  id: string; 
+  name: string; 
+  description?: string; 
+  schema: FormOption[]; 
+  onboard_step?: number | null;
+  allow_other_option?: boolean;
+  other_option_label?: string | null;
+}
 interface AudioPreview { id: string; title: string; subtitle?: string | null; duration?: number | null; cover_url?: string | null }
 
 export default function OnboardingClient() {
@@ -42,6 +50,7 @@ export default function OnboardingClient() {
   const [selected, setSelected] = useState<string>(''); // stores selected category_id
   const [selectedKey, setSelectedKey] = useState<string>(''); // stores unique option key (index)
   const [shortText, setShortText] = useState<string>('');
+  const [otherOptionText, setOtherOptionText] = useState<string>('');
   const [multiKeys, setMultiKeys] = useState<string[]>([]); // for step 4
   const [multiLabels, setMultiLabels] = useState<string[]>([]); // labels for step 4
   const [submitting, setSubmitting] = useState(false);
@@ -260,13 +269,53 @@ export default function OnboardingClient() {
   }, [desiredStep, user?.id, router]);
 
   async function submit() {
-    if (!form || !selected) {
-      toast.error('Selecione uma opção');
+    if (!form) {
+      toast.error('Formulário não encontrado');
       return;
     }
+    
+    // Verificar se selecionou uma opção OU preencheu o campo "Outros"
+    const hasOtherOption = form.allow_other_option && otherOptionText.trim();
+    if (!selected && !hasOtherOption) {
+      toast.error('Selecione uma opção ou preencha o campo "Outros"');
+      return;
+    }
+
     try {
       setSubmitting(true);
-      await saveFormResponse({ formId: form.id, answers: { option: selected }, userId: user?.id ?? null });
+      
+      // Salvar resposta do formulário
+      await saveFormResponse({ 
+        formId: form.id, 
+        answers: { 
+          option: selected || null,
+          other_option: hasOtherOption ? otherOptionText.trim() : null
+        }, 
+        userId: user?.id ?? null 
+      });
+
+      // Se preencheu o campo "Outros", salvar como sugestão
+      if (hasOtherOption) {
+        try {
+          const { error: suggestionError } = await supabase
+            .from('user_suggestions')
+            .insert({
+              user_id: user?.id || null,
+              suggestion_text: otherOptionText.trim(),
+              source: 'onboarding',
+              form_id: form.id,
+              source_id: form.id
+            });
+          
+          if (suggestionError) {
+            console.error('Erro ao salvar sugestão:', suggestionError);
+            // Não bloquear o fluxo se falhar ao salvar sugestão
+          }
+        } catch (suggestionErr) {
+          console.error('Erro ao salvar sugestão:', suggestionErr);
+        }
+      }
+
       toast.success('Resposta enviada');
     } catch (e) {
       // eslint-disable-next-line no-console
@@ -1066,9 +1115,18 @@ export default function OnboardingClient() {
             value={selectedKey}
             onValueChange={(key) => {
               setSelectedKey(key);
-              const index = Number(key);
-              const chosen = form.schema?.[index];
-              if (chosen) setSelected(chosen.category_id);
+              if (key === 'other') {
+                setSelected('');
+                // Não limpar o texto quando selecionar "other"
+              } else {
+                const index = Number(key);
+                const chosen = form.schema?.[index];
+                if (chosen) {
+                  setSelected(chosen.category_id);
+                  // Limpar campo "Outros" quando selecionar uma opção
+                  setOtherOptionText('');
+                }
+              }
             }}
             className="space-y-3"
           >
@@ -1083,11 +1141,46 @@ export default function OnboardingClient() {
                 </label>
               </div>
             ))}
+            
+            {form.allow_other_option && (
+              <div className="space-y-2">
+                <div className="flex items-center gap-4 w-full p-4 rounded-lg border border-gray-800 hover:bg-gray-800/40">
+                  <RadioGroupItem 
+                    className="h-5 w-5" 
+                    value="other" 
+                    id="opt-other"
+                  />
+                  <label htmlFor="opt-other" className="text-base cursor-pointer flex-1">
+                    {form.other_option_label || 'Outros'}
+                  </label>
+                </div>
+                <Input
+                  id="opt-other-input"
+                  placeholder="Digite sua opção..."
+                  value={otherOptionText}
+                  onChange={(e) => {
+                    setOtherOptionText(e.target.value);
+                    if (e.target.value.trim()) {
+                      setSelectedKey('other');
+                      setSelected('');
+                    } else {
+                      setSelectedKey('');
+                    }
+                  }}
+                  className="ml-9"
+                />
+              </div>
+            )}
           </RadioGroup>
 
           <div className="flex justify-between">
             <Button variant="ghost" onClick={skip} disabled={submitting}>Agora não</Button>
-            <Button onClick={submit} disabled={!selected || submitting}>{submitting ? 'Enviando...' : 'Enviar'}</Button>
+            <Button 
+              onClick={submit} 
+              disabled={(!selected && !(form.allow_other_option && otherOptionText.trim())) || submitting}
+            >
+              {submitting ? 'Enviando...' : 'Enviar'}
+            </Button>
           </div>
         </CardContent>
       </Card>

@@ -97,6 +97,12 @@ const adminRoutes = [
     color: 'text-amber-500'
   },
   {
+    label: 'Feedbacks',
+    icon: MessageCircle,
+    href: '/admin/feedback',
+    color: 'text-indigo-500'
+  },
+  {
     label: 'Playlists',
     icon: BookOpen,
     href: '/admin/playlists',
