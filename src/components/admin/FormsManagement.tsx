@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
-import { FileText, Plus, Trash } from 'lucide-react';
+import { FileText, Plus, Trash, Play, RotateCcw } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { toast } from 'sonner';
 import Link from 'next/link';
@@ -23,6 +23,7 @@ interface OnboardForm {
 export default function FormsManagement() {
   const [forms, setForms] = useState<OnboardForm[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
+  const [resetting, setResetting] = useState<boolean>(false);
   const router = useRouter();
 
   useEffect(() => {
@@ -53,8 +54,65 @@ export default function FormsManagement() {
   return (
     <div>
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900 mb-1">Forms</h1>
-        <p className="text-gray-500">Gerencie formulários administrativos, como o onboarding.</p>
+        <div className="flex items-center justify-between mb-1">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900 mb-1">Forms</h1>
+            <p className="text-gray-500">Gerencie formulários administrativos, como o onboarding.</p>
+          </div>
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={async () => {
+                try {
+                  setResetting(true);
+                  const { data: { session } } = await supabase.auth.getSession();
+                  if (!session?.user) {
+                    toast.error('Você precisa estar logado para resetar as respostas');
+                    return;
+                  }
+
+                  const response = await fetch('/api/onboarding/reset', {
+                    method: 'POST',
+                    headers: {
+                      'Content-Type': 'application/json',
+                      'x-user-id': session.user.id,
+                    },
+                  });
+
+                  if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.error || 'Erro ao resetar respostas');
+                  }
+
+                  const result = await response.json();
+                  toast.success(result.message || 'Respostas resetadas com sucesso! Agora você pode testar o onboarding novamente.');
+                } catch (e) {
+                  console.error(e);
+                  toast.error('Não foi possível resetar as respostas');
+                } finally {
+                  setResetting(false);
+                }
+              }}
+              disabled={resetting}
+              className="gap-2"
+            >
+              <RotateCcw className="h-4 w-4" />
+              {resetting ? 'Resetando...' : 'Resetar minhas respostas'}
+            </Button>
+            <Button
+              variant="default"
+              size="sm"
+              onClick={() => {
+                window.open('/onboarding?step=1', '_blank');
+              }}
+              className="gap-2"
+            >
+              <Play className="h-4 w-4" />
+              Testar Onboarding
+            </Button>
+          </div>
+        </div>
       </div>
 
       <Card className="mb-6">

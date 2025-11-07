@@ -11,8 +11,8 @@ import { useCategories } from '@/hooks/useCategories';
 import { toast } from 'sonner';
 import { supabase } from '@/lib/supabase';
 
-// Desabilita o preview no editor de formulário
-const ENABLE_FORM_PREVIEW = false;
+// Habilita o preview no editor de formulário
+const ENABLE_FORM_PREVIEW = true;
 
 interface AdminForm {
   id: string;

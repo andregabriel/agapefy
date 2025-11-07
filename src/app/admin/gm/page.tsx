@@ -38,8 +38,6 @@ type ItemProgress = {
   fieldOrder: string[];
 };
 
-const MAX_ITEMS = 30;
-
 function TruncatedWithTooltip({
   text,
   emptyAsDash = true,
@@ -229,11 +227,8 @@ export default function GmPage() {
     setIsValidating(true);
     try {
       const parsed = parseNdjson(input);
-      if (parsed.length > MAX_ITEMS) {
-        toast.error(`Máximo de ${MAX_ITEMS} itens por lote`);
-      }
       setLines(parsed);
-      setValidLines(parsed.filter(l => !l.error).slice(0, MAX_ITEMS));
+      setValidLines(parsed.filter(l => !l.error));
       toast.success(`Validação concluída. Válidos: ${parsed.filter(l => !l.error).length}.`);
     } finally {
       setIsValidating(false);
@@ -602,7 +597,7 @@ export default function GmPage() {
               onChange={(e) => setInput(e.target.value)}
               disabled={isRunning}
             />
-            <div className="text-xs text-muted-foreground mt-1">Máximo de {MAX_ITEMS} linhas por lote. Uma entrada JSON por linha.</div>
+            <div className="text-xs text-muted-foreground mt-1">Uma entrada JSON por linha.</div>
           </div>
 
           <div className="flex gap-2">
