@@ -295,15 +295,17 @@ export default function FormDetailPage() {
           {/* Lista de opções adicionadas */}
           {form?.schema && form.schema.length > 0 && (
             <div className="mt-2 space-y-2">
+              <p className="text-sm font-semibold text-gray-700 mb-2">Opções adicionadas:</p>
               {form.schema.map((opt, idx) => (
-                <div key={idx} className="flex items-center justify-between rounded border border-gray-800 p-3">
-                  <div className="text-sm text-gray-300">
-                    <span className="font-medium text-white mr-2">{opt.label}</span>
-                    <span className="text-gray-400">→ {(() => {
+                <div key={idx} className="flex items-center justify-between rounded border border-gray-300 bg-gray-50 p-3">
+                  <div className="flex items-center gap-2 text-sm">
+                    <span className="font-semibold text-gray-900">{opt.label || `Opção ${idx + 1}`}</span>
+                    <span className="text-gray-600">→</span>
+                    <span className="text-gray-700">{(() => {
                       const pl = playlists.find(p => p.id === (opt as any).playlist_id);
                       if (pl) return pl.title;
                       const cat = categories.find(c => c.id === opt.category_id);
-                      return cat?.name || 'Playlist';
+                      return cat?.name || 'Playlist não selecionada';
                     })()}</span>
                   </div>
                   <Button variant="ghost" size="sm" onClick={() => removeOption(idx)}>Remover</Button>
@@ -327,18 +329,24 @@ export default function FormDetailPage() {
             </CardHeader>
             <CardContent className="space-y-5">
               <div>
-                <p className="text-lg font-semibold text-white">{form?.name || 'Título do formulário'}</p>
+                <p className="text-xl font-bold text-gray-900">{form?.name || 'Título do formulário'}</p>
                 {form?.description && (
-                  <p className="text-gray-300 mt-3 text-xl font-medium">{form.description}</p>
+                  <p className="text-base text-gray-700 mt-3 font-medium leading-relaxed">{form.description}</p>
                 )}
               </div>
+
+              {form?.schema && form.schema.length > 0 && (
+                <div className="pt-2">
+                  <p className="text-base font-semibold text-gray-800 mb-3">Marque a opção que você está mais precisando neste momento:</p>
+                </div>
+              )}
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 {form?.schema?.filter(opt => (opt?.label || '').trim()).map((opt, idx) => {
                   const active = previewSelected === idx;
                   const base = 'w-full rounded-md border px-4 py-3 text-left transition-colors';
-                  const normal = 'border-gray-800 bg-transparent hover:bg-gray-800/50';
-                  const selected = 'border-blue-500 bg-gray-800';
+                  const normal = 'border-gray-300 bg-white hover:bg-gray-50 shadow-sm';
+                  const selected = 'border-blue-500 bg-blue-50 shadow-md';
                   return (
                     <button
                       key={`${opt.category_id}-${idx}`}
@@ -347,8 +355,10 @@ export default function FormDetailPage() {
                       className={`${base} ${active ? selected : normal}`}
                     >
                       <div className="flex items-center gap-3">
-                        <span className={`h-4 w-4 rounded-full border ${active ? 'border-blue-500 bg-blue-500' : 'border-gray-500'}`}></span>
-                        <span className="text-sm text-white">{opt.label}</span>
+                        <span className={`h-5 w-5 rounded-full border-2 flex-shrink-0 ${active ? 'border-blue-500 bg-blue-500' : 'border-gray-400'}`}>
+                          {active && <span className="w-full h-full flex items-center justify-center text-white text-xs">✓</span>}
+                        </span>
+                        <span className="text-base font-medium text-gray-900">{opt.label}</span>
                       </div>
                     </button>
                   );
@@ -396,12 +406,12 @@ export default function FormDetailPage() {
               if (combined.length === 0) return <p className="text-sm text-gray-500">Nenhuma etapa configurada.</p>;
 
               return combined.map(step => (
-                <div key={step.id} className="flex items-center justify-between rounded border border-gray-800 p-3">
-                  <div className="flex items-center gap-3">
-                    <span className="text-xs text-gray-400">Passo {step.onboard_step ?? '-'}</span>
-                    <span className="text-sm text-white">{step.name}</span>
+                <div key={step.id} className="flex items-center justify-between rounded border border-gray-300 bg-gray-50 p-4 hover:bg-gray-100 transition-colors">
+                  <div className="flex items-center gap-4">
+                    <span className="text-sm font-bold text-gray-900 min-w-[60px]">Passo {step.onboard_step ?? '-'}</span>
+                    <span className="text-base font-semibold text-gray-800">{step.name}</span>
                     {typeof step.is_active === 'boolean' && (
-                      <span className={`text-xs ${step.is_active ? 'text-green-400' : 'text-gray-500'}`}>{step.is_active ? 'Ativo' : 'Inativo'}</span>
+                      <span className={`text-xs font-medium px-2 py-1 rounded ${step.is_active ? 'bg-green-100 text-green-700' : 'bg-gray-200 text-gray-600'}`}>{step.is_active ? 'Ativo' : 'Inativo'}</span>
                     )}
                   </div>
                   {String(step.id).startsWith('virtual-step-') ? (
@@ -412,11 +422,19 @@ export default function FormDetailPage() {
                         if (step.onboard_step === 2) router.push('/admin/configuracoes#onboarding');
                         else if (step.onboard_step === 3) router.push('/admin/whatsIA');
                       }}
+                      className="font-medium text-gray-700 hover:text-gray-900"
                     >
                       Abrir
                     </Button>
                   ) : (
-                    <Button variant="ghost" size="sm" onClick={() => router.push(`/admin/forms/${step.id}`)}>Abrir</Button>
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      onClick={() => router.push(`/admin/forms/${step.id}`)}
+                      className="font-medium text-gray-700 hover:text-gray-900"
+                    >
+                      Abrir
+                    </Button>
                   )}
                 </div>
               ));
