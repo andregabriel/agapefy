@@ -44,6 +44,8 @@ export default function FormDetailPage() {
   const [allSteps, setAllSteps] = useState<OnboardingStepSummary[]>([]);
   const [loadingSteps, setLoadingSteps] = useState<boolean>(false);
   const [isActiveRootForm, setIsActiveRootForm] = useState<boolean>(false);
+  const [editingIndex, setEditingIndex] = useState<number | null>(null);
+  const [editingOption, setEditingOption] = useState<{ label: string; category_id: string; playlist_id?: string }>({ label: '', category_id: '' });
   const hasPreview = useMemo(() => {
     const items = form?.schema || [];
     return items.some(opt => (opt?.label || '').trim().length > 0);
@@ -210,6 +212,11 @@ export default function FormDetailPage() {
 
   function addOption() {
     if (!form) return;
+    if (editingIndex !== null) {
+      // Se está editando, salvar a edição
+      saveEdit();
+      return;
+    }
     if (!newOption.label.trim() || !newOption.category_id) {
       toast.error('Informe o texto e a playlist');
       return;
@@ -218,8 +225,49 @@ export default function FormDetailPage() {
     setNewOption({ label: '', category_id: '' });
   }
 
+  function editOption(index: number) {
+    if (!form || !form.schema) return;
+    const opt = form.schema[index];
+    setEditingIndex(index);
+    setEditingOption({
+      label: opt.label || '',
+      category_id: opt.category_id || '',
+      playlist_id: (opt as any).playlist_id || '',
+    });
+    // Preencher os campos de input com os valores da opção sendo editada
+    setNewOption({
+      label: opt.label || '',
+      category_id: opt.category_id || '',
+      playlist_id: (opt as any).playlist_id || '',
+    });
+  }
+
+  function saveEdit() {
+    if (!form || editingIndex === null) return;
+    if (!editingOption.label.trim() || !editingOption.category_id) {
+      toast.error('Informe o texto e a playlist');
+      return;
+    }
+    const copy = [...(form.schema || [])];
+    copy[editingIndex] = { ...editingOption };
+    setForm({ ...form, schema: copy });
+    setEditingIndex(null);
+    setEditingOption({ label: '', category_id: '' });
+    setNewOption({ label: '', category_id: '' });
+    toast.success('Opção atualizada');
+  }
+
+  function cancelEdit() {
+    setEditingIndex(null);
+    setEditingOption({ label: '', category_id: '' });
+    setNewOption({ label: '', category_id: '' });
+  }
+
   function removeOption(index: number) {
     if (!form) return;
+    if (editingIndex === index) {
+      cancelEdit();
+    }
     const copy = [...(form.schema || [])];
     copy.splice(index, 1);
     setForm({ ...form, schema: copy });
@@ -261,13 +309,23 @@ export default function FormDetailPage() {
           </div>
 
           {/* Opções: Texto do botão + Playlist (gravando a categoria da playlist para compatibilidade) */}
+          {editingIndex !== null && (
+            <div className="p-3 bg-blue-50 border border-blue-200 rounded-md mb-2">
+              <p className="text-sm font-semibold text-blue-900 mb-2">Editando opção {editingIndex + 1}</p>
+            </div>
+          )}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <p className="font-semibold mb-2">Texto da caixa de seleção</p>
               <Input
                 placeholder="Inserir texto"
                 value={newOption.label}
-                onChange={e => setNewOption(prev => ({ ...prev, label: e.target.value }))}
+                onChange={e => {
+                  setNewOption(prev => ({ ...prev, label: e.target.value }));
+                  if (editingIndex !== null) {
+                    setEditingOption(prev => ({ ...prev, label: e.target.value }));
+                  }
+                }}
               />
             </div>
             <div>
@@ -278,7 +336,14 @@ export default function FormDetailPage() {
                 value={(() => playlists.find(p => p.id === (newOption as any).playlist_id)?.title || '')()}
                 onChange={e => {
                   const match = playlists.find(p => (p.title || '').toLowerCase() === e.target.value.toLowerCase());
-                  setNewOption(prev => ({ ...prev, category_id: match?.category_id || '', playlist_id: match?.id || '' }));
+                  const updated = {
+                    category_id: match?.category_id || '',
+                    playlist_id: match?.id || '',
+                  };
+                  setNewOption(prev => ({ ...prev, ...updated }));
+                  if (editingIndex !== null) {
+                    setEditingOption(prev => ({ ...prev, ...updated }));
+                  }
                 }}
               />
               <datalist id="playlists-list">
@@ -289,7 +354,14 @@ export default function FormDetailPage() {
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <Button type="button" variant="ghost" onClick={addOption}>Adicionar texto + playlist</Button>
+            {editingIndex !== null ? (
+              <>
+                <Button type="button" variant="default" onClick={saveEdit}>Salvar edição</Button>
+                <Button type="button" variant="ghost" onClick={cancelEdit}>Cancelar</Button>
+              </>
+            ) : (
+              <Button type="button" variant="ghost" onClick={addOption}>Adicionar texto + playlist</Button>
+            )}
           </div>
 
           {/* Lista de opções adicionadas */}
@@ -297,7 +369,7 @@ export default function FormDetailPage() {
             <div className="mt-2 space-y-2">
               <p className="text-sm font-semibold text-gray-700 mb-2">Opções adicionadas:</p>
               {form.schema.map((opt, idx) => (
-                <div key={idx} className="flex items-center justify-between rounded border border-gray-300 bg-gray-50 p-3">
+                <div key={idx} className={`flex items-center justify-between rounded border p-3 ${editingIndex === idx ? 'border-blue-500 bg-blue-50' : 'border-gray-300 bg-gray-50'}`}>
                   <div className="flex items-center gap-2 text-sm">
                     <span className="font-semibold text-gray-900">{opt.label || `Opção ${idx + 1}`}</span>
                     <span className="text-gray-600">→</span>
@@ -308,7 +380,24 @@ export default function FormDetailPage() {
                       return cat?.name || 'Playlist não selecionada';
                     })()}</span>
                   </div>
-                  <Button variant="ghost" size="sm" onClick={() => removeOption(idx)}>Remover</Button>
+                  <div className="flex items-center gap-2">
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      onClick={() => editOption(idx)}
+                      disabled={editingIndex !== null && editingIndex !== idx}
+                    >
+                      Editar
+                    </Button>
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      onClick={() => removeOption(idx)}
+                      disabled={editingIndex !== null && editingIndex !== idx}
+                    >
+                      Remover
+                    </Button>
+                  </div>
                 </div>
               ))}
             </div>
