@@ -19,6 +19,8 @@ import { useAppSettings } from '@/hooks/useAppSettings';
 import { buildRoutinePlaylistFromOnboarding } from '@/lib/services/routine';
 import { useRoutinePlaylist } from '@/hooks/useRoutinePlaylist';
 import { Switch } from '@/components/ui/switch';
+import { useOnboardingProgress } from '@/hooks/useOnboardingProgress';
+import { ProgressBar } from '@/components/onboarding/ProgressBar';
 
 interface FormOption { label: string; category_id: string }
 interface AdminForm { 
@@ -64,6 +66,9 @@ export default function OnboardingClient() {
   const [savingVersePref, setSavingVersePref] = useState<boolean>(false);
   const [previousResponses, setPreviousResponses] = useState<Map<number, string>>(new Map());
   const [loadingResponses, setLoadingResponses] = useState<boolean>(false);
+  
+  // Calcular progresso do onboarding
+  const { percentage: progressPercentage, loading: progressLoading } = useOnboardingProgress(desiredStep, currentCategoryId);
 
   // Função para determinar o próximo passo disponível e retornar a URL completa
   async function getNextStepUrl(currentStep: number): Promise<string> {
@@ -167,6 +172,16 @@ export default function OnboardingClient() {
         if (isAvailable) {
           return getStaticStepUrl(candidateStep);
         }
+      }
+
+      // 3) Se não é passo estático e não há formulário dinâmico ativo,
+      // verificar se há formulário dinâmico (mesmo inativo) neste passo
+      // Isso garante que passos com formulários configurados sejam considerados
+      if (!staticSteps.includes(candidateStep) && occupiedSteps.has(candidateStep)) {
+        // Há um formulário dinâmico neste passo (pode estar inativo)
+        // Mas só retornar se não houver outro passo ativo antes dele
+        // Por enquanto, retornar o passo para não pular
+        return `/onboarding?step=${candidateStep}${formParam}${categoryParam}`;
       }
 
       candidateStep++;
@@ -561,15 +576,39 @@ export default function OnboardingClient() {
               }
             }
           }
-        } else if (desiredStep === 3 || staticKind === 'whatsapp') {
+        } else if (desiredStep === 3) {
+          // Passo 3 é sempre estático (preview da categoria), não busca formulário dinâmico
+          // Limpar form state para garantir que não haja interferência de formulários anteriores
+          if (mounted) setForm(null);
           const categoryId = searchParams?.get('categoryId');
-          if (categoryId && !category) {
-            const { data: cat } = await supabase
-              .from('categories')
-              .select('id,name,description,image_url')
-              .eq('id', categoryId)
-              .maybeSingle();
-            if (mounted) setCategory((cat as any) || null);
+          if (categoryId) {
+            const [{ data: cat, error: catErr }, { data: auds, error: audErr }, getPl] = await Promise.all([
+              supabase
+                .from('categories')
+                .select('id,name,description,image_url')
+                .eq('id', categoryId)
+                .maybeSingle(),
+              supabase
+                .from('audios')
+                .select('id,title,subtitle,duration,cover_url')
+                .eq('category_id', categoryId)
+                .order('created_at', { ascending: false })
+                .limit(10),
+              getPlaylistsByCategoryFast(categoryId)
+            ]);
+            if (catErr) throw catErr;
+            if (audErr) throw audErr;
+            if (mounted) {
+              setCategory((cat as any) || null);
+              setAudios(((auds as any[]) || []) as AudioPreview[]);
+              setPlaylists((getPl as any[]) || []);
+            }
+          } else {
+            if (mounted) {
+              setCategory(null);
+              setAudios([]);
+              setPlaylists([]);
+            }
           }
         } else {
           // Passos dinâmicos adicionais (>= 2, incluindo passos informativos)
@@ -755,9 +794,11 @@ export default function OnboardingClient() {
       <div className="max-w-2xl mx-auto p-4">
         <Card>
           <CardHeader>
-            <div className="relative">
-              <span className="absolute right-0 top-0 px-2 py-0.5 rounded bg-gray-800 text-gray-200 text-xs">Passo 6</span>
-              <div className="mt-10 md:mt-12 text-center px-2 md:px-6">
+            <div className="space-y-4">
+              <div className="w-full">
+                <ProgressBar percentage={progressPercentage} loading={progressLoading} />
+              </div>
+              <div className="text-center px-2 md:px-6">
                 <CardTitle className="text-2xl md:text-3xl leading-tight max-w-4xl mx-auto">Sua rotina está pronta</CardTitle>
               </div>
             </div>
@@ -894,15 +935,18 @@ export default function OnboardingClient() {
   }
 
   // Render estáticos via showStatic em QUALQUER passo
+  // Mas passo 3 sempre mostra preview da categoria, não WhatsApp
   const showStaticKind = searchParams?.get('showStatic') || '';
-  if (showStaticKind === 'whatsapp') {
+  if (showStaticKind === 'whatsapp' && desiredStep !== 3) {
     return (
       <div className="max-w-2xl mx-auto p-4">
         <Card>
           <CardHeader>
-            <div className="relative">
-              <span className="absolute right-0 top-0 px-2 py-0.5 rounded bg-gray-800 text-gray-200 text-xs">Passo</span>
-              <div className="mt-10 md:mt-12 text-center px-2 md:px-6">
+            <div className="space-y-4">
+              <div className="w-full">
+                <ProgressBar percentage={progressPercentage} loading={progressLoading} />
+              </div>
+              <div className="text-center px-2 md:px-6">
                 <CardTitle className="text-xl md:text-2xl leading-snug break-words max-w-3xl mx-auto">{(() => {
                   const raw = settings.onboarding_step3_title || 'Conecte seu WhatsApp para receber uma mensagem diária para {category}.';
                   const replacement = category?.name || 'sua dificuldade selecionada';
@@ -948,9 +992,11 @@ export default function OnboardingClient() {
       <div className="max-w-2xl mx-auto p-4">
         <Card>
           <CardHeader>
-            <div className="relative">
-              <span className="absolute right-0 top-0 px-2 py-0.5 rounded bg-gray-800 text-gray-200 text-xs">Passo</span>
-              <div className="mt-10 md:mt-12 text-center px-2 md:px-6">
+            <div className="space-y-4">
+              <div className="w-full">
+                <ProgressBar percentage={progressPercentage} loading={progressLoading} />
+              </div>
+              <div className="text-center px-2 md:px-6">
                 <CardTitle className="text-2xl md:text-3xl leading-tight line-clamp-2 max-w-4xl mx-auto">{settings.onboarding_step2_title || 'Parabéns pela coragem e pela abertura de dar as mãos à Jesus neste momento difícil.'}</CardTitle>
                 <p className="mt-3 text-black text-base md:text-lg max-w-3xl mx-auto">{settings.onboarding_step2_subtitle || 'Sua playlist foi criada, em breve você poderá escutar essas orações.'}</p>
               </div>
@@ -1033,9 +1079,11 @@ export default function OnboardingClient() {
       <div className="max-w-2xl mx-auto p-4">
         <Card>
           <CardHeader>
-            <div className="relative">
-              <span className="absolute right-0 top-0 px-2 py-0.5 rounded bg-gray-800 text-gray-200 text-xs">Passo 7</span>
-              <div className="mt-10 md:mt-12 text-center px-2 md:px-6">
+            <div className="space-y-4">
+              <div className="w-full">
+                <ProgressBar percentage={progressPercentage} loading={progressLoading} />
+              </div>
+              <div className="text-center px-2 md:px-6">
                 <CardTitle className="text-xl md:text-2xl leading-snug break-words max-w-3xl mx-auto">
                   Conecte seu WhatsApp para receber suas mensagens diárias.
                 </CardTitle>
@@ -1077,9 +1125,11 @@ export default function OnboardingClient() {
       <div className="max-w-2xl mx-auto p-4">
         <Card>
           <CardHeader>
-            <div className="relative">
-              <span className="absolute right-0 top-0 px-2 py-0.5 rounded bg-gray-800 text-gray-200 text-xs">Passo 8</span>
-              <div className="mt-10 md:mt-12 text-center px-2 md:px-6">
+            <div className="space-y-4">
+              <div className="w-full">
+                <ProgressBar percentage={progressPercentage} loading={progressLoading} />
+              </div>
+              <div className="text-center px-2 md:px-6">
                 <CardTitle className="text-[clamp(18px,4.5vw,28px)] leading-snug break-words max-w-3xl mx-auto">
                   Receba um versículo diário para fortalecer sua fé.
                 </CardTitle>
@@ -1156,43 +1206,96 @@ export default function OnboardingClient() {
     );
   }
 
-  // Passo 3: Configurar WhatsApp (embedded)
+  // Passo 3: Preview da categoria (mesmo conteúdo do passo 2)
   if (desiredStep === 3) {
+    const formatDuration = (seconds?: number | null): string | null => {
+      if (!seconds && seconds !== 0) return null;
+      const mins = Math.floor(seconds / 60);
+      const rem = seconds % 60;
+      if (!Number.isFinite(mins)) return null;
+      if (rem === 0) return `${mins} min`;
+      return `${mins}:${String(rem).padStart(2, '0')}`;
+    };
     return (
       <div className="max-w-2xl mx-auto p-4">
         <Card>
           <CardHeader>
-            <div className="relative">
-              <span className="absolute right-0 top-0 px-2 py-0.5 rounded bg-gray-800 text-gray-200 text-xs">Passo 3</span>
-              <div className="mt-10 md:mt-12 text-center px-2 md:px-6">
-                <CardTitle className="text-xl md:text-2xl leading-snug break-words max-w-3xl mx-auto">{(() => {
-                  const raw = settings.onboarding_step3_title || 'Conecte seu WhatsApp para receber uma mensagem diária para {category}.';
-                  const replacement = category?.name || 'sua dificuldade selecionada';
-                  return raw.replace('{category}', replacement);
-                })()}</CardTitle>
+            <div className="space-y-4">
+              <div className="w-full">
+                <ProgressBar percentage={progressPercentage} loading={progressLoading} />
+              </div>
+              <div className="text-center px-2 md:px-6">
+                <CardTitle className="text-2xl md:text-3xl leading-tight line-clamp-2 max-w-4xl mx-auto">{settings.onboarding_step2_title || 'Parabéns pela coragem e pela abertura de dar as mãos à Jesus neste momento difícil.'}</CardTitle>
+                <p className="mt-3 text-black text-base md:text-lg max-w-3xl mx-auto">{settings.onboarding_step2_subtitle || 'Sua playlist foi criada, em breve você poderá escutar essas orações.'}</p>
               </div>
             </div>
           </CardHeader>
-          <CardContent className="space-y-6">
-            <WhatsAppSetup variant="embedded" redirectIfNotLoggedIn={false} />
-            <div className="flex justify-between">
-              <Button
-                variant="ghost"
-                onClick={async () => {
-                  const nextUrl = await getNextStepUrl(desiredStep);
-                  router.replace(nextUrl);
-                }}
-              >
-                Pular
-              </Button>
+          <CardContent className="space-y-8">
 
-              <Button
-                onClick={async () => {
-                  const nextUrl = await getNextStepUrl(desiredStep);
-                  router.replace(nextUrl);
-                }}
-              >
-                Concluir
+            {(() => {
+              const combined: Array<{
+                id: string;
+                type: 'audio' | 'playlist';
+                title: string;
+                subtitle?: string | null;
+                duration?: number | null;
+                image?: string | null;
+              }> = [
+                ...playlists.map(p => ({ id: p.id, type: 'playlist' as const, title: p.title, subtitle: null, duration: null, image: p.cover_url || category?.image_url || null })),
+                ...audios.map(a => ({ id: a.id, type: 'audio' as const, title: a.title, subtitle: a.subtitle || null, duration: a.duration || null, image: a.cover_url || category?.image_url || null })),
+              ];
+
+              if (combined.length === 0) return null;
+
+              return (
+                <div className="space-y-4">
+                  <h2 className="text-2xl font-bold text-black">{category?.name}</h2>
+                  <div className="relative group">
+                    {/* Setas do carrossel */}
+                    <button onClick={() => scrollCarousel('left')} className="absolute left-0 top-1/2 -translate-y-1/2 z-20 bg-white/90 hover:bg-white text-gray-800 rounded-full w-10 h-10 flex items-center justify-center shadow-lg border-2 border-gray-200" title="Rolar para a esquerda">
+                      <svg width="20" height="20" viewBox="0 0 24 24"><path fill="currentColor" d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"/></svg>
+                    </button>
+                    <button onClick={() => scrollCarousel('right')} className="absolute right-0 top-1/2 -translate-y-1/2 z-20 bg-white/90 hover:bg-white text-gray-800 rounded-full w-10 h-10 flex items-center justify-center shadow-lg border-2 border-gray-200" title="Rolar para a direita">
+                      <svg width="20" height="20" viewBox="0 0 24 24"><path fill="currentColor" d="M8.59 16.59L10 18l6-6-6-6-1.41 1.41L13.17 12z"/></svg>
+                    </button>
+
+                    <div ref={carouselRef} className="flex space-x-6 overflow-x-auto scrollbar-hide pb-2 scroll-smooth snap-x snap-mandatory">
+                      {combined.map((item) => (
+                        <div key={`${item.type}-${item.id}`} className="flex-shrink-0 w-48 snap-start group">
+                          <div className="relative mb-4">
+                            <div className="w-48 h-48 rounded-lg overflow-hidden bg-gray-800">
+                              {item.image ? (
+                                <img src={item.image} alt={item.title} className="w-full h-full object-cover" />
+                              ) : (
+                                <div className="w-full h-48 bg-gray-800" />
+                              )}
+                            </div>
+                            {/* Sem overlay de play no preview */}
+                          </div>
+                          <div className="space-y-1">
+                            <div className="font-bold text-black text-base leading-tight truncate">{item.title}</div>
+                            {item.subtitle && (
+                              <div className="text-sm text-gray-400 truncate">{item.subtitle}</div>
+                            )}
+                            {typeof item.duration === 'number' && item.duration !== null && (
+                              <div className="text-sm text-gray-400">{formatDuration(item.duration)}</div>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              );
+            })()}
+
+            <div className="flex justify-end">
+              <Button onClick={async () => {
+                const nextUrl = await getNextStepUrl(desiredStep);
+                router.replace(nextUrl);
+              }}>
+                Avançar
+                <ArrowRight className="ml-2 h-4 w-4" />
               </Button>
             </div>
           </CardContent>
@@ -1202,7 +1305,8 @@ export default function OnboardingClient() {
   }
 
   // Passo informativo (tipo 'info' no schema)
-  if (form && Array.isArray((form as any).schema) && (form as any).schema[0]?.type === 'info') {
+  // Não executar se desiredStep === 3 (passo 3 é sempre estático)
+  if (desiredStep !== 3 && form && Array.isArray((form as any).schema) && (form as any).schema[0]?.type === 'info') {
     const currentForm: any = processedForm || form;
     const infoData = currentForm.schema[0];
     const categoryName = category?.name || 'o tema escolhido';
@@ -1221,11 +1325,11 @@ export default function OnboardingClient() {
       <div className="min-h-[calc(100vh-0rem)] flex items-center justify-center px-4">
         <Card className="w-full max-w-3xl">
           <CardHeader>
-            <div className="relative">
-              <span className="absolute right-0 top-0 px-2 py-0.5 rounded bg-gray-800 text-gray-200 text-xs">
-                Passo {form.onboard_step || desiredStep}
-              </span>
-              <div className="mt-10 md:mt-12 text-center px-2 md:px-6">
+            <div className="space-y-4">
+              <div className="w-full">
+                <ProgressBar percentage={progressPercentage} loading={progressLoading} />
+              </div>
+              <div className="text-center px-2 md:px-6">
                 <CardTitle className="text-2xl md:text-3xl leading-tight max-w-4xl mx-auto">
                   {title}
                 </CardTitle>
@@ -1273,9 +1377,11 @@ export default function OnboardingClient() {
       <div className="max-w-2xl mx-auto p-4">
         <Card>
           <CardHeader>
-            <div className="relative">
-              <span className="absolute right-0 top-0 px-2 py-0.5 rounded bg-gray-800 text-gray-200 text-xs">Passo 2</span>
-              <div className="mt-10 md:mt-12 text-center px-2 md:px-6">
+            <div className="space-y-4">
+              <div className="w-full">
+                <ProgressBar percentage={progressPercentage} loading={progressLoading} />
+              </div>
+              <div className="text-center px-2 md:px-6">
                 <CardTitle className="text-2xl md:text-3xl leading-tight line-clamp-2 max-w-4xl mx-auto">{settings.onboarding_step2_title || 'Parabéns pela coragem e pela abertura de dar as mãos à Jesus neste momento difícil.'}</CardTitle>
                 <p className="mt-3 text-black text-base md:text-lg max-w-3xl mx-auto">{settings.onboarding_step2_subtitle || 'Sua playlist foi criada, em breve você poderá escutar essas orações.'}</p>
               </div>
@@ -1369,9 +1475,11 @@ export default function OnboardingClient() {
         <div className="max-w-2xl mx-auto p-4">
           <Card>
             <CardHeader>
-              <div className="relative">
-                <span className="absolute right-0 top-0 px-2 py-0.5 rounded bg-gray-800 text-gray-200 text-xs">Passo {desiredStep}</span>
-                <div className="mt-10 md:mt-12 text-center px-2 md:px-6">
+              <div className="space-y-4">
+                <div className="w-full">
+                  <ProgressBar percentage={progressPercentage} loading={progressLoading} />
+                </div>
+                <div className="text-center px-2 md:px-6">
                   <CardTitle className="text-2xl md:text-3xl leading-tight line-clamp-2 max-w-4xl mx-auto">{processedForm?.name || form.name}</CardTitle>
                 </div>
               </div>
@@ -1395,9 +1503,11 @@ export default function OnboardingClient() {
         <div className="min-h-[calc(100vh-0rem)] flex items-center justify-center px-4">
           <Card className="w-full max-w-3xl">
             <CardHeader>
-              <div className="flex items-center justify-between">
+              <div className="space-y-4">
+                <div className="w-full">
+                  <ProgressBar percentage={progressPercentage} loading={progressLoading} />
+                </div>
                 <CardTitle className="text-2xl">{processedForm?.name || form.name}</CardTitle>
-                <span className="px-2 py-0.5 rounded bg-gray-800 text-gray-200 text-xs">Passo {desiredStep}</span>
               </div>
             </CardHeader>
             <CardContent className="space-y-6">
@@ -1454,9 +1564,11 @@ export default function OnboardingClient() {
       <div className="min-h-[calc(100vh-0rem)] flex items-center justify-center px-4">
         <Card className="w-full max-w-3xl">
           <CardHeader>
-            <div className="flex items-center justify-between">
+            <div className="space-y-4">
+              <div className="w-full">
+                <ProgressBar percentage={progressPercentage} loading={progressLoading} />
+              </div>
               <CardTitle className="text-2xl">{processedForm?.name || form.name}</CardTitle>
-              <span className="px-2 py-0.5 rounded bg-gray-800 text-gray-200 text-xs">Passo {desiredStep}</span>
             </div>
           </CardHeader>
           <CardContent className="space-y-6">
@@ -1520,11 +1632,11 @@ export default function OnboardingClient() {
     <div className="min-h-[calc(100vh-0rem)] flex items-center justify-center px-4">
       <Card className="w-full max-w-3xl">
         <CardHeader>
-          <div className="flex items-center justify-between">
+          <div className="space-y-4">
+            <div className="w-full">
+              <ProgressBar percentage={progressPercentage} loading={progressLoading} />
+            </div>
             <CardTitle className="text-2xl">{processedForm?.name || form.name}</CardTitle>
-            {typeof form.onboard_step === 'number' && (
-              <span className="px-2 py-0.5 rounded bg-gray-800 text-gray-200 text-xs">Passo {form.onboard_step}</span>
-            )}
           </div>
         </CardHeader>
         <CardContent className="space-y-6">
