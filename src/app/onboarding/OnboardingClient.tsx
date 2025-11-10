@@ -21,6 +21,7 @@ import { useRoutinePlaylist } from '@/hooks/useRoutinePlaylist';
 import { Switch } from '@/components/ui/switch';
 import { useOnboardingProgress } from '@/hooks/useOnboardingProgress';
 import { ProgressBar } from '@/components/onboarding/ProgressBar';
+import { getNextStepUrl as getNextStepUrlShared, getOnboardingStepsOrder } from '@/lib/services/onboarding-steps';
 
 interface FormOption { label: string; category_id: string }
 interface AdminForm { 
@@ -71,124 +72,29 @@ export default function OnboardingClient() {
   const { percentage: progressPercentage, loading: progressLoading } = useOnboardingProgress(desiredStep, currentCategoryId);
 
   // Função para determinar o próximo passo disponível e retornar a URL completa
-  async function getNextStepUrl(currentStep: number): Promise<string> {
+  async function getNextStepUrl(
+    currentStep: number,
+    opts?: { categoryId?: string }
+  ): Promise<string> {
     const parentFormId = activeFormId || form?.id || '';
-    const categoryParam = currentCategoryId ? `&categoryId=${encodeURIComponent(currentCategoryId)}` : '';
-    const formParam = parentFormId ? `&formId=${encodeURIComponent(parentFormId)}` : '';
-
-    // Buscar todos os formulários dinâmicos ativos ordenados por passo
-    let { data: activeForms, error: formsError } = await supabase
-      .from('admin_forms')
-      .select('id, onboard_step, is_active')
-      .eq('form_type', 'onboarding')
-      .eq('is_active', true)
-      .not('onboard_step', 'is', null)
-      .order('onboard_step', { ascending: true });
-
-    // Fallback quando parent_form_id não existe
-    if (formsError && (formsError.code === '42703' || /parent_form_id/i.test(String(formsError.message || '')))) {
-      const fb = await supabase
-        .from('admin_forms')
-        .select('id, onboard_step, is_active')
-        .eq('form_type', 'onboarding')
-        .eq('is_active', true)
-        .not('onboard_step', 'is', null)
-        .order('onboard_step', { ascending: true });
-      if (!fb.error) {
-        activeForms = fb.data as any;
-      }
-    }
-
-    // Buscar todos os formulários dinâmicos (ativos e inativos) para verificar quais passos estão ocupados
-    const { data: allForms } = await supabase
-      .from('admin_forms')
-      .select('onboard_step, is_active')
-      .eq('form_type', 'onboarding')
-      .not('onboard_step', 'is', null);
-
-    const occupiedSteps = new Set<number>();
-    const activeSteps = new Set<number>();
     
-    if (allForms) {
-      allForms.forEach((f: any) => {
-        if (f.onboard_step) {
-          occupiedSteps.add(f.onboard_step);
-          if (f.is_active) {
-            activeSteps.add(f.onboard_step);
-          }
-        }
-      });
-    }
-
-    // Função auxiliar para verificar se um passo estático está disponível
-    const isStaticStepAvailable = async (stepNum: number): Promise<boolean> => {
-      // Se há um formulário dinâmico (ativo ou inativo) neste passo, o estático não está disponível
-      if (occupiedSteps.has(stepNum)) {
-        return false;
-      }
-      
-      // Verificações específicas para cada passo estático
-      if (stepNum === 2) {
-        // Passo 2 (preview) só está disponível se tiver categoryId
-        return !!currentCategoryId;
-      }
-      
-      // Passos 3, 6, 7, 8 estão sempre disponíveis se não houver formulário dinâmico
-      return true;
+    // Converter settings para formato esperado pela função compartilhada
+    const settingsForShared = {
+      onboarding_step2_title: settings.onboarding_step2_title,
+      onboarding_step2_subtitle: settings.onboarding_step2_subtitle,
+      onboarding_step3_title: settings.onboarding_step3_title,
+      onboarding_static_preview_active: settings.onboarding_static_preview_active,
+      onboarding_static_whatsapp_active: settings.onboarding_static_whatsapp_active,
+      onboarding_hardcoded_6_active: settings.onboarding_hardcoded_6_active,
+      onboarding_hardcoded_7_active: settings.onboarding_hardcoded_7_active,
+      onboarding_hardcoded_8_active: settings.onboarding_hardcoded_8_active,
     };
 
-    // Função auxiliar para gerar URL de passo estático
-    const getStaticStepUrl = (stepNum: number): string => {
-      if (stepNum === 2) {
-        return `/onboarding?step=2&showStatic=preview${categoryParam}${formParam}`;
-      }
-      if (stepNum === 3) {
-        return `/onboarding?step=3&showStatic=whatsapp${categoryParam}${formParam}`;
-      }
-      return `/onboarding?step=${stepNum}${categoryParam}${formParam}`;
-    };
-
-    // Lista de passos estáticos possíveis em ordem
-    const staticSteps = [2, 3, 6, 7, 8];
-
-    // Procurar próximo passo ativo (dinâmico ou estático)
-    // Começar verificando a partir do próximo passo sequencial
-    let candidateStep = currentStep + 1;
-    const maxStep = Math.max(
-      ...(activeForms?.map(f => f.onboard_step as number) || []),
-      ...staticSteps,
-      currentStep
-    );
-
-    while (candidateStep <= maxStep + 1) {
-      // 1) Verificar se há formulário dinâmico ativo neste passo
-      if (activeSteps.has(candidateStep)) {
-        return `/onboarding?step=${candidateStep}${formParam}${categoryParam}`;
-      }
-
-      // 2) Verificar se é um passo estático disponível
-      if (staticSteps.includes(candidateStep)) {
-        const isAvailable = await isStaticStepAvailable(candidateStep);
-        if (isAvailable) {
-          return getStaticStepUrl(candidateStep);
-        }
-      }
-
-      // 3) Se não é passo estático e não há formulário dinâmico ativo,
-      // verificar se há formulário dinâmico (mesmo inativo) neste passo
-      // Isso garante que passos com formulários configurados sejam considerados
-      if (!staticSteps.includes(candidateStep) && occupiedSteps.has(candidateStep)) {
-        // Há um formulário dinâmico neste passo (pode estar inativo)
-        // Mas só retornar se não houver outro passo ativo antes dele
-        // Por enquanto, retornar o passo para não pular
-        return `/onboarding?step=${candidateStep}${formParam}${categoryParam}`;
-      }
-
-      candidateStep++;
-    }
-
-    // Se não houver mais passos, finalizar onboarding
-    return '/';
+    return getNextStepUrlShared(currentStep, {
+      categoryId: (opts?.categoryId ?? currentCategoryId) || undefined,
+      formId: parentFormId || undefined,
+      settings: settingsForShared,
+    });
   }
 
   // Persistir preferência de versículo diário imediatamente quando o usuário alternar no passo 8.
@@ -446,6 +352,41 @@ export default function OnboardingClient() {
       try {
         setLoading(true);
         const stepParam = Number(searchParams?.get('step') || desiredStep || 1);
+        
+        // VERIFICAÇÃO CRÍTICA: Verificar se o passo solicitado está ativo
+        const settingsForCheck = {
+          onboarding_step2_title: settings.onboarding_step2_title,
+          onboarding_step2_subtitle: settings.onboarding_step2_subtitle,
+          onboarding_step3_title: settings.onboarding_step3_title,
+          onboarding_static_preview_active: settings.onboarding_static_preview_active,
+          onboarding_static_whatsapp_active: settings.onboarding_static_whatsapp_active,
+          onboarding_hardcoded_6_active: settings.onboarding_hardcoded_6_active,
+          onboarding_hardcoded_7_active: settings.onboarding_hardcoded_7_active,
+          onboarding_hardcoded_8_active: settings.onboarding_hardcoded_8_active,
+        };
+        
+        const steps = await getOnboardingStepsOrder(settingsForCheck);
+        const requestedStep = steps.find(s => s.position === stepParam);
+        
+        // Se o passo solicitado não existe ou está inativo, redirecionar para o próximo ativo
+        if (!requestedStep || !requestedStep.isActive) {
+          // Encontrar o último passo ativo antes do solicitado, ou usar 0 se não houver
+          const activeStepsBefore = steps
+            .filter(s => s.isActive && s.position < stepParam)
+            .sort((a, b) => b.position - a.position);
+          const previousActiveStep = activeStepsBefore[0]?.position ?? 0;
+          
+          const nextUrl = await getNextStepUrlShared(previousActiveStep, {
+            categoryId: searchParams?.get('categoryId') || undefined,
+            formId: searchParams?.get('formId') || undefined,
+            settings: settingsForCheck,
+          });
+          if (mounted) {
+            router.replace(nextUrl);
+            return;
+          }
+        }
+        
         const categoryIdFromUrl = searchParams?.get('categoryId') || null;
         const rootFormIdFromUrl = searchParams?.get('formId') || null;
         await fetchPreviousResponses(stepParam, {
@@ -577,11 +518,14 @@ export default function OnboardingClient() {
             }
           }
         } else if (desiredStep === 3) {
-          // Passo 3 é sempre estático (preview da categoria), não busca formulário dinâmico
+          // Passo 3 pode ser estático (preview da categoria ou WhatsApp)
           // Limpar form state para garantir que não haja interferência de formulários anteriores
           if (mounted) setForm(null);
-          const categoryId = searchParams?.get('categoryId');
-          if (categoryId) {
+          const staticKind = searchParams?.get('showStatic') || '';
+          // Só carregar dados da categoria se for preview (ou padrão sem showStatic)
+          if (staticKind !== 'whatsapp') {
+            const categoryId = searchParams?.get('categoryId');
+            if (categoryId) {
             const [{ data: cat, error: catErr }, { data: auds, error: audErr }, getPl] = await Promise.all([
               supabase
                 .from('categories')
@@ -609,6 +553,7 @@ export default function OnboardingClient() {
               setAudios([]);
               setPlaylists([]);
             }
+          }
           }
         } else {
           // Passos dinâmicos adicionais (>= 2, incluindo passos informativos)
@@ -763,17 +708,21 @@ export default function OnboardingClient() {
       // Usar getNextStepUrl para determinar o próximo passo
       try {
         const currentStep = form.onboard_step || desiredStep;
-        let nextUrl = await getNextStepUrl(currentStep);
-        // Garantir categoryId na URL após o passo 1 (usuário pode não estar logado)
-        if (currentStep === 1 && selected && !nextUrl.includes('categoryId=')) {
-          nextUrl = `${nextUrl}${nextUrl.includes('?') ? '&' : '?'}categoryId=${encodeURIComponent(selected)}`;
-        }
+        // Garantir que categoryId seja passado para getNextStepUrl quando estamos no passo 1
+        const categoryIdForNext = currentStep === 1 && selected ? selected : currentCategoryId;
+        const nextUrl = await getNextStepUrl(currentStep, { categoryId: categoryIdForNext || undefined });
         router.replace(nextUrl);
       } catch {
-        // Fallback: ir para passo 2 se houver erro
-        const categoryParam = `categoryId=${encodeURIComponent(selected)}`;
-        const formParam = `formId=${encodeURIComponent(form.id)}`;
-        router.replace(`/onboarding?step=2&${categoryParam}&${formParam}`);
+        // Fallback: usar getNextStepUrl em vez de hardcode
+        try {
+          const currentStep = form.onboard_step || desiredStep;
+          const categoryIdForFallback = currentStep === 1 && selected ? selected : currentCategoryId;
+          const fallbackUrl = await getNextStepUrl(currentStep, { categoryId: categoryIdForFallback || undefined });
+          router.replace(fallbackUrl);
+        } catch {
+          // Último fallback: ir para home se tudo falhar
+          router.replace('/');
+        }
       }
       setSubmitting(false);
     }
@@ -935,9 +884,8 @@ export default function OnboardingClient() {
   }
 
   // Render estáticos via showStatic em QUALQUER passo
-  // Mas passo 3 sempre mostra preview da categoria, não WhatsApp
   const showStaticKind = searchParams?.get('showStatic') || '';
-  if (showStaticKind === 'whatsapp' && desiredStep !== 3) {
+  if (showStaticKind === 'whatsapp') {
     return (
       <div className="max-w-2xl mx-auto p-4">
         <Card>
@@ -1206,8 +1154,9 @@ export default function OnboardingClient() {
     );
   }
 
-  // Passo 3: Preview da categoria (mesmo conteúdo do passo 2)
-  if (desiredStep === 3) {
+  // Passo 3: Preview da categoria (apenas se não for showStatic=whatsapp)
+  // Se showStatic=whatsapp, já foi renderizado acima
+  if (desiredStep === 3 && showStaticKind !== 'whatsapp') {
     const formatDuration = (seconds?: number | null): string | null => {
       if (!seconds && seconds !== 0) return null;
       const mins = Math.floor(seconds / 60);
@@ -1305,7 +1254,7 @@ export default function OnboardingClient() {
   }
 
   // Passo informativo (tipo 'info' no schema)
-  // Não executar se desiredStep === 3 (passo 3 é sempre estático)
+  // Não executar se desiredStep === 3 (passo 3 pode ser estático)
   if (desiredStep !== 3 && form && Array.isArray((form as any).schema) && (form as any).schema[0]?.type === 'info') {
     const currentForm: any = processedForm || form;
     const infoData = currentForm.schema[0];

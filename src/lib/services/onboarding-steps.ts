@@ -1,0 +1,319 @@
+import { supabase } from '@/lib/supabase';
+
+export interface OnboardingStep {
+  id: string;
+  position: number; // Posição real no fluxo (não o stepNumber de exibição)
+  type: 'form' | 'static' | 'hardcoded' | 'info';
+  title: string;
+  description?: string;
+  isActive: boolean;
+  formData?: any;
+  staticData?: {
+    step2_title?: string;
+    step2_subtitle?: string;
+    step3_title?: string;
+  };
+  // Para identificar qual passo estático/hardcoded é
+  staticKind?: 'preview' | 'whatsapp';
+  hardcodedKind?: 'routine' | 'whatsapp-final' | 'daily-verse';
+}
+
+interface AppSettings {
+  onboarding_step2_title?: string;
+  onboarding_step2_subtitle?: string;
+  onboarding_step3_title?: string;
+  onboarding_static_preview_active?: string;
+  onboarding_static_whatsapp_active?: string;
+  onboarding_hardcoded_6_active?: string;
+  onboarding_hardcoded_7_active?: string;
+  onboarding_hardcoded_8_active?: string;
+}
+
+/**
+ * Determina a ordem real dos passos do onboarding, replicando a lógica do admin.
+ * Retorna lista ordenada por posição real (não stepNumber de exibição).
+ */
+export async function getOnboardingStepsOrder(
+  settings?: AppSettings
+): Promise<OnboardingStep[]> {
+  // Buscar todos os formulários
+  const { data: forms, error: formsError } = await supabase
+    .from('admin_forms')
+    .select('*')
+    .order('onboard_step', { ascending: true, nullsFirst: true })
+    .order('created_at', { ascending: true });
+
+  if (formsError) {
+    console.error('Erro ao buscar formulários:', formsError);
+    return [];
+  }
+
+  const formsList = (forms || []) as any[];
+
+  // Buscar settings se não foram fornecidos
+  let appSettings: AppSettings = settings || {};
+  if (!settings) {
+    const { data: settingsData } = await supabase
+      .from('app_settings')
+      .select('key, value')
+      .in('key', [
+        'onboarding_step2_title',
+        'onboarding_step2_subtitle',
+        'onboarding_step3_title',
+        'onboarding_static_preview_active',
+        'onboarding_static_whatsapp_active',
+        'onboarding_hardcoded_6_active',
+        'onboarding_hardcoded_7_active',
+        'onboarding_hardcoded_8_active',
+      ]);
+
+    if (settingsData) {
+      settingsData.forEach((s: any) => {
+        (appSettings as any)[s.key] = s.value;
+      });
+    }
+  }
+
+  type Entry = { position: number; data: Omit<OnboardingStep, 'position'> };
+  const entries: Entry[] = [];
+
+  // Passo 1: Formulário raiz
+  let rootForm = formsList.find(
+    (f) => f.onboard_step === 1 && (!f.parent_form_id || f.parent_form_id === null)
+  );
+
+  if (!rootForm) {
+    rootForm = formsList.find(
+      (f) =>
+        (!f.onboard_step || f.onboard_step === null) &&
+        (!f.parent_form_id || f.parent_form_id === null)
+    );
+  }
+
+  if (!rootForm) {
+    rootForm = formsList.find((f) => !f.parent_form_id || f.parent_form_id === null);
+  }
+
+  if (rootForm) {
+    entries.push({
+      position: 1,
+      data: {
+        id: rootForm.id,
+        type: 'form',
+        title: rootForm.name,
+        description: rootForm.description,
+        isActive: rootForm.is_active ?? true,
+        formData: rootForm,
+      },
+    });
+  }
+
+  // Passos informativos e formulários dinâmicos (>= 2)
+  // Replicar EXATAMENTE a lógica do admin: inserir TODOS os formulários (ativos e inativos)
+  const dynamicForms = formsList.filter(
+    (f) => typeof f.onboard_step === 'number' && (f.onboard_step as number) >= 2
+  );
+  const occupied = new Set<number>(
+    dynamicForms.map((f) => f.onboard_step as number).concat(rootForm ? [1] : [])
+  );
+
+  // Inserir TODOS os formulários dinâmicos (ativos e inativos) com a posição igual ao onboard_step original
+  // Isso replica exatamente a lógica do admin
+  dynamicForms.forEach((form) => {
+    if (form.onboard_step) {
+      const isInfoStep =
+        form.schema &&
+        Array.isArray(form.schema) &&
+        form.schema.length > 0 &&
+        form.schema[0]?.type === 'info';
+
+      entries.push({
+        position: form.onboard_step,
+        data: {
+          id: form.id,
+          type: isInfoStep ? 'info' : 'form',
+          title: form.name,
+          description: form.description,
+          isActive: form.is_active ?? true,
+          formData: form,
+        },
+      });
+    }
+  });
+
+  // Função util para alocar primeiro slot livre a partir de um baseline
+  const findNextFree = (start: number) => {
+    let s = start;
+    while (occupied.has(s)) s += 1;
+    occupied.add(s);
+    return s;
+  };
+
+  // Alocar estáticos em slots livres a partir de seus baselines
+  const previewSlot = findNextFree(2);
+  const previewActive =
+    appSettings.onboarding_static_preview_active !== 'false'; // default true
+  entries.push({
+    position: previewSlot,
+    data: {
+      id: 'static-step-preview',
+      type: 'static',
+      title: 'Preview da Categoria',
+      description: appSettings.onboarding_step2_subtitle,
+      isActive: previewActive,
+      staticData: {
+        step2_title: appSettings.onboarding_step2_title,
+        step2_subtitle: appSettings.onboarding_step2_subtitle,
+      },
+      staticKind: 'preview',
+    },
+  });
+
+  const whatsappSlot = findNextFree(3);
+  const whatsappActive =
+    appSettings.onboarding_static_whatsapp_active !== 'false'; // default true
+  entries.push({
+    position: whatsappSlot,
+    data: {
+      id: 'static-step-whatsapp',
+      type: 'static',
+      title: 'Conectar WhatsApp',
+      description: appSettings.onboarding_step3_title,
+      isActive: whatsappActive,
+      staticData: {
+        step3_title: appSettings.onboarding_step3_title,
+      },
+      staticKind: 'whatsapp',
+    },
+  });
+
+  // Hardcoded (baselines 6, 7, 8) - deslocar se necessário
+  const hard6 = findNextFree(6);
+  const hard6Active = appSettings.onboarding_hardcoded_6_active !== 'false'; // default true
+  entries.push({
+    position: hard6,
+    data: {
+      id: 'hardcoded-step-6',
+      type: 'hardcoded',
+      title: 'Sua rotina está pronta',
+      description: 'Tela de exibição da playlist da rotina criada',
+      isActive: hard6Active,
+      hardcodedKind: 'routine',
+    },
+  });
+
+  const hard7 = findNextFree(7);
+  const hard7Active = appSettings.onboarding_hardcoded_7_active !== 'false'; // default true
+  entries.push({
+    position: hard7,
+    data: {
+      id: 'hardcoded-step-7',
+      type: 'hardcoded',
+      title: 'Conectar WhatsApp (final)',
+      description: 'Tela de configuração do WhatsApp para receber versículos diários',
+      isActive: hard7Active,
+      hardcodedKind: 'whatsapp-final',
+    },
+  });
+
+  const hard8 = findNextFree(8);
+  const hard8Active = appSettings.onboarding_hardcoded_8_active !== 'false'; // default true
+  entries.push({
+    position: hard8,
+    data: {
+      id: 'hardcoded-step-8',
+      type: 'hardcoded',
+      title: 'Versículo Diário',
+      description: 'Tela de opt-in para receber versículos diários via WhatsApp',
+      isActive: hard8Active,
+      hardcodedKind: 'daily-verse',
+    },
+  });
+
+  // Ordenar por posição
+  const ordered = entries.sort((a, b) => a.position - b.position);
+  return ordered.map((e) => ({
+    ...e.data,
+    position: e.position,
+  }));
+}
+
+/**
+ * Gera URL para um passo específico baseado no tipo
+ */
+export function getStepUrl(
+  step: OnboardingStep,
+  params: {
+    categoryId?: string;
+    formId?: string;
+  }
+): string {
+  const categoryParam = params.categoryId
+    ? `&categoryId=${encodeURIComponent(params.categoryId)}`
+    : '';
+  const formParam = params.formId ? `&formId=${encodeURIComponent(params.formId)}` : '';
+
+  if (step.type === 'static') {
+    if (step.staticKind === 'preview') {
+      return `/onboarding?step=${step.position}&showStatic=preview${categoryParam}${formParam}`;
+    } else if (step.staticKind === 'whatsapp') {
+      return `/onboarding?step=${step.position}&showStatic=whatsapp${categoryParam}${formParam}`;
+    }
+  }
+
+  // Para passos dinâmicos e hardcoded
+  return `/onboarding?step=${step.position}${categoryParam}${formParam}`;
+}
+
+/**
+ * Encontra o próximo passo ativo após o passo atual
+ */
+export async function getNextStepUrl(
+  currentStep: number,
+  params: {
+    categoryId?: string;
+    formId?: string;
+    settings?: AppSettings;
+  }
+): Promise<string> {
+  const steps = await getOnboardingStepsOrder(params.settings);
+
+  // Filtrar apenas passos ativos
+  let activeSteps = steps.filter((s) => s.isActive);
+
+  // Verificação especial para passo preview: só está disponível se tiver categoryId
+  activeSteps = activeSteps.filter((s) => {
+    if (s.type === 'static' && s.staticKind === 'preview') {
+      return !!params.categoryId;
+    }
+    return true;
+  });
+
+  // Ordenar por position para garantir ordem correta
+  activeSteps.sort((a, b) => a.position - b.position);
+
+  // Encontrar o índice do passo atual na lista de passos ativos
+  // Isso garante que seguimos a ordem sequencial dos passos ativos,
+  // pulando apenas os passos inativos
+  const currentIndex = activeSteps.findIndex((s) => s.position === currentStep);
+  
+  let nextStep: OnboardingStep | undefined;
+  
+  if (currentIndex >= 0 && currentIndex < activeSteps.length - 1) {
+    // Se encontrou o passo atual na lista de ativos, pegar o próximo da lista
+    // Isso garante ordem sequencial respeitando apenas passos ativos
+    nextStep = activeSteps[currentIndex + 1];
+  } else {
+    // Fallback: se não encontrou o passo atual (pode ser inativo ou inválido),
+    // buscar o primeiro passo ativo com position > currentStep
+    nextStep = activeSteps.find((s) => s.position > currentStep);
+  }
+
+  if (nextStep) {
+    return getStepUrl(nextStep, params);
+  }
+
+  // Não há mais passos, finalizar onboarding
+  return '/';
+}
+

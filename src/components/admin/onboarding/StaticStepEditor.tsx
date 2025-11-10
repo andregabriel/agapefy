@@ -11,6 +11,7 @@ import { Save, X } from 'lucide-react';
 
 interface StaticStepEditorProps {
   stepNumber: number;
+  stepId?: string; // Identificador único do passo (ex: 'static-step-preview', 'static-step-whatsapp')
   initialData?: {
     step2_title?: string;
     step2_subtitle?: string;
@@ -22,6 +23,7 @@ interface StaticStepEditorProps {
 
 export default function StaticStepEditor({
   stepNumber,
+  stepId,
   initialData,
   onSaved,
   onCancel,
@@ -29,31 +31,35 @@ export default function StaticStepEditor({
   const { updateSetting, settings, refetch } = useAppSettings();
   const [saving, setSaving] = useState(false);
   
+  // Identificar qual passo estático está sendo editado baseado no stepId
+  const isPreviewStep = stepId === 'static-step-preview';
+  const isWhatsAppStep = stepId === 'static-step-whatsapp';
+  
   const [step2Title, setStep2Title] = useState(initialData?.step2_title || settings.onboarding_step2_title || '');
   const [step2Subtitle, setStep2Subtitle] = useState(initialData?.step2_subtitle || settings.onboarding_step2_subtitle || '');
   const [step3Title, setStep3Title] = useState(initialData?.step3_title || settings.onboarding_step3_title || '');
 
   // Sincronizar valores quando settings mudarem
   useEffect(() => {
-    if (stepNumber === 2) {
+    if (isPreviewStep) {
       setStep2Title(settings.onboarding_step2_title || '');
       setStep2Subtitle(settings.onboarding_step2_subtitle || '');
-    } else if (stepNumber === 3) {
+    } else if (isWhatsAppStep) {
       setStep3Title(settings.onboarding_step3_title || '');
     }
-  }, [settings, stepNumber]);
+  }, [settings, isPreviewStep, isWhatsAppStep]);
 
   const handleSave = async () => {
     try {
       setSaving(true);
 
-      if (stepNumber === 2) {
+      if (isPreviewStep) {
         const result1 = await updateSetting('onboarding_step2_title', step2Title);
         const result2 = await updateSetting('onboarding_step2_subtitle', step2Subtitle);
         if (!result1.success || !result2.success) {
           throw new Error('Erro ao salvar configurações');
         }
-      } else if (stepNumber === 3) {
+      } else if (isWhatsAppStep) {
         const result = await updateSetting('onboarding_step3_title', step3Title);
         if (!result.success) {
           throw new Error('Erro ao salvar configurações');
@@ -90,7 +96,7 @@ export default function StaticStepEditor({
         </div>
       </div>
 
-      {stepNumber === 2 && (
+      {isPreviewStep && (
         <div className="space-y-4">
           <div>
             <Label htmlFor="step2-title">Título</Label>
@@ -114,7 +120,7 @@ export default function StaticStepEditor({
         </div>
       )}
 
-      {stepNumber === 3 && (
+      {isWhatsAppStep && (
         <div>
           <Label htmlFor="step3-title">Título</Label>
           <Input

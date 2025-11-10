@@ -156,6 +156,7 @@ export default function OnboardingTimeline() {
 
     // Alocar estáticos em slots livres a partir de seus baselines
     const previewSlot = findNextFree(2);
+    const previewActive = settings.onboarding_static_preview_active !== 'false'; // default true
     entries.push({
       position: previewSlot,
       data: {
@@ -163,7 +164,7 @@ export default function OnboardingTimeline() {
         type: 'static',
         title: 'Preview da Categoria',
         description: settings.onboarding_step2_subtitle,
-        isActive: true,
+        isActive: previewActive,
         staticData: {
           step2_title: settings.onboarding_step2_title,
           step2_subtitle: settings.onboarding_step2_subtitle,
@@ -172,6 +173,7 @@ export default function OnboardingTimeline() {
     });
 
     const whatsappSlot = findNextFree(3);
+    const whatsappActive = settings.onboarding_static_whatsapp_active !== 'false'; // default true
     entries.push({
       position: whatsappSlot,
       data: {
@@ -179,7 +181,7 @@ export default function OnboardingTimeline() {
         type: 'static',
         title: 'Conectar WhatsApp',
         description: settings.onboarding_step3_title,
-        isActive: true,
+        isActive: whatsappActive,
         staticData: {
           step3_title: settings.onboarding_step3_title,
         },
@@ -188,6 +190,7 @@ export default function OnboardingTimeline() {
 
     // Hardcoded (baselines 6, 7, 8) - deslocar se necessário
     const hard6 = findNextFree(6);
+    const hard6Active = settings.onboarding_hardcoded_6_active !== 'false'; // default true
     entries.push({
       position: hard6,
       data: {
@@ -195,11 +198,12 @@ export default function OnboardingTimeline() {
         type: 'hardcoded',
         title: 'Sua rotina está pronta',
         description: 'Tela de exibição da playlist da rotina criada',
-        isActive: true,
+        isActive: hard6Active,
       }
     });
 
     const hard7 = findNextFree(7);
+    const hard7Active = settings.onboarding_hardcoded_7_active !== 'false'; // default true
     entries.push({
       position: hard7,
       data: {
@@ -207,11 +211,12 @@ export default function OnboardingTimeline() {
         type: 'hardcoded',
         title: 'Conectar WhatsApp (final)',
         description: 'Tela de configuração do WhatsApp para receber versículos diários',
-        isActive: true,
+        isActive: hard7Active,
       }
     });
 
     const hard8 = findNextFree(8);
+    const hard8Active = settings.onboarding_hardcoded_8_active !== 'false'; // default true
     entries.push({
       position: hard8,
       data: {
@@ -219,7 +224,7 @@ export default function OnboardingTimeline() {
         type: 'hardcoded',
         title: 'Versículo Diário',
         description: 'Tela de opt-in para receber versículos diários via WhatsApp',
-        isActive: true,
+        isActive: hard8Active,
       }
     });
 

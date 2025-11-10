@@ -60,6 +60,12 @@ interface AppSettings {
   onboarding_step2_title?: string;
   onboarding_step2_subtitle?: string;
   onboarding_step3_title?: string;
+  // Onboarding step active controls
+  onboarding_static_preview_active?: string;
+  onboarding_static_whatsapp_active?: string;
+  onboarding_hardcoded_6_active?: string;
+  onboarding_hardcoded_7_active?: string;
+  onboarding_hardcoded_8_active?: string;
 }
 
 const DEFAULT_SETTINGS: AppSettings = {
@@ -112,6 +118,12 @@ const DEFAULT_SETTINGS: AppSettings = {
   onboarding_step2_title: 'Parabéns pela coragem e pela abertura de dar as mãos à Jesus neste momento difícil.',
   onboarding_step2_subtitle: 'Sua playlist foi criada, em breve você poderá escutar essas orações.',
   onboarding_step3_title: 'Conecte seu WhatsApp para receber uma mensagem diária para {category}.',
+  // Onboarding step active controls (default: true)
+  onboarding_static_preview_active: 'true',
+  onboarding_static_whatsapp_active: 'true',
+  onboarding_hardcoded_6_active: 'true',
+  onboarding_hardcoded_7_active: 'true',
+  onboarding_hardcoded_8_active: 'true',
 };
 
 export function useAppSettings() {

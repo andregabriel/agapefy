@@ -10,6 +10,7 @@ import FormStepEditor from './FormStepEditor';
 import StaticStepEditor from './StaticStepEditor';
 import InfoStepEditor from './InfoStepEditor';
 import StepPreview from './StepPreview';
+import { useAppSettings } from '@/hooks/useAppSettings';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -44,6 +45,7 @@ export default function StepCard({ step, onUpdated, onDeleted }: StepCardProps) 
   const [showPreview, setShowPreview] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const { settings, updateSetting } = useAppSettings();
 
   const getTypeBadge = () => {
     switch (step.type) {
@@ -87,16 +89,51 @@ export default function StepCard({ step, onUpdated, onDeleted }: StepCardProps) 
   };
 
   const handleToggleActive = async (checked: boolean) => {
-    if ((step.type !== 'form' && step.type !== 'info') || !step.formData) return;
-
     try {
-      const { supabase } = await import('@/lib/supabase');
-      const { error } = await supabase
-        .from('admin_forms')
-        .update({ is_active: checked })
-        .eq('id', step.id);
+      // Para passos dinâmicos (form e info), atualizar no banco
+      if ((step.type === 'form' || step.type === 'info') && step.formData) {
+        const { supabase } = await import('@/lib/supabase');
+        const { error } = await supabase
+          .from('admin_forms')
+          .update({ is_active: checked })
+          .eq('id', step.id);
 
-      if (error) throw error;
+        if (error) throw error;
+      } else if (step.type === 'static') {
+        // Para passos estáticos, atualizar em app_settings
+        let settingKey: string;
+        if (step.id === 'static-step-preview') {
+          settingKey = 'onboarding_static_preview_active';
+        } else if (step.id === 'static-step-whatsapp') {
+          settingKey = 'onboarding_static_whatsapp_active';
+        } else {
+          return;
+        }
+
+        const result = await updateSetting(settingKey as any, checked ? 'true' : 'false');
+        if (!result.success) {
+          throw new Error(result.error || 'Erro ao atualizar');
+        }
+      } else if (step.type === 'hardcoded') {
+        // Para passos hardcoded, atualizar em app_settings
+        let settingKey: string;
+        if (step.id === 'hardcoded-step-6') {
+          settingKey = 'onboarding_hardcoded_6_active';
+        } else if (step.id === 'hardcoded-step-7') {
+          settingKey = 'onboarding_hardcoded_7_active';
+        } else if (step.id === 'hardcoded-step-8') {
+          settingKey = 'onboarding_hardcoded_8_active';
+        } else {
+          return;
+        }
+
+        const result = await updateSetting(settingKey as any, checked ? 'true' : 'false');
+        if (!result.success) {
+          throw new Error(result.error || 'Erro ao atualizar');
+        }
+      } else {
+        return;
+      }
 
       const { toast } = await import('sonner');
       toast.success(checked ? 'Passo ativado' : 'Passo desativado');
@@ -128,16 +165,15 @@ export default function StepCard({ step, onUpdated, onDeleted }: StepCardProps) 
               </div>
             </div>
             <div className="flex items-center gap-2 ml-4">
-              {(step.type === 'form' || step.type === 'info') && (
-                <div className="flex items-center gap-2">
-                  <span className="text-xs text-gray-500">Ativo</span>
-                  <Switch
-                    checked={step.isActive}
-                    onCheckedChange={handleToggleActive}
-                    aria-label={`Alternar ativo para passo ${step.stepNumber}`}
-                  />
-                </div>
-              )}
+              {/* Mostrar toggle para todos os tipos de passo */}
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-gray-500">Ativo</span>
+                <Switch
+                  checked={step.isActive}
+                  onCheckedChange={handleToggleActive}
+                  aria-label={`Alternar ativo para passo ${step.stepNumber}`}
+                />
+              </div>
               <Button
                 variant="ghost"
                 size="sm"
@@ -210,6 +246,7 @@ export default function StepCard({ step, onUpdated, onDeleted }: StepCardProps) 
             {isEditing && step.type === 'static' && (
               <StaticStepEditor
                 stepNumber={step.stepNumber}
+                stepId={step.id}
                 initialData={step.staticData}
                 onSaved={() => {
                   setIsEditing(false);
