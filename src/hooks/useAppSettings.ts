@@ -66,6 +66,12 @@ interface AppSettings {
   onboarding_hardcoded_6_active?: string;
   onboarding_hardcoded_7_active?: string;
   onboarding_hardcoded_8_active?: string;
+  // Onboarding step positions
+  onboarding_static_preview_position?: string;
+  onboarding_static_whatsapp_position?: string;
+  onboarding_hardcoded_6_position?: string;
+  onboarding_hardcoded_7_position?: string;
+  onboarding_hardcoded_8_position?: string;
 }
 
 const DEFAULT_SETTINGS: AppSettings = {
@@ -124,6 +130,12 @@ const DEFAULT_SETTINGS: AppSettings = {
   onboarding_hardcoded_6_active: 'true',
   onboarding_hardcoded_7_active: 'true',
   onboarding_hardcoded_8_active: 'true',
+  // Onboarding step positions (default baselines)
+  onboarding_static_preview_position: '2',
+  onboarding_static_whatsapp_position: '3',
+  onboarding_hardcoded_6_position: '6',
+  onboarding_hardcoded_7_position: '7',
+  onboarding_hardcoded_8_position: '8',
 };
 
 export function useAppSettings() {

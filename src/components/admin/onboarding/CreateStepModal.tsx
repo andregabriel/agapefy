@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import { toast } from 'sonner';
 import {
@@ -42,6 +42,15 @@ export default function CreateStepModal({
   const [name, setName] = useState('');
   const [customStepNumber, setCustomStepNumber] = useState<number | null>(null);
 
+  // Resetar estado quando o modal abrir ou o tipo mudar
+  useEffect(() => {
+    if (open) {
+      setName('');
+      setCustomStepNumber(null);
+      setCreating(false);
+    }
+  }, [open, stepType]);
+
   const calculateNextStep = () => {
     // Se não há passo 1, criar como passo 1
     const hasStep1 = existingSteps.some(s => s.stepNumber === 1);
@@ -75,41 +84,78 @@ export default function CreateStepModal({
       setCreating(true);
       const nextStep = customStepNumber !== null ? customStepNumber : calculateNextStep();
       
-      // Verificar se o passo já existe
-      const stepExists = existingSteps.some(s => s.stepNumber === nextStep);
+      // Verificar se já existe um passo DINÂMICO no banco com esse número
+      // (passos estáticos não bloqueiam a criação de passos dinâmicos)
+      const { data: existingDynamicStep, error: checkError } = await supabase
+        .from('admin_forms')
+        .select('id, onboard_step')
+        .eq('form_type', 'onboarding')
+        .eq('is_active', true)
+        .eq('onboard_step', nextStep)
+        .lt('onboard_step', 6); // Apenas passos dinâmicos (< 6)
       
-      if (stepExists) {
-        // Renumerar automaticamente todos os passos dinâmicos >= nextStep para abrir espaço
-        // Passos estáticos (2 e 3) e hardcoded (6, 7, 8) não são renumerados porque são hardcoded
-        // Mas os passos dinâmicos (formulários) >= nextStep devem ser renumerados (+1)
-        
-        // Buscar todos os formulários dinâmicos que precisam ser renumerados
-        // Passos >= nextStep que são formulários dinâmicos (não estáticos, não hardcoded)
-        const { data: formsToRenumber, error: fetchError } = await supabase
+      if (checkError) {
+        throw new Error(`Erro ao verificar passo existente: ${checkError.message}`);
+      }
+      
+      // Se existe um passo dinâmico com esse número, precisamos renumerar
+      // TODOS os passos dinâmicos >= nextStep para abrir espaço
+      // Os passos estáticos e hardcoded se ajustarão automaticamente na timeline
+      if (existingDynamicStep && existingDynamicStep.length > 0) {
+        // Buscar TODOS os passos dinâmicos >= nextStep (sem limite superior)
+        // Isso garante que todos os passos sejam "empurrados" para baixo sequencialmente
+        const { data: allFormsToRenumber, error: fetchError } = await supabase
           .from('admin_forms')
           .select('id, onboard_step')
           .eq('form_type', 'onboarding')
           .eq('is_active', true)
           .gte('onboard_step', nextStep)
-          .lt('onboard_step', 6); // Não renumerar passos hardcoded (6, 7, 8)
+          .not('onboard_step', 'is', null)
+          .order('onboard_step', { ascending: true }); // Ordenar ascendente para garantir ordem correta
         
         if (fetchError) {
           throw new Error(`Erro ao buscar passos para renumerar: ${fetchError.message}`);
         }
         
-        if (formsToRenumber && formsToRenumber.length > 0) {
-          // Ordenar por onboard_step descendente para renumerar do maior para o menor
-          formsToRenumber.sort((a, b) => (b.onboard_step || 0) - (a.onboard_step || 0));
+        if (allFormsToRenumber && allFormsToRenumber.length > 0) {
+          // Garantir que temos todos os passos: verificar se há passos em posições intermediárias
+          // que não foram capturados (pode acontecer se houver lacunas)
+          const stepsFound = new Set(allFormsToRenumber.map(f => f.onboard_step).filter((s): s is number => typeof s === 'number'));
+          const maxStepFound = Math.max(...Array.from(stepsFound));
           
-          // Primeiro, renumerar para números temporários altos (900+) para evitar conflitos de constraint única
-          // Isso garante que não haverá duplicatas durante o processo
+          // Buscar novamente todos os passos >= nextStep para garantir que não perdemos nenhum
+          // Isso é importante porque pode haver passos criados entre a primeira busca e agora
+          const { data: doubleCheckForms, error: doubleCheckError } = await supabase
+            .from('admin_forms')
+            .select('id, onboard_step')
+            .eq('form_type', 'onboarding')
+            .eq('is_active', true)
+            .gte('onboard_step', nextStep)
+            .not('onboard_step', 'is', null);
+          
+          if (!doubleCheckError && doubleCheckForms) {
+            // Adicionar qualquer passo que não estava na lista original
+            const originalIds = new Set(allFormsToRenumber.map(f => f.id));
+            for (const form of doubleCheckForms) {
+              if (!originalIds.has(form.id) && form.onboard_step && form.onboard_step >= nextStep) {
+                allFormsToRenumber.push(form);
+              }
+            }
+          }
+          
+          // Ordenar por onboard_step DESCENDENTE para renumerar do maior para o menor
+          // Isso evita conflitos de constraint única
+          allFormsToRenumber.sort((a, b) => (b.onboard_step || 0) - (a.onboard_step || 0));
+          
+          // Primeiro, renumerar TODOS para números temporários altos (900+) para evitar conflitos
           const tempOffset = 900;
           const tempSteps: Array<{ id: string; originalStep: number; tempStep: number }> = [];
           
-          for (const form of formsToRenumber) {
+          for (const form of allFormsToRenumber) {
             if (form.onboard_step && form.onboard_step >= nextStep) {
               const originalStep = form.onboard_step;
-              const tempStep = originalStep + tempOffset;
+              // Se já está em um número temporário (>= tempOffset), usar um offset maior
+              const tempStep = originalStep >= tempOffset ? originalStep + 1000 : originalStep + tempOffset;
               tempSteps.push({ id: form.id, originalStep, tempStep });
               
               const { error: updateError } = await supabase
@@ -123,27 +169,43 @@ export default function CreateStepModal({
             }
           }
           
-          // Depois, renumerar para os números finais (+1 do original)
+          // Depois, renumerar para os números finais (+1 do original) em ordem DESCENDENTE
+          // Ordenar por originalStep descendente para garantir ordem correta
+          tempSteps.sort((a, b) => {
+            const aOriginal = a.originalStep >= tempOffset ? a.originalStep - tempOffset : a.originalStep;
+            const bOriginal = b.originalStep >= tempOffset ? b.originalStep - tempOffset : b.originalStep;
+            return bOriginal - aOriginal; // Descendente: maior primeiro
+          });
+          
+          // Renumerar todos os passos sequencialmente (+1)
           for (const item of tempSteps) {
-            const finalStep = item.originalStep + 1;
+            // Calcular o passo original (removendo offset temporário se aplicável)
+            const originalStep = item.originalStep >= tempOffset ? item.originalStep - tempOffset : item.originalStep;
+            const finalStep = originalStep + 1;
+            
             const { error: updateError } = await supabase
               .from('admin_forms')
               .update({ onboard_step: finalStep })
               .eq('id', item.id);
             
             if (updateError) {
-              throw new Error(`Erro ao renumerar passo ${item.originalStep} para ${finalStep}: ${updateError.message}`);
+              if (updateError.code === '23505') {
+                throw new Error(`Conflito ao renumerar passo ${originalStep} para ${finalStep}: já existe um passo nesta posição. Tente novamente.`);
+              }
+              throw new Error(`Erro ao renumerar passo ${originalStep} para ${finalStep}: ${updateError.message}`);
             }
           }
           
-          toast.success(`Passos renumerados automaticamente (passo ${nextStep} → ${nextStep + 1}, ${nextStep + 1} → ${nextStep + 2}, etc.)`);
+          toast.success(`Passos renumerados automaticamente. Todos os passos na posição ${nextStep} ou acima foram renumerados (+1).`);
         } else {
-          // Não há passos dinâmicos para renumerar, mas o passo existe (provavelmente estático/hardcoded)
-          toast.error(`Já existe um passo com o número ${nextStep}. Escolha outro número.`);
+          // Não há passos dinâmicos para renumerar, mas existe um passo dinâmico com esse número
+          toast.error(`Já existe um passo dinâmico com o número ${nextStep}. Escolha outro número.`);
           setCreating(false);
           return;
         }
       }
+      // Se não existe passo dinâmico com esse número, podemos criar normalmente
+      // (mesmo que exista um passo estático na timeline, isso não bloqueia)
 
       const base: any = {
         name: name.trim(),
@@ -286,42 +348,55 @@ export default function CreateStepModal({
               placeholder={`Etapa ${suggestedStep}`}
             />
           </div>
-          {stepType === 'info' && (
-            <div>
-              <Label htmlFor="step-number">Número do Passo</Label>
-              <Input
-                id="step-number"
-                type="number"
-                min={1}
-                value={customStepNumber !== null ? customStepNumber : suggestedStep}
-                onChange={(e) => {
-                  const val = e.target.value ? Number(e.target.value) : null;
-                  setCustomStepNumber(val);
-                }}
-                placeholder={String(suggestedStep)}
-              />
-              <p className="text-xs text-gray-500 mt-1">
-                Sugestão: {suggestedStep}. Você pode escolher outro número para inserir entre passos existentes.
-              </p>
-              {(() => {
-                const targetStep = customStepNumber !== null ? customStepNumber : suggestedStep;
-                const stepExists = existingSteps.some(s => s.stepNumber === targetStep);
-                if (stepExists && targetStep === 2) {
-                  return (
-                    <p className="text-xs text-blue-600 mt-2 font-medium">
-                      ⚠️ O passo 2 estático (Preview da Categoria) já existe. Ao criar este passo informativo como passo 2, os passos dinâmicos (formulários) existentes no passo 2 ou acima serão renumerados automaticamente (+1). O passo 2 estático continuará sendo passo 2, mas aparecerá depois deste passo informativo no fluxo.
-                    </p>
-                  );
+          <div>
+            <Label htmlFor="step-number">Número do Passo</Label>
+            <Input
+              id="step-number"
+              type="number"
+              min={1}
+              value={customStepNumber !== null ? customStepNumber : suggestedStep}
+              onChange={(e) => {
+                const val = e.target.value.trim();
+                if (val === '') {
+                  setCustomStepNumber(null);
+                } else {
+                  const numVal = Number(val);
+                  if (!isNaN(numVal) && numVal > 0) {
+                    setCustomStepNumber(numVal);
+                  } else {
+                    setCustomStepNumber(null);
+                  }
                 }
-                return null;
-              })()}
-            </div>
-          )}
-          {stepType !== 'info' && (
-            <p className="text-xs text-gray-500">
-              Este passo será criado como passo {suggestedStep}
+              }}
+              placeholder={String(suggestedStep)}
+            />
+            <p className="text-xs text-gray-500 mt-1">
+              Sugestão: {suggestedStep}. Você pode escolher outro número para inserir entre passos existentes.
             </p>
-          )}
+            {(() => {
+              const targetStep = customStepNumber !== null ? customStepNumber : suggestedStep;
+              // Verificar se existe um passo dinâmico na timeline (não apenas estático)
+              const dynamicStepExists = existingSteps.some(s => 
+                s.stepNumber === targetStep && (s.type === 'form' || s.type === 'info')
+              );
+              const anyStepExists = existingSteps.some(s => s.stepNumber === targetStep);
+              
+              if (dynamicStepExists) {
+                return (
+                  <p className="text-xs text-blue-600 mt-2 font-medium">
+                    ⚠️ Já existe um passo dinâmico com o número {targetStep}. Os passos dinâmicos existentes no passo {targetStep} ou acima serão renumerados automaticamente (+1) para abrir espaço.
+                  </p>
+                );
+              } else if (anyStepExists) {
+                return (
+                  <p className="text-xs text-gray-500 mt-2">
+                    ℹ️ Existe um passo estático na posição {targetStep}. Você pode criar um passo dinâmico nesta posição.
+                  </p>
+                );
+              }
+              return null;
+            })()}
+          </div>
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={creating}>

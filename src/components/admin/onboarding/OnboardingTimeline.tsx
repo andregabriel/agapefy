@@ -45,7 +45,7 @@ interface StepData {
 }
 
 export default function OnboardingTimeline() {
-  const { settings, loading: settingsLoading } = useAppSettings();
+  const { settings, loading: settingsLoading, updateSetting } = useAppSettings();
   const [forms, setForms] = useState<AdminForm[]>([]);
   const [loading, setLoading] = useState(true);
   const [resetting, setResetting] = useState(false);
@@ -154,8 +154,9 @@ export default function OnboardingTimeline() {
       return s;
     };
 
-    // Alocar estáticos em slots livres a partir de seus baselines
-    const previewSlot = findNextFree(2);
+    // Alocar estáticos usando posições de app_settings (ou defaults)
+    const previewPosition = Number.parseInt(settings.onboarding_static_preview_position || '2', 10) || 2;
+    const previewSlot = findNextFree(previewPosition);
     const previewActive = settings.onboarding_static_preview_active !== 'false'; // default true
     entries.push({
       position: previewSlot,
@@ -172,7 +173,8 @@ export default function OnboardingTimeline() {
       }
     });
 
-    const whatsappSlot = findNextFree(3);
+    const whatsappPosition = Number.parseInt(settings.onboarding_static_whatsapp_position || '3', 10) || 3;
+    const whatsappSlot = findNextFree(whatsappPosition);
     const whatsappActive = settings.onboarding_static_whatsapp_active !== 'false'; // default true
     entries.push({
       position: whatsappSlot,
@@ -188,8 +190,9 @@ export default function OnboardingTimeline() {
       }
     });
 
-    // Hardcoded (baselines 6, 7, 8) - deslocar se necessário
-    const hard6 = findNextFree(6);
+    // Hardcoded usando posições de app_settings (ou defaults)
+    const hard6Position = Number.parseInt(settings.onboarding_hardcoded_6_position || '6', 10) || 6;
+    const hard6 = findNextFree(hard6Position);
     const hard6Active = settings.onboarding_hardcoded_6_active !== 'false'; // default true
     entries.push({
       position: hard6,
@@ -202,7 +205,8 @@ export default function OnboardingTimeline() {
       }
     });
 
-    const hard7 = findNextFree(7);
+    const hard7Position = Number.parseInt(settings.onboarding_hardcoded_7_position || '7', 10) || 7;
+    const hard7 = findNextFree(hard7Position);
     const hard7Active = settings.onboarding_hardcoded_7_active !== 'false'; // default true
     entries.push({
       position: hard7,
@@ -215,7 +219,8 @@ export default function OnboardingTimeline() {
       }
     });
 
-    const hard8 = findNextFree(8);
+    const hard8Position = Number.parseInt(settings.onboarding_hardcoded_8_position || '8', 10) || 8;
+    const hard8 = findNextFree(hard8Position);
     const hard8Active = settings.onboarding_hardcoded_8_active !== 'false'; // default true
     entries.push({
       position: hard8,
@@ -312,6 +317,129 @@ export default function OnboardingTimeline() {
     void refreshForms();
   };
 
+  // Função auxiliar para obter a posição desejada de um passo
+  const getStepPosition = (step: StepData): number | null => {
+    if (step.type === 'form' || step.type === 'info') {
+      return step.formData?.onboard_step ?? null;
+    } else if (step.type === 'static') {
+      if (step.id === 'static-step-preview') {
+        return Number.parseInt(settings.onboarding_static_preview_position || '2', 10) || 2;
+      } else if (step.id === 'static-step-whatsapp') {
+        return Number.parseInt(settings.onboarding_static_whatsapp_position || '3', 10) || 3;
+      }
+    } else if (step.type === 'hardcoded') {
+      if (step.id === 'hardcoded-step-6') {
+        return Number.parseInt(settings.onboarding_hardcoded_6_position || '6', 10) || 6;
+      } else if (step.id === 'hardcoded-step-7') {
+        return Number.parseInt(settings.onboarding_hardcoded_7_position || '7', 10) || 7;
+      } else if (step.id === 'hardcoded-step-8') {
+        return Number.parseInt(settings.onboarding_hardcoded_8_position || '8', 10) || 8;
+      }
+    }
+    return null;
+  };
+
+  // Função auxiliar para atualizar a posição de um passo
+  const updateStepPosition = async (step: StepData, newPosition: number): Promise<void> => {
+    if (step.type === 'form' || step.type === 'info') {
+      const { error } = await supabase
+        .from('admin_forms')
+        .update({ onboard_step: newPosition })
+        .eq('id', step.id);
+      if (error) throw error;
+    } else if (step.type === 'static') {
+      let settingKey: string;
+      if (step.id === 'static-step-preview') {
+        settingKey = 'onboarding_static_preview_position';
+      } else if (step.id === 'static-step-whatsapp') {
+        settingKey = 'onboarding_static_whatsapp_position';
+      } else {
+        throw new Error('Passo estático desconhecido');
+      }
+      const result = await updateSetting(settingKey as any, String(newPosition));
+      if (!result.success) {
+        throw new Error(result.error || 'Erro ao atualizar posição');
+      }
+    } else if (step.type === 'hardcoded') {
+      let settingKey: string;
+      if (step.id === 'hardcoded-step-6') {
+        settingKey = 'onboarding_hardcoded_6_position';
+      } else if (step.id === 'hardcoded-step-7') {
+        settingKey = 'onboarding_hardcoded_7_position';
+      } else if (step.id === 'hardcoded-step-8') {
+        settingKey = 'onboarding_hardcoded_8_position';
+      } else {
+        throw new Error('Passo hardcoded desconhecido');
+      }
+      const result = await updateSetting(settingKey as any, String(newPosition));
+      if (!result.success) {
+        throw new Error(result.error || 'Erro ao atualizar posição');
+      }
+    }
+  };
+
+  const handleMoveStep = async (stepId: string, direction: 'up' | 'down') => {
+    try {
+      // Encontrar o passo atual
+      const currentStep = steps.find(s => s.id === stepId);
+      if (!currentStep) {
+        return;
+      }
+
+      const currentStepNumber = currentStep.stepNumber;
+      const targetStepNumber = direction === 'up' ? currentStepNumber - 1 : currentStepNumber + 1;
+
+      // Verificar se há um passo na posição alvo
+      const targetStep = steps.find(s => s.stepNumber === targetStepNumber);
+      if (!targetStep) {
+        toast.error('Não é possível mover o passo nesta direção');
+        return;
+      }
+
+      // Obter as posições desejadas dos passos
+      const currentPosition = getStepPosition(currentStep);
+      const targetPosition = getStepPosition(targetStep);
+
+      if (currentPosition === null || targetPosition === null) {
+        toast.error('Erro ao obter posições dos passos');
+        return;
+      }
+
+      // Se ambos são dinâmicos (form/info), usar lógica de troca com temporário
+      if ((currentStep.type === 'form' || currentStep.type === 'info') && 
+          (targetStep.type === 'form' || targetStep.type === 'info')) {
+        // Buscar o maior onboard_step para usar como temporário seguro
+        const { data: maxStepData, error: maxError } = await supabase
+          .from('admin_forms')
+          .select('onboard_step')
+          .eq('form_type', 'onboarding')
+          .not('onboard_step', 'is', null)
+          .order('onboard_step', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+        if (maxError) throw maxError;
+        const maxStep = maxStepData?.onboard_step || 0;
+        const tempStep = maxStep + 1000;
+
+        // Trocar usando temporário
+        await updateStepPosition(currentStep, tempStep);
+        await updateStepPosition(targetStep, currentPosition);
+        await updateStepPosition(currentStep, targetPosition);
+      } else {
+        // Para outros casos, simplesmente trocar as posições
+        await updateStepPosition(currentStep, targetPosition);
+        await updateStepPosition(targetStep, currentPosition);
+      }
+
+      toast.success('Posição do passo atualizada com sucesso');
+      void refreshForms();
+    } catch (e: any) {
+      console.error(e);
+      toast.error(`Não foi possível mover o passo: ${e.message || 'Erro desconhecido'}`);
+    }
+  };
+
   if (loading || settingsLoading) {
     return (
       <div className="flex items-center justify-center py-20">
@@ -391,8 +519,10 @@ export default function OnboardingTimeline() {
             <StepCard
               key={step.id}
               step={step}
+              steps={steps}
               onUpdated={handleStepUpdated}
               onDeleted={handleStepDeleted}
+              onMoveStep={handleMoveStep}
             />
           ))
         )}

@@ -9,7 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
-import { Save, X } from 'lucide-react';
+import { Save, X, Sparkles } from 'lucide-react';
 import StepOptionEditor from './StepOptionEditor';
 
 interface AdminForm {
@@ -138,18 +138,83 @@ export default function FormStepEditor({ form, onSaved, onCancel }: FormStepEdit
       <div className="space-y-4">
         {/* Nome */}
         <div>
-          <Label htmlFor="form-name">Nome do Formulário</Label>
+          <div className="flex items-center justify-between mb-2">
+            <Label htmlFor="form-name">Nome do Formulário</Label>
+            {formData.onboard_step && formData.onboard_step > 1 && (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  const input = document.getElementById('form-name') as HTMLInputElement;
+                  if (input) {
+                    const start = input.selectionStart || 0;
+                    const end = input.selectionEnd || 0;
+                    const text = formData.name || '';
+                    const newText = text.substring(0, start) + '{resposta1}' + text.substring(end);
+                    setFormData(prev => ({ ...prev, name: newText }));
+                    // Focar no input e reposicionar cursor
+                    setTimeout(() => {
+                      input.focus();
+                      const newPos = start + '{resposta1}'.length;
+                      input.setSelectionRange(newPos, newPos);
+                    }, 0);
+                  }
+                }}
+                className="h-7 text-xs"
+                title="Inserir texto da resposta do passo 1"
+              >
+                <Sparkles className="h-3 w-3 mr-1" />
+                Usar resposta do passo 1
+              </Button>
+            )}
+          </div>
           <Input
             id="form-name"
             value={formData.name}
             onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
             placeholder="Ex.: O que mais você quer a benção de Deus, hoje?"
           />
+          {formData.onboard_step && formData.onboard_step > 1 && (
+            <p className="text-xs text-gray-500 mt-1">
+              💡 Use <code className="bg-gray-100 px-1 rounded">{'{resposta1}'}</code> para inserir o texto da opção selecionada no passo 1
+            </p>
+          )}
         </div>
 
         {/* Descrição */}
         <div>
-          <Label htmlFor="form-description">Descrição (opcional)</Label>
+          <div className="flex items-center justify-between mb-2">
+            <Label htmlFor="form-description">Descrição (opcional)</Label>
+            {formData.onboard_step && formData.onboard_step > 1 && (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  const textarea = document.getElementById('form-description') as HTMLTextAreaElement;
+                  if (textarea) {
+                    const start = textarea.selectionStart || 0;
+                    const end = textarea.selectionEnd || 0;
+                    const text = formData.description || '';
+                    const newText = text.substring(0, start) + '{resposta1}' + text.substring(end);
+                    setFormData(prev => ({ ...prev, description: newText }));
+                    // Focar no textarea e reposicionar cursor
+                    setTimeout(() => {
+                      textarea.focus();
+                      const newPos = start + '{resposta1}'.length;
+                      textarea.setSelectionRange(newPos, newPos);
+                    }, 0);
+                  }
+                }}
+                className="h-7 text-xs"
+                title="Inserir texto da resposta do passo 1"
+              >
+                <Sparkles className="h-3 w-3 mr-1" />
+                Usar resposta do passo 1
+              </Button>
+            )}
+          </div>
           <Textarea
             id="form-description"
             value={formData.description || ''}
@@ -157,6 +222,11 @@ export default function FormStepEditor({ form, onSaved, onCancel }: FormStepEdit
             placeholder="Explique o objetivo do formulário"
             rows={3}
           />
+          {formData.onboard_step && formData.onboard_step > 1 && (
+            <p className="text-xs text-gray-500 mt-1">
+              💡 Use <code className="bg-gray-100 px-1 rounded">{'{resposta1}'}</code> para inserir o texto da opção selecionada no passo 1
+            </p>
+          )}
         </div>
 
         {/* Número do passo */}
@@ -275,7 +345,37 @@ export default function FormStepEditor({ form, onSaved, onCancel }: FormStepEdit
           </div>
           {formData.allow_other_option && (
             <div>
-              <Label htmlFor="other-label">Label do campo "Outros"</Label>
+              <div className="flex items-center justify-between mb-2">
+                <Label htmlFor="other-label">Label do campo "Outros"</Label>
+                {formData.onboard_step && formData.onboard_step > 1 && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      const input = document.getElementById('other-label') as HTMLInputElement;
+                      if (input) {
+                        const start = input.selectionStart || 0;
+                        const end = input.selectionEnd || 0;
+                        const text = formData.other_option_label || '';
+                        const newText = text.substring(0, start) + '{resposta1}' + text.substring(end);
+                        setFormData(prev => ({ ...prev, other_option_label: newText }));
+                        // Focar no input e reposicionar cursor
+                        setTimeout(() => {
+                          input.focus();
+                          const newPos = start + '{resposta1}'.length;
+                          input.setSelectionRange(newPos, newPos);
+                        }, 0);
+                      }
+                    }}
+                    className="h-7 text-xs"
+                    title="Inserir texto da resposta do passo 1"
+                  >
+                    <Sparkles className="h-3 w-3 mr-1" />
+                    Usar resposta do passo 1
+                  </Button>
+                )}
+              </div>
               <Input
                 id="other-label"
                 placeholder="Outros"
@@ -284,6 +384,9 @@ export default function FormStepEditor({ form, onSaved, onCancel }: FormStepEdit
               />
               <p className="text-xs text-gray-500 mt-1">
                 Deixe em branco para usar "Outros" como padrão
+                {formData.onboard_step && formData.onboard_step > 1 && (
+                  <> • Use <code className="bg-gray-100 px-1 rounded">{'{resposta1}'}</code> para inserir o texto da opção selecionada no passo 1</>
+                )}
               </p>
             </div>
           )}

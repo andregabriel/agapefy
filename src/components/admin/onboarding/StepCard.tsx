@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
-import { Edit, Eye, Trash, ChevronDown, ChevronUp } from 'lucide-react';
+import { Edit, Eye, Trash, ChevronDown, ChevronUp, ArrowUp, ArrowDown } from 'lucide-react';
 import FormStepEditor from './FormStepEditor';
 import StaticStepEditor from './StaticStepEditor';
 import InfoStepEditor from './InfoStepEditor';
@@ -35,11 +35,13 @@ interface StepData {
 
 interface StepCardProps {
   step: StepData;
+  steps: StepData[];
   onUpdated: () => void;
   onDeleted: () => void;
+  onMoveStep: (stepId: string, direction: 'up' | 'down') => void;
 }
 
-export default function StepCard({ step, onUpdated, onDeleted }: StepCardProps) {
+export default function StepCard({ step, steps, onUpdated, onDeleted, onMoveStep }: StepCardProps) {
   const [isExpanded, setIsExpanded] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
@@ -85,6 +87,28 @@ export default function StepCard({ step, onUpdated, onDeleted }: StepCardProps) 
       toast.error('Não foi possível excluir o passo');
     } finally {
       setIsDeleting(false);
+    }
+  };
+
+  const canMoveUp = () => {
+    const prevStep = steps.find(s => s.stepNumber === step.stepNumber - 1);
+    return !!prevStep; // Pode mover para cima se houver um passo anterior
+  };
+
+  const canMoveDown = () => {
+    const nextStep = steps.find(s => s.stepNumber === step.stepNumber + 1);
+    return !!nextStep; // Pode mover para baixo se houver um passo seguinte
+  };
+
+  const handleMoveUp = () => {
+    if (canMoveUp()) {
+      onMoveStep(step.id, 'up');
+    }
+  };
+
+  const handleMoveDown = () => {
+    if (canMoveDown()) {
+      onMoveStep(step.id, 'down');
     }
   };
 
@@ -165,6 +189,29 @@ export default function StepCard({ step, onUpdated, onDeleted }: StepCardProps) 
               </div>
             </div>
             <div className="flex items-center gap-2 ml-4">
+              {/* Botões de mover posição (para todos os tipos de passos) */}
+              <div className="flex flex-col gap-0.5 mr-2">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleMoveUp}
+                  disabled={!canMoveUp()}
+                  className="h-6 w-6 p-0"
+                  title="Mover para cima"
+                >
+                  <ArrowUp className="h-3 w-3" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleMoveDown}
+                  disabled={!canMoveDown()}
+                  className="h-6 w-6 p-0"
+                  title="Mover para baixo"
+                >
+                  <ArrowDown className="h-3 w-3" />
+                </Button>
+              </div>
               {/* Mostrar toggle para todos os tipos de passo */}
               <div className="flex items-center gap-2">
                 <span className="text-xs text-gray-500">Ativo</span>

@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
-import { Save, X } from 'lucide-react';
+import { Save, X, Sparkles } from 'lucide-react';
 
 interface InfoStepEditorProps {
   form: {
@@ -115,18 +115,79 @@ export default function InfoStepEditor({ form, onSaved, onCancel }: InfoStepEdit
 
         {/* Título */}
         <div>
-          <Label htmlFor="info-title">Título</Label>
+          <div className="flex items-center justify-between mb-2">
+            <Label htmlFor="info-title">Título</Label>
+            {form.onboard_step && form.onboard_step > 1 && (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  const input = document.getElementById('info-title') as HTMLInputElement;
+                  if (input) {
+                    const start = input.selectionStart || 0;
+                    const end = input.selectionEnd || 0;
+                    const newText = title.substring(0, start) + '{resposta1}' + title.substring(end);
+                    setTitle(newText);
+                    setTimeout(() => {
+                      input.focus();
+                      const newPos = start + '{resposta1}'.length;
+                      input.setSelectionRange(newPos, newPos);
+                    }, 0);
+                  }
+                }}
+                className="h-7 text-xs"
+                title="Inserir texto da resposta do passo 1"
+              >
+                <Sparkles className="h-3 w-3 mr-1" />
+                Usar resposta do passo 1
+              </Button>
+            )}
+          </div>
           <Input
             id="info-title"
             value={title}
             onChange={(e) => setTitle(e.target.value)}
             placeholder="Ex.: A oração é onde o coração encontra direção 🙏"
           />
+          {form.onboard_step && form.onboard_step > 1 && (
+            <p className="text-xs text-gray-500 mt-1">
+              💡 Use <code className="bg-gray-100 px-1 rounded">{'{resposta1}'}</code> para inserir o texto da opção selecionada no passo 1
+            </p>
+          )}
         </div>
 
         {/* Subtítulo */}
         <div>
-          <Label htmlFor="info-subtitle">Subtítulo</Label>
+          <div className="flex items-center justify-between mb-2">
+            <Label htmlFor="info-subtitle">Subtítulo</Label>
+            {form.onboard_step && form.onboard_step > 1 && (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  const textarea = document.getElementById('info-subtitle') as HTMLTextAreaElement;
+                  if (textarea) {
+                    const start = textarea.selectionStart || 0;
+                    const end = textarea.selectionEnd || 0;
+                    const newText = subtitle.substring(0, start) + '{resposta1}' + subtitle.substring(end);
+                    setSubtitle(newText);
+                    setTimeout(() => {
+                      textarea.focus();
+                      const newPos = start + '{resposta1}'.length;
+                      textarea.setSelectionRange(newPos, newPos);
+                    }, 0);
+                  }
+                }}
+                className="h-7 text-xs"
+                title="Inserir texto da resposta do passo 1"
+              >
+                <Sparkles className="h-3 w-3 mr-1" />
+                Usar resposta do passo 1
+              </Button>
+            )}
+          </div>
           <Textarea
             id="info-subtitle"
             value={subtitle}
@@ -134,11 +195,44 @@ export default function InfoStepEditor({ form, onSaved, onCancel }: InfoStepEdit
             placeholder="Ex.: Quando você fala com Deus sobre o que sente, o coração se acalma e a fé se fortalece."
             rows={2}
           />
+          {form.onboard_step && form.onboard_step > 1 && (
+            <p className="text-xs text-gray-500 mt-1">
+              💡 Use <code className="bg-gray-100 px-1 rounded">{'{resposta1}'}</code> para inserir o texto da opção selecionada no passo 1
+            </p>
+          )}
         </div>
 
         {/* Explicação */}
         <div>
-          <Label htmlFor="info-explanation">Explicação</Label>
+          <div className="flex items-center justify-between mb-2">
+            <Label htmlFor="info-explanation">Explicação</Label>
+            {form.onboard_step && form.onboard_step > 1 && (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  const textarea = document.getElementById('info-explanation') as HTMLTextAreaElement;
+                  if (textarea) {
+                    const start = textarea.selectionStart || 0;
+                    const end = textarea.selectionEnd || 0;
+                    const newText = explanation.substring(0, start) + '{resposta1}' + explanation.substring(end);
+                    setExplanation(newText);
+                    setTimeout(() => {
+                      textarea.focus();
+                      const newPos = start + '{resposta1}'.length;
+                      textarea.setSelectionRange(newPos, newPos);
+                    }, 0);
+                  }
+                }}
+                className="h-7 text-xs"
+                title="Inserir texto da resposta do passo 1"
+              >
+                <Sparkles className="h-3 w-3 mr-1" />
+                Usar resposta do passo 1
+              </Button>
+            )}
+          </div>
           <Textarea
             id="info-explanation"
             value={explanation}
@@ -148,18 +242,54 @@ export default function InfoStepEditor({ form, onSaved, onCancel }: InfoStepEdit
           />
           <p className="text-xs text-gray-500 mt-1">
             Você pode usar {"{tema escolhido}"} ou {"{category}"} para inserir dinamicamente o tema/categoria selecionada.
+            {form.onboard_step && form.onboard_step > 1 && (
+              <> • Use <code className="bg-gray-100 px-1 rounded">{'{resposta1}'}</code> para inserir o texto da opção selecionada no passo 1</>
+            )}
           </p>
         </div>
 
         {/* Texto do botão */}
         <div>
-          <Label htmlFor="info-button">Texto do Botão</Label>
+          <div className="flex items-center justify-between mb-2">
+            <Label htmlFor="info-button">Texto do Botão</Label>
+            {form.onboard_step && form.onboard_step > 1 && (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  const input = document.getElementById('info-button') as HTMLInputElement;
+                  if (input) {
+                    const start = input.selectionStart || 0;
+                    const end = input.selectionEnd || 0;
+                    const newText = buttonText.substring(0, start) + '{resposta1}' + buttonText.substring(end);
+                    setButtonText(newText);
+                    setTimeout(() => {
+                      input.focus();
+                      const newPos = start + '{resposta1}'.length;
+                      input.setSelectionRange(newPos, newPos);
+                    }, 0);
+                  }
+                }}
+                className="h-7 text-xs"
+                title="Inserir texto da resposta do passo 1"
+              >
+                <Sparkles className="h-3 w-3 mr-1" />
+                Usar resposta do passo 1
+              </Button>
+            )}
+          </div>
           <Input
             id="info-button"
             value={buttonText}
             onChange={(e) => setButtonText(e.target.value)}
             placeholder="Ex.: Começar agora →"
           />
+          {form.onboard_step && form.onboard_step > 1 && (
+            <p className="text-xs text-gray-500 mt-1">
+              💡 Use <code className="bg-gray-100 px-1 rounded">{'{resposta1}'}</code> para inserir o texto da opção selecionada no passo 1
+            </p>
+          )}
         </div>
       </div>
     </div>

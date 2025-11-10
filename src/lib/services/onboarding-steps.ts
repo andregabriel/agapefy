@@ -27,6 +27,11 @@ interface AppSettings {
   onboarding_hardcoded_6_active?: string;
   onboarding_hardcoded_7_active?: string;
   onboarding_hardcoded_8_active?: string;
+  onboarding_static_preview_position?: string;
+  onboarding_static_whatsapp_position?: string;
+  onboarding_hardcoded_6_position?: string;
+  onboarding_hardcoded_7_position?: string;
+  onboarding_hardcoded_8_position?: string;
 }
 
 /**
@@ -65,6 +70,11 @@ export async function getOnboardingStepsOrder(
         'onboarding_hardcoded_6_active',
         'onboarding_hardcoded_7_active',
         'onboarding_hardcoded_8_active',
+        'onboarding_static_preview_position',
+        'onboarding_static_whatsapp_position',
+        'onboarding_hardcoded_6_position',
+        'onboarding_hardcoded_7_position',
+        'onboarding_hardcoded_8_position',
       ]);
 
     if (settingsData) {
@@ -149,8 +159,9 @@ export async function getOnboardingStepsOrder(
     return s;
   };
 
-  // Alocar estáticos em slots livres a partir de seus baselines
-  const previewSlot = findNextFree(2);
+  // Alocar estáticos usando posições de app_settings (ou defaults)
+  const previewPosition = Number.parseInt(appSettings.onboarding_static_preview_position || '2', 10) || 2;
+  const previewSlot = findNextFree(previewPosition);
   const previewActive =
     appSettings.onboarding_static_preview_active !== 'false'; // default true
   entries.push({
@@ -169,7 +180,8 @@ export async function getOnboardingStepsOrder(
     },
   });
 
-  const whatsappSlot = findNextFree(3);
+  const whatsappPosition = Number.parseInt(appSettings.onboarding_static_whatsapp_position || '3', 10) || 3;
+  const whatsappSlot = findNextFree(whatsappPosition);
   const whatsappActive =
     appSettings.onboarding_static_whatsapp_active !== 'false'; // default true
   entries.push({
@@ -187,8 +199,9 @@ export async function getOnboardingStepsOrder(
     },
   });
 
-  // Hardcoded (baselines 6, 7, 8) - deslocar se necessário
-  const hard6 = findNextFree(6);
+  // Hardcoded usando posições de app_settings (ou defaults)
+  const hard6Position = Number.parseInt(appSettings.onboarding_hardcoded_6_position || '6', 10) || 6;
+  const hard6 = findNextFree(hard6Position);
   const hard6Active = appSettings.onboarding_hardcoded_6_active !== 'false'; // default true
   entries.push({
     position: hard6,
@@ -202,7 +215,8 @@ export async function getOnboardingStepsOrder(
     },
   });
 
-  const hard7 = findNextFree(7);
+  const hard7Position = Number.parseInt(appSettings.onboarding_hardcoded_7_position || '7', 10) || 7;
+  const hard7 = findNextFree(hard7Position);
   const hard7Active = appSettings.onboarding_hardcoded_7_active !== 'false'; // default true
   entries.push({
     position: hard7,
@@ -216,7 +230,8 @@ export async function getOnboardingStepsOrder(
     },
   });
 
-  const hard8 = findNextFree(8);
+  const hard8Position = Number.parseInt(appSettings.onboarding_hardcoded_8_position || '8', 10) || 8;
+  const hard8 = findNextFree(hard8Position);
   const hard8Active = appSettings.onboarding_hardcoded_8_active !== 'false'; // default true
   entries.push({
     position: hard8,
