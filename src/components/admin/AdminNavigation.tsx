@@ -61,9 +61,9 @@ const adminRoutes = [
     color: 'text-gray-500'
   },
   {
-    label: 'Forms',
+    label: 'Onboarding',
     icon: FileText,
-    href: '/admin/forms',
+    href: '/admin/onboarding',
     color: 'text-sky-500'
   },
   {

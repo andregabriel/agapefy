@@ -222,11 +222,11 @@ export default function Dashboard() {
               <span className="text-sm font-medium text-gray-900">Categorias</span>
             </a>
             <a
-              href="/admin/forms"
+              href="/admin/onboarding"
               className="p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors text-center"
             >
               <FileText className="h-6 w-6 mx-auto mb-2 text-sky-600" />
-              <span className="text-sm font-medium text-gray-900">Forms</span>
+              <span className="text-sm font-medium text-gray-900">Onboarding</span>
             </a>
           </div>
         </div>

@@ -62,6 +62,119 @@ export default function OnboardingClient() {
   const [phoneForWhatsApp, setPhoneForWhatsApp] = useState<string>('');
   const [dailyVerseEnabled, setDailyVerseEnabled] = useState<boolean>(true);
   const [savingVersePref, setSavingVersePref] = useState<boolean>(false);
+  const [previousResponses, setPreviousResponses] = useState<Map<number, string>>(new Map());
+  const [loadingResponses, setLoadingResponses] = useState<boolean>(false);
+
+  // Função para determinar o próximo passo disponível e retornar a URL completa
+  async function getNextStepUrl(currentStep: number): Promise<string> {
+    const parentFormId = activeFormId || form?.id || '';
+    const categoryParam = currentCategoryId ? `&categoryId=${encodeURIComponent(currentCategoryId)}` : '';
+    const formParam = parentFormId ? `&formId=${encodeURIComponent(parentFormId)}` : '';
+
+    // Buscar todos os formulários dinâmicos ativos ordenados por passo
+    let { data: activeForms, error: formsError } = await supabase
+      .from('admin_forms')
+      .select('id, onboard_step, is_active')
+      .eq('form_type', 'onboarding')
+      .eq('is_active', true)
+      .not('onboard_step', 'is', null)
+      .order('onboard_step', { ascending: true });
+
+    // Fallback quando parent_form_id não existe
+    if (formsError && (formsError.code === '42703' || /parent_form_id/i.test(String(formsError.message || '')))) {
+      const fb = await supabase
+        .from('admin_forms')
+        .select('id, onboard_step, is_active')
+        .eq('form_type', 'onboarding')
+        .eq('is_active', true)
+        .not('onboard_step', 'is', null)
+        .order('onboard_step', { ascending: true });
+      if (!fb.error) {
+        activeForms = fb.data as any;
+      }
+    }
+
+    // Buscar todos os formulários dinâmicos (ativos e inativos) para verificar quais passos estão ocupados
+    const { data: allForms } = await supabase
+      .from('admin_forms')
+      .select('onboard_step, is_active')
+      .eq('form_type', 'onboarding')
+      .not('onboard_step', 'is', null);
+
+    const occupiedSteps = new Set<number>();
+    const activeSteps = new Set<number>();
+    
+    if (allForms) {
+      allForms.forEach((f: any) => {
+        if (f.onboard_step) {
+          occupiedSteps.add(f.onboard_step);
+          if (f.is_active) {
+            activeSteps.add(f.onboard_step);
+          }
+        }
+      });
+    }
+
+    // Função auxiliar para verificar se um passo estático está disponível
+    const isStaticStepAvailable = async (stepNum: number): Promise<boolean> => {
+      // Se há um formulário dinâmico (ativo ou inativo) neste passo, o estático não está disponível
+      if (occupiedSteps.has(stepNum)) {
+        return false;
+      }
+      
+      // Verificações específicas para cada passo estático
+      if (stepNum === 2) {
+        // Passo 2 (preview) só está disponível se tiver categoryId
+        return !!currentCategoryId;
+      }
+      
+      // Passos 3, 6, 7, 8 estão sempre disponíveis se não houver formulário dinâmico
+      return true;
+    };
+
+    // Função auxiliar para gerar URL de passo estático
+    const getStaticStepUrl = (stepNum: number): string => {
+      if (stepNum === 2) {
+        return `/onboarding?step=2&showStatic=preview${categoryParam}${formParam}`;
+      }
+      if (stepNum === 3) {
+        return `/onboarding?step=3&showStatic=whatsapp${categoryParam}${formParam}`;
+      }
+      return `/onboarding?step=${stepNum}${categoryParam}${formParam}`;
+    };
+
+    // Lista de passos estáticos possíveis em ordem
+    const staticSteps = [2, 3, 6, 7, 8];
+
+    // Procurar próximo passo ativo (dinâmico ou estático)
+    // Começar verificando a partir do próximo passo sequencial
+    let candidateStep = currentStep + 1;
+    const maxStep = Math.max(
+      ...(activeForms?.map(f => f.onboard_step as number) || []),
+      ...staticSteps,
+      currentStep
+    );
+
+    while (candidateStep <= maxStep + 1) {
+      // 1) Verificar se há formulário dinâmico ativo neste passo
+      if (activeSteps.has(candidateStep)) {
+        return `/onboarding?step=${candidateStep}${formParam}${categoryParam}`;
+      }
+
+      // 2) Verificar se é um passo estático disponível
+      if (staticSteps.includes(candidateStep)) {
+        const isAvailable = await isStaticStepAvailable(candidateStep);
+        if (isAvailable) {
+          return getStaticStepUrl(candidateStep);
+        }
+      }
+
+      candidateStep++;
+    }
+
+    // Se não houver mais passos, finalizar onboarding
+    return '/';
+  }
 
   // Persistir preferência de versículo diário imediatamente quando o usuário alternar no passo 8.
   // Isso garante que o toggle em `/eu` já apareça sincronizado sem exigir novo clique em "Salvar".
@@ -92,6 +205,215 @@ export default function OnboardingClient() {
     }
   }
 
+  // Extrai um valor legível da resposta de um formulário anterior
+  async function extractResponseValue(formId: string, answers: Record<string, any>, onboardStep: number): Promise<string> {
+    try {
+      if (answers.other_option && typeof answers.other_option === 'string' && answers.other_option.trim()) {
+        return answers.other_option.trim();
+      }
+      if (answers.text && typeof answers.text === 'string' && answers.text.trim()) {
+        return answers.text.trim();
+      }
+      if (answers.option) {
+        const { data: formData, error: formError } = await supabase
+          .from('admin_forms')
+          .select('schema')
+          .eq('id', formId)
+          .maybeSingle();
+        if (!formError && formData && Array.isArray((formData as any).schema)) {
+          const option = (formData as any).schema.find((opt: any) => opt?.category_id === answers.option);
+          if (option && option.label) {
+            return option.label as string;
+          }
+        }
+      }
+      return '';
+    } catch (error) {
+      // eslint-disable-next-line no-console
+      console.warn('Erro ao extrair valor da resposta:', error);
+      return '';
+    }
+  }
+
+  // Substitui {respostaN} nos textos
+  function replaceResponseVariables(text: string | null | undefined, responsesMap: Map<number, string>): string {
+    if (!text || typeof text !== 'string') return '';
+    return text.replace(/\{resposta(\d+)\}/gi, (_match, stepNum) => {
+      const step = Number.parseInt(stepNum, 10);
+      if (Number.isFinite(step) && responsesMap.has(step)) {
+        return responsesMap.get(step) || '';
+      }
+      return '';
+    });
+  }
+
+  // Busca respostas anteriores até o passo atual
+  async function fetchPreviousResponses(
+    currentStep: number,
+    params?: { userId: string | null; categoryId: string | null; rootFormId: string | null }
+  ) {
+    const userId = params?.userId ?? user?.id ?? null;
+    const categoryId = params?.categoryId ?? currentCategoryId ?? null;
+    const rootFormId = params?.rootFormId ?? (searchParams?.get('formId') || null);
+    setLoadingResponses(true);
+    try {
+      if (currentStep <= 1) {
+        setPreviousResponses(new Map());
+        setLoadingResponses(false);
+        return;
+      }
+
+      // Fallback rápido para {resposta1} quando usuário não logado, via categoryId,
+      // priorizando o formId da sessão (Testar Onboarding) para garantir o schema correto do passo 1.
+      if (!userId && currentStep > 1 && categoryId) {
+        try {
+          const sessionFormId = (rootFormId || '').trim();
+          let step1Form: any = null;
+
+          if (sessionFormId) {
+            const { data: byId } = await supabase
+              .from('admin_forms')
+              .select('id, schema, onboard_step')
+              .eq('id', sessionFormId)
+              .maybeSingle();
+            // aceitar se for passo 1 (ou raiz sem onboard_step definido)
+            if (byId && (byId as any).schema && (((byId as any).onboard_step ?? 1) === 1)) {
+              step1Form = byId;
+            }
+          }
+
+          if (!step1Form) {
+            const { data: byStep } = await supabase
+              .from('admin_forms')
+              .select('id, schema')
+              .eq('form_type', 'onboarding')
+              .eq('is_active', true)
+              .eq('onboard_step', 1)
+              .order('created_at', { ascending: true })
+              .limit(1)
+              .maybeSingle();
+            step1Form = byStep;
+          }
+
+          if (step1Form && Array.isArray((step1Form as any).schema)) {
+            const match = (step1Form as any).schema.find((opt: any) => opt?.category_id === categoryId);
+            if (match?.label) {
+              const map = new Map<number, string>();
+              map.set(1, match.label as string);
+              setPreviousResponses(map);
+              setLoadingResponses(false);
+              return;
+            }
+          }
+        } catch (e) {
+          // eslint-disable-next-line no-console
+          console.warn('Erro no fallback de categoryId/formId:', e);
+        }
+        setPreviousResponses(new Map());
+        setLoadingResponses(false);
+        return;
+      }
+
+      if (!userId) {
+        setPreviousResponses(new Map());
+        setLoadingResponses(false);
+        return;
+      }
+
+      // Buscar formulários anteriores
+      const { data: forms, error: formsError } = await supabase
+        .from('admin_forms')
+        .select('id, onboard_step')
+        .eq('form_type', 'onboarding')
+        .eq('is_active', true)
+        .lt('onboard_step', currentStep)
+        .not('onboard_step', 'is', null)
+        .order('onboard_step', { ascending: true });
+      if (formsError || !forms || (forms as any[]).length === 0) {
+        setPreviousResponses(new Map());
+        setLoadingResponses(false);
+        return;
+      }
+      const formIds = (forms as any[]).map(f => f.id);
+      const { data: responses, error: responsesError } = await supabase
+        .from('admin_form_responses')
+        .select('form_id, answers')
+        .eq('user_id', userId)
+        .in('form_id', formIds);
+      if (responsesError) {
+        setPreviousResponses(new Map());
+        setLoadingResponses(false);
+        return;
+      }
+      // Montar mapa step -> valor
+      const responseMap = new Map<string, { answers: Record<string, any>; onboard_step: number }>();
+      (responses as any[] | null | undefined)?.forEach((resp: any) => {
+        const formMatch = (forms as any[]).find((f: any) => f.id === resp.form_id);
+        if (formMatch && typeof formMatch.onboard_step === 'number') {
+          responseMap.set(resp.form_id, { answers: resp.answers, onboard_step: formMatch.onboard_step });
+        }
+      });
+      const responsesTextMap = new Map<number, string>();
+      for (const [formId, { answers, onboard_step }] of responseMap.entries()) {
+        const value = await extractResponseValue(formId, answers, onboard_step);
+        if (value) responsesTextMap.set(onboard_step, value);
+      }
+
+      // Fallback extra para {resposta1} via categoryId quando não houver resposta salva com user_id
+      if (currentStep > 1 && categoryId && !responsesTextMap.has(1)) {
+        const step1Form = (forms as any[]).find((f: any) => f.onboard_step === 1);
+        if (step1Form) {
+          const { data: step1Data } = await supabase
+            .from('admin_forms')
+            .select('schema')
+            .eq('id', step1Form.id)
+            .maybeSingle();
+          const schemaArr = (step1Data as any)?.schema as Array<{ label: string; category_id: string }> | undefined;
+          const match = Array.isArray(schemaArr) ? schemaArr.find(opt => opt?.category_id === categoryId) : undefined;
+          if (match?.label) {
+            responsesTextMap.set(1, match.label);
+          }
+        }
+      }
+
+      setPreviousResponses(responsesTextMap);
+      setLoadingResponses(false);
+    } catch (error) {
+      // eslint-disable-next-line no-console
+      console.warn('Erro ao buscar respostas anteriores:', error);
+      setPreviousResponses(new Map());
+      setLoadingResponses(false);
+    }
+  }
+
+  // Versão processada do formulário aplicando {respostaN}
+  const processedForm = useMemo(() => {
+    if (!form) return null;
+    const processed: any = {
+      ...form,
+      name: replaceResponseVariables((form as any).name as any, previousResponses),
+      description: replaceResponseVariables((form as any).description as any, previousResponses),
+      other_option_label: replaceResponseVariables((form as any).other_option_label as any, previousResponses),
+      schema: Array.isArray((form as any).schema)
+        ? (form as any).schema.map((opt: any) => {
+            if (opt?.type === 'info') {
+              return {
+                ...opt,
+                title: replaceResponseVariables(opt.title, previousResponses),
+                subtitle: replaceResponseVariables(opt.subtitle, previousResponses),
+                explanation: replaceResponseVariables(opt.explanation, previousResponses),
+                buttonText: replaceResponseVariables(opt.buttonText, previousResponses),
+              };
+            }
+            return {
+              ...opt,
+              label: replaceResponseVariables(opt.label, previousResponses),
+            };
+          })
+        : (form as any).schema,
+    };
+    return processed as AdminForm;
+  }, [form, previousResponses]);
   // Carrossel da categoria (preview sem play)
   const carouselRef = useRef<HTMLDivElement | null>(null);
   const scrollCarousel = (direction: 'left' | 'right') => {
@@ -108,6 +430,15 @@ export default function OnboardingClient() {
     async function load() {
       try {
         setLoading(true);
+        const stepParam = Number(searchParams?.get('step') || desiredStep || 1);
+        const categoryIdFromUrl = searchParams?.get('categoryId') || null;
+        const rootFormIdFromUrl = searchParams?.get('formId') || null;
+        await fetchPreviousResponses(stepParam, {
+          userId: user?.id ?? null,
+          categoryId: categoryIdFromUrl,
+          rootFormId: rootFormIdFromUrl,
+        });
+        const staticKind = searchParams?.get('showStatic') || '';
         if (desiredStep === 1) {
           // Primeiro tenta pelo passo configurado = 1
           const primary = await supabase
@@ -149,37 +480,88 @@ export default function OnboardingClient() {
             if (fallback.error) throw fallback.error;
             if (mounted) setForm((fallback.data as AdminForm) || null);
           }
-        } else if (desiredStep === 2) {
-          const categoryId = searchParams?.get('categoryId');
-          if (!categoryId) {
-            if (mounted) {
-              setCategory(null);
-              setAudios([]);
+        } else if (desiredStep === 2 || staticKind === 'preview') {
+          // Suporte a passo estático de preview em qualquer step via showStatic=preview
+          if (staticKind === 'preview') {
+            const categoryId = searchParams?.get('categoryId');
+            if (!categoryId) {
+              if (mounted) {
+                setCategory(null);
+                setAudios([]);
+              }
+            } else {
+              const [{ data: cat, error: catErr }, { data: auds, error: audErr }, getPl] = await Promise.all([
+                supabase
+                .from('categories')
+                .select('id,name,description,image_url')
+                .eq('id', categoryId)
+                .maybeSingle(),
+                supabase
+                  .from('audios')
+                  .select('id,title,subtitle,duration,cover_url')
+                  .eq('category_id', categoryId)
+                  .order('created_at', { ascending: false })
+                  .limit(10),
+                getPlaylistsByCategoryFast(categoryId)
+              ]);
+              if (catErr) throw catErr;
+              if (audErr) throw audErr;
+              if (mounted) {
+                setCategory((cat as any) || null);
+                setAudios(((auds as any[]) || []) as AudioPreview[]);
+                setPlaylists((getPl as any[]) || []);
+              }
             }
           } else {
-            const [{ data: cat, error: catErr }, { data: auds, error: audErr }, getPl] = await Promise.all([
-              supabase
-              .from('categories')
-              .select('id,name,description,image_url')
-              .eq('id', categoryId)
-              .maybeSingle(),
-              supabase
-                .from('audios')
-                .select('id,title,subtitle,duration,cover_url')
-                .eq('category_id', categoryId)
-                .order('created_at', { ascending: false })
-                .limit(10),
-              getPlaylistsByCategoryFast(categoryId)
-            ]);
-            if (catErr) throw catErr;
-            if (audErr) throw audErr;
-            if (mounted) {
-              setCategory((cat as any) || null);
-              setAudios(((auds as any[]) || []) as AudioPreview[]);
-              setPlaylists((getPl as any[]) || []);
+            // Primeiro verificar se há um passo informativo no passo 2
+            // Se houver, mostrar ele primeiro; caso contrário, mostrar o passo 2 estático (preview da categoria)
+            let infoForm = await supabase
+              .from('admin_forms')
+              .select('*')
+              .eq('form_type', 'onboarding')
+              .eq('is_active', true)
+              .eq('onboard_step', 2)
+              .maybeSingle();
+            
+            if (infoForm.data && infoForm.data.schema && 
+                Array.isArray(infoForm.data.schema) && 
+                infoForm.data.schema[0]?.type === 'info') {
+              // Há um passo informativo no passo 2, mostrar ele
+              if (mounted) setForm((infoForm.data as AdminForm) || null);
+            } else {
+              // Não há passo informativo, mostrar o passo 2 estático (preview da categoria)
+              const categoryId = searchParams?.get('categoryId');
+              if (!categoryId) {
+                if (mounted) {
+                  setCategory(null);
+                  setAudios([]);
+                }
+              } else {
+                const [{ data: cat, error: catErr }, { data: auds, error: audErr }, getPl] = await Promise.all([
+                  supabase
+                  .from('categories')
+                  .select('id,name,description,image_url')
+                  .eq('id', categoryId)
+                  .maybeSingle(),
+                  supabase
+                    .from('audios')
+                    .select('id,title,subtitle,duration,cover_url')
+                    .eq('category_id', categoryId)
+                    .order('created_at', { ascending: false })
+                    .limit(10),
+                  getPlaylistsByCategoryFast(categoryId)
+                ]);
+                if (catErr) throw catErr;
+                if (audErr) throw audErr;
+                if (mounted) {
+                  setCategory((cat as any) || null);
+                  setAudios(((auds as any[]) || []) as AudioPreview[]);
+                  setPlaylists((getPl as any[]) || []);
+                }
+              }
             }
           }
-        } else if (desiredStep === 3) {
+        } else if (desiredStep === 3 || staticKind === 'whatsapp') {
           const categoryId = searchParams?.get('categoryId');
           if (categoryId && !category) {
             const { data: cat } = await supabase
@@ -190,7 +572,8 @@ export default function OnboardingClient() {
             if (mounted) setCategory((cat as any) || null);
           }
         } else {
-          // Passos dinâmicos adicionais (>= 4)
+          // Passos dinâmicos adicionais (>= 2, incluindo passos informativos)
+          // Primeiro tenta buscar com parent_form_id
           let { data, error } = await supabase
             .from('admin_forms')
             .select('*')
@@ -199,6 +582,22 @@ export default function OnboardingClient() {
             .eq('onboard_step', desiredStep)
             .eq('parent_form_id', activeFormId || '-')
             .maybeSingle();
+          
+          // Se não encontrou e a coluna parent_form_id existe, tenta buscar apenas por onboard_step
+          if ((!data || error) && activeFormId) {
+            const fb = await supabase
+              .from('admin_forms')
+              .select('*')
+              .eq('form_type', 'onboarding')
+              .eq('is_active', true)
+              .eq('onboard_step', desiredStep)
+              .maybeSingle();
+            if (!fb.error && fb.data) {
+              data = fb.data as any;
+              error = null;
+            }
+          }
+          
           // Fallback se a coluna parent_form_id não existir: buscar apenas por onboard_step
           if (error && (error.code === '42703' || /parent_form_id/i.test(String(error.message || '')))) {
             const fb = await supabase
@@ -322,31 +721,20 @@ export default function OnboardingClient() {
       console.error(e);
       toast.error('Não foi possível enviar. Seguimos para o próximo passo.');
     } finally {
-      // Procurar próximo formulário encadeado (filho) e ir direto para ele se existir; caso contrário, ir para o preview (passo 2)
+      // Usar getNextStepUrl para determinar o próximo passo
       try {
-        let nextStep: number | null = null;
-        let resp = await supabase
-          .from('admin_forms')
-          .select('onboard_step')
-          .eq('form_type', 'onboarding')
-          .eq('is_active', true)
-          .eq('parent_form_id', form.id)
-          .order('onboard_step', { ascending: true })
-          .limit(1)
-          .maybeSingle();
-        if (resp.error && (resp.error.code === '42703' || /parent_form_id/i.test(String(resp.error.message || '')))) {
-          // Ambiente sem parent_form_id – não há encadeamento; mantém fluxo padrão
-          resp = null as any;
+        const currentStep = form.onboard_step || desiredStep;
+        let nextUrl = await getNextStepUrl(currentStep);
+        // Garantir categoryId na URL após o passo 1 (usuário pode não estar logado)
+        if (currentStep === 1 && selected && !nextUrl.includes('categoryId=')) {
+          nextUrl = `${nextUrl}${nextUrl.includes('?') ? '&' : '?'}categoryId=${encodeURIComponent(selected)}`;
         }
-        if (resp && resp.data && typeof (resp.data as any).onboard_step === 'number') {
-          nextStep = (resp.data as any).onboard_step as number;
-        }
-        const stepToGo = Number.isFinite(nextStep as any) ? (nextStep as number) : 2;
+        router.replace(nextUrl);
+      } catch {
+        // Fallback: ir para passo 2 se houver erro
         const categoryParam = `categoryId=${encodeURIComponent(selected)}`;
         const formParam = `formId=${encodeURIComponent(form.id)}`;
-        router.replace(`/onboarding?step=${stepToGo}&${categoryParam}&${formParam}`);
-      } catch {
-        router.replace(`/onboarding?step=2&categoryId=${encodeURIComponent(selected)}&formId=${encodeURIComponent(form.id)}`);
+        router.replace(`/onboarding?step=2&${categoryParam}&${formParam}`);
       }
       setSubmitting(false);
     }
@@ -421,13 +809,17 @@ export default function OnboardingClient() {
             <div className="flex items-center justify-between">
               <Button
                 variant="ghost"
-                onClick={() => router.replace(`/onboarding?step=7${currentCategoryId ? `&categoryId=${encodeURIComponent(currentCategoryId)}` : ''}${activeFormId ? `&formId=${encodeURIComponent(activeFormId)}` : ''}`)}
+                onClick={async () => {
+                  const nextUrl = await getNextStepUrl(desiredStep);
+                  router.replace(nextUrl);
+                }}
               >
                 Pular
               </Button>
               <Button
-                onClick={() => {
-                  router.replace(`/onboarding?step=7${currentCategoryId ? `&categoryId=${encodeURIComponent(currentCategoryId)}` : ''}${activeFormId ? `&formId=${encodeURIComponent(activeFormId)}` : ''}`);
+                onClick={async () => {
+                  const nextUrl = await getNextStepUrl(desiredStep);
+                  router.replace(nextUrl);
                 }}
               >
                 Ver minha rotina
@@ -447,73 +839,8 @@ export default function OnboardingClient() {
       await saveFormResponse({ formId: form.id, answers: { skipped: true }, userId: user?.id ?? null });
       toast.success('Passo adiado');
       const currentStep = form.onboard_step || desiredStep;
-      const nextStep = currentStep + 1;
-      const parentFormId = (form as any).parent_form_id || activeFormId || form.id;
-
-      // 1) Tentar ir exatamente para o próximo formulário encadeado
-      let { data, error } = await supabase
-        .from('admin_forms')
-        .select('id')
-        .eq('form_type', 'onboarding')
-        .eq('is_active', true)
-        .eq('onboard_step', nextStep)
-        .eq('parent_form_id', parentFormId)
-        .maybeSingle();
-
-      // 2) Se a coluna parent_form_id não existir OU não houver formulário no próximo passo,
-      //    tentar encontrar o próximo passo disponível (> passo atual)
-      if ((error && (error.code === '42703' || /parent_form_id/i.test(String(error.message || '')))) || (!error && !data)) {
-        let fb2 = await supabase
-          .from('admin_forms')
-          .select('id, onboard_step')
-          .eq('form_type', 'onboarding')
-          .eq('is_active', true)
-          .eq('parent_form_id', parentFormId)
-          .gt('onboard_step', currentStep)
-          .order('onboard_step', { ascending: true })
-          .limit(1)
-          .maybeSingle();
-        // Se parent_form_id não existir, buscar globalmente o próximo passo disponível
-        if (fb2.error && (fb2.error.code === '42703' || /parent_form_id/i.test(String(fb2.error.message || '')))) {
-          fb2 = await supabase
-            .from('admin_forms')
-            .select('id, onboard_step')
-            .eq('form_type', 'onboarding')
-            .eq('is_active', true)
-            .gt('onboard_step', currentStep)
-            .order('onboard_step', { ascending: true })
-            .limit(1)
-            .maybeSingle();
-        }
-        if (!fb2.error && fb2.data) {
-          const nextAvailable = (fb2.data as any).onboard_step as number;
-          const cat = currentCategoryId ? `&categoryId=${encodeURIComponent(currentCategoryId)}` : '';
-          router.replace(`/onboarding?step=${nextAvailable}&formId=${encodeURIComponent(parentFormId)}${cat}`);
-          return;
-        }
-      }
-
-      // 3) Fallback final: seguir para o próximo passo "estático" conhecido
-      const cat = currentCategoryId ? `&categoryId=${encodeURIComponent(currentCategoryId)}` : '';
-      const formParam = parentFormId ? `&formId=${encodeURIComponent(parentFormId)}` : '';
-      let fallbackStep = nextStep;
-      if (fallbackStep <= 3) {
-        router.replace(`/onboarding?step=${fallbackStep}${formParam}${cat}`);
-        return;
-      }
-      if (fallbackStep <= 5) {
-        router.replace(`/onboarding?step=6${formParam}${cat}`);
-        return;
-      }
-      if (fallbackStep === 6) {
-        router.replace(`/onboarding?step=7${formParam}${cat}`);
-        return;
-      }
-      if (fallbackStep === 7) {
-        router.replace(`/onboarding?step=8${formParam}${cat}`);
-        return;
-      }
-      router.replace('/');
+      const nextUrl = await getNextStepUrl(currentStep);
+      router.replace(nextUrl);
     } catch (e) {
       // eslint-disable-next-line no-console
       console.error(e);
@@ -534,12 +861,11 @@ export default function OnboardingClient() {
       console.error(e);
       toast.error('Não foi possível enviar. Seguimos para o próximo passo.');
     } finally {
-      const nextStep = (form.onboard_step || desiredStep) + 1;
+      const currentStep = form.onboard_step || desiredStep;
       const parentFormId = (form as any).parent_form_id || activeFormId || form.id;
 
       // Após finalizar o Passo 5, construir/atualizar a playlist pessoal "Minha Rotina"
       try {
-        const currentStep = form.onboard_step || desiredStep;
         if (currentStep === 5 && user?.id) {
           await buildRoutinePlaylistFromOnboarding({ userId: user.id, rootFormId: parentFormId });
         }
@@ -548,36 +874,9 @@ export default function OnboardingClient() {
         // eslint-disable-next-line no-console
         console.error('buildRoutinePlaylistFromOnboarding error:', err);
       }
-      let { data, error } = await supabase
-        .from('admin_forms')
-        .select('id')
-        .eq('form_type', 'onboarding')
-        .eq('is_active', true)
-        .eq('onboard_step', nextStep)
-        .eq('parent_form_id', parentFormId)
-        .maybeSingle();
-      // Fallback quando parent_form_id não existe ou quando não foi vinculado
-      if ((error && (error.code === '42703' || /parent_form_id/i.test(String(error.message || '')))) || (!error && !data)) {
-        const fb = await supabase
-          .from('admin_forms')
-          .select('id')
-          .eq('form_type', 'onboarding')
-          .eq('is_active', true)
-          .eq('onboard_step', nextStep)
-          .maybeSingle();
-        data = fb.data as any;
-        error = fb.error as any;
-      }
-      if (data) {
-        router.replace(`/onboarding?step=${nextStep}&formId=${encodeURIComponent(parentFormId)}${currentCategoryId ? `&categoryId=${encodeURIComponent(currentCategoryId)}` : ''}`);
-      } else {
-        // considerar passos virtuais 2, 3 e 6 (playlist da rotina)
-        if (nextStep === 2 || nextStep === 3 || nextStep === 6) {
-          router.replace(`/onboarding?step=${nextStep}&formId=${encodeURIComponent(parentFormId)}${currentCategoryId ? `&categoryId=${encodeURIComponent(currentCategoryId)}` : ''}`);
-        } else {
-          router.replace('/');
-        }
-      }
+
+      const nextUrl = await getNextStepUrl(currentStep);
+      router.replace(nextUrl);
       setSubmitting(false);
     }
   }
@@ -594,6 +893,129 @@ export default function OnboardingClient() {
     );
   }
 
+  // Render estáticos via showStatic em QUALQUER passo
+  const showStaticKind = searchParams?.get('showStatic') || '';
+  if (showStaticKind === 'whatsapp') {
+    return (
+      <div className="max-w-2xl mx-auto p-4">
+        <Card>
+          <CardHeader>
+            <div className="relative">
+              <span className="absolute right-0 top-0 px-2 py-0.5 rounded bg-gray-800 text-gray-200 text-xs">Passo</span>
+              <div className="mt-10 md:mt-12 text-center px-2 md:px-6">
+                <CardTitle className="text-xl md:text-2xl leading-snug break-words max-w-3xl mx-auto">{(() => {
+                  const raw = settings.onboarding_step3_title || 'Conecte seu WhatsApp para receber uma mensagem diária para {category}.';
+                  const replacement = category?.name || 'sua dificuldade selecionada';
+                  return raw.replace('{category}', replacement);
+                })()}</CardTitle>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <WhatsAppSetup variant="embedded" redirectIfNotLoggedIn={false} />
+            <div className="flex justify-between">
+              <Button
+                variant="ghost"
+                onClick={async () => {
+                  const nextUrl = await getNextStepUrl(desiredStep);
+                  router.replace(nextUrl);
+                }}
+              >
+                Pular
+              </Button>
+              <Button onClick={async () => {
+                const nextUrl = await getNextStepUrl(desiredStep);
+                router.replace(nextUrl);
+              }}>Concluir</Button>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  if (showStaticKind === 'preview') {
+    // Reusar o mesmo bloco do Passo 2 (Preview da categoria)
+    const formatDuration = (seconds?: number | null): string | null => {
+      if (!seconds && seconds !== 0) return null;
+      const mins = Math.floor(seconds / 60);
+      const rem = seconds % 60;
+      if (!Number.isFinite(mins)) return null;
+      if (rem === 0) return `${mins} min`;
+      return `${mins}:${String(rem).padStart(2, '0')}`;
+    };
+    return (
+      <div className="max-w-2xl mx-auto p-4">
+        <Card>
+          <CardHeader>
+            <div className="relative">
+              <span className="absolute right-0 top-0 px-2 py-0.5 rounded bg-gray-800 text-gray-200 text-xs">Passo</span>
+              <div className="mt-10 md:mt-12 text-center px-2 md:px-6">
+                <CardTitle className="text-2xl md:text-3xl leading-tight line-clamp-2 max-w-4xl mx-auto">{settings.onboarding_step2_title || 'Parabéns pela coragem e pela abertura de dar as mãos à Jesus neste momento difícil.'}</CardTitle>
+                <p className="mt-3 text-black text-base md:text-lg max-w-3xl mx-auto">{settings.onboarding_step2_subtitle || 'Sua playlist foi criada, em breve você poderá escutar essas orações.'}</p>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-8">
+            {(() => {
+              const combined: Array<{
+                id: string;
+                type: 'audio' | 'playlist';
+                title: string;
+                subtitle?: string | null;
+                duration?: number | null;
+                image?: string | null;
+              }> = [
+                ...playlists.map(p => ({ id: p.id, type: 'playlist' as const, title: p.title, subtitle: null, duration: null, image: p.cover_url || category?.image_url || null })),
+                ...audios.map(a => ({ id: a.id, type: 'audio' as const, title: a.title, subtitle: a.subtitle || null, duration: a.duration || null, image: a.cover_url || category?.image_url || null })),
+              ];
+              if (combined.length === 0) return null;
+              return (
+                <div className="space-y-4">
+                  <h2 className="text-2xl font-bold text-black">{category?.name}</h2>
+                  <div className="relative group">
+                    <div ref={carouselRef} className="flex space-x-6 overflow-x-auto scrollbar-hide pb-2 scroll-smooth snap-x snap-mandatory">
+                      {combined.map((item) => (
+                        <div key={`${item.type}-${item.id}`} className="flex-shrink-0 w-48 snap-start group">
+                          <div className="relative mb-4">
+                            <div className="w-48 h-48 rounded-lg overflow-hidden bg-gray-800">
+                              {item.image ? (
+                                <img src={item.image} alt={item.title} className="w-full h-full object-cover" />
+                              ) : (
+                                <div className="w-full h-48 bg-gray-800" />
+                              )}
+                            </div>
+                          </div>
+                          <div className="space-y-1">
+                            <div className="font-bold text-black text-base leading-tight truncate">{item.title}</div>
+                            {item.subtitle && (
+                              <div className="text-sm text-gray-400 truncate">{item.subtitle}</div>
+                            )}
+                            {typeof item.duration === 'number' && item.duration !== null && (
+                              <div className="text-sm text-gray-400">{formatDuration(item.duration)}</div>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              );
+            })()}
+            <div className="flex justify-end">
+              <Button onClick={async () => {
+                const nextUrl = await getNextStepUrl(desiredStep);
+                router.replace(nextUrl);
+              }}>
+                Avançar
+                <ArrowRight className="ml-2 h-4 w-4" />
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
   // Passo 7: Relembrar cadastro do WhatsApp (apenas para quem não concluiu no passo 3)
   if (desiredStep === 7) {
     if (hasWhatsApp === null) {
@@ -629,12 +1051,18 @@ export default function OnboardingClient() {
             <div className="flex justify-between">
               <Button
                 variant="ghost"
-                onClick={() => router.replace(`/onboarding?step=8${currentCategoryId ? `&categoryId=${encodeURIComponent(currentCategoryId)}` : ''}${activeFormId ? `&formId=${encodeURIComponent(activeFormId)}` : ''}`)}
+                onClick={async () => {
+                  const nextUrl = await getNextStepUrl(desiredStep);
+                  router.replace(nextUrl);
+                }}
               >
                 Pular
               </Button>
               {hasWhatsApp && (
-                <Button onClick={() => router.replace(`/onboarding?step=8${currentCategoryId ? `&categoryId=${encodeURIComponent(currentCategoryId)}` : ''}${activeFormId ? `&formId=${encodeURIComponent(activeFormId)}` : ''}`)}>Concluir</Button>
+                <Button onClick={async () => {
+                  const nextUrl = await getNextStepUrl(desiredStep);
+                  router.replace(nextUrl);
+                }}>Concluir</Button>
               )}
             </div>
           </CardContent>
@@ -751,44 +1179,8 @@ export default function OnboardingClient() {
               <Button
                 variant="ghost"
                 onClick={async () => {
-                  try {
-                    // Pular este passo: tentar encontrar o próximo formulário encadeado (> 3)
-                    const parentId = activeFormId || '';
-                    if (parentId) {
-                      let { data, error } = await supabase
-                        .from('admin_forms')
-                        .select('onboard_step')
-                        .eq('form_type', 'onboarding')
-                        .eq('is_active', true)
-                        .eq('parent_form_id', parentId)
-                        .gt('onboard_step', 3)
-                        .order('onboard_step', { ascending: true })
-                        .limit(1)
-                        .maybeSingle();
-                      if (error && (error.code === '42703' || /parent_form_id/i.test(String(error.message || '')))) {
-                        const fb = await supabase
-                          .from('admin_forms')
-                          .select('onboard_step')
-                          .eq('form_type', 'onboarding')
-                          .eq('is_active', true)
-                          .gt('onboard_step', 3)
-                          .order('onboard_step', { ascending: true })
-                          .limit(1)
-                          .maybeSingle();
-                        data = fb.data as any;
-                        error = fb.error as any;
-                      }
-                      if (!error && data && typeof (data as any).onboard_step === 'number') {
-                        const next = (data as any).onboard_step as number;
-                        const cat = currentCategoryId ? `&categoryId=${encodeURIComponent(currentCategoryId)}` : '';
-                        router.replace(`/onboarding?step=${next}&formId=${encodeURIComponent(parentId)}${cat}`);
-                        return;
-                      }
-                    }
-                  } catch {
-                    // Ignorar e cair no redirecionamento padrão
-                  }
-                  router.replace('/');
+                  const nextUrl = await getNextStepUrl(desiredStep);
+                  router.replace(nextUrl);
                 }}
               >
                 Pular
@@ -796,45 +1188,8 @@ export default function OnboardingClient() {
 
               <Button
                 onClick={async () => {
-                  try {
-                    // Após configurar o WhatsApp, tentar seguir para a próxima etapa filha (ex.: Passo 4)
-                    const parentId = activeFormId || '';
-                    if (parentId) {
-                      let { data, error } = await supabase
-                        .from('admin_forms')
-                        .select('onboard_step')
-                        .eq('form_type', 'onboarding')
-                        .eq('is_active', true)
-                        .eq('parent_form_id', parentId)
-                        .gt('onboard_step', 3)
-                        .order('onboard_step', { ascending: true })
-                        .limit(1)
-                        .maybeSingle();
-                      // Fallback se a coluna parent_form_id não existir
-                      if (error && (error.code === '42703' || /parent_form_id/i.test(String(error.message || '')))) {
-                        const fb = await supabase
-                          .from('admin_forms')
-                          .select('onboard_step')
-                          .eq('form_type', 'onboarding')
-                          .eq('is_active', true)
-                          .gt('onboard_step', 3)
-                          .order('onboard_step', { ascending: true })
-                          .limit(1)
-                          .maybeSingle();
-                        data = fb.data as any;
-                        error = fb.error as any;
-                      }
-                      if (!error && data && typeof (data as any).onboard_step === 'number') {
-                        const next = (data as any).onboard_step as number;
-                        const cat = currentCategoryId ? `&categoryId=${encodeURIComponent(currentCategoryId)}` : '';
-                        router.replace(`/onboarding?step=${next}&formId=${encodeURIComponent(parentId)}${cat}`);
-                        return;
-                      }
-                    }
-                  } catch {
-                    // Ignorar e cair no redirecionamento padrão
-                  }
-                  router.replace('/');
+                  const nextUrl = await getNextStepUrl(desiredStep);
+                  router.replace(nextUrl);
                 }}
               >
                 Concluir
@@ -846,8 +1201,65 @@ export default function OnboardingClient() {
     );
   }
 
-  // Passo 2: Preview da categoria
-  if (desiredStep === 2) {
+  // Passo informativo (tipo 'info' no schema)
+  if (form && Array.isArray((form as any).schema) && (form as any).schema[0]?.type === 'info') {
+    const currentForm: any = processedForm || form;
+    const infoData = currentForm.schema[0];
+    const categoryName = category?.name || 'o tema escolhido';
+    const title = (infoData.title || '').replace(/\{tema escolhido\}/gi, categoryName).replace(/\{category\}/gi, categoryName);
+    const subtitle = (infoData.subtitle || '').replace(/\{tema escolhido\}/gi, categoryName).replace(/\{category\}/gi, categoryName);
+    const explanation = (infoData.explanation || '').replace(/\{tema escolhido\}/gi, categoryName).replace(/\{category\}/gi, categoryName);
+    const buttonText = infoData.buttonText || 'Começar agora →';
+
+    const handleInfoNext = async () => {
+      const currentStep = form.onboard_step || desiredStep;
+      const nextUrl = await getNextStepUrl(currentStep);
+      router.replace(nextUrl);
+    };
+
+    return (
+      <div className="min-h-[calc(100vh-0rem)] flex items-center justify-center px-4">
+        <Card className="w-full max-w-3xl">
+          <CardHeader>
+            <div className="relative">
+              <span className="absolute right-0 top-0 px-2 py-0.5 rounded bg-gray-800 text-gray-200 text-xs">
+                Passo {form.onboard_step || desiredStep}
+              </span>
+              <div className="mt-10 md:mt-12 text-center px-2 md:px-6">
+                <CardTitle className="text-2xl md:text-3xl leading-tight max-w-4xl mx-auto">
+                  {title}
+                </CardTitle>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            {subtitle && (
+              <p className="text-black text-lg text-center max-w-3xl mx-auto">
+                {subtitle}
+              </p>
+            )}
+            {explanation && (
+              <div className="space-y-4">
+                <p className="text-black text-base text-center max-w-3xl mx-auto">
+                  {explanation}
+                </p>
+              </div>
+            )}
+            <div className="flex justify-end pt-4">
+              <Button onClick={handleInfoNext} size="lg" className="gap-2">
+                {buttonText}
+                <ArrowRight className="h-4 w-4" />
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  // Passo 2: Preview da categoria (apenas se não for passo informativo OU se showStatic=true)
+  const showStaticStep2 = searchParams?.get('showStatic') === 'true';
+  if (desiredStep === 2 && (showStaticStep2 || (!form || !Array.isArray((form as any).schema) || (form as any).schema[0]?.type !== 'info'))) {
 
     const formatDuration = (seconds?: number | null): string | null => {
       if (!seconds && seconds !== 0) return null;
@@ -929,7 +1341,10 @@ export default function OnboardingClient() {
             })()}
 
             <div className="flex justify-end">
-              <Button onClick={() => router.replace(`/onboarding?step=3${currentCategoryId ? `&categoryId=${encodeURIComponent(currentCategoryId)}` : ''}${activeFormId ? `&formId=${encodeURIComponent(activeFormId)}` : ''}`)}>
+              <Button onClick={async () => {
+                const nextUrl = await getNextStepUrl(desiredStep);
+                router.replace(nextUrl);
+              }}>
                 Avançar
                 <ArrowRight className="ml-2 h-4 w-4" />
               </Button>
@@ -940,8 +1355,14 @@ export default function OnboardingClient() {
     );
   }
 
-  // Passos dinâmicos (>= 4 ou personalizados)
+  // Passos dinâmicos (>= 4 ou personalizados, excluindo passos informativos que já foram tratados acima)
   if (desiredStep !== 1 && desiredStep !== 2 && desiredStep !== 3 && form) {
+    // Verificar se é passo informativo (já renderizado acima)
+    const isInfoStep = Array.isArray((form as any).schema) && (form as any).schema[0]?.type === 'info';
+    if (isInfoStep) {
+      return null; // Já renderizado acima
+    }
+    
     const isShortText = Array.isArray((form as any).schema) && (form as any).schema[0]?.type === 'short_text';
     if (isShortText) {
       return (
@@ -951,12 +1372,12 @@ export default function OnboardingClient() {
               <div className="relative">
                 <span className="absolute right-0 top-0 px-2 py-0.5 rounded bg-gray-800 text-gray-200 text-xs">Passo {desiredStep}</span>
                 <div className="mt-10 md:mt-12 text-center px-2 md:px-6">
-                  <CardTitle className="text-2xl md:text-3xl leading-tight line-clamp-2 max-w-4xl mx-auto">{form.name}</CardTitle>
+                  <CardTitle className="text-2xl md:text-3xl leading-tight line-clamp-2 max-w-4xl mx-auto">{processedForm?.name || form.name}</CardTitle>
                 </div>
               </div>
             </CardHeader>
             <CardContent className="space-y-6">
-              {form.description && <p className="text-black text-lg">{form.description}</p>}
+              {(processedForm?.description || form.description) && <p className="text-black text-lg">{processedForm?.description || form.description}</p>}
               <Input placeholder="Digite sua resposta..." value={shortText} onChange={(e) => setShortText(e.target.value)} />
               <div className="flex justify-between">
                 <Button variant="ghost" onClick={skip} disabled={submitting}>Agora não</Button>
@@ -975,17 +1396,17 @@ export default function OnboardingClient() {
           <Card className="w-full max-w-3xl">
             <CardHeader>
               <div className="flex items-center justify-between">
-                <CardTitle className="text-2xl">{form.name}</CardTitle>
+                <CardTitle className="text-2xl">{processedForm?.name || form.name}</CardTitle>
                 <span className="px-2 py-0.5 rounded bg-gray-800 text-gray-200 text-xs">Passo {desiredStep}</span>
               </div>
             </CardHeader>
             <CardContent className="space-y-6">
-              {form.description && (
-                <p className="text-black text-lg">{form.description}</p>
+              {(processedForm?.description || form.description) && (
+                <p className="text-black text-lg">{processedForm?.description || form.description}</p>
               )}
 
               <div className="space-y-3">
-                {(form.schema as any[])?.map((opt: any, idx: number) => {
+                {(((processedForm?.schema as any[]) || (form.schema as any[])) as any[])?.map((opt: any, idx: number) => {
                   const checked = multiKeys.includes(String(idx));
                   return (
                     <div key={idx}>
@@ -1034,13 +1455,13 @@ export default function OnboardingClient() {
         <Card className="w-full max-w-3xl">
           <CardHeader>
             <div className="flex items-center justify-between">
-              <CardTitle className="text-2xl">{form.name}</CardTitle>
+              <CardTitle className="text-2xl">{processedForm?.name || form.name}</CardTitle>
               <span className="px-2 py-0.5 rounded bg-gray-800 text-gray-200 text-xs">Passo {desiredStep}</span>
             </div>
           </CardHeader>
           <CardContent className="space-y-6">
-            {form.description && (
-              <p className="text-black text-lg">{form.description}</p>
+            {(processedForm?.description || form.description) && (
+              <p className="text-black text-lg">{processedForm?.description || form.description}</p>
             )}
 
             <RadioGroup
@@ -1053,7 +1474,7 @@ export default function OnboardingClient() {
               }}
               className="space-y-3"
             >
-              {(form.schema as any[])?.map((opt: any, idx: number) => (
+              {(((processedForm?.schema as any[]) || (form.schema as any[])) as any[])?.map((opt: any, idx: number) => (
                 <div key={idx}>
                   <label
                     htmlFor={`opt-${idx}`}
@@ -1100,15 +1521,15 @@ export default function OnboardingClient() {
       <Card className="w-full max-w-3xl">
         <CardHeader>
           <div className="flex items-center justify-between">
-            <CardTitle className="text-2xl">{form.name}</CardTitle>
+            <CardTitle className="text-2xl">{processedForm?.name || form.name}</CardTitle>
             {typeof form.onboard_step === 'number' && (
               <span className="px-2 py-0.5 rounded bg-gray-800 text-gray-200 text-xs">Passo {form.onboard_step}</span>
             )}
           </div>
         </CardHeader>
         <CardContent className="space-y-6">
-          {form.description && (
-            <p className="text-black text-lg">{form.description}</p>
+          {(processedForm?.description || form.description) && (
+            <p className="text-black text-lg">{processedForm?.description || form.description}</p>
           )}
 
           <RadioGroup
@@ -1130,7 +1551,7 @@ export default function OnboardingClient() {
             }}
             className="space-y-3"
           >
-            {form.schema?.map((opt, idx) => (
+            {(((processedForm?.schema as any[]) || (form.schema as any[])) as any[])?.map((opt: any, idx: number) => (
               <div key={idx}>
                 <label
                   htmlFor={`opt-${idx}`}
@@ -1151,24 +1572,23 @@ export default function OnboardingClient() {
                     id="opt-other"
                   />
                   <label htmlFor="opt-other" className="text-base cursor-pointer flex-1">
-                    {form.other_option_label || 'Outros'}
+                    {processedForm?.other_option_label || form.other_option_label || 'Outros'}
                   </label>
                 </div>
-                <Input
-                  id="opt-other-input"
-                  placeholder="Digite sua opção..."
-                  value={otherOptionText}
-                  onChange={(e) => {
-                    setOtherOptionText(e.target.value);
-                    if (e.target.value.trim()) {
-                      setSelectedKey('other');
-                      setSelected('');
-                    } else {
-                      setSelectedKey('');
-                    }
-                  }}
-                  className="ml-9"
-                />
+                {selectedKey === 'other' && (
+                  <div className="pl-9 pr-4">
+                    <Input
+                      id="opt-other-input"
+                      placeholder="Digite sua opção..."
+                      value={otherOptionText}
+                      onChange={(e) => {
+                        setOtherOptionText(e.target.value);
+                      }}
+                      className="w-full"
+                      autoFocus
+                    />
+                  </div>
+                )}
               </div>
             )}
           </RadioGroup>

@@ -140,48 +140,6 @@ export default function ConfiguracoesPage() {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-8">
-              {/* Onboarding */}
-              <div id="onboarding" className="space-y-3 p-4 border border-gray-200 rounded-lg bg-white">
-                <h3 className="text-base font-semibold text-gray-900">Onboarding</h3>
-                <div className="space-y-2">
-                  <Label htmlFor="onboarding_step2_title">Passo 2 — Título</Label>
-                  <Input
-                    id="onboarding_step2_title"
-                    value={localSettings.onboarding_step2_title || ''}
-                    onChange={(e) => setLocalSettings(prev => ({
-                      ...prev,
-                      onboarding_step2_title: e.target.value
-                    }))}
-                    placeholder="Título do passo 2"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="onboarding_step2_subtitle">Passo 2 — Subtítulo</Label>
-                  <Textarea
-                    id="onboarding_step2_subtitle"
-                    value={localSettings.onboarding_step2_subtitle || ''}
-                    onChange={(e) => setLocalSettings(prev => ({
-                      ...prev,
-                      onboarding_step2_subtitle: e.target.value
-                    }))}
-                    placeholder="Subtítulo do passo 2"
-                    rows={3}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="onboarding_step3_title">Passo 3 — Título</Label>
-                  <Input
-                    id="onboarding_step3_title"
-                    value={localSettings.onboarding_step3_title || ''}
-                    onChange={(e) => setLocalSettings(prev => ({
-                      ...prev,
-                      onboarding_step3_title: e.target.value
-                    }))}
-                    placeholder="Título do passo 3"
-                  />
-                  <p className="text-xs text-gray-500">Você pode usar {"{category}"} para inserir o nome da categoria selecionada.</p>
-                </div>
-              </div>
               {/* Automação */}
               <div className="space-y-3 p-4 border border-gray-200 rounded-lg bg-white">
                 <h3 className="text-base font-semibold text-gray-900">Automação</h3>
