@@ -72,37 +72,47 @@ export default function WhatsAppSetup({ variant = "standalone", redirectIfNotLog
       try {
         let row: any = null;
 
-        // First, try to get the user's WhatsApp number by user_id
-        if (user?.id) {
+        // Try to get the user's WhatsApp number by phone_number from localStorage first
+        const localPhone = typeof window !== 'undefined' ? window.localStorage.getItem('agape_whatsapp_phone') : null;
+        
+        if (localPhone) {
           const { data } = await supabase
             .from('whatsapp_users')
             .select('phone_number, is_active, receives_daily_verse, receives_daily_prayer, receives_daily_routine, prayer_time_wakeup, prayer_time_lunch, prayer_time_dinner, prayer_time_sleep')
-            .eq('user_id', user.id)
+            .eq('phone_number', localPhone)
             .maybeSingle();
           row = data || null;
         }
 
-        // If not found by user_id, try by phone number from localStorage (but only if it belongs to this user)
-        if (!row) {
-          const localPhone = typeof window !== 'undefined' ? window.localStorage.getItem('agape_whatsapp_phone') : null;
-          if (localPhone && user?.id) {
-            const { data } = await supabase
+        // If user is logged in, try to find by user_id (if column exists)
+        if (!row && user?.id) {
+          try {
+            const { data, error } = await supabase
               .from('whatsapp_users')
               .select('phone_number, is_active, receives_daily_verse, receives_daily_prayer, receives_daily_routine, prayer_time_wakeup, prayer_time_lunch, prayer_time_dinner, prayer_time_sleep')
-              .eq('phone_number', localPhone)
               .eq('user_id', user.id)
               .maybeSingle();
-            row = data || null;
-            if (row && row.phone_number) {
-              setPhone(row.phone_number);
+            
+            // Se não houver erro sobre user_id não existir, usar os dados
+            if (!error || (!error.message?.includes('user_id') && !error.message?.includes('schema cache'))) {
+              row = data || null;
             }
-          } else if (localPhone && !user?.id) {
-            // If user is not logged in, just set the phone from localStorage for display
-            setPhone(localPhone);
+          } catch (e: any) {
+            // Ignorar erro se user_id não existir
+            if (!e?.message?.includes('user_id') && !e?.message?.includes('schema cache')) {
+              console.warn("Erro ao buscar por user_id:", e);
+            }
           }
         }
 
-        if (!row) return;
+        if (!row) {
+          // Se não encontrou nada e há um telefone no localStorage, pelo menos mostrar ele
+          if (localPhone) {
+            setPhone(localPhone);
+          }
+          return;
+        }
+
         if (row.phone_number) setPhone(row.phone_number);
         if (typeof row.is_active === 'boolean') setIsActive(Boolean(row.is_active));
         if (typeof row.receives_daily_verse === 'boolean') setDailyVerse(Boolean(row.receives_daily_verse));
@@ -122,7 +132,9 @@ export default function WhatsAppSetup({ variant = "standalone", redirectIfNotLog
         setLunchEnabled(!!lt);
         setDinnerEnabled(!!dt);
         setSleepEnabled(!!st);
-      } catch {}
+      } catch (e) {
+        console.warn("Erro ao buscar dados do WhatsApp:", e);
+      }
     };
     fetchExisting();
   }, [user?.id]);
@@ -221,20 +233,58 @@ export default function WhatsAppSetup({ variant = "standalone", redirectIfNotLog
       toast.error("Digite um número válido");
       return;
     }
+    
+    // Verificar se o usuário está logado (se redirectIfNotLoggedIn estiver ativo)
+    if (redirectIfNotLoggedIn && !user?.id) {
+      toast.error("Você precisa estar logado para salvar o número");
+      return;
+    }
+    
     setSaving(true);
     try {
+      // Primeiro, fazer upsert básico sem user_id (como os webhooks fazem)
+      const payload: any = {
+        phone_number: clean,
+        name: user?.email?.split("@")[0] ?? "Irmão(ã)",
+        is_active: true,
+        receives_daily_verse: false,
+        updated_at: new Date().toISOString(),
+      };
+
+      // Tentar adicionar user_id apenas se o usuário estiver logado
+      // Se a coluna não existir, o Supabase vai ignorar silenciosamente
+      if (user?.id) {
+        payload.user_id = user.id;
+      }
+
       const { error } = await supabase.from("whatsapp_users").upsert(
-        {
-          phone_number: clean,
-          user_id: user?.id || null,
-          name: user?.email?.split("@")[0] ?? "Irmão(ã)",
-          is_active: true,
-          receives_daily_verse: false,
-          updated_at: new Date().toISOString(),
-        },
+        payload,
         { onConflict: "phone_number" }
       );
-      if (error) throw error;
+      
+      if (error) {
+        // Se o erro for sobre user_id não existir, tentar novamente sem user_id
+        if (error.message?.includes("user_id") || error.message?.includes("schema cache")) {
+          console.warn("Coluna user_id não encontrada, salvando sem ela...");
+          const { error: retryError } = await supabase.from("whatsapp_users").upsert(
+            {
+              phone_number: clean,
+              name: user?.email?.split("@")[0] ?? "Irmão(ã)",
+              is_active: true,
+              receives_daily_verse: false,
+              updated_at: new Date().toISOString(),
+            },
+            { onConflict: "phone_number" }
+          );
+          
+          if (retryError) {
+            throw retryError;
+          }
+        } else {
+          throw error;
+        }
+      }
+      
       toast.success("Número salvo com sucesso. Envie /start no seu WhatsApp.");
       setIsActive(true);
       try {
@@ -259,9 +309,18 @@ export default function WhatsAppSetup({ variant = "standalone", redirectIfNotLog
           console.warn("Falha ao agendar envio de mensagem de boas-vindas", e);
         }
       }
-    } catch (e) {
-      console.warn(e);
-      toast.error("Não foi possível salvar o número");
+    } catch (e: any) {
+      console.error("Erro ao salvar número:", e);
+      // Mensagens de erro mais específicas
+      if (e?.code === '23505') { // Unique violation
+        toast.error("Este número já está cadastrado");
+      } else if (e?.code === '42501') { // Insufficient privilege
+        toast.error("Você não tem permissão para realizar esta ação");
+      } else if (e?.message) {
+        toast.error(e.message);
+      } else {
+        toast.error("Não foi possível salvar o número. Tente novamente.");
+      }
     } finally {
       setSaving(false);
     }
@@ -306,10 +365,35 @@ export default function WhatsAppSetup({ variant = "standalone", redirectIfNotLog
       return;
     }
     try {
+      const payload: any = {
+        phone_number: clean,
+        [field]: value,
+        updated_at: new Date().toISOString()
+      };
+      
+      // Tentar adicionar user_id apenas se o usuário estiver logado
+      if (user?.id) {
+        payload.user_id = user.id;
+      }
+
       const { error } = await supabase
         .from('whatsapp_users')
-        .upsert({ phone_number: clean, user_id: user?.id || null, [field]: value, updated_at: new Date().toISOString() } as any, { onConflict: 'phone_number' });
-      if (error) throw error;
+        .upsert(payload, { onConflict: 'phone_number' });
+      
+      // Se o erro for sobre user_id não existir, tentar novamente sem user_id
+      if (error && (error.message?.includes("user_id") || error.message?.includes("schema cache"))) {
+        const { error: retryError } = await supabase
+          .from('whatsapp_users')
+          .upsert({
+            phone_number: clean,
+            [field]: value,
+            updated_at: new Date().toISOString()
+          }, { onConflict: 'phone_number' });
+        if (retryError) throw retryError;
+      } else if (error) {
+        throw error;
+      }
+      
       if (field === 'is_active') setIsActive(value);
       if (field === 'receives_daily_verse') setDailyVerse(value);
       if (field === 'receives_daily_prayer') setDailyPrayer(value);
@@ -329,13 +413,38 @@ export default function WhatsAppSetup({ variant = "standalone", redirectIfNotLog
     }
     try {
       // Persist as time (HH:MM); Postgres will cast string to time
-      const payload: any = { phone_number: clean, user_id: user?.id || null, updated_at: new Date().toISOString() };
+      const payload: any = {
+        phone_number: clean,
+        updated_at: new Date().toISOString()
+      };
+      
+      // Tentar adicionar user_id apenas se o usuário estiver logado
+      if (user?.id) {
+        payload.user_id = user.id;
+      }
+      
       // If empty, set null
-      (payload as any)[field] = value && value.length >= 4 ? value : null;
+      payload[field] = value && value.length >= 4 ? value : null;
+      
       const { error } = await supabase
         .from('whatsapp_users')
         .upsert(payload, { onConflict: 'phone_number' });
-      if (error) throw error;
+      
+      // Se o erro for sobre user_id não existir, tentar novamente sem user_id
+      if (error && (error.message?.includes("user_id") || error.message?.includes("schema cache"))) {
+        const retryPayload: any = {
+          phone_number: clean,
+          updated_at: new Date().toISOString()
+        };
+        retryPayload[field] = value && value.length >= 4 ? value : null;
+        const { error: retryError } = await supabase
+          .from('whatsapp_users')
+          .upsert(retryPayload, { onConflict: 'phone_number' });
+        if (retryError) throw retryError;
+      } else if (error) {
+        throw error;
+      }
+      
       toast.success('Horário atualizado');
     } catch (e) {
       console.warn(e);

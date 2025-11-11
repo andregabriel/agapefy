@@ -116,6 +116,20 @@ export default function OnboardingClient() {
   }, [playlists, orderedChallengePlaylists]);
   const recommendedId = orderedChallengePlaylists[0]?.id || '';
 
+  // When entering step 2, clear any previous radio selection (from step 1)
+  useEffect(() => {
+    if (desiredStep === 2) {
+      setSelectedKey('');
+    }
+  }, [desiredStep]);
+
+  // Keep the selected playlist id in sync with recommended when nothing chosen yet
+  useEffect(() => {
+    if (desiredStep === 2 && !selectedKey) {
+      if (recommendedId) setSelected(recommendedId);
+    }
+  }, [desiredStep, recommendedId, selectedKey]);
+
   // Função para determinar o próximo passo disponível e retornar a URL completa
   async function getNextStepUrl(
     currentStep: number,
@@ -696,7 +710,7 @@ export default function OnboardingClient() {
           if (staticKind !== 'whatsapp') {
             const categoryId = searchParams?.get('categoryId');
             if (categoryId) {
-            const [{ data: cat, error: catErr }, { data: auds, error: audErr }, getPl] = await Promise.all([
+            const [{ data: cat, error: catErr }, { data: auds, error: audErr }, plRes] = await Promise.all([
               supabase
                 .from('categories')
                 .select('id,name,description,image_url')
@@ -712,14 +726,23 @@ export default function OnboardingClient() {
             ]);
             if (catErr) throw catErr;
             if (audErr) throw audErr;
+            let playlistsArr = (plRes as any[]) || [];
+            // Fallback: se não houver challenges, usar playlists públicas da categoria
+            if (!playlistsArr.length) {
+              try {
+                const fb = await getPlaylistsByCategoryFast(categoryId);
+                playlistsArr = (fb as any[]) || [];
+              } catch {}
+            }
             if (mounted) {
               setCategory((cat as any) || null);
               setAudios(((auds as any[]) || []) as AudioPreview[]);
-              setPlaylists((getPl as any[]) || []);
-              // Determinar playlist selecionada no passo 2
-              let chosenPlaylistId: string | null = null;
+              setPlaylists(playlistsArr);
+              // Determinar playlist selecionada no passo 2 com prioridade: URL > DB > localStorage > recomendada
+              const selPl = searchParams?.get('selPl') || '';
+              let chosenPlaylistId: string | null = selPl || null;
               try {
-                if (user?.id) {
+                if (!chosenPlaylistId && user?.id) {
                   // Buscar form do passo 2 preferindo parent_form_id
                   let step2Form: any = null;
                   try {
@@ -758,12 +781,20 @@ export default function OnboardingClient() {
                     }
                   }
                 }
+                if (!chosenPlaylistId && typeof window !== 'undefined') {
+                  try {
+                    const localSel = window.localStorage.getItem('ag_onb_selected_playlist');
+                    if (localSel && typeof localSel === 'string') {
+                      chosenPlaylistId = localSel;
+                    }
+                  } catch {}
+                }
               } catch (e) {
                 // eslint-disable-next-line no-console
-                console.warn('Falha ao carregar resposta do passo 2:', e);
+                console.warn('Falha ao determinar playlist escolhida no passo 2:', e);
               }
-              // Fallback para recomendada (maior número de dias)
-              const plArr = (getPl as any[]) || [];
+              // Fallback: recomendada (maior número de dias)
+              const plArr = playlistsArr || [];
               if (!chosenPlaylistId && plArr.length > 0) {
                 const withDays = plArr.map((p: any) => ({ ...p, _days: parseDaysFromTitle(p.title) }));
                 withDays.sort((a: any, b: any) => b._days - a._days || String(a.title || '').localeCompare(String(b.title || '')));
@@ -1096,7 +1127,17 @@ export default function OnboardingClient() {
         console.error('buildRoutinePlaylistFromOnboarding error:', err);
       }
 
-      const nextUrl = await getNextStepUrl(currentStep, { categoryId: currentCategoryId || undefined });
+      let nextUrl = await getNextStepUrl(currentStep, { categoryId: currentCategoryId || undefined });
+      // Passar a playlist selecionada via URL de handoff quando vier do passo 2
+      try {
+        if (currentStep === 2) {
+          const selectedPlaylistId = (recordedAnswers as any)?.option;
+          if (typeof selectedPlaylistId === 'string' && selectedPlaylistId) {
+            const sep = nextUrl.includes('?') ? '&' : '?';
+            nextUrl = `${nextUrl}${sep}selPl=${encodeURIComponent(selectedPlaylistId)}`;
+          }
+        }
+      } catch {}
       router.replace(nextUrl);
       setSubmitting(false);
     }
@@ -1406,7 +1447,7 @@ export default function OnboardingClient() {
   }
 
   // Passo 3: Mostrar apenas a playlist selecionada no passo 2 (se não for showStatic=whatsapp)
-  if (currentStepMeta?.type === 'static' && currentStepMeta?.staticKind === 'preview' && showStaticKind !== 'whatsapp') {
+  if (((desiredStep === 3) || (currentStepMeta?.type === 'static' && currentStepMeta?.staticKind === 'preview')) && showStaticKind !== 'whatsapp') {
     return (
       <div className="max-w-2xl mx-auto p-4">
         <Card>

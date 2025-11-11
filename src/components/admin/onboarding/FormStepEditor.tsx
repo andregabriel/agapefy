@@ -34,6 +34,8 @@ export default function FormStepEditor({ form, onSaved, onCancel }: FormStepEdit
   const [formData, setFormData] = useState<AdminForm>(form);
   const [saving, setSaving] = useState(false);
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
+  // Considerar como passo raiz quando onboard_step é 1 OU quando não há parent_form_id (dados legados)
+  const isRootStep = ((formData.onboard_step ?? 1) === 1) || !(form as any)?.parent_form_id;
 
   // Carregar playlists
   useEffect(() => {
@@ -287,7 +289,7 @@ export default function FormStepEditor({ form, onSaved, onCancel }: FormStepEdit
                       option={opt}
                       categories={categories}
                       playlists={playlists}
-                      showPlaylistPicker={formData.onboard_step !== 1}
+                      showPlaylistPicker={!isRootStep}
                       onSave={(option) => handleUpdateOption(idx, option)}
                       onCancel={() => setEditingIndex(null)}
                       onDelete={() => handleRemoveOption(idx)}
@@ -299,7 +301,7 @@ export default function FormStepEditor({ form, onSaved, onCancel }: FormStepEdit
                         <span className="text-gray-400">→</span>
                         <span className="text-sm text-gray-600">
                           {(() => {
-                            if (formData.onboard_step !== 1) {
+                            if (!isRootStep) {
                               const pl = playlists.find(p => p.id === (opt as any).playlist_id);
                               if (pl) return pl.title;
                             }
@@ -338,7 +340,7 @@ export default function FormStepEditor({ form, onSaved, onCancel }: FormStepEdit
                 option={{ label: '', category_id: '' }}
                 categories={categories}
                 playlists={playlists}
-                showPlaylistPicker={formData.onboard_step !== 1}
+                showPlaylistPicker={!isRootStep}
                 onSave={(option) => {
                   handleAddOption(option);
                 }}
