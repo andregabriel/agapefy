@@ -74,13 +74,13 @@ export default function StepPreview({ stepNumber, formId, staticKind, onClose }:
     const baseUrl = `/onboarding?step=${stepNumber}`;
     const params: string[] = [];
     
-    // Passo 2 e 3 precisam de categoryId
+    // Passo 2 e 3 podem precisar de categoryId (preview estático)
     if ((stepNumber === 2 || stepNumber === 3) && categoryId) {
       params.push(`categoryId=${encodeURIComponent(categoryId)}`);
     }
     
-    // Passos dinâmicos (4+) precisam de formId
-    if (stepNumber >= 4 && rootFormId) {
+    // Se houver um formId conhecido, sempre propagar — inclusive para passo 2
+    if (rootFormId) {
       params.push(`formId=${encodeURIComponent(rootFormId)}`);
     }
     // Passos estáticos: indicar explicitamente qual tela renderizar

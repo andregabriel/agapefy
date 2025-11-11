@@ -21,7 +21,7 @@ import { useRoutinePlaylist } from '@/hooks/useRoutinePlaylist';
 import { Switch } from '@/components/ui/switch';
 import { useOnboardingProgress } from '@/hooks/useOnboardingProgress';
 import { ProgressBar } from '@/components/onboarding/ProgressBar';
-import { getNextStepUrl as getNextStepUrlShared, getOnboardingStepsOrder } from '@/lib/services/onboarding-steps';
+import { getNextStepUrl as getNextStepUrlShared, getOnboardingStepsOrder, type OnboardingStep } from '@/lib/services/onboarding-steps';
 
 interface FormOption { label: string; category_id: string }
 interface AdminForm { 
@@ -67,6 +67,7 @@ export default function OnboardingClient() {
   const [savingVersePref, setSavingVersePref] = useState<boolean>(false);
   const [previousResponses, setPreviousResponses] = useState<Map<number, string>>(new Map());
   const [loadingResponses, setLoadingResponses] = useState<boolean>(false);
+  const [currentStepMeta, setCurrentStepMeta] = useState<OnboardingStep | null>(null);
   
   // Calcular progresso do onboarding
   const { percentage: progressPercentage, loading: progressLoading } = useOnboardingProgress(desiredStep, currentCategoryId);
@@ -95,6 +96,79 @@ export default function OnboardingClient() {
       formId: parentFormId || undefined,
       settings: settingsForShared,
     });
+  }
+
+  // Função para determinar o passo anterior e retornar a URL completa
+  async function getPreviousStepUrl(): Promise<string | null> {
+    if (desiredStep <= 1) {
+      return null; // Não há passo anterior ao primeiro
+    }
+
+    const parentFormId = activeFormId || form?.id || '';
+    
+    // Converter settings para formato esperado pela função compartilhada
+    const settingsForShared = {
+      onboarding_step2_title: settings.onboarding_step2_title,
+      onboarding_step2_subtitle: settings.onboarding_step2_subtitle,
+      onboarding_step3_title: settings.onboarding_step3_title,
+      onboarding_static_preview_active: settings.onboarding_static_preview_active,
+      onboarding_static_whatsapp_active: settings.onboarding_static_whatsapp_active,
+      onboarding_hardcoded_6_active: settings.onboarding_hardcoded_6_active,
+      onboarding_hardcoded_7_active: settings.onboarding_hardcoded_7_active,
+      onboarding_hardcoded_8_active: settings.onboarding_hardcoded_8_active,
+    };
+
+    const steps = await getOnboardingStepsOrder(settingsForShared);
+    
+    // Filtrar apenas passos ativos
+    let activeSteps = steps.filter((s) => s.isActive);
+    
+    // Verificação especial para passo preview: só está disponível se tiver categoryId
+    activeSteps = activeSteps.filter((s) => {
+      if (s.type === 'static' && s.staticKind === 'preview') {
+        return !!currentCategoryId;
+      }
+      return true;
+    });
+
+    // Ordenar por position para garantir ordem correta
+    activeSteps.sort((a, b) => a.position - b.position);
+
+    // Encontrar o índice do passo atual na lista de passos ativos
+    const currentIndex = activeSteps.findIndex((s) => s.position === desiredStep);
+    
+    let previousStep: OnboardingStep | undefined;
+    
+    if (currentIndex > 0) {
+      // Se encontrou o passo atual na lista de ativos, pegar o anterior da lista
+      previousStep = activeSteps[currentIndex - 1];
+    } else {
+      // Fallback: buscar o último passo ativo com position < desiredStep
+      const previousSteps = activeSteps.filter((s) => s.position < desiredStep);
+      if (previousSteps.length > 0) {
+        previousStep = previousSteps[previousSteps.length - 1];
+      }
+    }
+
+    if (previousStep) {
+      // Usar a função getStepUrl do módulo onboarding-steps
+      const { getStepUrl } = await import('@/lib/services/onboarding-steps');
+      return getStepUrl(previousStep, {
+        categoryId: currentCategoryId || undefined,
+        formId: parentFormId || undefined,
+      });
+    }
+
+    // Se não encontrou passo anterior, voltar para o passo 1
+    return `/onboarding?step=1${currentCategoryId ? `&categoryId=${encodeURIComponent(currentCategoryId)}` : ''}${parentFormId ? `&formId=${encodeURIComponent(parentFormId)}` : ''}`;
+  }
+
+  // Função para voltar ao passo anterior
+  async function handleGoBack() {
+    const previousUrl = await getPreviousStepUrl();
+    if (previousUrl) {
+      router.replace(previousUrl);
+    }
   }
 
   // Persistir preferência de versículo diário imediatamente quando o usuário alternar no passo 8.
@@ -367,6 +441,9 @@ export default function OnboardingClient() {
         
         const steps = await getOnboardingStepsOrder(settingsForCheck);
         const requestedStep = steps.find(s => s.position === stepParam);
+        if (mounted) {
+          setCurrentStepMeta(requestedStep || null);
+        }
         
         // Se o passo solicitado não existe ou está inativo, redirecionar para o próximo ativo
         if (!requestedStep || !requestedStep.isActive) {
@@ -376,10 +453,8 @@ export default function OnboardingClient() {
             .sort((a, b) => b.position - a.position);
           const previousActiveStep = activeStepsBefore[0]?.position ?? 0;
           
-          const nextUrl = await getNextStepUrlShared(previousActiveStep, {
+          const nextUrl = await getNextStepUrl(previousActiveStep, {
             categoryId: searchParams?.get('categoryId') || undefined,
-            formId: searchParams?.get('formId') || undefined,
-            settings: settingsForCheck,
           });
           if (mounted) {
             router.replace(nextUrl);
@@ -469,23 +544,55 @@ export default function OnboardingClient() {
               }
             }
           } else {
-            // Primeiro verificar se há um passo informativo no passo 2
-            // Se houver, mostrar ele primeiro; caso contrário, mostrar o passo 2 estático (preview da categoria)
-            let infoForm = await supabase
-              .from('admin_forms')
-              .select('*')
-              .eq('form_type', 'onboarding')
-              .eq('is_active', true)
-              .eq('onboard_step', 2)
-              .maybeSingle();
-            
-            if (infoForm.data && infoForm.data.schema && 
-                Array.isArray(infoForm.data.schema) && 
-                infoForm.data.schema[0]?.type === 'info') {
-              // Há um passo informativo no passo 2, mostrar ele
-              if (mounted) setForm((infoForm.data as AdminForm) || null);
+            // Passo 2: Preferir formulário dinâmico (inclusive múltipla escolha) se existir.
+            // 1) Verificar se há um formulário ativo no passo 2 associado ao parent_form_id
+            let fetched: any = null;
+            let fetchErr: any = null;
+            try {
+              const primary = await supabase
+                .from('admin_forms')
+                .select('*')
+                .eq('form_type', 'onboarding')
+                .eq('is_active', true)
+                .eq('onboard_step', 2)
+                .eq('parent_form_id', activeFormId || '-')
+                .maybeSingle();
+              fetched = primary.data as any;
+              fetchErr = primary.error as any;
+            } catch (e) {
+              fetchErr = e;
+            }
+            // 2) Se não encontrou (ou coluna não existe), buscar somente por onboard_step
+            if ((!fetched || fetchErr) && activeFormId) {
+              const fb = await supabase
+                .from('admin_forms')
+                .select('*')
+                .eq('form_type', 'onboarding')
+                .eq('is_active', true)
+                .eq('onboard_step', 2)
+                .maybeSingle();
+              if (!fb.error && fb.data) {
+                fetched = fb.data as any;
+                fetchErr = null;
+              }
+            }
+            // 3) Fallback se parent_form_id não existir
+            if (fetchErr && (fetchErr.code === '42703' || /parent_form_id/i.test(String(fetchErr.message || '')))) {
+              const fb = await supabase
+                .from('admin_forms')
+                .select('*')
+                .eq('form_type', 'onboarding')
+                .eq('is_active', true)
+                .eq('onboard_step', 2)
+                .maybeSingle();
+              fetched = fb.data as any;
+              fetchErr = fb.error as any;
+            }
+            // Se encontrou algum formulário no passo 2, mostrar ele (info ou não-info).
+            if (fetched) {
+              if (mounted) setForm((fetched as AdminForm) || null);
             } else {
-              // Não há passo informativo, mostrar o passo 2 estático (preview da categoria)
+              // Sem formulário no passo 2: mostrar preview estático da categoria
               const categoryId = searchParams?.get('categoryId');
               if (!categoryId) {
                 if (mounted) {
@@ -495,10 +602,10 @@ export default function OnboardingClient() {
               } else {
                 const [{ data: cat, error: catErr }, { data: auds, error: audErr }, getPl] = await Promise.all([
                   supabase
-                  .from('categories')
-                  .select('id,name,description,image_url')
-                  .eq('id', categoryId)
-                  .maybeSingle(),
+                    .from('categories')
+                    .select('id,name,description,image_url')
+                    .eq('id', categoryId)
+                    .maybeSingle(),
                   supabase
                     .from('audios')
                     .select('id,title,subtitle,duration,cover_url')
@@ -728,8 +835,8 @@ export default function OnboardingClient() {
     }
   }
 
-  // Passo 6: Mostrar playlist da rotina criada
-  if (desiredStep === 6) {
+  // Passo hardcoded: rotina pronta (via metadado)
+  if (currentStepMeta?.type === 'hardcoded' && currentStepMeta?.hardcodedKind === 'routine') {
     const formatDuration = (seconds?: number | null): string | null => {
       if (!seconds && seconds !== 0) return null;
       const mins = Math.floor(seconds / 60);
@@ -745,7 +852,12 @@ export default function OnboardingClient() {
           <CardHeader>
             <div className="space-y-4">
               <div className="w-full">
-                <ProgressBar percentage={progressPercentage} loading={progressLoading} />
+                <ProgressBar 
+                  percentage={progressPercentage} 
+                  loading={progressLoading}
+                  onBack={handleGoBack}
+                  showBackButton={desiredStep > 1}
+                />
               </div>
               <div className="text-center px-2 md:px-6">
                 <CardTitle className="text-2xl md:text-3xl leading-tight max-w-4xl mx-auto">Sua rotina está pronta</CardTitle>
@@ -800,7 +912,7 @@ export default function OnboardingClient() {
               <Button
                 variant="ghost"
                 onClick={async () => {
-                  const nextUrl = await getNextStepUrl(desiredStep);
+                  const nextUrl = await getNextStepUrl(desiredStep, { categoryId: currentCategoryId || undefined });
                   router.replace(nextUrl);
                 }}
               >
@@ -808,7 +920,7 @@ export default function OnboardingClient() {
               </Button>
               <Button
                 onClick={async () => {
-                  const nextUrl = await getNextStepUrl(desiredStep);
+                  const nextUrl = await getNextStepUrl(desiredStep, { categoryId: currentCategoryId || undefined });
                   router.replace(nextUrl);
                 }}
               >
@@ -829,7 +941,7 @@ export default function OnboardingClient() {
       await saveFormResponse({ formId: form.id, answers: { skipped: true }, userId: user?.id ?? null });
       toast.success('Passo adiado');
       const currentStep = form.onboard_step || desiredStep;
-      const nextUrl = await getNextStepUrl(currentStep);
+      const nextUrl = await getNextStepUrl(currentStep, { categoryId: currentCategoryId || undefined });
       router.replace(nextUrl);
     } catch (e) {
       // eslint-disable-next-line no-console
@@ -865,7 +977,7 @@ export default function OnboardingClient() {
         console.error('buildRoutinePlaylistFromOnboarding error:', err);
       }
 
-      const nextUrl = await getNextStepUrl(currentStep);
+      const nextUrl = await getNextStepUrl(currentStep, { categoryId: currentCategoryId || undefined });
       router.replace(nextUrl);
       setSubmitting(false);
     }
@@ -892,7 +1004,12 @@ export default function OnboardingClient() {
           <CardHeader>
             <div className="space-y-4">
               <div className="w-full">
-                <ProgressBar percentage={progressPercentage} loading={progressLoading} />
+                <ProgressBar 
+                  percentage={progressPercentage} 
+                  loading={progressLoading}
+                  onBack={handleGoBack}
+                  showBackButton={desiredStep > 1}
+                />
               </div>
               <div className="text-center px-2 md:px-6">
                 <CardTitle className="text-xl md:text-2xl leading-snug break-words max-w-3xl mx-auto">{(() => {
@@ -909,14 +1026,14 @@ export default function OnboardingClient() {
               <Button
                 variant="ghost"
                 onClick={async () => {
-                  const nextUrl = await getNextStepUrl(desiredStep);
+                  const nextUrl = await getNextStepUrl(desiredStep, { categoryId: currentCategoryId || undefined });
                   router.replace(nextUrl);
                 }}
               >
                 Pular
               </Button>
               <Button onClick={async () => {
-                const nextUrl = await getNextStepUrl(desiredStep);
+                const nextUrl = await getNextStepUrl(desiredStep, { categoryId: currentCategoryId || undefined });
                 router.replace(nextUrl);
               }}>Concluir</Button>
             </div>
@@ -942,7 +1059,12 @@ export default function OnboardingClient() {
           <CardHeader>
             <div className="space-y-4">
               <div className="w-full">
-                <ProgressBar percentage={progressPercentage} loading={progressLoading} />
+                <ProgressBar 
+                  percentage={progressPercentage} 
+                  loading={progressLoading}
+                  onBack={handleGoBack}
+                  showBackButton={desiredStep > 1}
+                />
               </div>
               <div className="text-center px-2 md:px-6">
                 <CardTitle className="text-2xl md:text-3xl leading-tight line-clamp-2 max-w-4xl mx-auto">{settings.onboarding_step2_title || 'Parabéns pela coragem e pela abertura de dar as mãos à Jesus neste momento difícil.'}</CardTitle>
@@ -998,7 +1120,7 @@ export default function OnboardingClient() {
             })()}
             <div className="flex justify-end">
               <Button onClick={async () => {
-                const nextUrl = await getNextStepUrl(desiredStep);
+                const nextUrl = await getNextStepUrl(desiredStep, { categoryId: currentCategoryId || undefined });
                 router.replace(nextUrl);
               }}>
                 Avançar
@@ -1011,7 +1133,7 @@ export default function OnboardingClient() {
     );
   }
   // Passo 7: Relembrar cadastro do WhatsApp (apenas para quem não concluiu no passo 3)
-  if (desiredStep === 7) {
+  if (currentStepMeta?.type === 'hardcoded' && currentStepMeta?.hardcodedKind === 'whatsapp-final') {
     if (hasWhatsApp === null) {
       return (
         <div className="max-w-2xl mx-auto p-4">
@@ -1029,7 +1151,12 @@ export default function OnboardingClient() {
           <CardHeader>
             <div className="space-y-4">
               <div className="w-full">
-                <ProgressBar percentage={progressPercentage} loading={progressLoading} />
+                <ProgressBar 
+                  percentage={progressPercentage} 
+                  loading={progressLoading}
+                  onBack={handleGoBack}
+                  showBackButton={desiredStep > 1}
+                />
               </div>
               <div className="text-center px-2 md:px-6">
                 <CardTitle className="text-xl md:text-2xl leading-snug break-words max-w-3xl mx-auto">
@@ -1048,7 +1175,7 @@ export default function OnboardingClient() {
               <Button
                 variant="ghost"
                 onClick={async () => {
-                  const nextUrl = await getNextStepUrl(desiredStep);
+                  const nextUrl = await getNextStepUrl(desiredStep, { categoryId: currentCategoryId || undefined });
                   router.replace(nextUrl);
                 }}
               >
@@ -1056,7 +1183,7 @@ export default function OnboardingClient() {
               </Button>
               {hasWhatsApp && (
                 <Button onClick={async () => {
-                  const nextUrl = await getNextStepUrl(desiredStep);
+                  const nextUrl = await getNextStepUrl(desiredStep, { categoryId: currentCategoryId || undefined });
                   router.replace(nextUrl);
                 }}>Concluir</Button>
               )}
@@ -1068,14 +1195,19 @@ export default function OnboardingClient() {
   }
 
   // Passo 8: Opt-in de Versículo Diário
-  if (desiredStep === 8) {
+  if (currentStepMeta?.type === 'hardcoded' && currentStepMeta?.hardcodedKind === 'daily-verse') {
     return (
       <div className="max-w-2xl mx-auto p-4">
         <Card>
           <CardHeader>
             <div className="space-y-4">
               <div className="w-full">
-                <ProgressBar percentage={progressPercentage} loading={progressLoading} />
+                <ProgressBar 
+                  percentage={progressPercentage} 
+                  loading={progressLoading}
+                  onBack={handleGoBack}
+                  showBackButton={desiredStep > 1}
+                />
               </div>
               <div className="text-center px-2 md:px-6">
                 <CardTitle className="text-[clamp(18px,4.5vw,28px)] leading-snug break-words max-w-3xl mx-auto">
@@ -1156,7 +1288,7 @@ export default function OnboardingClient() {
 
   // Passo 3: Preview da categoria (apenas se não for showStatic=whatsapp)
   // Se showStatic=whatsapp, já foi renderizado acima
-  if (desiredStep === 3 && showStaticKind !== 'whatsapp') {
+  if (currentStepMeta?.type === 'static' && currentStepMeta?.staticKind === 'preview' && showStaticKind !== 'whatsapp') {
     const formatDuration = (seconds?: number | null): string | null => {
       if (!seconds && seconds !== 0) return null;
       const mins = Math.floor(seconds / 60);
@@ -1171,7 +1303,12 @@ export default function OnboardingClient() {
           <CardHeader>
             <div className="space-y-4">
               <div className="w-full">
-                <ProgressBar percentage={progressPercentage} loading={progressLoading} />
+                <ProgressBar 
+                  percentage={progressPercentage} 
+                  loading={progressLoading}
+                  onBack={handleGoBack}
+                  showBackButton={desiredStep > 1}
+                />
               </div>
               <div className="text-center px-2 md:px-6">
                 <CardTitle className="text-2xl md:text-3xl leading-tight line-clamp-2 max-w-4xl mx-auto">{settings.onboarding_step2_title || 'Parabéns pela coragem e pela abertura de dar as mãos à Jesus neste momento difícil.'}</CardTitle>
@@ -1240,7 +1377,7 @@ export default function OnboardingClient() {
 
             <div className="flex justify-end">
               <Button onClick={async () => {
-                const nextUrl = await getNextStepUrl(desiredStep);
+                const nextUrl = await getNextStepUrl(desiredStep, { categoryId: currentCategoryId || undefined });
                 router.replace(nextUrl);
               }}>
                 Avançar
@@ -1266,7 +1403,7 @@ export default function OnboardingClient() {
 
     const handleInfoNext = async () => {
       const currentStep = form.onboard_step || desiredStep;
-      const nextUrl = await getNextStepUrl(currentStep);
+      const nextUrl = await getNextStepUrl(currentStep, { categoryId: currentCategoryId || undefined });
       router.replace(nextUrl);
     };
 
@@ -1276,7 +1413,12 @@ export default function OnboardingClient() {
           <CardHeader>
             <div className="space-y-4">
               <div className="w-full">
-                <ProgressBar percentage={progressPercentage} loading={progressLoading} />
+                <ProgressBar 
+                  percentage={progressPercentage} 
+                  loading={progressLoading}
+                  onBack={handleGoBack}
+                  showBackButton={desiredStep > 1}
+                />
               </div>
               <div className="text-center px-2 md:px-6">
                 <CardTitle className="text-2xl md:text-3xl leading-tight max-w-4xl mx-auto">
@@ -1310,9 +1452,65 @@ export default function OnboardingClient() {
     );
   }
 
+  // Passo 2: Form dinâmico (quando existir e não for informativo)
+  if (desiredStep === 2 && form && !(Array.isArray((form as any).schema) && (form as any).schema[0]?.type === 'info')) {
+    return (
+      <div className="min-h-[calc(100vh-0rem)] flex items-center justify-center px-4">
+        <Card className="w-full max-w-3xl">
+          <CardHeader>
+            <div className="space-y-4">
+              <div className="w-full">
+                <ProgressBar 
+                  percentage={progressPercentage} 
+                  loading={progressLoading}
+                  onBack={handleGoBack}
+                  showBackButton={desiredStep > 1}
+                />
+              </div>
+              <CardTitle className="text-2xl">{processedForm?.name || form.name}</CardTitle>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            {(processedForm?.description || form.description) && (
+              <p className="text-black text-lg">{processedForm?.description || form.description}</p>
+            )}
+
+            <RadioGroup
+              value={selectedKey}
+              onValueChange={(key) => {
+                setSelectedKey(key);
+                const index = Number(key);
+                const chosen = (form.schema as any)?.[index];
+                if (chosen) setSelected(chosen.label || '');
+              }}
+              className="space-y-3"
+            >
+              {(((processedForm?.schema as any[]) || (form.schema as any[])) as any[])?.map((opt: any, idx: number) => (
+                <div key={idx}>
+                  <label
+                    htmlFor={`opt-${idx}`}
+                    className="flex items-center gap-4 w-full p-4 rounded-lg border border-gray-800 hover:bg-gray-800/40 cursor-pointer"
+                  >
+                    <RadioGroupItem className="h-5 w-5" value={`${idx}`} id={`opt-${idx}`} />
+                    <span className="text-base">{opt.label}</span>
+                  </label>
+                </div>
+              ))}
+            </RadioGroup>
+
+            <div className="flex justify-between">
+              <Button variant="ghost" onClick={skip} disabled={submitting}>Agora não</Button>
+              <Button onClick={() => submitAndGoNext({ option: selected })} disabled={!selected || submitting}>{submitting ? 'Enviando...' : 'Enviar'}</Button>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
   // Passo 2: Preview da categoria (apenas se não for passo informativo OU se showStatic=true)
   const showStaticStep2 = searchParams?.get('showStatic') === 'true';
-  if (desiredStep === 2 && (showStaticStep2 || (!form || !Array.isArray((form as any).schema) || (form as any).schema[0]?.type !== 'info'))) {
+  if (desiredStep === 2 && (showStaticStep2 || !form)) {
 
     const formatDuration = (seconds?: number | null): string | null => {
       if (!seconds && seconds !== 0) return null;
@@ -1328,7 +1526,12 @@ export default function OnboardingClient() {
           <CardHeader>
             <div className="space-y-4">
               <div className="w-full">
-                <ProgressBar percentage={progressPercentage} loading={progressLoading} />
+                <ProgressBar 
+                  percentage={progressPercentage} 
+                  loading={progressLoading}
+                  onBack={handleGoBack}
+                  showBackButton={desiredStep > 1}
+                />
               </div>
               <div className="text-center px-2 md:px-6">
                 <CardTitle className="text-2xl md:text-3xl leading-tight line-clamp-2 max-w-4xl mx-auto">{settings.onboarding_step2_title || 'Parabéns pela coragem e pela abertura de dar as mãos à Jesus neste momento difícil.'}</CardTitle>
@@ -1397,7 +1600,7 @@ export default function OnboardingClient() {
 
             <div className="flex justify-end">
               <Button onClick={async () => {
-                const nextUrl = await getNextStepUrl(desiredStep);
+                const nextUrl = await getNextStepUrl(desiredStep, { categoryId: currentCategoryId || undefined });
                 router.replace(nextUrl);
               }}>
                 Avançar
@@ -1426,7 +1629,12 @@ export default function OnboardingClient() {
             <CardHeader>
               <div className="space-y-4">
                 <div className="w-full">
-                  <ProgressBar percentage={progressPercentage} loading={progressLoading} />
+                  <ProgressBar 
+                  percentage={progressPercentage} 
+                  loading={progressLoading}
+                  onBack={handleGoBack}
+                  showBackButton={desiredStep > 1}
+                />
                 </div>
                 <div className="text-center px-2 md:px-6">
                   <CardTitle className="text-2xl md:text-3xl leading-tight line-clamp-2 max-w-4xl mx-auto">{processedForm?.name || form.name}</CardTitle>
@@ -1454,7 +1662,12 @@ export default function OnboardingClient() {
             <CardHeader>
               <div className="space-y-4">
                 <div className="w-full">
-                  <ProgressBar percentage={progressPercentage} loading={progressLoading} />
+                  <ProgressBar 
+                  percentage={progressPercentage} 
+                  loading={progressLoading}
+                  onBack={handleGoBack}
+                  showBackButton={desiredStep > 1}
+                />
                 </div>
                 <CardTitle className="text-2xl">{processedForm?.name || form.name}</CardTitle>
               </div>
@@ -1515,7 +1728,12 @@ export default function OnboardingClient() {
           <CardHeader>
             <div className="space-y-4">
               <div className="w-full">
-                <ProgressBar percentage={progressPercentage} loading={progressLoading} />
+                <ProgressBar 
+                  percentage={progressPercentage} 
+                  loading={progressLoading}
+                  onBack={handleGoBack}
+                  showBackButton={desiredStep > 1}
+                />
               </div>
               <CardTitle className="text-2xl">{processedForm?.name || form.name}</CardTitle>
             </div>
@@ -1583,7 +1801,12 @@ export default function OnboardingClient() {
         <CardHeader>
           <div className="space-y-4">
             <div className="w-full">
-              <ProgressBar percentage={progressPercentage} loading={progressLoading} />
+              <ProgressBar 
+                percentage={progressPercentage} 
+                loading={progressLoading}
+                onBack={handleGoBack}
+                showBackButton={desiredStep > 1}
+              />
             </div>
             <CardTitle className="text-2xl">{processedForm?.name || form.name}</CardTitle>
           </div>

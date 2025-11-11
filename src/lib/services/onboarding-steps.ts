@@ -307,22 +307,9 @@ export async function getNextStepUrl(
   // Ordenar por position para garantir ordem correta
   activeSteps.sort((a, b) => a.position - b.position);
 
-  // Encontrar o índice do passo atual na lista de passos ativos
-  // Isso garante que seguimos a ordem sequencial dos passos ativos,
-  // pulando apenas os passos inativos
-  const currentIndex = activeSteps.findIndex((s) => s.position === currentStep);
-  
-  let nextStep: OnboardingStep | undefined;
-  
-  if (currentIndex >= 0 && currentIndex < activeSteps.length - 1) {
-    // Se encontrou o passo atual na lista de ativos, pegar o próximo da lista
-    // Isso garante ordem sequencial respeitando apenas passos ativos
-    nextStep = activeSteps[currentIndex + 1];
-  } else {
-    // Fallback: se não encontrou o passo atual (pode ser inativo ou inválido),
-    // buscar o primeiro passo ativo com position > currentStep
-    nextStep = activeSteps.find((s) => s.position > currentStep);
-  }
+  // Sempre pegar o primeiro passo ativo com posição maior que a atual.
+  // Esta regra simples garante avanço sequencial sem pular passos ativos.
+  const nextStep = activeSteps.find((s) => s.position > currentStep);
 
   if (nextStep) {
     return getStepUrl(nextStep, params);
@@ -330,5 +317,18 @@ export async function getNextStepUrl(
 
   // Não há mais passos, finalizar onboarding
   return '/';
+}
+
+/**
+ * Retorna o metadado do passo pela posição atual, considerando settings.
+ * Útil para centralizar a decisão de renderização no cliente.
+ */
+export async function getStepByPosition(
+  position: number,
+  settings?: AppSettings
+): Promise<OnboardingStep | null> {
+  const steps = await getOnboardingStepsOrder(settings);
+  const step = steps.find((s) => s.position === position);
+  return step || null;
 }
 
