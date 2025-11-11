@@ -61,11 +61,20 @@ export default function FormStepEditor({ form, onSaved, onCancel }: FormStepEdit
 
     try {
       setSaving(true);
-      
+
+      // Para o passo 1, garantir que nenhuma opção contenha playlist_id
+      const normalizedSchema =
+        (formData.onboard_step === 1)
+          ? (formData.schema || []).map((opt) => {
+              const { label, category_id } = opt as any;
+              return { label, category_id };
+            })
+          : formData.schema;
+
       const updateData: any = {
         name: formData.name,
         description: formData.description || null,
-        schema: formData.schema,
+        schema: normalizedSchema,
         onboard_step: formData.onboard_step,
         allow_other_option: formData.allow_other_option || false,
         other_option_label: formData.other_option_label || null,
@@ -180,6 +189,9 @@ export default function FormStepEditor({ form, onSaved, onCancel }: FormStepEdit
               💡 Use <code className="bg-gray-100 px-1 rounded">{'{resposta1}'}</code> para inserir o texto da opção selecionada no passo 1
             </p>
           )}
+          <p className="text-xs text-gray-500 mt-1">
+            🔗 Use <code className="bg-gray-100 px-1 rounded">[texto](https://exemplo.com)</code> para adicionar links que abrem em nova janela
+          </p>
         </div>
 
         {/* Descrição */}
@@ -227,6 +239,9 @@ export default function FormStepEditor({ form, onSaved, onCancel }: FormStepEdit
               💡 Use <code className="bg-gray-100 px-1 rounded">{'{resposta1}'}</code> para inserir o texto da opção selecionada no passo 1
             </p>
           )}
+          <p className="text-xs text-gray-500 mt-1">
+            🔗 Use <code className="bg-gray-100 px-1 rounded">[texto](https://exemplo.com)</code> para adicionar links que abrem em nova janela
+          </p>
         </div>
 
         {/* Número do passo */}
@@ -272,6 +287,7 @@ export default function FormStepEditor({ form, onSaved, onCancel }: FormStepEdit
                       option={opt}
                       categories={categories}
                       playlists={playlists}
+                      showPlaylistPicker={formData.onboard_step !== 1}
                       onSave={(option) => handleUpdateOption(idx, option)}
                       onCancel={() => setEditingIndex(null)}
                       onDelete={() => handleRemoveOption(idx)}
@@ -283,8 +299,10 @@ export default function FormStepEditor({ form, onSaved, onCancel }: FormStepEdit
                         <span className="text-gray-400">→</span>
                         <span className="text-sm text-gray-600">
                           {(() => {
-                            const pl = playlists.find(p => p.id === (opt as any).playlist_id);
-                            if (pl) return pl.title;
+                            if (formData.onboard_step !== 1) {
+                              const pl = playlists.find(p => p.id === (opt as any).playlist_id);
+                              if (pl) return pl.title;
+                            }
                             const cat = categories.find(c => c.id === opt.category_id);
                             return cat?.name || 'Categoria não selecionada';
                           })()}
@@ -320,6 +338,7 @@ export default function FormStepEditor({ form, onSaved, onCancel }: FormStepEdit
                 option={{ label: '', category_id: '' }}
                 categories={categories}
                 playlists={playlists}
+                showPlaylistPicker={formData.onboard_step !== 1}
                 onSave={(option) => {
                   handleAddOption(option);
                 }}
@@ -387,6 +406,8 @@ export default function FormStepEditor({ form, onSaved, onCancel }: FormStepEdit
                 {formData.onboard_step && formData.onboard_step > 1 && (
                   <> • Use <code className="bg-gray-100 px-1 rounded">{'{resposta1}'}</code> para inserir o texto da opção selecionada no passo 1</>
                 )}
+                <br />
+                🔗 Use <code className="bg-gray-100 px-1 rounded">[texto](https://exemplo.com)</code> para adicionar links que abrem em nova janela
               </p>
             </div>
           )}

@@ -22,6 +22,7 @@ import { Switch } from '@/components/ui/switch';
 import { useOnboardingProgress } from '@/hooks/useOnboardingProgress';
 import { ProgressBar } from '@/components/onboarding/ProgressBar';
 import { getNextStepUrl as getNextStepUrlShared, getOnboardingStepsOrder, type OnboardingStep } from '@/lib/services/onboarding-steps';
+import { processLinks } from '@/lib/utils';
 
 interface FormOption { label: string; category_id: string }
 interface AdminForm { 
@@ -68,9 +69,52 @@ export default function OnboardingClient() {
   const [previousResponses, setPreviousResponses] = useState<Map<number, string>>(new Map());
   const [loadingResponses, setLoadingResponses] = useState<boolean>(false);
   const [currentStepMeta, setCurrentStepMeta] = useState<OnboardingStep | null>(null);
+  const [selectedChallengePlaylist, setSelectedChallengePlaylist] = useState<{ id: string; title: string; cover_url?: string | null } | null>(null);
   
   // Calcular progresso do onboarding
   const { percentage: progressPercentage, loading: progressLoading } = useOnboardingProgress(desiredStep, currentCategoryId);
+
+  // Helpers
+  function parseDaysFromTitle(title?: string | null): number {
+    if (!title) return 0;
+    const t = String(title).toLowerCase();
+    // capture the largest number preceding 'dia' or 'dias'
+    const matches = [...t.matchAll(/(\d+)\s*dias?\b/g)];
+    if (matches.length === 0) return 0;
+    const nums = matches.map(m => Number(m[1])).filter(n => Number.isFinite(n));
+    return nums.length ? Math.max(...nums) : 0;
+  }
+
+  async function getChallengePlaylistsByCategory(categoryId: string): Promise<Array<{ id: string; title: string; description?: string | null; cover_url?: string | null }>> {
+    const { data, error } = await supabase
+      .from('playlists')
+      .select('id,title,description,cover_url,category_id,is_challenge,is_public')
+      .eq('category_id', categoryId)
+      .eq('is_public', true)
+      .eq('is_challenge', true)
+      .order('created_at', { ascending: false });
+    if (error) {
+      // eslint-disable-next-line no-console
+      console.warn('Erro ao buscar playlists de desafio por categoria:', error);
+      return [];
+    }
+    return ((data || []) as any[]).map(p => ({ id: p.id, title: p.title, description: p.description, cover_url: p.cover_url }));
+  }
+
+  // Derived ordering and recommended selection for step 2 (avoid state changes to prevent flicker)
+  const orderedChallengePlaylists = useMemo(() => {
+    const arr = (playlists || []).map((p) => ({ ...p, _days: parseDaysFromTitle(p.title) }));
+    arr.sort((a, b) => b._days - a._days || String(a.title || '').localeCompare(String(b.title || '')));
+    return arr;
+  }, [playlists]);
+  const recommendedOriginalIndex = useMemo(() => {
+    if (!playlists || playlists.length === 0) return '';
+    const top = orderedChallengePlaylists[0];
+    if (!top) return '';
+    const idx = playlists.findIndex(pl => pl.id === top.id);
+    return idx >= 0 ? String(idx) : '';
+  }, [playlists, orderedChallengePlaylists]);
+  const recommendedId = orderedChallengePlaylists[0]?.id || '';
 
   // Função para determinar o próximo passo disponível e retornar a URL completa
   async function getNextStepUrl(
@@ -208,6 +252,19 @@ export default function OnboardingClient() {
       }
       if (answers.text && typeof answers.text === 'string' && answers.text.trim()) {
         return answers.text.trim();
+      }
+      // Para o passo 2, quando salvamos o id da playlist selecionada
+      if (onboardStep === 2 && answers.option && typeof answers.option === 'string') {
+        try {
+          const { data, error } = await supabase
+            .from('playlists')
+            .select('title')
+            .eq('id', answers.option)
+            .maybeSingle();
+          if (!error && data?.title) {
+            return data.title as string;
+          }
+        } catch {}
       }
       if (answers.option) {
         const { data: formData, error: formError } = await supabase
@@ -533,7 +590,7 @@ export default function OnboardingClient() {
                   .eq('category_id', categoryId)
                   .order('created_at', { ascending: false })
                   .limit(10),
-                getPlaylistsByCategoryFast(categoryId)
+                getChallengePlaylistsByCategory(categoryId)
               ]);
               if (catErr) throw catErr;
               if (audErr) throw audErr;
@@ -591,6 +648,12 @@ export default function OnboardingClient() {
             // Se encontrou algum formulário no passo 2, mostrar ele (info ou não-info).
             if (fetched) {
               if (mounted) setForm((fetched as AdminForm) || null);
+              // Carregar playlists de desafio da categoria selecionada (para listar como opções)
+              const categoryId = searchParams?.get('categoryId');
+              if (categoryId) {
+                const pls = await getChallengePlaylistsByCategory(categoryId);
+                if (mounted) setPlaylists(pls as any[]);
+              }
             } else {
               // Sem formulário no passo 2: mostrar preview estático da categoria
               const categoryId = searchParams?.get('categoryId');
@@ -612,7 +675,7 @@ export default function OnboardingClient() {
                     .eq('category_id', categoryId)
                     .order('created_at', { ascending: false })
                     .limit(10),
-                  getPlaylistsByCategoryFast(categoryId)
+                  getChallengePlaylistsByCategory(categoryId)
                 ]);
                 if (catErr) throw catErr;
                 if (audErr) throw audErr;
@@ -645,7 +708,7 @@ export default function OnboardingClient() {
                 .eq('category_id', categoryId)
                 .order('created_at', { ascending: false })
                 .limit(10),
-              getPlaylistsByCategoryFast(categoryId)
+              getChallengePlaylistsByCategory(categoryId)
             ]);
             if (catErr) throw catErr;
             if (audErr) throw audErr;
@@ -653,12 +716,68 @@ export default function OnboardingClient() {
               setCategory((cat as any) || null);
               setAudios(((auds as any[]) || []) as AudioPreview[]);
               setPlaylists((getPl as any[]) || []);
+              // Determinar playlist selecionada no passo 2
+              let chosenPlaylistId: string | null = null;
+              try {
+                if (user?.id) {
+                  // Buscar form do passo 2 preferindo parent_form_id
+                  let step2Form: any = null;
+                  try {
+                    const primary = await supabase
+                      .from('admin_forms')
+                      .select('id')
+                      .eq('form_type', 'onboarding')
+                      .eq('is_active', true)
+                      .eq('onboard_step', 2)
+                      .eq('parent_form_id', activeFormId || '-')
+                      .maybeSingle();
+                    if (!primary.error && primary.data) step2Form = primary.data;
+                  } catch {}
+                  if (!step2Form) {
+                    const fallback = await supabase
+                      .from('admin_forms')
+                      .select('id')
+                      .eq('form_type', 'onboarding')
+                      .eq('is_active', true)
+                      .eq('onboard_step', 2)
+                      .maybeSingle();
+                    if (!fallback.error) step2Form = fallback.data;
+                  }
+                  if (step2Form?.id) {
+                    const resp = await supabase
+                      .from('admin_form_responses')
+                      .select('answers, created_at')
+                      .eq('user_id', user.id)
+                      .eq('form_id', step2Form.id)
+                      .order('created_at', { ascending: false })
+                      .limit(1)
+                      .maybeSingle();
+                    const ans: any = (resp.data as any)?.answers || {};
+                    if (ans?.option && typeof ans.option === 'string') {
+                      chosenPlaylistId = ans.option;
+                    }
+                  }
+                }
+              } catch (e) {
+                // eslint-disable-next-line no-console
+                console.warn('Falha ao carregar resposta do passo 2:', e);
+              }
+              // Fallback para recomendada (maior número de dias)
+              const plArr = (getPl as any[]) || [];
+              if (!chosenPlaylistId && plArr.length > 0) {
+                const withDays = plArr.map((p: any) => ({ ...p, _days: parseDaysFromTitle(p.title) }));
+                withDays.sort((a: any, b: any) => b._days - a._days || String(a.title || '').localeCompare(String(b.title || '')));
+                chosenPlaylistId = withDays[0]?.id || null;
+              }
+              const selected = plArr.find((p: any) => p.id === chosenPlaylistId) || null;
+              setSelectedChallengePlaylist(selected ? { id: selected.id, title: selected.title, cover_url: selected.cover_url } : null);
             }
           } else {
             if (mounted) {
               setCategory(null);
               setAudios([]);
               setPlaylists([]);
+              setSelectedChallengePlaylist(null);
             }
           }
           }
@@ -1030,12 +1149,12 @@ export default function OnboardingClient() {
                   router.replace(nextUrl);
                 }}
               >
-                Pular
+                {settings.onboarding_step4_skip_button || 'Pular'}
               </Button>
               <Button onClick={async () => {
                 const nextUrl = await getNextStepUrl(desiredStep, { categoryId: currentCategoryId || undefined });
                 router.replace(nextUrl);
-              }}>Concluir</Button>
+              }}>{settings.onboarding_step4_complete_button || 'Concluir'}</Button>
             </div>
           </CardContent>
         </Card>
@@ -1043,7 +1162,7 @@ export default function OnboardingClient() {
     );
   }
 
-  if (showStaticKind === 'preview') {
+  if (showStaticKind === 'preview' && desiredStep !== 3) {
     // Reusar o mesmo bloco do Passo 2 (Preview da categoria)
     const formatDuration = (seconds?: number | null): string | null => {
       if (!seconds && seconds !== 0) return null;
@@ -1286,17 +1405,8 @@ export default function OnboardingClient() {
     );
   }
 
-  // Passo 3: Preview da categoria (apenas se não for showStatic=whatsapp)
-  // Se showStatic=whatsapp, já foi renderizado acima
+  // Passo 3: Mostrar apenas a playlist selecionada no passo 2 (se não for showStatic=whatsapp)
   if (currentStepMeta?.type === 'static' && currentStepMeta?.staticKind === 'preview' && showStaticKind !== 'whatsapp') {
-    const formatDuration = (seconds?: number | null): string | null => {
-      if (!seconds && seconds !== 0) return null;
-      const mins = Math.floor(seconds / 60);
-      const rem = seconds % 60;
-      if (!Number.isFinite(mins)) return null;
-      if (rem === 0) return `${mins} min`;
-      return `${mins}:${String(rem).padStart(2, '0')}`;
-    };
     return (
       <div className="max-w-2xl mx-auto p-4">
         <Card>
@@ -1311,70 +1421,39 @@ export default function OnboardingClient() {
                 />
               </div>
               <div className="text-center px-2 md:px-6">
-                <CardTitle className="text-2xl md:text-3xl leading-tight line-clamp-2 max-w-4xl mx-auto">{settings.onboarding_step2_title || 'Parabéns pela coragem e pela abertura de dar as mãos à Jesus neste momento difícil.'}</CardTitle>
-                <p className="mt-3 text-black text-base md:text-lg max-w-3xl mx-auto">{settings.onboarding_step2_subtitle || 'Sua playlist foi criada, em breve você poderá escutar essas orações.'}</p>
+                <CardTitle className="text-2xl md:text-3xl leading-tight line-clamp-2 max-w-4xl mx-auto">
+                  {settings.onboarding_step2_title || 'Parabéns pela coragem e pela abertura de dar as mãos à Jesus neste momento difícil.'}
+                </CardTitle>
+                <p className="mt-3 text-black text-base md:text-lg max-w-3xl mx-auto">
+                  {settings.onboarding_step2_subtitle || 'Sua playlist foi criada, em breve você poderá escutar essas orações.'}
+                </p>
               </div>
             </div>
           </CardHeader>
           <CardContent className="space-y-8">
-
-            {(() => {
-              const combined: Array<{
-                id: string;
-                type: 'audio' | 'playlist';
-                title: string;
-                subtitle?: string | null;
-                duration?: number | null;
-                image?: string | null;
-              }> = [
-                ...playlists.map(p => ({ id: p.id, type: 'playlist' as const, title: p.title, subtitle: null, duration: null, image: p.cover_url || category?.image_url || null })),
-                ...audios.map(a => ({ id: a.id, type: 'audio' as const, title: a.title, subtitle: a.subtitle || null, duration: a.duration || null, image: a.cover_url || category?.image_url || null })),
-              ];
-
-              if (combined.length === 0) return null;
-
-              return (
-                <div className="space-y-4">
-                  <h2 className="text-2xl font-bold text-black">{category?.name}</h2>
-                  <div className="relative group">
-                    {/* Setas do carrossel */}
-                    <button onClick={() => scrollCarousel('left')} className="absolute left-0 top-1/2 -translate-y-1/2 z-20 bg-white/90 hover:bg-white text-gray-800 rounded-full w-10 h-10 flex items-center justify-center shadow-lg border-2 border-gray-200" title="Rolar para a esquerda">
-                      <svg width="20" height="20" viewBox="0 0 24 24"><path fill="currentColor" d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"/></svg>
-                    </button>
-                    <button onClick={() => scrollCarousel('right')} className="absolute right-0 top-1/2 -translate-y-1/2 z-20 bg-white/90 hover:bg-white text-gray-800 rounded-full w-10 h-10 flex items-center justify-center shadow-lg border-2 border-gray-200" title="Rolar para a direita">
-                      <svg width="20" height="20" viewBox="0 0 24 24"><path fill="currentColor" d="M8.59 16.59L10 18l6-6-6-6-1.41 1.41L13.17 12z"/></svg>
-                    </button>
-
-                    <div ref={carouselRef} className="flex space-x-6 overflow-x-auto scrollbar-hide pb-2 scroll-smooth snap-x snap-mandatory">
-                      {combined.map((item) => (
-                        <div key={`${item.type}-${item.id}`} className="flex-shrink-0 w-48 snap-start group">
-                          <div className="relative mb-4">
-                            <div className="w-48 h-48 rounded-lg overflow-hidden bg-gray-800">
-                              {item.image ? (
-                                <img src={item.image} alt={item.title} className="w-full h-full object-cover" />
-                              ) : (
-                                <div className="w-full h-48 bg-gray-800" />
-                              )}
-                            </div>
-                            {/* Sem overlay de play no preview */}
-                          </div>
-                          <div className="space-y-1">
-                            <div className="font-bold text-black text-base leading-tight truncate">{item.title}</div>
-                            {item.subtitle && (
-                              <div className="text-sm text-gray-400 truncate">{item.subtitle}</div>
-                            )}
-                            {typeof item.duration === 'number' && item.duration !== null && (
-                              <div className="text-sm text-gray-400">{formatDuration(item.duration)}</div>
-                            )}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
+            {selectedChallengePlaylist && (
+              <div className="space-y-4">
+                <h2 className="text-2xl font-bold text-black">{category?.name}</h2>
+                <div className="flex items-center gap-6">
+                  <div className="w-32 h-32 rounded-lg overflow-hidden bg-gray-200 border border-gray-300">
+                    {selectedChallengePlaylist.cover_url ? (
+                      <img src={selectedChallengePlaylist.cover_url} alt={selectedChallengePlaylist.title} className="w-full h-full object-cover" />
+                    ) : (
+                      <div className="w-full h-full bg-gray-100" />
+                    )}
+                  </div>
+                  <div className="flex-1">
+                    <div className="font-bold text-black text-lg leading-tight">{selectedChallengePlaylist.title}</div>
+                    <div className="text-sm text-gray-500 mt-1">Playlist selecionada</div>
                   </div>
                 </div>
-              );
-            })()}
-
+              </div>
+            )}
+            {!selectedChallengePlaylist && (
+              <div className="text-sm text-gray-500">
+                Nenhuma playlist de desafio encontrada nesta categoria.
+              </div>
+            )}
             <div className="flex justify-end">
               <Button onClick={async () => {
                 const nextUrl = await getNextStepUrl(desiredStep, { categoryId: currentCategoryId || undefined });
@@ -1421,23 +1500,26 @@ export default function OnboardingClient() {
                 />
               </div>
               <div className="text-center px-2 md:px-6">
-                <CardTitle className="text-2xl md:text-3xl leading-tight max-w-4xl mx-auto">
-                  {title}
-                </CardTitle>
+                <CardTitle 
+                  className="text-2xl md:text-3xl leading-tight max-w-4xl mx-auto"
+                  dangerouslySetInnerHTML={{ __html: processLinks(title) }}
+                />
               </div>
             </div>
           </CardHeader>
           <CardContent className="space-y-6">
             {subtitle && (
-              <p className="text-black text-lg text-center max-w-3xl mx-auto">
-                {subtitle}
-              </p>
+              <p 
+                className="text-black text-lg text-center max-w-3xl mx-auto"
+                dangerouslySetInnerHTML={{ __html: processLinks(subtitle) }}
+              />
             )}
             {explanation && (
               <div className="space-y-4">
-                <p className="text-black text-base text-center max-w-3xl mx-auto">
-                  {explanation}
-                </p>
+                <p 
+                  className="text-black text-base text-center max-w-3xl mx-auto"
+                  dangerouslySetInnerHTML={{ __html: processLinks(explanation) }}
+                />
               </div>
             )}
             <div className="flex justify-end pt-4">
@@ -1467,40 +1549,64 @@ export default function OnboardingClient() {
                   showBackButton={desiredStep > 1}
                 />
               </div>
-              <CardTitle className="text-2xl">{processedForm?.name || form.name}</CardTitle>
+              <CardTitle 
+                className="text-2xl"
+                dangerouslySetInnerHTML={{ __html: processLinks(processedForm?.name || form.name) }}
+              />
             </div>
           </CardHeader>
           <CardContent className="space-y-6">
             {(processedForm?.description || form.description) && (
-              <p className="text-black text-lg">{processedForm?.description || form.description}</p>
+              <p 
+                className="text-black text-lg"
+                dangerouslySetInnerHTML={{ __html: processLinks(processedForm?.description || form.description) }}
+              />
             )}
 
             <RadioGroup
-              value={selectedKey}
+              value={selectedKey || recommendedOriginalIndex}
               onValueChange={(key) => {
                 setSelectedKey(key);
                 const index = Number(key);
-                const chosen = (form.schema as any)?.[index];
-                if (chosen) setSelected(chosen.label || '');
+                const chosen = playlists?.[index];
+                if (chosen) setSelected(chosen.id || '');
               }}
               className="space-y-3"
             >
-              {(((processedForm?.schema as any[]) || (form.schema as any[])) as any[])?.map((opt: any, idx: number) => (
-                <div key={idx}>
-                  <label
-                    htmlFor={`opt-${idx}`}
-                    className="flex items-center gap-4 w-full p-4 rounded-lg border border-gray-800 hover:bg-gray-800/40 cursor-pointer"
-                  >
-                    <RadioGroupItem className="h-5 w-5" value={`${idx}`} id={`opt-${idx}`} />
-                    <span className="text-base">{opt.label}</span>
-                  </label>
-                </div>
-              ))}
+              {orderedChallengePlaylists.map((pl) => {
+                const originalIndex = (playlists || []).findIndex(p => p.id === pl.id);
+                return (
+                  <div key={pl.id}>
+                    <label
+                      htmlFor={`opt-${originalIndex}`}
+                      className="flex items-center justify-between gap-4 w-full p-4 rounded-lg border border-gray-800 hover:bg-gray-800/40 cursor-pointer"
+                      onClick={() => {
+                        setSelectedKey(String(originalIndex));
+                        setSelected(pl.id);
+                      }}
+                    >
+                      <div className="flex items-center gap-4">
+                        <RadioGroupItem className="h-5 w-5" value={`${originalIndex}`} id={`opt-${originalIndex}`} />
+                        <span className="text-base">{pl.title}</span>
+                      </div>
+                      {pl.id === recommendedId && (
+                        <span className="text-xs px-2 py-0.5 rounded-full border border-amber-500 text-amber-700 bg-amber-50">
+                          Recomendada
+                        </span>
+                      )}
+                    </label>
+                  </div>
+                );
+              })}
             </RadioGroup>
 
             <div className="flex justify-between">
               <Button variant="ghost" onClick={skip} disabled={submitting}>Agora não</Button>
-              <Button onClick={() => submitAndGoNext({ option: selected })} disabled={!selected || submitting}>{submitting ? 'Enviando...' : 'Enviar'}</Button>
+              <Button onClick={() => {
+                const chosen = playlists?.[Number(selectedKey)];
+                const payload = { option: selected, playlist_title: chosen?.title || null };
+                void submitAndGoNext(payload);
+              }} disabled={!selected || submitting}>{submitting ? 'Enviando...' : 'Enviar'}</Button>
             </div>
           </CardContent>
         </Card>
@@ -1637,12 +1743,20 @@ export default function OnboardingClient() {
                 />
                 </div>
                 <div className="text-center px-2 md:px-6">
-                  <CardTitle className="text-2xl md:text-3xl leading-tight line-clamp-2 max-w-4xl mx-auto">{processedForm?.name || form.name}</CardTitle>
-                </div>
+                <CardTitle 
+                  className="text-2xl md:text-3xl leading-tight line-clamp-2 max-w-4xl mx-auto"
+                  dangerouslySetInnerHTML={{ __html: processLinks(processedForm?.name || form.name) }}
+                />
               </div>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              {(processedForm?.description || form.description) && <p className="text-black text-lg">{processedForm?.description || form.description}</p>}
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            {(processedForm?.description || form.description) && (
+              <p 
+                className="text-black text-lg"
+                dangerouslySetInnerHTML={{ __html: processLinks(processedForm?.description || form.description) }}
+              />
+            )}
               <Input placeholder="Digite sua resposta..." value={shortText} onChange={(e) => setShortText(e.target.value)} />
               <div className="flex justify-between">
                 <Button variant="ghost" onClick={skip} disabled={submitting}>Agora não</Button>
@@ -1669,13 +1783,19 @@ export default function OnboardingClient() {
                   showBackButton={desiredStep > 1}
                 />
                 </div>
-                <CardTitle className="text-2xl">{processedForm?.name || form.name}</CardTitle>
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              {(processedForm?.description || form.description) && (
-                <p className="text-black text-lg">{processedForm?.description || form.description}</p>
-              )}
+              <CardTitle 
+                className="text-2xl"
+                dangerouslySetInnerHTML={{ __html: processLinks(processedForm?.name || form.name) }}
+              />
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            {(processedForm?.description || form.description) && (
+              <p 
+                className="text-black text-lg"
+                dangerouslySetInnerHTML={{ __html: processLinks(processedForm?.description || form.description) }}
+              />
+            )}
 
               <div className="space-y-3">
                 {(((processedForm?.schema as any[]) || (form.schema as any[])) as any[])?.map((opt: any, idx: number) => {
@@ -1705,7 +1825,10 @@ export default function OnboardingClient() {
                           setMultiKeys(prev => nextChecked ? [...prev, key] : prev.filter(k => k !== key));
                           setMultiLabels(prev => nextChecked ? [...prev, label] : prev.filter(l => l !== label));
                         }} />
-                        <span className="text-base">{opt.label}</span>
+                        <span 
+                          className="text-base"
+                          dangerouslySetInnerHTML={{ __html: processLinks(opt.label) }}
+                        />
                       </label>
                     </div>
                   );
@@ -1760,7 +1883,10 @@ export default function OnboardingClient() {
                     className="flex items-center gap-4 w-full p-4 rounded-lg border border-gray-800 hover:bg-gray-800/40 cursor-pointer"
                   >
                     <RadioGroupItem className="h-5 w-5" value={`${idx}`} id={`opt-${idx}`} />
-                    <span className="text-base">{opt.label}</span>
+                    <span 
+                      className="text-base"
+                      dangerouslySetInnerHTML={{ __html: processLinks(opt.label) }}
+                    />
                   </label>
                 </div>
               ))}
@@ -1808,12 +1934,18 @@ export default function OnboardingClient() {
                 showBackButton={desiredStep > 1}
               />
             </div>
-            <CardTitle className="text-2xl">{processedForm?.name || form.name}</CardTitle>
+            <CardTitle 
+              className="text-2xl"
+              dangerouslySetInnerHTML={{ __html: processLinks(processedForm?.name || form.name) }}
+            />
           </div>
         </CardHeader>
         <CardContent className="space-y-6">
           {(processedForm?.description || form.description) && (
-            <p className="text-black text-lg">{processedForm?.description || form.description}</p>
+            <p 
+              className="text-black text-lg"
+              dangerouslySetInnerHTML={{ __html: processLinks(processedForm?.description || form.description) }}
+            />
           )}
 
           <RadioGroup
@@ -1842,7 +1974,10 @@ export default function OnboardingClient() {
                   className="flex items-center gap-4 w-full p-4 rounded-lg border border-gray-800 hover:bg-gray-800/40 cursor-pointer"
                 >
                   <RadioGroupItem className="h-5 w-5" value={`${idx}`} id={`opt-${idx}`} />
-                  <span className="text-base">{opt.label}</span>
+                  <span 
+                    className="text-base"
+                    dangerouslySetInnerHTML={{ __html: processLinks(opt.label) }}
+                  />
                 </label>
               </div>
             ))}
@@ -1855,9 +1990,11 @@ export default function OnboardingClient() {
                     value="other" 
                     id="opt-other"
                   />
-                  <label htmlFor="opt-other" className="text-base cursor-pointer flex-1">
-                    {processedForm?.other_option_label || form.other_option_label || 'Outros'}
-                  </label>
+                  <label 
+                    htmlFor="opt-other" 
+                    className="text-base cursor-pointer flex-1"
+                    dangerouslySetInnerHTML={{ __html: processLinks(processedForm?.other_option_label || form.other_option_label || 'Outros') }}
+                  />
                 </div>
                 {selectedKey === 'other' && (
                   <div className="pl-9 pr-4">

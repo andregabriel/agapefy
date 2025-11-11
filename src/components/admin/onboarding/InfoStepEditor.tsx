@@ -155,6 +155,9 @@ export default function InfoStepEditor({ form, onSaved, onCancel }: InfoStepEdit
               💡 Use <code className="bg-gray-100 px-1 rounded">{'{resposta1}'}</code> para inserir o texto da opção selecionada no passo 1
             </p>
           )}
+          <p className="text-xs text-gray-500 mt-1">
+            🔗 Use <code className="bg-gray-100 px-1 rounded">[texto](https://exemplo.com)</code> para adicionar links que abrem em nova janela
+          </p>
         </div>
 
         {/* Subtítulo */}
@@ -200,6 +203,9 @@ export default function InfoStepEditor({ form, onSaved, onCancel }: InfoStepEdit
               💡 Use <code className="bg-gray-100 px-1 rounded">{'{resposta1}'}</code> para inserir o texto da opção selecionada no passo 1
             </p>
           )}
+          <p className="text-xs text-gray-500 mt-1">
+            🔗 Use <code className="bg-gray-100 px-1 rounded">[texto](https://exemplo.com)</code> para adicionar links que abrem em nova janela
+          </p>
         </div>
 
         {/* Explicação */}
@@ -245,6 +251,8 @@ export default function InfoStepEditor({ form, onSaved, onCancel }: InfoStepEdit
             {form.onboard_step && form.onboard_step > 1 && (
               <> • Use <code className="bg-gray-100 px-1 rounded">{'{resposta1}'}</code> para inserir o texto da opção selecionada no passo 1</>
             )}
+            <br />
+            🔗 Use <code className="bg-gray-100 px-1 rounded">[texto](https://exemplo.com)</code> para adicionar links que abrem em nova janela
           </p>
         </div>
 
@@ -290,6 +298,9 @@ export default function InfoStepEditor({ form, onSaved, onCancel }: InfoStepEdit
               💡 Use <code className="bg-gray-100 px-1 rounded">{'{resposta1}'}</code> para inserir o texto da opção selecionada no passo 1
             </p>
           )}
+          <p className="text-xs text-gray-500 mt-1">
+            🔗 Use <code className="bg-gray-100 px-1 rounded">[texto](https://exemplo.com)</code> para adicionar links que abrem em nova janela
+          </p>
         </div>
       </div>
     </div>

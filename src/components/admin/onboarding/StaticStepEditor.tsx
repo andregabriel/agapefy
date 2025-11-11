@@ -16,6 +16,12 @@ interface StaticStepEditorProps {
     step2_title?: string;
     step2_subtitle?: string;
     step3_title?: string;
+    step4_section_title?: string;
+    step4_instruction?: string;
+    step4_label?: string;
+    step4_privacy_text?: string;
+    step4_skip_button?: string;
+    step4_complete_button?: string;
   };
   onSaved: () => void;
   onCancel: () => void;
@@ -38,6 +44,14 @@ export default function StaticStepEditor({
   const [step2Title, setStep2Title] = useState(initialData?.step2_title || settings.onboarding_step2_title || '');
   const [step2Subtitle, setStep2Subtitle] = useState(initialData?.step2_subtitle || settings.onboarding_step2_subtitle || '');
   const [step3Title, setStep3Title] = useState(initialData?.step3_title || settings.onboarding_step3_title || '');
+  
+  // Step 4 (WhatsApp) fields
+  const [step4SectionTitle, setStep4SectionTitle] = useState(initialData?.step4_section_title || settings.onboarding_step4_section_title || '');
+  const [step4Instruction, setStep4Instruction] = useState(initialData?.step4_instruction || settings.onboarding_step4_instruction || '');
+  const [step4Label, setStep4Label] = useState(initialData?.step4_label || settings.onboarding_step4_label || '');
+  const [step4PrivacyText, setStep4PrivacyText] = useState(initialData?.step4_privacy_text || settings.onboarding_step4_privacy_text || '');
+  const [step4SkipButton, setStep4SkipButton] = useState(initialData?.step4_skip_button || settings.onboarding_step4_skip_button || '');
+  const [step4CompleteButton, setStep4CompleteButton] = useState(initialData?.step4_complete_button || settings.onboarding_step4_complete_button || '');
 
   // Sincronizar valores quando settings mudarem
   useEffect(() => {
@@ -46,6 +60,12 @@ export default function StaticStepEditor({
       setStep2Subtitle(settings.onboarding_step2_subtitle || '');
     } else if (isWhatsAppStep) {
       setStep3Title(settings.onboarding_step3_title || '');
+      setStep4SectionTitle(settings.onboarding_step4_section_title || '');
+      setStep4Instruction(settings.onboarding_step4_instruction || '');
+      setStep4Label(settings.onboarding_step4_label || '');
+      setStep4PrivacyText(settings.onboarding_step4_privacy_text || '');
+      setStep4SkipButton(settings.onboarding_step4_skip_button || '');
+      setStep4CompleteButton(settings.onboarding_step4_complete_button || '');
     }
   }, [settings, isPreviewStep, isWhatsAppStep]);
 
@@ -60,8 +80,16 @@ export default function StaticStepEditor({
           throw new Error('Erro ao salvar configurações');
         }
       } else if (isWhatsAppStep) {
-        const result = await updateSetting('onboarding_step3_title', step3Title);
-        if (!result.success) {
+        const results = await Promise.all([
+          updateSetting('onboarding_step3_title', step3Title),
+          updateSetting('onboarding_step4_section_title', step4SectionTitle),
+          updateSetting('onboarding_step4_instruction', step4Instruction),
+          updateSetting('onboarding_step4_label', step4Label),
+          updateSetting('onboarding_step4_privacy_text', step4PrivacyText),
+          updateSetting('onboarding_step4_skip_button', step4SkipButton),
+          updateSetting('onboarding_step4_complete_button', step4CompleteButton),
+        ]);
+        if (results.some(r => !r.success)) {
           throw new Error('Erro ao salvar configurações');
         }
       }
@@ -121,17 +149,79 @@ export default function StaticStepEditor({
       )}
 
       {isWhatsAppStep && (
-        <div>
-          <Label htmlFor="step3-title">Título</Label>
-          <Input
-            id="step3-title"
-            value={step3Title}
-            onChange={(e) => setStep3Title(e.target.value)}
-            placeholder="Conecte seu WhatsApp para receber uma mensagem diária para {category}."
-          />
-          <p className="text-xs text-gray-500 mt-1">
-            Você pode usar {"{category}"} para inserir o nome da categoria selecionada.
-          </p>
+        <div className="space-y-4">
+          <div>
+            <Label htmlFor="step3-title">Título</Label>
+            <Input
+              id="step3-title"
+              value={step3Title}
+              onChange={(e) => setStep3Title(e.target.value)}
+              placeholder="Conecte seu WhatsApp para receber uma mensagem diária para {category}."
+            />
+            <p className="text-xs text-gray-500 mt-1">
+              Você pode usar {"{category}"} para inserir o nome da categoria selecionada.
+            </p>
+          </div>
+          
+          <div>
+            <Label htmlFor="step4-section-title">Título da Seção</Label>
+            <Input
+              id="step4-section-title"
+              value={step4SectionTitle}
+              onChange={(e) => setStep4SectionTitle(e.target.value)}
+              placeholder="Configuração do WhatsApp"
+            />
+          </div>
+          
+          <div>
+            <Label htmlFor="step4-instruction">Instrução</Label>
+            <Input
+              id="step4-instruction"
+              value={step4Instruction}
+              onChange={(e) => setStep4Instruction(e.target.value)}
+              placeholder="Informe seu número com DDD. Exemplo: +55 11 99999-9999"
+            />
+          </div>
+          
+          <div>
+            <Label htmlFor="step4-label">Label do Campo</Label>
+            <Input
+              id="step4-label"
+              value={step4Label}
+              onChange={(e) => setStep4Label(e.target.value)}
+              placeholder="Número do WhatsApp"
+            />
+          </div>
+          
+          <div>
+            <Label htmlFor="step4-privacy-text">Texto de Privacidade</Label>
+            <Input
+              id="step4-privacy-text"
+              value={step4PrivacyText}
+              onChange={(e) => setStep4PrivacyText(e.target.value)}
+              placeholder="seu número será usado apenas para enviar/receber mensagens."
+            />
+          </div>
+          
+          <div>
+            <Label htmlFor="step4-skip-button">Texto do Botão Pular</Label>
+            <Input
+              id="step4-skip-button"
+              value={step4SkipButton}
+              onChange={(e) => setStep4SkipButton(e.target.value)}
+              placeholder="Pular"
+            />
+          </div>
+          
+          <div>
+            <Label htmlFor="step4-complete-button">Texto do Botão Concluir</Label>
+            <Input
+              id="step4-complete-button"
+              value={step4CompleteButton}
+              onChange={(e) => setStep4CompleteButton(e.target.value)}
+              placeholder="Concluir"
+            />
+          </div>
         </div>
       )}
     </div>

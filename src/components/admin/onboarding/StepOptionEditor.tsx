@@ -21,6 +21,8 @@ interface StepOptionEditorProps {
   option: { label: string; category_id: string; playlist_id?: string };
   categories: Category[];
   playlists: Playlist[];
+  // When false, the playlist picker is hidden and options should save without playlist_id
+  showPlaylistPicker?: boolean;
   onSave: (option: { label: string; category_id: string; playlist_id?: string }) => void;
   onCancel: () => void;
   onDelete?: () => void;
@@ -30,6 +32,7 @@ export default function StepOptionEditor({
   option,
   categories,
   playlists,
+  showPlaylistPicker = true,
   onSave,
   onCancel,
   onDelete,
@@ -50,11 +53,14 @@ export default function StepOptionEditor({
     if (!categoryId) {
       return;
     }
-    onSave({
+    const payload: { label: string; category_id: string; playlist_id?: string } = {
       label: label.trim(),
       category_id: categoryId,
-      playlist_id: playlistId || undefined,
-    });
+    };
+    if (showPlaylistPicker && playlistId) {
+      payload.playlist_id = playlistId;
+    }
+    onSave(payload);
   };
 
   return (
@@ -87,26 +93,28 @@ export default function StepOptionEditor({
           ))}
         </select>
       </div>
-      <div>
-        <Label htmlFor="option-playlist">Playlist (opcional)</Label>
-        <Input
-          id="option-playlist"
-          list="playlists-list"
-          placeholder="Busque pelo nome da playlist"
-          value={filteredPlaylists.find(p => p.id === playlistId)?.title || ''}
-          onChange={(e) => {
-            const match = filteredPlaylists.find(
-              p => (p.title || '').toLowerCase() === e.target.value.toLowerCase()
-            );
-            setPlaylistId(match?.id || '');
-          }}
-        />
-        <datalist id="playlists-list">
-          {filteredPlaylists.map(p => (
-            <option key={p.id} value={p.title || ''} />
-          ))}
-        </datalist>
-      </div>
+      {showPlaylistPicker && (
+        <div>
+          <Label htmlFor="option-playlist">Playlist (opcional)</Label>
+          <Input
+            id="option-playlist"
+            list="playlists-list"
+            placeholder="Busque pelo nome da playlist"
+            value={filteredPlaylists.find(p => p.id === playlistId)?.title || ''}
+            onChange={(e) => {
+              const match = filteredPlaylists.find(
+                p => (p.title || '').toLowerCase() === e.target.value.toLowerCase()
+              );
+              setPlaylistId(match?.id || '');
+            }}
+          />
+          <datalist id="playlists-list">
+            {filteredPlaylists.map(p => (
+              <option key={p.id} value={p.title || ''} />
+            ))}
+          </datalist>
+        </div>
+      )}
       <div className="flex items-center gap-2">
         <Button
           size="sm"

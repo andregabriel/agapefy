@@ -12,6 +12,12 @@ export interface OnboardingStep {
     step2_title?: string;
     step2_subtitle?: string;
     step3_title?: string;
+    step4_section_title?: string;
+    step4_instruction?: string;
+    step4_label?: string;
+    step4_privacy_text?: string;
+    step4_skip_button?: string;
+    step4_complete_button?: string;
   };
   // Para identificar qual passo estático/hardcoded é
   staticKind?: 'preview' | 'whatsapp';
@@ -22,6 +28,12 @@ interface AppSettings {
   onboarding_step2_title?: string;
   onboarding_step2_subtitle?: string;
   onboarding_step3_title?: string;
+  onboarding_step4_section_title?: string;
+  onboarding_step4_instruction?: string;
+  onboarding_step4_label?: string;
+  onboarding_step4_privacy_text?: string;
+  onboarding_step4_skip_button?: string;
+  onboarding_step4_complete_button?: string;
   onboarding_static_preview_active?: string;
   onboarding_static_whatsapp_active?: string;
   onboarding_hardcoded_6_active?: string;
@@ -194,6 +206,12 @@ export async function getOnboardingStepsOrder(
       isActive: whatsappActive,
       staticData: {
         step3_title: appSettings.onboarding_step3_title,
+        step4_section_title: appSettings.onboarding_step4_section_title,
+        step4_instruction: appSettings.onboarding_step4_instruction,
+        step4_label: appSettings.onboarding_step4_label,
+        step4_privacy_text: appSettings.onboarding_step4_privacy_text,
+        step4_skip_button: appSettings.onboarding_step4_skip_button,
+        step4_complete_button: appSettings.onboarding_step4_complete_button,
       },
       staticKind: 'whatsapp',
     },

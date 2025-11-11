@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
@@ -47,7 +47,13 @@ export default function StepCard({ step, steps, onUpdated, onDeleted, onMoveStep
   const [showPreview, setShowPreview] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [localIsActive, setLocalIsActive] = useState(step.isActive);
   const { settings, updateSetting } = useAppSettings();
+
+  // Sincronizar estado local quando step.isActive mudar (após refresh)
+  useEffect(() => {
+    setLocalIsActive(step.isActive);
+  }, [step.isActive]);
 
   const getTypeBadge = () => {
     switch (step.type) {
@@ -113,6 +119,9 @@ export default function StepCard({ step, steps, onUpdated, onDeleted, onMoveStep
   };
 
   const handleToggleActive = async (checked: boolean) => {
+    // Atualização otimista: atualizar UI imediatamente
+    setLocalIsActive(checked);
+    
     try {
       // Para passos dinâmicos (form e info), atualizar no banco
       if ((step.type === 'form' || step.type === 'info') && step.formData) {
@@ -164,6 +173,8 @@ export default function StepCard({ step, steps, onUpdated, onDeleted, onMoveStep
       onUpdated();
     } catch (e) {
       console.error(e);
+      // Reverter atualização otimista em caso de erro
+      setLocalIsActive(!checked);
       const { toast } = await import('sonner');
       toast.error('Não foi possível atualizar o status');
     }
@@ -216,7 +227,7 @@ export default function StepCard({ step, steps, onUpdated, onDeleted, onMoveStep
               <div className="flex items-center gap-2">
                 <span className="text-xs text-gray-500">Ativo</span>
                 <Switch
-                  checked={step.isActive}
+                  checked={localIsActive}
                   onCheckedChange={handleToggleActive}
                   aria-label={`Alternar ativo para passo ${step.stepNumber}`}
                 />

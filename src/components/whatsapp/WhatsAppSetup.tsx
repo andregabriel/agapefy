@@ -436,15 +436,55 @@ export default function WhatsAppSetup({ variant = "standalone", redirectIfNotLog
     }
   }
 
+  // Usar configurações quando variant="embedded" (onboarding)
+  // Se os campos estiverem vazios, não usar valores padrão - deixar vazio ou não renderizar
+  const getSettingValue = (key: string, allowDefault: boolean = false) => {
+    if (variant !== "embedded") {
+      // Quando não é embedded, sempre retornar valores padrão
+      switch (key) {
+        case 'onboarding_step4_section_title':
+          return 'Configuração do WhatsApp';
+        case 'onboarding_step4_instruction':
+          return `Informe seu número com DDD. Exemplo: ${formattedExample}`;
+        case 'onboarding_step4_label':
+          return 'Número do WhatsApp';
+        case 'onboarding_step4_privacy_text':
+          return 'seu número será usado apenas para enviar/receber mensagens.';
+        default:
+          return '';
+      }
+    }
+    const value = (settings as any)[key];
+    // Se for string vazia ou apenas espaços
+    if (!value || typeof value !== 'string' || value.trim() === '') {
+      // Se allowDefault for true, retornar valor padrão, senão retornar null para não renderizar
+      if (allowDefault) {
+        switch (key) {
+          case 'onboarding_step4_section_title':
+            return 'Configuração do WhatsApp';
+          default:
+            return '';
+        }
+      }
+      return null;
+    }
+    return value;
+  };
+
+  const sectionTitle = getSettingValue('onboarding_step4_section_title', true) || 'Configuração do WhatsApp';
+  const instruction = getSettingValue('onboarding_step4_instruction', false);
+  const labelText = getSettingValue('onboarding_step4_label', false);
+  const privacyText = getSettingValue('onboarding_step4_privacy_text', false);
+
   const Content = (
     <Card>
       <CardHeader>
-        <CardTitle>Configuração do WhatsApp</CardTitle>
-        <CardDescription>Informe seu número com DDD. Exemplo: {formattedExample}</CardDescription>
+        <CardTitle>{sectionTitle}</CardTitle>
+        {instruction && <CardDescription>{instruction}</CardDescription>}
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="space-y-2">
-          <Label htmlFor="wpp-number">Número do WhatsApp</Label>
+          {labelText && <Label htmlFor="wpp-number">{labelText}</Label>}
           <div className="flex gap-2">
             <Input
               id="wpp-number"
@@ -456,7 +496,7 @@ export default function WhatsAppSetup({ variant = "standalone", redirectIfNotLog
               {saving ? "Salvando..." : "Salvar"}
             </Button>
           </div>
-          <p className="text-xs text-muted-foreground">seu número será usado apenas para enviar/receber mensagens.</p>
+          {privacyText && <p className="text-xs text-muted-foreground">{privacyText}</p>}
         </div>
 
         {variant !== "embedded" && (

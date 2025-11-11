@@ -60,6 +60,13 @@ interface AppSettings {
   onboarding_step2_title?: string;
   onboarding_step2_subtitle?: string;
   onboarding_step3_title?: string;
+  // Onboarding step 4 (WhatsApp) texts
+  onboarding_step4_section_title?: string;
+  onboarding_step4_instruction?: string;
+  onboarding_step4_label?: string;
+  onboarding_step4_privacy_text?: string;
+  onboarding_step4_skip_button?: string;
+  onboarding_step4_complete_button?: string;
   // Onboarding step active controls
   onboarding_static_preview_active?: string;
   onboarding_static_whatsapp_active?: string;
@@ -124,6 +131,13 @@ const DEFAULT_SETTINGS: AppSettings = {
   onboarding_step2_title: 'Parabéns pela coragem e pela abertura de dar as mãos à Jesus neste momento difícil.',
   onboarding_step2_subtitle: 'Sua playlist foi criada, em breve você poderá escutar essas orações.',
   onboarding_step3_title: 'Conecte seu WhatsApp para receber uma mensagem diária para {category}.',
+  // Onboarding step 4 (WhatsApp) defaults
+  onboarding_step4_section_title: 'Configuração do WhatsApp',
+  onboarding_step4_instruction: 'Informe seu número com DDD. Exemplo: +55 11 99999-9999',
+  onboarding_step4_label: 'Número do WhatsApp',
+  onboarding_step4_privacy_text: 'seu número será usado apenas para enviar/receber mensagens.',
+  onboarding_step4_skip_button: 'Pular',
+  onboarding_step4_complete_button: 'Concluir',
   // Onboarding step active controls (default: true)
   onboarding_static_preview_active: 'true',
   onboarding_static_whatsapp_active: 'true',

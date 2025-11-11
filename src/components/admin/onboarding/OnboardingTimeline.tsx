@@ -186,6 +186,12 @@ export default function OnboardingTimeline() {
         isActive: whatsappActive,
         staticData: {
           step3_title: settings.onboarding_step3_title,
+          step4_section_title: settings.onboarding_step4_section_title,
+          step4_instruction: settings.onboarding_step4_instruction,
+          step4_label: settings.onboarding_step4_label,
+          step4_privacy_text: settings.onboarding_step4_privacy_text,
+          step4_skip_button: settings.onboarding_step4_skip_button,
+          step4_complete_button: settings.onboarding_step4_complete_button,
         },
       }
     });
