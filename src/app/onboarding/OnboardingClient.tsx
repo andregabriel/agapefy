@@ -23,6 +23,8 @@ import { useOnboardingProgress } from '@/hooks/useOnboardingProgress';
 import { ProgressBar } from '@/components/onboarding/ProgressBar';
 import { getNextStepUrl as getNextStepUrlShared, getOnboardingStepsOrder, type OnboardingStep } from '@/lib/services/onboarding-steps';
 import { processLinks } from '@/lib/utils';
+import { Play } from 'lucide-react';
+import { normalizeImageUrl, formatDuration } from '@/app/home/_utils/homeUtils';
 
 interface FormOption { label: string; category_id: string }
 interface AdminForm { 
@@ -34,7 +36,15 @@ interface AdminForm {
   allow_other_option?: boolean;
   other_option_label?: string | null;
 }
-interface AudioPreview { id: string; title: string; subtitle?: string | null; duration?: number | null; cover_url?: string | null }
+interface AudioPreview { 
+  id: string; 
+  title: string; 
+  subtitle?: string | null; 
+  duration?: number | null; 
+  cover_url?: string | null;
+  thumbnail_url?: string | null;
+  category?: { id: string; name: string; image_url?: string | null } | null;
+}
 
 export default function OnboardingClient() {
   const { user } = useAuth();
@@ -70,9 +80,14 @@ export default function OnboardingClient() {
   const [loadingResponses, setLoadingResponses] = useState<boolean>(false);
   const [currentStepMeta, setCurrentStepMeta] = useState<OnboardingStep | null>(null);
   const [selectedChallengePlaylist, setSelectedChallengePlaylist] = useState<{ id: string; title: string; cover_url?: string | null } | null>(null);
+  const [playlistAudios, setPlaylistAudios] = useState<AudioPreview[]>([]);
+  const playlistCarouselRef = useRef<HTMLDivElement | null>(null);
   
   // Calcular progresso do onboarding
   const { percentage: progressPercentage, loading: progressLoading } = useOnboardingProgress(desiredStep, currentCategoryId);
+  
+  // Determinar tipo de passo estático (definido cedo para uso em múltiplos lugares)
+  const showStaticKind = searchParams?.get('showStatic') || '';
 
   // Helpers
   function parseDaysFromTitle(title?: string | null): number {
@@ -129,6 +144,207 @@ export default function OnboardingClient() {
       if (recommendedId) setSelected(recommendedId);
     }
   }, [desiredStep, recommendedId, selectedKey]);
+
+  // Determinar playlist selecionada no passo 3 após carregar dados
+  useEffect(() => {
+    const staticKind = searchParams?.get('showStatic') || '';
+    if (desiredStep !== 3 || staticKind === 'whatsapp') return;
+    
+    const categoryId = searchParams?.get('categoryId');
+    if (!categoryId || !playlists || playlists.length === 0) {
+      setSelectedChallengePlaylist(null);
+      return;
+    }
+
+    // Prioridade: URL > DB > localStorage > recomendada
+    const selPl = searchParams?.get('selPl') || '';
+    let chosenPlaylistId: string | null = selPl || null;
+
+    // Buscar do DB se usuário logado e não tem na URL
+    if (!chosenPlaylistId && user?.id) {
+      (async () => {
+        try {
+          let step2Form: any = null;
+          try {
+            const primary = await supabase
+              .from('admin_forms')
+              .select('id')
+              .eq('form_type', 'onboarding')
+              .eq('is_active', true)
+              .eq('onboard_step', 2)
+              .eq('parent_form_id', activeFormId || '-')
+              .maybeSingle();
+            if (!primary.error && primary.data) step2Form = primary.data;
+          } catch {}
+          if (!step2Form) {
+            const fallback = await supabase
+              .from('admin_forms')
+              .select('id')
+              .eq('form_type', 'onboarding')
+              .eq('is_active', true)
+              .eq('onboard_step', 2)
+              .maybeSingle();
+            if (!fallback.error) step2Form = fallback.data;
+          }
+          if (step2Form?.id) {
+            const resp = await supabase
+              .from('admin_form_responses')
+              .select('answers, created_at')
+              .eq('user_id', user.id)
+              .eq('form_id', step2Form.id)
+              .order('created_at', { ascending: false })
+              .limit(1)
+              .maybeSingle();
+            const ans: any = (resp.data as any)?.answers || {};
+            if (ans?.option && typeof ans.option === 'string') {
+              chosenPlaylistId = ans.option;
+            }
+          }
+        } catch (e) {
+          // eslint-disable-next-line no-console
+          console.warn('Falha ao buscar resposta do passo 2:', e);
+        }
+        
+        // Se ainda não tem, tentar localStorage
+        if (!chosenPlaylistId && typeof window !== 'undefined') {
+          try {
+            const localSel = window.localStorage.getItem('ag_onb_selected_playlist');
+            if (localSel && typeof localSel === 'string') {
+              chosenPlaylistId = localSel;
+            }
+          } catch {}
+        }
+
+        // Fallback: recomendada (maior número de dias)
+        const plArr = playlists || [];
+        if (!chosenPlaylistId && plArr.length > 0) {
+          const withDays = plArr.map((p: any) => ({ ...p, _days: parseDaysFromTitle(p.title) }));
+          withDays.sort((a: any, b: any) => b._days - a._days || String(a.title || '').localeCompare(String(b.title || '')));
+          chosenPlaylistId = withDays[0]?.id || null;
+        }
+
+        const selected = plArr.find((p: any) => p.id === chosenPlaylistId) || null;
+        setSelectedChallengePlaylist(selected ? { id: selected.id, title: selected.title, cover_url: selected.cover_url } : null);
+      })();
+    } else {
+      // Para usuários não logados ou quando já tem selPl na URL
+      // Tentar localStorage se não tem na URL
+      if (!chosenPlaylistId && typeof window !== 'undefined') {
+        try {
+          const localSel = window.localStorage.getItem('ag_onb_selected_playlist');
+          if (localSel && typeof localSel === 'string') {
+            chosenPlaylistId = localSel;
+          }
+        } catch {}
+      }
+
+      // Fallback: recomendada (maior número de dias)
+      const plArr = playlists || [];
+      if (!chosenPlaylistId && plArr.length > 0) {
+        const withDays = plArr.map((p: any) => ({ ...p, _days: parseDaysFromTitle(p.title) }));
+        withDays.sort((a: any, b: any) => b._days - a._days || String(a.title || '').localeCompare(String(b.title || '')));
+        chosenPlaylistId = withDays[0]?.id || null;
+      }
+
+      const selected = plArr.find((p: any) => p.id === chosenPlaylistId) || null;
+      setSelectedChallengePlaylist(selected ? { id: selected.id, title: selected.title, cover_url: selected.cover_url } : null);
+    }
+  }, [desiredStep, playlists, searchParams, user?.id, activeFormId]);
+
+  // Buscar áudios da playlist selecionada quando ela mudar
+  useEffect(() => {
+    if (!selectedChallengePlaylist?.id || desiredStep !== 3) {
+      setPlaylistAudios([]);
+      return;
+    }
+
+    let isMounted = true;
+
+    (async () => {
+      try {
+        // eslint-disable-next-line no-console
+        console.log('🔍 Buscando áudios da playlist:', selectedChallengePlaylist.id);
+        
+        // Usar a mesma sintaxe que funciona em useRoutinePlaylist
+        const { data, error } = await supabase
+          .from('playlist_audios')
+          .select(`
+            position,
+            audio:audios(
+              *,
+              category:categories(*)
+            )
+          `)
+          .eq('playlist_id', selectedChallengePlaylist.id)
+          .order('position', { ascending: true });
+
+        if (error) {
+          // eslint-disable-next-line no-console
+          console.error('❌ Erro na query de áudios:', error);
+          // eslint-disable-next-line no-console
+          console.error('Detalhes do erro:', JSON.stringify(error, null, 2));
+          throw error;
+        }
+
+        // eslint-disable-next-line no-console
+        console.log('📦 Dados recebidos:', data?.length || 0, 'itens');
+
+        const audiosList = ((data || []) as any[])
+          .sort((a, b) => (a.position || 0) - (b.position || 0))
+          .map((pa: any) => {
+            const audio = pa.audio;
+            if (!audio) return null;
+            return {
+              id: audio.id,
+              title: audio.title,
+              subtitle: audio.subtitle,
+              duration: audio.duration,
+              cover_url: audio.cover_url,
+              thumbnail_url: audio.thumbnail_url,
+              category: audio.category ? {
+                id: audio.category.id,
+                name: audio.category.name,
+                image_url: audio.category.image_url
+              } : null
+            };
+          })
+          .filter(Boolean) as AudioPreview[];
+
+        if (isMounted) {
+          setPlaylistAudios(audiosList);
+          // eslint-disable-next-line no-console
+          console.log('✅ Áudios da playlist carregados:', audiosList.length);
+        }
+      } catch (e) {
+        // eslint-disable-next-line no-console
+        console.warn('Falha ao buscar áudios da playlist:', e);
+        if (isMounted) {
+          setPlaylistAudios([]);
+        }
+      }
+    })();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [selectedChallengePlaylist?.id, desiredStep]);
+
+  // Função para scroll do carrossel de áudios
+  const scrollPlaylistCarousel = (direction: 'left' | 'right') => {
+    const carousel = playlistCarouselRef.current;
+    if (carousel) {
+      const scrollAmount = 200;
+      const currentScroll = carousel.scrollLeft;
+      const targetScroll = direction === 'left' 
+        ? currentScroll - scrollAmount 
+        : currentScroll + scrollAmount;
+      
+      carousel.scrollTo({
+        left: targetScroll,
+        behavior: 'smooth'
+      });
+    }
+  };
 
   // Função para determinar o próximo passo disponível e retornar a URL completa
   async function getNextStepUrl(
@@ -389,55 +605,86 @@ export default function OnboardingClient() {
       // Buscar formulários anteriores
       const { data: forms, error: formsError } = await supabase
         .from('admin_forms')
-        .select('id, onboard_step')
+        .select('id, onboard_step, schema')
         .eq('form_type', 'onboarding')
         .eq('is_active', true)
         .lt('onboard_step', currentStep)
         .not('onboard_step', 'is', null)
         .order('onboard_step', { ascending: true });
-      if (formsError || !forms || (forms as any[]).length === 0) {
-        setPreviousResponses(new Map());
-        setLoadingResponses(false);
-        return;
-      }
-      const formIds = (forms as any[]).map(f => f.id);
-      const { data: responses, error: responsesError } = await supabase
-        .from('admin_form_responses')
-        .select('form_id, answers')
-        .eq('user_id', userId)
-        .in('form_id', formIds);
-      if (responsesError) {
-        setPreviousResponses(new Map());
-        setLoadingResponses(false);
-        return;
-      }
-      // Montar mapa step -> valor
-      const responseMap = new Map<string, { answers: Record<string, any>; onboard_step: number }>();
-      (responses as any[] | null | undefined)?.forEach((resp: any) => {
-        const formMatch = (forms as any[]).find((f: any) => f.id === resp.form_id);
-        if (formMatch && typeof formMatch.onboard_step === 'number') {
-          responseMap.set(resp.form_id, { answers: resp.answers, onboard_step: formMatch.onboard_step });
-        }
-      });
+      
       const responsesTextMap = new Map<number, string>();
-      for (const [formId, { answers, onboard_step }] of responseMap.entries()) {
-        const value = await extractResponseValue(formId, answers, onboard_step);
-        if (value) responsesTextMap.set(onboard_step, value);
+      
+      // Se há formulários anteriores, buscar respostas salvas
+      if (!formsError && forms && (forms as any[]).length > 0) {
+        const formIds = (forms as any[]).map(f => f.id);
+        const { data: responses, error: responsesError } = await supabase
+          .from('admin_form_responses')
+          .select('form_id, answers')
+          .eq('user_id', userId)
+          .in('form_id', formIds);
+        
+        if (!responsesError && responses) {
+          // Montar mapa step -> valor
+          const responseMap = new Map<string, { answers: Record<string, any>; onboard_step: number }>();
+          (responses as any[]).forEach((resp: any) => {
+            const formMatch = (forms as any[]).find((f: any) => f.id === resp.form_id);
+            if (formMatch && typeof formMatch.onboard_step === 'number') {
+              responseMap.set(resp.form_id, { answers: resp.answers, onboard_step: formMatch.onboard_step });
+            }
+          });
+          
+          for (const [formId, { answers, onboard_step }] of responseMap.entries()) {
+            const value = await extractResponseValue(formId, answers, onboard_step);
+            if (value) responsesTextMap.set(onboard_step, value);
+          }
+        }
       }
 
       // Fallback extra para {resposta1} via categoryId quando não houver resposta salva com user_id
+      // Este fallback funciona tanto para usuários logados quanto não logados
       if (currentStep > 1 && categoryId && !responsesTextMap.has(1)) {
-        const step1Form = (forms as any[]).find((f: any) => f.onboard_step === 1);
-        if (step1Form) {
-          const { data: step1Data } = await supabase
-            .from('admin_forms')
-            .select('schema')
-            .eq('id', step1Form.id)
-            .maybeSingle();
-          const schemaArr = (step1Data as any)?.schema as Array<{ label: string; category_id: string }> | undefined;
-          const match = Array.isArray(schemaArr) ? schemaArr.find(opt => opt?.category_id === categoryId) : undefined;
+        // Tentar primeiro com o formulário do passo 1 que já foi buscado (se houver)
+        const step1Form = forms && (forms as any[]).find((f: any) => f.onboard_step === 1);
+        if (step1Form && Array.isArray((step1Form as any).schema)) {
+          const match = (step1Form as any).schema.find((opt: any) => opt?.category_id === categoryId);
           if (match?.label) {
             responsesTextMap.set(1, match.label);
+          }
+        } else {
+          // Se não encontrou no forms já buscado, buscar diretamente do banco
+          // Priorizar o formulário raiz (parent_form_id) se rootFormId estiver disponível
+          let step1FormToUse: any = null;
+          
+          if (rootFormId) {
+            const { data: byId } = await supabase
+              .from('admin_forms')
+              .select('id, schema, onboard_step')
+              .eq('id', rootFormId)
+              .maybeSingle();
+            // aceitar se for passo 1 (ou raiz sem onboard_step definido)
+            if (byId && (byId as any).schema && (((byId as any).onboard_step ?? 1) === 1)) {
+              step1FormToUse = byId;
+            }
+          }
+          
+          if (!step1FormToUse) {
+            const { data: byStep } = await supabase
+              .from('admin_forms')
+              .select('id, schema')
+              .eq('form_type', 'onboarding')
+              .eq('is_active', true)
+              .eq('onboard_step', 1)
+              .order('created_at', { ascending: true })
+              .limit(1)
+              .maybeSingle();
+            step1FormToUse = byStep;
+          }
+          
+          if (step1FormToUse && Array.isArray((step1FormToUse as any).schema)) {
+            const match = (step1FormToUse as any).schema.find((opt: any) => opt?.category_id === categoryId);
+            if (match?.label) {
+              responsesTextMap.set(1, match.label);
+            }
           }
         }
       }
@@ -738,70 +985,8 @@ export default function OnboardingClient() {
               setCategory((cat as any) || null);
               setAudios(((auds as any[]) || []) as AudioPreview[]);
               setPlaylists(playlistsArr);
-              // Determinar playlist selecionada no passo 2 com prioridade: URL > DB > localStorage > recomendada
-              const selPl = searchParams?.get('selPl') || '';
-              let chosenPlaylistId: string | null = selPl || null;
-              try {
-                if (!chosenPlaylistId && user?.id) {
-                  // Buscar form do passo 2 preferindo parent_form_id
-                  let step2Form: any = null;
-                  try {
-                    const primary = await supabase
-                      .from('admin_forms')
-                      .select('id')
-                      .eq('form_type', 'onboarding')
-                      .eq('is_active', true)
-                      .eq('onboard_step', 2)
-                      .eq('parent_form_id', activeFormId || '-')
-                      .maybeSingle();
-                    if (!primary.error && primary.data) step2Form = primary.data;
-                  } catch {}
-                  if (!step2Form) {
-                    const fallback = await supabase
-                      .from('admin_forms')
-                      .select('id')
-                      .eq('form_type', 'onboarding')
-                      .eq('is_active', true)
-                      .eq('onboard_step', 2)
-                      .maybeSingle();
-                    if (!fallback.error) step2Form = fallback.data;
-                  }
-                  if (step2Form?.id) {
-                    const resp = await supabase
-                      .from('admin_form_responses')
-                      .select('answers, created_at')
-                      .eq('user_id', user.id)
-                      .eq('form_id', step2Form.id)
-                      .order('created_at', { ascending: false })
-                      .limit(1)
-                      .maybeSingle();
-                    const ans: any = (resp.data as any)?.answers || {};
-                    if (ans?.option && typeof ans.option === 'string') {
-                      chosenPlaylistId = ans.option;
-                    }
-                  }
-                }
-                if (!chosenPlaylistId && typeof window !== 'undefined') {
-                  try {
-                    const localSel = window.localStorage.getItem('ag_onb_selected_playlist');
-                    if (localSel && typeof localSel === 'string') {
-                      chosenPlaylistId = localSel;
-                    }
-                  } catch {}
-                }
-              } catch (e) {
-                // eslint-disable-next-line no-console
-                console.warn('Falha ao determinar playlist escolhida no passo 2:', e);
-              }
-              // Fallback: recomendada (maior número de dias)
-              const plArr = playlistsArr || [];
-              if (!chosenPlaylistId && plArr.length > 0) {
-                const withDays = plArr.map((p: any) => ({ ...p, _days: parseDaysFromTitle(p.title) }));
-                withDays.sort((a: any, b: any) => b._days - a._days || String(a.title || '').localeCompare(String(b.title || '')));
-                chosenPlaylistId = withDays[0]?.id || null;
-              }
-              const selected = plArr.find((p: any) => p.id === chosenPlaylistId) || null;
-              setSelectedChallengePlaylist(selected ? { id: selected.id, title: selected.title, cover_url: selected.cover_url } : null);
+              // A determinação da playlist selecionada será feita em um useEffect separado
+              // para garantir que roda após o estado ser atualizado
             }
           } else {
             if (mounted) {
@@ -1156,7 +1341,6 @@ export default function OnboardingClient() {
   }
 
   // Render estáticos via showStatic em QUALQUER passo
-  const showStaticKind = searchParams?.get('showStatic') || '';
   if (showStaticKind === 'whatsapp') {
     return (
       <div className="max-w-2xl mx-auto p-4">
@@ -1472,25 +1656,124 @@ export default function OnboardingClient() {
             </div>
           </CardHeader>
           <CardContent className="space-y-8">
-            {selectedChallengePlaylist && (
-              <div className="space-y-4">
-                <h2 className="text-2xl font-bold text-black">{category?.name}</h2>
-                <div className="flex items-center gap-6">
-                  <div className="w-32 h-32 rounded-lg overflow-hidden bg-gray-200 border border-gray-300">
-                    {selectedChallengePlaylist.cover_url ? (
-                      <img src={selectedChallengePlaylist.cover_url} alt={selectedChallengePlaylist.title} className="w-full h-full object-cover" />
-                    ) : (
-                      <div className="w-full h-full bg-gray-100" />
+            {selectedChallengePlaylist ? (
+              <div className="space-y-6">
+                <h2 className="text-2xl font-bold text-black">{selectedChallengePlaylist.title}</h2>
+                
+                {/* Carrossel de áudios da playlist */}
+                {playlistAudios.length > 0 ? (
+                  <div className="relative group">
+                    {/* Setas de navegação */}
+                    {playlistAudios.length > 1 && (
+                      <>
+                        <button
+                          onClick={() => scrollPlaylistCarousel('left')}
+                          className="absolute left-0 top-1/2 -translate-y-1/2 z-20 bg-white/90 hover:bg-white text-gray-800 rounded-full w-10 h-10 flex items-center justify-center shadow-lg border-2 border-gray-200 opacity-0 group-hover:opacity-100 transition-opacity"
+                          title="Rolar para a esquerda"
+                        >
+                          <svg width="20" height="20" viewBox="0 0 24 24"><path fill="currentColor" d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"/></svg>
+                        </button>
+                        <button
+                          onClick={() => scrollPlaylistCarousel('right')}
+                          className="absolute right-0 top-1/2 -translate-y-1/2 z-20 bg-white/90 hover:bg-white text-gray-800 rounded-full w-10 h-10 flex items-center justify-center shadow-lg border-2 border-gray-200 opacity-0 group-hover:opacity-100 transition-opacity"
+                          title="Rolar para a direita"
+                        >
+                          <svg width="20" height="20" viewBox="0 0 24 24"><path fill="currentColor" d="M8.59 16.59L10 18l6-6-6-6-1.41 1.41L13.17 12z"/></svg>
+                        </button>
+                      </>
                     )}
+
+                    <div 
+                      ref={playlistCarouselRef}
+                      className="flex space-x-6 overflow-x-auto pb-2 scroll-smooth snap-x snap-mandatory"
+                      style={{ scrollbarWidth: 'none', msOverflowStyle: 'none', WebkitOverflowScrolling: 'touch' }}
+                    >
+                      {playlistAudios.map((audio: any) => {
+                        const imageUrl = normalizeImageUrl(audio.thumbnail_url) || 
+                                       normalizeImageUrl(audio.cover_url) || 
+                                       normalizeImageUrl(audio.category?.image_url) ||
+                                       normalizeImageUrl(category?.image_url) ||
+                                       null;
+
+                        const fallbackContent = (
+                          <div className="w-full h-full bg-gradient-to-br from-purple-600 to-blue-600 flex items-center justify-center">
+                            <div className="text-center">
+                              <Play className="w-8 h-8 text-white mx-auto mb-2" fill="currentColor" />
+                              <p className="text-white text-xs font-medium px-2 text-center line-clamp-2">
+                                {audio.category?.name || category?.name || 'Áudio'}
+                              </p>
+                            </div>
+                          </div>
+                        );
+
+                        return (
+                          <Link
+                            key={audio.id}
+                            href={`/player/audio/${audio.id}`}
+                            className="flex-shrink-0 w-48 snap-start cursor-pointer group"
+                          >
+                            <div className="relative mb-4">
+                              <div className="w-48 h-48 rounded-lg overflow-hidden bg-gray-800 shadow-lg">
+                                {imageUrl ? (
+                                  <img
+                                    src={imageUrl}
+                                    alt={audio.title}
+                                    className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+                                    onError={(e) => {
+                                      const target = e.target as HTMLImageElement;
+                                      target.style.display = 'none';
+                                      const parent = target.parentElement;
+                                      if (parent) {
+                                        parent.innerHTML = `
+                                          <div class="w-full h-full bg-gradient-to-br from-purple-600 to-blue-600 flex items-center justify-center">
+                                            <div class="text-center">
+                                              <svg class="w-8 h-8 text-white mx-auto mb-2" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+                                              <p class="text-white text-xs font-medium px-2 text-center">${audio.category?.name || category?.name || 'Áudio'}</p>
+                                            </div>
+                                          </div>
+                                        `;
+                                      }
+                                    }}
+                                  />
+                                ) : (
+                                  fallbackContent
+                                )}
+                              </div>
+                              
+                              {/* Play Button Overlay */}
+                              <div className="absolute bottom-2 right-2 opacity-0 group-hover:opacity-100 transition-all duration-300 transform translate-y-2 group-hover:translate-y-0">
+                                <div className="w-12 h-12 bg-green-500 rounded-full flex items-center justify-center shadow-lg hover:bg-green-400 hover:scale-105 transition-all duration-200">
+                                  <Play size={16} className="text-black ml-0.5" fill="currentColor" />
+                                </div>
+                              </div>
+                            </div>
+                            
+                            {/* Título, Sub-título e Duração */}
+                            <div className="space-y-1">
+                              <h3 className="font-bold text-black text-base leading-tight truncate group-hover:underline">
+                                {audio.title}
+                              </h3>
+                              {audio.subtitle && (
+                                <p className="text-sm text-gray-500 truncate">
+                                  {audio.subtitle}
+                                </p>
+                              )}
+                              <p className="text-sm text-gray-400">
+                                {formatDuration(audio.duration)}
+                              </p>
+                            </div>
+                          </Link>
+                        );
+                      })}
+                    </div>
                   </div>
-                  <div className="flex-1">
-                    <div className="font-bold text-black text-lg leading-tight">{selectedChallengePlaylist.title}</div>
-                    <div className="text-sm text-gray-500 mt-1">Playlist selecionada</div>
+                ) : (
+                  <div className="text-sm text-gray-500 py-4">
+                    Carregando áudios da playlist...
                   </div>
-                </div>
+                )}
               </div>
-            )}
-            {!selectedChallengePlaylist && (
+            ) : (
               <div className="text-sm text-gray-500">
                 Nenhuma playlist de desafio encontrada nesta categoria.
               </div>
@@ -1644,10 +1927,18 @@ export default function OnboardingClient() {
             <div className="flex justify-between">
               <Button variant="ghost" onClick={skip} disabled={submitting}>Agora não</Button>
               <Button onClick={() => {
-                const chosen = playlists?.[Number(selectedKey)];
-                const payload = { option: selected, playlist_title: chosen?.title || null };
+                // Garantir que sempre temos um ID válido: usar selected, ou recommendedId como fallback
+                const finalSelectedId = selected || recommendedId || '';
+                const chosen = playlists?.find(p => p.id === finalSelectedId) || playlists?.[Number(selectedKey)];
+                const payload = { option: finalSelectedId, playlist_title: chosen?.title || null };
+                // Salvar no localStorage para usuários anônimos
+                if (finalSelectedId && typeof window !== 'undefined') {
+                  try {
+                    window.localStorage.setItem('ag_onb_selected_playlist', finalSelectedId);
+                  } catch {}
+                }
                 void submitAndGoNext(payload);
-              }} disabled={!selected || submitting}>{submitting ? 'Enviando...' : 'Enviar'}</Button>
+              }} disabled={(!selected && !recommendedId) || submitting}>{submitting ? 'Enviando...' : 'Enviar'}</Button>
             </div>
           </CardContent>
         </Card>
