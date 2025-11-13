@@ -38,19 +38,37 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ status: 'ignored', reason: 'empty_message' });
     }
 
-    // Registrar usuário
-    console.log('👤 Registrando usuário...');
+    // Registrar usuário e verificar status
+    console.log('👤 Registrando/verificando usuário...');
+    const { data: existingUser } = await supabase
+      .from('whatsapp_users')
+      .select('is_active')
+      .eq('phone_number', userPhone)
+      .maybeSingle();
+    
+    // Verificar se o usuário está ativo
+    if (existingUser && existingUser.is_active === false) {
+      console.log(`❌ Usuário ${userPhone} está inativo - mensagem ignorada`);
+      return NextResponse.json({ 
+        status: 'ignored', 
+        reason: 'user_inactive',
+        message: 'Usuário desativado. Mensagens não serão processadas.'
+      });
+    }
+
+    // Atualizar ou criar usuário
     await supabase.from('whatsapp_users').upsert({
       phone_number: userPhone,
       name: userName,
+      is_active: existingUser?.is_active ?? true, // Manter status existente ou criar como ativo
       updated_at: new Date().toISOString()
     }, { onConflict: 'phone_number' });
 
-    // Carregar configurações úteis (short-commands, intents)
+    // Carregar configurações úteis (short-commands, intents, assistant rules)
     const settingsRows = await supabase
       .from('app_settings')
       .select('key,value')
-      .in('key', ['bw_intents_config','bw_short_commands','bw_waiting_message']);
+      .in('key', ['bw_intents_config','bw_short_commands','bw_waiting_message','whatsapp_assistant_rules']);
     const settingsMap: Record<string, string> = {};
     for (const r of settingsRows.data || []) settingsMap[r.key] = r.value as string;
 
@@ -76,18 +94,27 @@ export async function POST(request: NextRequest) {
 
     // Gerar resposta inteligente
     console.log('🤖 Gerando resposta inteligente...');
-    const response = await generateIntelligentResponse(request, messageContent, userName, userPhone, settingsMap);
+    const responseResult = await generateIntelligentResponse(request, messageContent, userName, userPhone, settingsMap);
+    const response = typeof responseResult === 'string' ? responseResult : responseResult.response;
+    const responseThreadId = typeof responseResult === 'object' ? responseResult.threadId : undefined;
     console.log(`💬 Resposta gerada: "${response}"`);
 
-    // Salvar conversa
+    // Salvar conversa (thread_id será salvo junto se existir)
     console.log('💾 Salvando conversa...');
-    await supabase.from('whatsapp_conversations').insert({
+    const conversationData: any = {
       user_phone: userPhone,
       conversation_type: 'intelligent_chat',
       message_content: messageContent,
       response_content: response,
       message_type: 'text'
-    });
+    };
+    
+    // Adicionar thread_id se disponível (para continuidade de conversa com assistentes)
+    if (responseThreadId) {
+      conversationData.thread_id = responseThreadId;
+    }
+    
+    await supabase.from('whatsapp_conversations').insert(conversationData);
 
     // Enviar resposta via Z-API
     console.log('📤 Enviando resposta via Z-API...');
@@ -116,7 +143,7 @@ export async function POST(request: NextRequest) {
   }
 }
 
-async function generateIntelligentResponse(request: NextRequest, message: string, userName: string, userPhone: string, settingsMap?: Record<string,string>): Promise<string> {
+async function generateIntelligentResponse(request: NextRequest, message: string, userName: string, userPhone: string, settingsMap?: Record<string,string>): Promise<string | { response: string; threadId?: string }> {
   try {
     console.log('🧠 Iniciando geração de resposta IA...');
     
@@ -166,9 +193,34 @@ async function generateIntelligentResponse(request: NextRequest, message: string
       intention = 'general_conversation';
     }
 
-    // 3) Conversa geral: usar Assistente Biblicus quando configurado
+    // Selecionar assistente baseado em detecção inteligente (palavras-chave + contexto)
+    let selectedAssistant: Assistant | null = null;
+    
+    try {
+      selectedAssistant = await selectAssistantByMessage(message, settingsMap);
+      if (selectedAssistant) {
+        console.log(`🤖 Usando assistente: ${selectedAssistant.name} (${selectedAssistant.assistantId})`);
+        const result = await callOpenAIAssistant(selectedAssistant.assistantId, message, userPhone);
+        if (result && result.reply) {
+          console.log('✅ Resposta do assistente recebida');
+          return { response: result.reply, threadId: result.threadId };
+        } else {
+          console.log('⚠️ Assistente não retornou resposta, usando fallback inteligente');
+        }
+      }
+    } catch (error) {
+      console.error('❌ Erro ao chamar assistente:', error);
+      // Fallback para fluxo normal se assistente falhar
+    }
+    
+    // Se nenhum assistente foi selecionado ou não retornou resposta, usar detecção inteligente de intenção
+    // para aplicar o prompt mais adequado no GPT-4o
+    const detectedContext = detectMessageContext(message);
+    console.log(`🧠 Contexto detectado: ${detectedContext}`);
+
+    // 3) Conversa geral: usar Assistente Biblicus quando configurado (fallback)
     const useAssistant = intention === 'general_conversation' && (currentIntentCfg?.engine || 'assistant') === 'assistant';
-    if (useAssistant) {
+    if (useAssistant && !selectedAssistant) {
       const base = request.nextUrl.origin;
       try {
         const chatRes = await fetch(`${base}/api/biblicus/chat`, {
@@ -185,9 +237,18 @@ async function generateIntelligentResponse(request: NextRequest, message: string
       // fallback se Assistente falhar: segue fluxo de prompt abaixo
     }
 
-    // Prompt e prefixo considerando overrides
+    // Prompt e prefixo considerando overrides e contexto detectado
     let systemPrompt = currentIntentCfg?.prompt?.trim() || getSystemPrompt(intention);
     let responsePrefix = getResponsePrefix(intention);
+    
+    // Melhorar prompt baseado no contexto detectado se não houver assistente específico
+    if (!selectedAssistant) {
+      const contextPrompt = getContextualPrompt(message, detectedContext);
+      if (contextPrompt) {
+        systemPrompt = contextPrompt;
+        console.log(`📝 Usando prompt contextualizado para: ${detectedContext}`);
+      }
+    }
 
     if (intention === 'daily_verse') {
       return await getDailyVerse();
@@ -316,6 +377,114 @@ function detectIntention(message: string, triggers?: Record<string, string[]>): 
   return 'general_conversation';
 }
 
+function detectMessageContext(message: string): 'support' | 'sales' | 'biblical' | 'general' {
+  const lowerMessage = message.toLowerCase();
+  
+  // Padrões de suporte
+  const supportPatterns = [
+    /\b(não consigo|não funciona|erro|problema|dificuldade|ajuda|como fazer|como usar|login|senha|conta)\b/i,
+    /\b(app|aplicativo|plataforma|sistema|site|página|funcionalidade)\b/i
+  ];
+  
+  // Padrões de vendas
+  const salesPatterns = [
+    /\b(pagamento|pagar|comprar|assinatura|plano|preço|custo|valor|quanto|desconto|promoção|oferta)\b/i,
+    /\b(quero|gostaria|interessado|desejo|preciso comprar)\b/i
+  ];
+  
+  // Padrões bíblicos
+  const biblicalPatterns = [
+    /\b(bíblia|versículo|jesus|deus|cristo|evangelho|escritura|parábola|oração)\b/i
+  ];
+  
+  if (supportPatterns.some(p => p.test(lowerMessage))) return 'support';
+  if (salesPatterns.some(p => p.test(lowerMessage))) return 'sales';
+  if (biblicalPatterns.some(p => p.test(lowerMessage))) return 'biblical';
+  
+  return 'general';
+}
+
+function getContextualPrompt(message: string, context: 'support' | 'sales' | 'biblical' | 'general'): string | null {
+  const lowerMessage = message.toLowerCase();
+  
+  if (context === 'support') {
+    return `Você é Agape, um assistente de suporte técnico especializado e extremamente eficiente. 
+
+SUA MISSÃO:
+- Resolver problemas do usuário de forma rápida e eficaz
+- Ser proativo e oferecer soluções práticas
+- Explicar de forma clara e didática
+- Ser empático e paciente com dificuldades técnicas
+- Se não souber algo específico, oferecer alternativas ou direcionar para onde encontrar ajuda
+
+ESTILO DE RESPOSTA:
+- Seja direto mas acolhedor
+- Use passos numerados quando apropriado
+- Ofereça múltiplas soluções quando possível
+- Confirme se o problema foi resolvido
+- Use emojis moderadamente (✅ para confirmação, 🔧 para soluções técnicas)
+
+CONTEXTO DA MENSAGEM: "${message}"
+
+Responda de forma que o usuário se sinta ajudado e confiante em resolver seu problema.`;
+  }
+  
+  if (context === 'sales') {
+    return `Você é Agape, um vendedor excepcional e consultor de produtos especializado. 
+
+SUA MISSÃO:
+- Entender as necessidades do cliente
+- Apresentar benefícios de forma convincente mas honesta
+- Criar valor e mostrar como o produto/serviço resolve problemas
+- Ser consultivo, não apenas vendedor
+- Fechar vendas de forma natural e sem pressão
+- Responder objeções com empatia e dados
+
+TÉCNICAS DE VENDAS:
+- Faça perguntas para entender necessidades
+- Destaque benefícios, não apenas características
+- Use prova social quando apropriado
+- Crie urgência positiva quando relevante
+- Ofereça opções e facilite a decisão
+- Seja transparente sobre preços e condições
+
+ESTILO DE RESPOSTA:
+- Entusiasmado mas profissional
+- Foque em como o produto melhora a vida do cliente
+- Use linguagem que gere confiança
+- Seja consultivo, não apenas vendedor
+- Use emojis estrategicamente (💰 para valores, ✨ para benefícios, 🎯 para ofertas)
+
+CONTEXTO DA MENSAGEM: "${message}"
+
+Transforme a conversa em uma oportunidade de ajudar o cliente a tomar a melhor decisão.`;
+  }
+  
+  if (context === 'biblical') {
+    return `Você é Agape, um mentor espiritual e especialista em Bíblia profundamente conhecedor das Escrituras.
+
+SUA MISSÃO:
+- Responder perguntas bíblicas com precisão teológica
+- Explicar versículos e passagens de forma acessível
+- Conectar ensinamentos bíblicos à vida prática
+- Oferecer orientação espiritual baseada na Palavra
+- Ser sábio, empático e edificante
+
+ESTILO DE RESPOSTA:
+- Use referências bíblicas precisas (livro, capítulo, versículo)
+- Explique o contexto histórico quando relevante
+- Aplique ensinamentos à vida prática
+- Seja reverente mas acessível
+- Use emojis moderadamente (📖 para versículos, 🙏 para oração, ✨ para inspiração)
+
+CONTEXTO DA MENSAGEM: "${message}"
+
+Seja um guia espiritual que ajuda o usuário a crescer na fé através do conhecimento bíblico.`;
+  }
+  
+  return null;
+}
+
 function getSystemPrompt(intention: string): string {
   const prompts = {
     greeting: `Você é Agape, um assistente espiritual cristão carinhoso. O usuário está cumprimentando você. Responda de forma calorosa e acolhedora, perguntando como ele está.`,
@@ -382,6 +551,268 @@ async function loadIntentsConfig(): Promise<Record<string, { enabled?: boolean; 
     return {};
   } catch {
     return {};
+  }
+}
+
+interface Assistant {
+  id: string;
+  name: string;
+  assistantId: string;
+  type: 'biblical' | 'sales' | 'support';
+  description: string;
+  keywords: string[];
+  enabled: boolean;
+}
+
+interface AssistantConfig {
+  assistants: Assistant[];
+  defaultAssistantId?: string;
+}
+
+async function selectAssistantByMessage(message: string, settingsMap?: Record<string, string>): Promise<Assistant | null> {
+  try {
+    // Carregar configuração de assistentes
+    const assistantRules = settingsMap?.['whatsapp_assistant_rules'];
+    if (!assistantRules) {
+      console.log('⚠️ Configuração de assistentes não encontrada');
+      return null;
+    }
+
+    // Parse da configuração
+    let config: AssistantConfig;
+    try {
+      config = JSON.parse(assistantRules);
+    } catch {
+      console.error('❌ Erro ao fazer parse da configuração de assistentes');
+      return null;
+    }
+
+    if (!config.assistants || !Array.isArray(config.assistants) || config.assistants.length === 0) {
+      console.log('⚠️ Nenhum assistente configurado');
+      return null;
+    }
+
+    // Normalizar mensagem para busca
+    const normalizedMessage = normalizeText(message);
+    const originalMessage = message.toLowerCase();
+
+    // PRIORIDADE 1: Verificar palavras-chave explícitas de cada assistente habilitado
+    for (const assistant of config.assistants.filter(a => a.enabled)) {
+      const matchedKeywords = assistant.keywords.filter(kw => 
+        normalizedMessage.includes(normalizeText(kw))
+      );
+      
+      if (matchedKeywords.length > 0) {
+        console.log(`✅ Assistente selecionado por palavras-chave: ${assistant.name} (palavras: ${matchedKeywords.join(', ')})`);
+        return assistant;
+      }
+    }
+
+    // PRIORIDADE 2: Detecção inteligente de contexto e intenção
+    
+    // Padrões para detectar suporte/vendas (mais abrangente)
+    const supportSalesPatterns = [
+      // Problemas técnicos e suporte
+      /\b(não consigo|não funciona|não está funcionando|não consegui|não consigo fazer|não está dando certo)\b/i,
+      /\b(erro|problema|dificuldade|preciso de ajuda|preciso ajuda|estou com problema|tenho problema)\b/i,
+      /\b(como faço|como fazer|como usar|como funciona|como posso|não sei como|não entendi como)\b/i,
+      /\b(login|entrar|acessar|conta|senha|esqueci|esqueceu|recuperar|resetar)\b/i,
+      /\b(cadastro|registro|registrar|cadastrar|perfil|conta|usuário|usuario)\b/i,
+      /\b(app|aplicativo|plataforma|sistema|site|página|página)\b/i,
+      
+      // Vendas e pagamentos
+      /\b(pagamento|pagar|pagando|comprar|compra|assinatura|assinar|plano|planos|preço|preços|custo|valor|quanto custa|quanto é)\b/i,
+      /\b(desconto|promoção|promocao|oferta|especial|benefício|beneficio|vantagem)\b/i,
+      /\b(quero|gostaria|interessado|interessada|desejo|preciso comprar|quero assinar)\b/i,
+      
+      // Dúvidas sobre funcionalidades
+      /\b(o que é|o que faz|para que serve|funcionalidade|recurso|feature|como funciona)\b/i,
+      /\b(dúvida|dúvidas|duvida|duvidas|pergunta|perguntas|quero saber|gostaria de saber)\b/i,
+    ];
+
+    // Padrões para detectar perguntas bíblicas/espirituais
+    const biblicalPatterns = [
+      /\b(bíblia|biblia|versículo|versiculo|versículos|versiculos|escritura|escrituras)\b/i,
+      /\b(jesus|cristo|deus|senhor|espírito santo|espirito santo|trindade)\b/i,
+      /\b(evangelho|evangelhos|apóstolo|apostolo|apostolos|apóstolos|discípulo|discipulo)\b/i,
+      /\b(parábola|parabola|parábolas|parabolas|salmos|salmo|provérbios|proverbios)\b/i,
+      /\b(o que a bíblia diz|o que diz a bíblia|o que significa|explique|ensina|fala sobre)\b/i,
+      /\b(mateus|marcos|lucas|joão|joao|gênesis|genesis|êxodo|exodo|levítico|levitico)\b/i,
+      /\b(números|numeros|deuteronômio|deuteronomio|josué|josue|juízes|juizes)\b/i,
+      /\b(oração|orações|oracoes|orar|reza|rezar|rezo|rezar|pedido|pedidos)\b/i,
+      /\b(fé|fe|esperança|esperanca|amor|caridade|perdão|perdao|graça|graca)\b/i,
+    ];
+
+    // Verificar padrões de suporte/vendas
+    const isSupportSalesQuestion = supportSalesPatterns.some(pattern => pattern.test(originalMessage));
+    
+    if (isSupportSalesQuestion) {
+      // Priorizar assistente de suporte, depois vendas
+      const supportAssistant = config.assistants.find(a => 
+        a.enabled && a.type === 'support'
+      ) || config.assistants.find(a => 
+        a.enabled && a.type === 'sales'
+      );
+      
+      if (supportAssistant) {
+        console.log(`✅ Assistente de suporte/vendas selecionado por contexto inteligente: ${supportAssistant.name}`);
+        return supportAssistant;
+      }
+    }
+
+    // Verificar padrões bíblicos
+    const isBiblicalQuestion = biblicalPatterns.some(pattern => pattern.test(originalMessage));
+    
+    if (isBiblicalQuestion) {
+      const biblicalAssistant = config.assistants.find(a => 
+        a.enabled && a.type === 'biblical'
+      );
+      
+      if (biblicalAssistant) {
+        console.log(`✅ Assistente bíblico selecionado por contexto inteligente: ${biblicalAssistant.name}`);
+        return biblicalAssistant;
+      }
+    }
+
+    // PRIORIDADE 3: Análise de intenção por estrutura da mensagem
+    
+    // Perguntas diretas sobre funcionalidade = suporte
+    if (originalMessage.match(/^(como|o que|qual|quando|onde|por que|porque|por quê|porque)/i) && 
+        (originalMessage.includes('fazer') || originalMessage.includes('usar') || originalMessage.includes('funciona'))) {
+      const supportAssistant = config.assistants.find(a => 
+        a.enabled && (a.type === 'support' || a.type === 'sales')
+      );
+      if (supportAssistant) {
+        console.log(`✅ Assistente selecionado por análise de estrutura (pergunta funcional): ${supportAssistant.name}`);
+        return supportAssistant;
+      }
+    }
+
+    // Mensagens com problemas/erros = suporte
+    if (originalMessage.match(/\b(não|erro|problema|dificuldade|ajuda)\b/i) && 
+        !originalMessage.match(/\b(bíblia|biblia|versículo|jesus|deus)\b/i)) {
+      const supportAssistant = config.assistants.find(a => 
+        a.enabled && (a.type === 'support' || a.type === 'sales')
+      );
+      if (supportAssistant) {
+        console.log(`✅ Assistente selecionado por análise de estrutura (problema técnico): ${supportAssistant.name}`);
+        return supportAssistant;
+      }
+    }
+
+    // PRIORIDADE 4: Assistente padrão configurado ou primeiro disponível
+    const defaultAssistant = config.assistants.find(a => 
+      a.enabled && (a.id === config.defaultAssistantId || !config.defaultAssistantId)
+    ) || config.assistants.find(a => a.enabled);
+
+    if (defaultAssistant) {
+      console.log(`✅ Usando assistente padrão: ${defaultAssistant.name}`);
+      return defaultAssistant;
+    }
+
+    return null;
+  } catch (error) {
+    console.error('❌ Erro ao selecionar assistente:', error);
+    return null;
+  }
+}
+
+async function callOpenAIAssistant(assistantId: string, message: string, userPhone: string): Promise<{ reply: string; threadId: string } | null> {
+  try {
+    const openaiApiKey = process.env.OPENAI_API_KEY;
+    if (!openaiApiKey) {
+      console.error('❌ Chave OpenAI não configurada');
+      return null;
+    }
+
+    // Buscar thread existente do usuário ou criar nova
+    let threadId: string | undefined = undefined;
+    try {
+      const { data: threadData } = await supabase
+        .from('whatsapp_conversations')
+        .select('thread_id')
+        .eq('user_phone', userPhone)
+        .not('thread_id', 'is', null)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      
+      threadId = threadData?.thread_id as string | undefined;
+    } catch (error) {
+      // Coluna thread_id pode não existir ainda, continuar sem thread existente
+      console.log('⚠️ Não foi possível buscar thread existente, criando nova');
+    }
+
+    // Criar cliente OpenAI
+    const OpenAI = (await import('openai')).default;
+    const client = new OpenAI({ apiKey: openaiApiKey });
+
+    // Criar ou usar thread existente
+    let thread;
+    if (threadId) {
+      try {
+        // Verificar se thread ainda existe
+        await client.beta.threads.retrieve(threadId);
+        thread = { id: threadId };
+      } catch {
+        // Thread não existe mais, criar nova
+        thread = await client.beta.threads.create();
+        threadId = thread.id;
+      }
+    } else {
+      thread = await client.beta.threads.create();
+      threadId = thread.id;
+    }
+
+    // Adicionar mensagem do usuário à thread
+    await client.beta.threads.messages.create(thread.id, {
+      role: 'user',
+      content: message,
+    });
+
+    // Criar run do assistente
+    const run = await client.beta.threads.runs.create(thread.id, {
+      assistant_id: assistantId,
+      temperature: 0.2,
+      top_p: 1.0,
+      response_format: { type: 'text' },
+    });
+
+    // Aguardar conclusão do run (com timeout de 30 segundos)
+    const started = Date.now();
+    const timeout = 30000; // 30 segundos
+    while (true) {
+      const r = await client.beta.threads.runs.retrieve(thread.id, run.id);
+      
+      if (r.status === 'completed') break;
+      if (r.status === 'failed' || r.status === 'expired' || r.status === 'cancelled') {
+        throw new Error(`Run failed with status: ${r.status}`);
+      }
+      
+      if (Date.now() - started > timeout) {
+        throw new Error('Timeout ao aguardar resposta do assistente');
+      }
+      
+      await new Promise((res) => setTimeout(res, 800));
+    }
+
+    // Buscar resposta do assistente
+    const messages = await client.beta.threads.messages.list(thread.id, { order: 'desc', limit: 1 });
+    const lastMessage = messages.data[0];
+    
+    if (lastMessage && Array.isArray(lastMessage.content) && lastMessage.content[0]?.type === 'text') {
+      const reply = (lastMessage.content[0] as any).text.value;
+      
+      // Retornar resposta com thread_id para continuidade
+      if (reply && threadId) {
+        return { reply, threadId };
+      }
+    }
+
+    return null;
+  } catch (error) {
+    console.error('❌ Erro ao chamar assistente OpenAI:', error);
+    return null;
   }
 }
 
