@@ -49,6 +49,7 @@ export async function POST(request: NextRequest) {
     }, { onConflict: 'phone_number' });
 
     // Carregar configurações úteis (boas-vindas, menu)
+    // NOTA: NÃO carregar bw_waiting_message - foi completamente removida
     const settingsRows = await supabase.from('app_settings').select('key,value').in('key', [
       'whatsapp_send_welcome_enabled',
       'whatsapp_welcome_message',
@@ -58,6 +59,8 @@ export async function POST(request: NextRequest) {
     ]);
     const settingsMap: Record<string, string> = {};
     for (const r of settingsRows.data || []) settingsMap[r.key] = r.value as string;
+    // Garantir que bw_waiting_message não seja usado mesmo se estiver no banco
+    delete settingsMap['bw_waiting_message'];
 
     // Verificar primeiro contato
     const { count: prevCount } = await supabase

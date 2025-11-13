@@ -65,12 +65,15 @@ export async function POST(request: NextRequest) {
     }, { onConflict: 'phone_number' });
 
     // Carregar configurações úteis (short-commands, intents, assistant rules)
+    // NOTA: NÃO carregar bw_waiting_message - foi completamente removida
     const settingsRows = await supabase
       .from('app_settings')
       .select('key,value')
       .in('key', ['bw_intents_config','bw_short_commands','whatsapp_assistant_rules']);
     const settingsMap: Record<string, string> = {};
     for (const r of settingsRows.data || []) settingsMap[r.key] = r.value as string;
+    // Garantir que bw_waiting_message não seja usado mesmo se estiver no banco
+    delete settingsMap['bw_waiting_message'];
 
     // Detectar intenção rapidamente (sem enviar mensagem de espera)
     const quickTriggers: Record<string, string[]> = (() => {
@@ -249,9 +252,11 @@ async function generateIntelligentResponse(request: NextRequest, message: string
     console.log(`🧠 Contexto detectado: ${detectedContext}`);
 
     // 3) Conversa geral: usar Assistente Biblicus quando configurado (fallback)
+    // NOTA: Não enviar mensagem de espera (bw_waiting_message) - foi completamente removida
     const useAssistant = intention === 'general_conversation' && (currentIntentCfg?.engine || 'prompt') === 'assistant';
     if (useAssistant && !selectedAssistant) {
       const base = request.nextUrl.origin;
+      // NÃO enviar mensagem de espera antes de chamar o Biblicus
       try {
         const chatRes = await fetch(`${base}/api/biblicus/chat`, {
           method: 'POST',
