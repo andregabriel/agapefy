@@ -1,0 +1,341 @@
+{
+  "affiliations": [
+    {
+      "affiliates_group_name": "group test",
+      "contact_email": "john.doe@email.com",
+      "currency": "BRL",
+      "fee": 19.32,
+      "id": "99f598ca-1d90-4afb-b306-70cc52b56f2f",
+      "marketplace_id": "YR5TFRMH",
+      "name": "John Doe",
+      "net_value": 315.07,
+      "value": 334.39
+    }
+  ],
+  "api_token": "mLjcGjzKGnXme5b7gbuKMggL34Ecdt5NHGihxfWr",
+  "cancel_at_cycle_end": 0,
+  "cancel_reason": null,
+  "cancelled_by": {
+    "date": "2023-12-13T10:39:31Z",
+    "email": null,
+    "name": null
+  },
+  "charged_every_days": 30,
+  "charged_times": 1,
+  "contracts": [],
+  "credit_card": {
+    "bin": null,
+    "brand": "visa",
+    "created_at": "2023-12-13T10:39:31Z",
+    "expiration_month": 1,
+    "expiration_year": 2025,
+    "holder_name": null,
+    "id": "1ece9218-12f1-4484-981e-1e8fc8b498d9",
+    "last_four": "0010",
+    "marketplace": {
+      "stripe": {
+        "customer": {
+          "id": "cus_Pi4mdcq2qZiL4s"
+        },
+        "payment": {
+          "id": null
+        }
+      }
+    },
+    "updated_at": "2023-12-13T10:39:31Z"
+  },
+  "current_invoice": {
+    "charge_at": "2024-12-13",
+    "code": "in_y5ZoRccnvFrFEgkPE",
+    "created_at": 1709131182,
+    "cycle": 2,
+    "discount_value": 0,
+    "id": "9b71cfb2-da2e-44d5-92ce-d83459dec85f",
+    "increment_value": 0,
+    "payment_url": "https://clkdmg.site/pay/9b71cfb2-da2e-44d5-92ce-d83459dec85a/invoice",
+    "period_end": "2025-12-13",
+    "period_start": "2024-12-13",
+    "status": "paid",
+    "subscription_id": "9ad693fe-4366-487b-8ac3-ff4831864928",
+    "tax_value": 5.49,
+    "type": "cycle",
+    "updated_at": 1709131802,
+    "value": 29.37
+  },
+  "dates": {
+    "canceled_at": null,
+    "cycle_end_date": "2025-12-13",
+    "cycle_start_date": "2024-02-28",
+    "last_status_at": "2020-05-07T18:39:34Z",
+    "next_cycle_at": "2025-12-14",
+    "started_at": "2020-05-07T11:35:57Z"
+  },
+  "id": "sub_BOAEj2WTKoclmg4X",
+  "internal_id": "9ad693fe-4366-487b-8ac3-ff4831864929",
+  "last_status": "active",
+  "last_transaction": {
+    "affiliations": [],
+    "checkout_url": "https://clkdmg.site/subscribe/9059bdb6-0ca4-4253-b405-482df6393537",
+    "contact": {
+      "address": "Rua Terra Rica",
+      "address_city": "Pinhais",
+      "address_comp": "",
+      "address_country": "BR",
+      "address_district": "Centro",
+      "address_number": "123",
+      "address_state": "PR",
+      "address_state_full_name": "Aveiro",
+      "address_zip_code": "83324090",
+      "company_name": "",
+      "doc": "01234567890",
+      "email": "email@email.email",
+      "id": "906d1e37-de6a-4f4d-8271-91ecd0d65ec6",
+      "lead": {
+        "first_tracking": {
+          "name": "TEstes",
+          "publisher": "",
+          "tracked_at": "2020-02-18T15:50:11Z",
+          "type": "form"
+        },
+        "last_tracking": {
+          "name": "Teste Tracking Plano",
+          "publisher": "Adwords",
+          "tracked_at": "2020-04-02T16:03:08Z",
+          "type": "lead"
+        }
+      },
+      "name": "Nome Contacto",
+      "phone_local_code": "55",
+      "phone_number": "1234567980"
+    },
+    "dates": {
+      "canceled_at": null,
+      "confirmed_at": "2020-05-07T11:35:57Z",
+      "created_at": "2024-02-28T14:45:07Z",
+      "expires_at": null,
+      "ordered_at": "2020-05-07T11:33:45Z",
+      "unavailable_until": "2020-06-06T11:35:57Z",
+      "updated_at": "2024-02-28T14:50:36Z",
+      "warranty_until": "2020-06-06T11:35:57Z"
+    },
+    "ecommerces": [],
+    "extras": {
+      "accepted_terms_url": 1,
+      "accepted_privacy_policy_url": 1
+    },
+    "id": "9081534a-7512-4dab-9172-218c1dc1f263",
+    "infrastructure": {
+      "city": null,
+      "city_lat_long": null,
+      "country": "BR",
+      "host": "https://clkdmg.site",
+      "ip": "127.0.0.1",
+      "region": null,
+      "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+    },
+    "invoice": {
+      "charge_at": "2024-12-13",
+      "created_at": "2024-02-28T14:39:42Z",
+      "cycle": 2,
+      "discount_value": 0,
+      "id": "in_y5ZoRccnvFrFEgkPE",
+      "increment_value": 0,
+      "period_end": "2025-12-13",
+      "period_start": "2024-12-13",
+      "status": "paid",
+      "tax_value": 5.49,
+      "tries": 3,
+      "try": 3,
+      "type": "cycle",
+      "value": 29.37
+    },
+    "payment": {
+      "acquirer": {
+        "code": "",
+        "message": "",
+        "name": "",
+        "nsu": "",
+        "tid": ""
+      },
+      "affiliate_value": 0,
+      "can_try_again": 1,
+      "coupon": null,
+      "billet": {
+        "expiration_date": "",
+        "line": "",
+        "url": ""
+      },
+      "credit_card": {
+        "brand": "visa",
+        "expiration_month": 12,
+        "expiration_year": 2024,
+        "first_digits": "400000",
+        "id": "card_WLmNYk1fmKUOwBwX",
+        "last_digits": "0010"
+      },
+      "currency": "BRL",
+      "discount_value": 0,
+      "gross": 500,
+      "installments": {
+        "interest": 0,
+        "qty": 1,
+        "value": ""
+      },
+      "marketplace_id": "ch_1ke4QoCQOs7VE6VY",
+      "marketplace_name": "mundipagg",
+      "marketplace_value": 0,
+      "method": null,
+      "net": 500,
+      "processing_times": {
+        "delay_in_seconds": 2,
+        "finished_at": "2024-02-28T14:50:02.397Z",
+        "started_at": "2024-02-28T14:50:00.241Z"
+      },
+      "refund_reason": "",
+      "refuse_reason": "Transação capturada com sucesso",
+      "tax": {
+        "rate": 0,
+        "value": 0
+      },
+      "total": 500
+    },
+    "product": {
+      "group": {
+        "id": "a038a2c8-ef55-415e-b45d-3a5a3d6a74e6",
+        "name": "grupo 1"
+      },
+      "id": "1587151083",
+      "image_url": "",
+      "internal_id": "906d1e37-de6a-4f4d-8271-91ecd0d65e32",
+      "marketplace_id": "1587151083",
+      "marketplace_name": "mundipagg",
+      "name": "Assinatura Mundipagg",
+      "offer": {
+        "id": "9ad505be-e7f9-4a08-a591-3ec4991c2615",
+        "name": "bvm - stripe - assinatura1 - oferta1"
+      },
+      "producer": {
+        "contact_email": "",
+        "marketplace_id": "01234567890",
+        "name": "Produtor Mundipagg"
+      },
+      "qty": 1,
+      "total_value": 500,
+      "type": "plan",
+      "unit_value": 500
+    },
+    "self_attribution": {
+      "title": "Como você conheceu nosso produto?",
+      "answer": "google"
+    },
+    "shipment": {
+      "carrier": "Correios",
+      "delivery_time": 15,
+      "service": "SEDEX",
+      "status": [],
+      "tracking": "ME20000BGL2BR",
+      "value": 105.68
+    },
+    "shipping": {
+      "name": "Standard",
+      "value": 0
+    },
+    "source": {
+      "checkout_source": "",
+      "pptc": [],
+      "source": "",
+      "utm_campaign": "",
+      "utm_content": "",
+      "utm_medium": "",
+      "utm_source": "",
+      "utm_term": ""
+    },
+    "status": "approved",
+    "type": "producer"
+  },
+  "name": "Assinatura Mundipagg",
+  "next_cycle_installments": 1,
+  "next_cycle_value": 49.9,
+  "next_product": {
+    "id": "9ad4f5bf-5fe5-4d02-bd9d-f819961b57cc",
+    "marketplace_id": "1702394333",
+    "marketplace_name": "mundipagg",
+    "name": "Assinatura Mundipagg",
+    "offer": {
+      "cash_discount": 0,
+      "id": "9ad505be-e7f9-4a08-a591-3ec4991c2615",
+      "name": "Assinatura Mundipagg",
+      "plan": {
+        "cycles": 0,
+        "discount": {
+          "cycles": 0,
+          "value": 0
+        },
+        "increment": {
+          "cycles": 0,
+          "value": 0
+        },
+        "interval": 1,
+        "interval_type": "year",
+        "provider": "guru",
+        "split_cycles": 0,
+        "trial_days": 0
+      },
+      "units_per_sale": 12,
+      "value": 23.88
+    }
+  },
+  "payment_method": "credit_card",
+  "product": {
+    "id": "9ad4f5bf-5fe5-4d02-bd9d-f819961b57cc",
+    "marketplace_id": "1702394333",
+    "marketplace_name": "mundipagg",
+    "name": "Assinatura Mundipagg",
+    "offer": {
+      "cash_discount": 0,
+      "id": "9ad505be-e7f9-4a08-a591-3ec4991c2615",
+      "name": "Assinatura Mundipagg",
+      "plan": {
+        "cycles": 0,
+        "discount": {
+          "cycles": 0,
+          "value": 0
+        },
+        "increment": {
+          "cycles": 0,
+          "value": 0
+        },
+        "interval": 1,
+        "interval_type": "year",
+        "provider": "guru",
+        "split_cycles": 0,
+        "trial_days": 0
+      },
+      "units_per_sale": 12,
+      "value": 23.88
+    }
+  },
+  "provider": "guru",
+  "subscriber": {
+    "address": "Rua Terra Rica",
+    "address_city": "Pinhais",
+    "address_comp": "",
+    "address_country": "BR",
+    "address_district": "Centro",
+    "address_number": "123",
+    "address_state": "PR",
+    "address_zip_code": "83324090",
+    "doc": "01234567890",
+    "email": "email@email.email",
+    "id": "906d1e37-de6a-4f4d-8271-91ecd0d65ec6",
+    "name": "Nome Assinante",
+    "phone_local_code": "55",
+    "phone_number": "1234567980"
+  },
+  "subscription_code": "sub_9CFyWTuPwXdJUikS",
+  "trial_days": 0,
+  "trial_finished_at": null,
+  "trial_started_at": null,
+  "webhook_type": "subscription"
+}
+
