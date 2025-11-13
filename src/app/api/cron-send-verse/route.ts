@@ -124,6 +124,7 @@ export async function GET(req: NextRequest) {
       if (!test) {
         const lockKey = `daily_verse_lock_${todaySp}`;
         // Use admin client to bypass RLS when acquiring the per-day lock
+        const adminSupabase = getWritableClient();
         const { error: lockError } = await adminSupabase
           .from('app_settings')
           .insert({ key: lockKey, value: new Date().toISOString(), type: 'text' });
@@ -161,6 +162,7 @@ export async function GET(req: NextRequest) {
       }
 
       // Record last sent timestamp with admin client (avoid RLS issues)
+      const adminSupabase = getWritableClient();
       await adminSupabase
         .from('app_settings')
         .upsert({ key: 'daily_verse_last_sent_at', value: new Date().toISOString(), type: 'text' }, { onConflict: 'key' });

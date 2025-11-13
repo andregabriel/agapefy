@@ -17,10 +17,10 @@ export function ProgressBar({ percentage, loading = false, onBack, showBackButto
       {showBackButton && onBack && (
         <button
           onClick={onBack}
-          className="flex-shrink-0 p-1 rounded-full hover:bg-gray-800/40 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-black"
+          className="flex-shrink-0 p-2 rounded-full hover:bg-gray-800/40 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-black"
           aria-label="Voltar ao passo anterior"
         >
-          <ArrowLeft className="h-3.5 w-3.5 text-gray-400 hover:text-gray-200 transition-colors" />
+          <ArrowLeft className="h-5 w-5 text-gray-400 hover:text-gray-200 transition-colors" />
         </button>
       )}
       <div className="flex-1 relative h-1.5 w-full overflow-hidden rounded-full bg-gray-200/50">

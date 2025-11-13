@@ -50,3 +50,5 @@ comment on table public.challenge is 'Marks playlists that are considered challe
 comment on column public.challenge.playlist_id is 'References playlists(id); unique means one row per challenge playlist';
 
 
+
+

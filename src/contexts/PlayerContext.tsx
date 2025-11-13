@@ -1,6 +1,6 @@
 "use client";
 
-import React, { createContext, useContext, useReducer, useRef, useEffect } from 'react';
+import React, { createContext, useContext, useReducer, useRef, useEffect, useCallback } from 'react';
 import { useUserActivity } from '@/hooks/useUserActivity';
 import { useAuth } from '@/contexts/AuthContext';
 
@@ -224,7 +224,34 @@ export const PlayerProvider = ({ children }: { children: React.ReactNode }) => {
     };
 
     const handleError = (e: Event) => {
-      console.error('🎵 Erro no áudio:', e);
+      const target = e.target as HTMLAudioElement;
+      const error = target.error;
+      
+      // Ignorar erros quando o src está vazio (limpeza intencional)
+      if (!target.src || target.src === window.location.href) {
+        return;
+      }
+      
+      // Logar apenas erros reais
+      if (error) {
+        let errorMessage = 'Erro desconhecido';
+        switch (error.code) {
+          case MediaError.MEDIA_ERR_ABORTED:
+            errorMessage = 'Reprodução abortada';
+            break;
+          case MediaError.MEDIA_ERR_NETWORK:
+            errorMessage = 'Erro de rede';
+            break;
+          case MediaError.MEDIA_ERR_DECODE:
+            errorMessage = 'Erro ao decodificar áudio';
+            break;
+          case MediaError.MEDIA_ERR_SRC_NOT_SUPPORTED:
+            errorMessage = 'Formato de áudio não suportado';
+            break;
+        }
+        console.error('🎵 Erro no áudio:', errorMessage, error);
+      }
+      
       dispatch({ type: 'SET_LOADING', payload: false });
       dispatch({ type: 'PAUSE' });
     };
@@ -244,28 +271,41 @@ export const PlayerProvider = ({ children }: { children: React.ReactNode }) => {
 
   // Atualizar src do áudio quando currentAudio muda
   useEffect(() => {
-    if (state.currentAudio && audioRef.current) {
-      console.log('🎵 Carregando novo áudio:', state.currentAudio.title);
-      audioRef.current.src = state.currentAudio.audio_url;
-      audioRef.current.load();
+    if (!audioRef.current) return;
+    
+    if (state.currentAudio) {
+      // Pausar e resetar o áudio anterior antes de carregar o novo
+      audioRef.current.pause();
+      audioRef.current.currentTime = 0;
+      
+      // Só atualizar src se for diferente do atual
+      const currentSrc = audioRef.current.src;
+      const newSrc = state.currentAudio.audio_url;
+      
+      if (currentSrc !== newSrc) {
+        console.log('🎵 Carregando novo áudio:', state.currentAudio.title);
+        audioRef.current.src = newSrc;
+        audioRef.current.load();
+      }
       
       // Registrar nova reprodução
       if (lastLoggedAudioRef.current !== state.currentAudio.id) {
         logPlayActivity(state.currentAudio);
       }
+    } else {
+      // Se não há áudio atual, apenas pausar (não limpar src para evitar erros)
+      audioRef.current.pause();
+      audioRef.current.currentTime = 0;
     }
   }, [state.currentAudio]);
 
   // Controlar play/pause
   useEffect(() => {
-    if (audioRef.current) {
-      if (state.isPlaying && !state.isLoading) {
-        console.log('🎵 Reproduzindo áudio');
-        audioRef.current.play().catch((error) => {
-          console.error('🎵 Erro ao reproduzir:', error);
-          dispatch({ type: 'PAUSE' });
-        });
-      } else {
+    if (!audioRef.current) return;
+    
+    // Sempre pausar primeiro se não está tocando ou está carregando
+    if (!state.isPlaying || state.isLoading) {
+      if (!audioRef.current.paused) {
         console.log('🎵 Pausando áudio');
         audioRef.current.pause();
         
@@ -274,6 +314,16 @@ export const PlayerProvider = ({ children }: { children: React.ReactNode }) => {
           logEndActivity(state.currentAudio, false);
         }
       }
+      return;
+    }
+    
+    // Só reproduzir se está tocando, não está carregando e há um áudio atual
+    if (state.isPlaying && !state.isLoading && state.currentAudio) {
+      console.log('🎵 Reproduzindo áudio');
+      audioRef.current.play().catch((error) => {
+        console.error('🎵 Erro ao reproduzir:', error);
+        dispatch({ type: 'PAUSE' });
+      });
     }
   }, [state.isPlaying, state.isLoading, state.currentAudio]);
 
@@ -285,25 +335,39 @@ export const PlayerProvider = ({ children }: { children: React.ReactNode }) => {
   }, [state.volume]);
 
   const playAudio = (audio: Audio) => {
+    // Pausar e resetar áudio atual antes de tocar novo
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current.currentTime = 0;
+    }
+    // Resetar estado de playing antes de definir novo áudio
+    dispatch({ type: 'PAUSE' });
     console.log('🎵 Tocando áudio individual:', audio.title);
     dispatch({ type: 'SET_AUDIO', payload: audio });
     dispatch({ type: 'SET_QUEUE', payload: { queue: [audio], index: 0 } });
   };
 
   const playQueue = (queue: Audio[], startIndex = 0) => {
+    // Pausar e resetar áudio atual antes de tocar nova playlist
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current.currentTime = 0;
+    }
+    // Resetar estado de playing antes de definir nova queue
+    dispatch({ type: 'PAUSE' });
     console.log('🎵 Tocando playlist com', queue.length, 'áudios, iniciando no índice', startIndex);
     dispatch({ type: 'SET_QUEUE', payload: { queue, index: startIndex } });
   };
 
-  const play = () => {
+  const play = useCallback(() => {
     console.log('🎵 Comando: Play');
     dispatch({ type: 'PLAY' });
-  };
+  }, []);
 
-  const pause = () => {
+  const pause = useCallback(() => {
     console.log('🎵 Comando: Pause');
     dispatch({ type: 'PAUSE' });
-  };
+  }, []);
 
   const seekTo = (time: number) => {
     if (audioRef.current) {

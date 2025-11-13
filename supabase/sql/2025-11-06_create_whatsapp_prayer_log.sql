@@ -17,3 +17,5 @@ comment on column public.whatsapp_prayer_log.slot is 'Prayer slot key (wakeup,lu
 comment on column public.whatsapp_prayer_log.sent_date is 'Local date (America/Sao_Paulo) of the send event';
 
 
+
+

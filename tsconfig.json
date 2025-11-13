@@ -33,7 +33,7 @@
     "noUnusedLocals": false,
     "noUnusedParameters": false,
     "exactOptionalPropertyTypes": false,
-    "target": "ES2017"
+    "target": "ES2018"
   },
   "include": [
     "next-env.d.ts",

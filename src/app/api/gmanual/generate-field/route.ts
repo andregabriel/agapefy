@@ -23,7 +23,7 @@ function applyPlaceholders(template: string, context: Record<string, string | un
 function sanitizeByField(field: FieldKey, text: string): string {
   let output = text.trim();
   // Remove cercas de código e aspas comuns
-  output = output.replace(/^`{3,}[\s\S]*?`{3,}$/g, '').replace(/^['"“”‘’](.*)['"“”‘’]$/s, '$1').trim();
+  output = output.replace(/^`{3,}[\s\S]*?`{3,}$/g, '').replace(/^['"""'']([\s\S]*)['"""'']$/, '$1').trim();
 
   const charLimit: Record<FieldKey, number | null> = {
     title: 60,

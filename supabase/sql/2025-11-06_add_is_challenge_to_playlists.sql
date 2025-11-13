@@ -18,3 +18,5 @@ WHERE EXISTS (
 -- Comentário na coluna
 COMMENT ON COLUMN public.playlists.is_challenge IS 'Indica se a playlist é um desafio para a jornada do WhatsApp';
 
+
+

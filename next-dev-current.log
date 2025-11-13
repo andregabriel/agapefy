@@ -1246,3 +1246,12 @@ Cadastre seu número de WhatsApp e comece a conversar comigo. Você poderá envi
  GET /api/onboarding/checklist 500 in 134ms
  GET / 200 in 857ms
  GET /whatsapp 200 in 154ms
+ GET /api/onboarding/checklist 500 in 293ms
+ GET /api/onboarding/checklist 500 in 52ms
+ GET /api/onboarding/checklist 500 in 220ms
+ GET /api/onboarding/checklist 500 in 47ms
+ GET /api/onboarding/checklist 500 in 175ms
+ GET /api/onboarding/checklist 500 in 45ms
+ GET /api/onboarding/checklist 500 in 193ms
+ GET /api/onboarding/checklist 500 in 44ms
+🔍 Middleware: Permitindo acesso temporário ao admin para debug

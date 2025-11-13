@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Checkbox } from '@/components/ui/checkbox';
 import { toast } from 'sonner';
@@ -21,10 +22,11 @@ import { useRoutinePlaylist } from '@/hooks/useRoutinePlaylist';
 import { Switch } from '@/components/ui/switch';
 import { useOnboardingProgress } from '@/hooks/useOnboardingProgress';
 import { ProgressBar } from '@/components/onboarding/ProgressBar';
-import { getNextStepUrl as getNextStepUrlShared, getOnboardingStepsOrder, type OnboardingStep } from '@/lib/services/onboarding-steps';
+import { getNextStepUrl as getNextStepUrlShared, getOnboardingStepsOrder, getStepUrl, type OnboardingStep } from '@/lib/services/onboarding-steps';
 import { processLinks } from '@/lib/utils';
-import { Play } from 'lucide-react';
+import { Play, Pause } from 'lucide-react';
 import { normalizeImageUrl, formatDuration } from '@/app/home/_utils/homeUtils';
+import { usePlayer } from '@/contexts/PlayerContext';
 
 interface FormOption { label: string; category_id: string }
 interface AdminForm { 
@@ -43,6 +45,7 @@ interface AudioPreview {
   duration?: number | null; 
   cover_url?: string | null;
   thumbnail_url?: string | null;
+  audio_url?: string | null;
   category?: { id: string; name: string; image_url?: string | null } | null;
 }
 
@@ -52,6 +55,7 @@ export default function OnboardingClient() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const { routinePlaylist, loading: routineLoading } = useRoutinePlaylist();
+  const { playQueue, pause, play, state: playerState } = usePlayer();
   const desiredStep = useMemo(() => {
     const stepParam = searchParams?.get('step');
     const parsed = stepParam ? Number(stepParam) : NaN;
@@ -82,6 +86,9 @@ export default function OnboardingClient() {
   const [selectedChallengePlaylist, setSelectedChallengePlaylist] = useState<{ id: string; title: string; cover_url?: string | null } | null>(null);
   const [playlistAudios, setPlaylistAudios] = useState<AudioPreview[]>([]);
   const playlistCarouselRef = useRef<HTMLDivElement | null>(null);
+  const previousStepRef = useRef<number>(desiredStep);
+  const pauseRef = useRef<(() => void) | null>(null);
+  const isPausingRef = useRef(false);
   
   // Calcular progresso do onboarding
   const { percentage: progressPercentage, loading: progressLoading } = useOnboardingProgress(desiredStep, currentCategoryId);
@@ -138,12 +145,41 @@ export default function OnboardingClient() {
     }
   }, [desiredStep]);
 
-  // Keep the selected playlist id in sync with recommended when nothing chosen yet
+  // Atualizar ref da função pause (separado para evitar loops)
   useEffect(() => {
-    if (desiredStep === 2 && !selectedKey) {
-      if (recommendedId) setSelected(recommendedId);
+    pauseRef.current = pause;
+  }, [pause]);
+
+  // Pausar áudio quando mudar de step ou sair da página
+  useEffect(() => {
+    // Pausar áudio quando o step mudar (mas não na primeira renderização)
+    const stepChanged = previousStepRef.current !== desiredStep && previousStepRef.current > 0;
+    let timeoutId: NodeJS.Timeout | null = null;
+    
+    if (stepChanged && !isPausingRef.current && pauseRef.current) {
+      isPausingRef.current = true;
+      pauseRef.current();
+      // Reset flag após um pequeno delay para evitar múltiplas chamadas
+      timeoutId = setTimeout(() => {
+        isPausingRef.current = false;
+      }, 100);
     }
-  }, [desiredStep, recommendedId, selectedKey]);
+    
+    previousStepRef.current = desiredStep;
+
+    // Cleanup: pausar áudio quando o componente for desmontado (usuário sai da página)
+    return () => {
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
+      if (!isPausingRef.current && pauseRef.current) {
+        pauseRef.current();
+      }
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [desiredStep]);
+
+  // Removed: Não pré-selecionar nenhuma opção automaticamente no step 2
 
   // Determinar playlist selecionada no passo 3 após carregar dados
   useEffect(() => {
@@ -301,6 +337,7 @@ export default function OnboardingClient() {
               duration: audio.duration,
               cover_url: audio.cover_url,
               thumbnail_url: audio.thumbnail_url,
+              audio_url: audio.audio_url,
               category: audio.category ? {
                 id: audio.category.id,
                 name: audio.category.name,
@@ -370,6 +407,17 @@ export default function OnboardingClient() {
       formId: parentFormId || undefined,
       settings: settingsForShared,
     });
+  }
+
+  // Função helper para navegar para a próxima etapa após salvar WhatsApp
+  async function handleWhatsAppSaved(phone: string) {
+    setHasWhatsApp(true);
+    try {
+      const nextUrl = await getNextStepUrl(desiredStep, { categoryId: currentCategoryId || undefined });
+      router.replace(nextUrl);
+    } catch (error) {
+      console.error('Erro ao navegar para próxima etapa:', error);
+    }
   }
 
   // Função para determinar o passo anterior e retornar a URL completa
@@ -1093,15 +1141,18 @@ export default function OnboardingClient() {
     return () => { mounted = false; };
   }, [desiredStep, user?.id, router]);
 
-  async function submit() {
+  async function submit(selectedOption?: string) {
     if (!form) {
       toast.error('Formulário não encontrado');
       return;
     }
     
+    // Usar o parâmetro passado ou o estado atual
+    const optionToSubmit = selectedOption !== undefined ? selectedOption : selected;
+    
     // Verificar se selecionou uma opção OU preencheu o campo "Outros"
     const hasOtherOption = form.allow_other_option && otherOptionText.trim();
-    if (!selected && !hasOtherOption) {
+    if (!optionToSubmit && !hasOtherOption) {
       toast.error('Selecione uma opção ou preencha o campo "Outros"');
       return;
     }
@@ -1113,7 +1164,7 @@ export default function OnboardingClient() {
       await saveFormResponse({ 
         formId: form.id, 
         answers: { 
-          option: selected || null,
+          option: optionToSubmit || null,
           other_option: hasOtherOption ? otherOptionText.trim() : null
         }, 
         userId: user?.id ?? null 
@@ -1147,23 +1198,59 @@ export default function OnboardingClient() {
       console.error(e);
       toast.error('Não foi possível enviar. Seguimos para o próximo passo.');
     } finally {
+      // Se selecionou "Outra situação", redirecionar para o passo do WhatsApp
+      if (hasOtherOption && selectedKey === 'other' && form) {
+        try {
+          const parentFormId = activeFormId || form.id || '';
+          const settingsForShared = {
+            onboarding_step2_title: settings.onboarding_step2_title,
+            onboarding_step2_subtitle: settings.onboarding_step2_subtitle,
+            onboarding_step3_title: settings.onboarding_step3_title,
+            onboarding_static_preview_active: settings.onboarding_static_preview_active,
+            onboarding_static_whatsapp_active: settings.onboarding_static_whatsapp_active,
+            onboarding_hardcoded_6_active: settings.onboarding_hardcoded_6_active,
+            onboarding_hardcoded_7_active: settings.onboarding_hardcoded_7_active,
+            onboarding_hardcoded_8_active: settings.onboarding_hardcoded_8_active,
+          };
+          
+          const steps = await getOnboardingStepsOrder(settingsForShared);
+          const whatsappStep = steps.find((s) => s.type === 'static' && s.staticKind === 'whatsapp' && s.isActive);
+          
+          if (whatsappStep) {
+            const whatsappUrl = getStepUrl(whatsappStep, {
+              categoryId: currentCategoryId || undefined,
+              formId: parentFormId || undefined,
+            });
+            router.replace(whatsappUrl);
+            setSubmitting(false);
+            return;
+          }
+        } catch (whatsappError) {
+          // eslint-disable-next-line no-console
+          console.error('Erro ao buscar passo do WhatsApp:', whatsappError);
+          // Continuar com o fluxo normal se falhar
+        }
+      }
+      
       // Usar getNextStepUrl para determinar o próximo passo
-      try {
-        const currentStep = form.onboard_step || desiredStep;
-        // Garantir que categoryId seja passado para getNextStepUrl quando estamos no passo 1
-        const categoryIdForNext = currentStep === 1 && selected ? selected : currentCategoryId;
-        const nextUrl = await getNextStepUrl(currentStep, { categoryId: categoryIdForNext || undefined });
-        router.replace(nextUrl);
-      } catch {
-        // Fallback: usar getNextStepUrl em vez de hardcode
+      if (form) {
         try {
           const currentStep = form.onboard_step || desiredStep;
-          const categoryIdForFallback = currentStep === 1 && selected ? selected : currentCategoryId;
-          const fallbackUrl = await getNextStepUrl(currentStep, { categoryId: categoryIdForFallback || undefined });
-          router.replace(fallbackUrl);
+          // Garantir que categoryId seja passado para getNextStepUrl quando estamos no passo 1
+          const categoryIdForNext = currentStep === 1 && optionToSubmit ? optionToSubmit : currentCategoryId;
+          const nextUrl = await getNextStepUrl(currentStep, { categoryId: categoryIdForNext || undefined });
+          router.replace(nextUrl);
         } catch {
-          // Último fallback: ir para home se tudo falhar
-          router.replace('/');
+          // Fallback: usar getNextStepUrl em vez de hardcode
+          try {
+            const currentStep = form.onboard_step || desiredStep;
+            const categoryIdForFallback = currentStep === 1 && optionToSubmit ? optionToSubmit : currentCategoryId;
+            const fallbackUrl = await getNextStepUrl(currentStep, { categoryId: categoryIdForFallback || undefined });
+            router.replace(fallbackUrl);
+          } catch {
+            // Último fallback: ir para home se tudo falhar
+            router.replace('/');
+          }
         }
       }
       setSubmitting(false);
@@ -1246,6 +1333,7 @@ export default function OnboardingClient() {
             <div className="flex items-center justify-between">
               <Button
                 variant="ghost"
+                className="hidden"
                 onClick={async () => {
                   const nextUrl = await getNextStepUrl(desiredStep, { categoryId: currentCategoryId || undefined });
                   router.replace(nextUrl);
@@ -1365,10 +1453,11 @@ export default function OnboardingClient() {
             </div>
           </CardHeader>
           <CardContent className="space-y-6">
-            <WhatsAppSetup variant="embedded" redirectIfNotLoggedIn={false} />
+            <WhatsAppSetup variant="embedded" redirectIfNotLoggedIn={false} onSavedPhone={handleWhatsAppSaved} />
             <div className="flex justify-between">
               <Button
                 variant="ghost"
+                className="hidden"
                 onClick={async () => {
                   const nextUrl = await getNextStepUrl(desiredStep, { categoryId: currentCategoryId || undefined });
                   router.replace(nextUrl);
@@ -1376,10 +1465,15 @@ export default function OnboardingClient() {
               >
                 {settings.onboarding_step4_skip_button || 'Pular'}
               </Button>
-              <Button onClick={async () => {
-                const nextUrl = await getNextStepUrl(desiredStep, { categoryId: currentCategoryId || undefined });
-                router.replace(nextUrl);
-              }}>{settings.onboarding_step4_complete_button || 'Concluir'}</Button>
+              <Button 
+                className="hidden"
+                onClick={async () => {
+                  const nextUrl = await getNextStepUrl(desiredStep, { categoryId: currentCategoryId || undefined });
+                  router.replace(nextUrl);
+                }}
+              >
+                {settings.onboarding_step4_complete_button || 'Concluir'}
+              </Button>
             </div>
           </CardContent>
         </Card>
@@ -1513,11 +1607,12 @@ export default function OnboardingClient() {
             <WhatsAppSetup
               variant="embedded"
               redirectIfNotLoggedIn={false}
-              onSavedPhone={() => setHasWhatsApp(true)}
+              onSavedPhone={handleWhatsAppSaved}
             />
             <div className="flex justify-between">
               <Button
                 variant="ghost"
+                className="hidden"
                 onClick={async () => {
                   const nextUrl = await getNextStepUrl(desiredStep, { categoryId: currentCategoryId || undefined });
                   router.replace(nextUrl);
@@ -1526,10 +1621,15 @@ export default function OnboardingClient() {
                 Pular
               </Button>
               {hasWhatsApp && (
-                <Button onClick={async () => {
-                  const nextUrl = await getNextStepUrl(desiredStep, { categoryId: currentCategoryId || undefined });
-                  router.replace(nextUrl);
-                }}>Concluir</Button>
+                <Button 
+                  className="hidden"
+                  onClick={async () => {
+                    const nextUrl = await getNextStepUrl(desiredStep, { categoryId: currentCategoryId || undefined });
+                    router.replace(nextUrl);
+                  }}
+                >
+                  Concluir
+                </Button>
               )}
             </div>
           </CardContent>
@@ -1706,6 +1806,12 @@ export default function OnboardingClient() {
                           </div>
                         );
 
+                        // Verificar se este áudio está tocando atualmente
+                        const isCurrentAudio = playerState.currentAudio?.id === audio.id;
+                        const isCurrentlyPlaying = isCurrentAudio && playerState.isPlaying;
+                        const isPaused = isCurrentAudio && !playerState.isPlaying;
+                        const isLoading = isCurrentAudio && playerState.isLoading;
+
                         return (
                           <Link
                             key={audio.id}
@@ -1740,12 +1846,64 @@ export default function OnboardingClient() {
                                 )}
                               </div>
                               
-                              {/* Play Button Overlay */}
-                              <div className="absolute bottom-2 right-2 opacity-0 group-hover:opacity-100 transition-all duration-300 transform translate-y-2 group-hover:translate-y-0">
-                                <div className="w-12 h-12 bg-green-500 rounded-full flex items-center justify-center shadow-lg hover:bg-green-400 hover:scale-105 transition-all duration-200">
-                                  <Play size={16} className="text-black ml-0.5" fill="currentColor" />
+                              {/* Play/Pause Button Overlay */}
+                              {audio.audio_url && (
+                                <div className={`absolute bottom-2 right-2 transition-all duration-300 transform ${isCurrentlyPlaying || isPaused || isLoading ? 'opacity-100 translate-y-0' : 'opacity-0 group-hover:opacity-100 translate-y-2 group-hover:translate-y-0'}`}>
+                                  <button
+                                    onClick={(e) => {
+                                      e.preventDefault();
+                                      e.stopPropagation();
+                                      
+                                      // Se está carregando, não fazer nada
+                                      if (isLoading) {
+                                        return;
+                                      }
+                                      
+                                      // Se já está tocando este áudio, pausar
+                                      if (isCurrentlyPlaying) {
+                                        pause();
+                                        return;
+                                      }
+                                      
+                                      // Se está pausado mas é o áudio atual, retomar reprodução
+                                      if (isPaused) {
+                                        play();
+                                        return;
+                                      }
+                                      
+                                      // Tocar apenas este áudio (substitui qualquer queue existente)
+                                      playQueue([{
+                                        id: audio.id,
+                                        title: audio.title,
+                                        subtitle: audio.subtitle || null,
+                                        duration: audio.duration || null,
+                                        audio_url: audio.audio_url!,
+                                        cover_url: audio.cover_url || null,
+                                        category: audio.category ? {
+                                          id: audio.category.id,
+                                          name: audio.category.name,
+                                          description: null,
+                                          image_url: audio.category.image_url,
+                                          created_at: ''
+                                        } : undefined
+                                      }], 0);
+                                    }}
+                                    disabled={isLoading}
+                                    className={`w-12 h-12 rounded-full flex items-center justify-center shadow-lg transition-all duration-200 ${
+                                      isCurrentlyPlaying 
+                                        ? 'bg-orange-500 hover:bg-orange-400' 
+                                        : 'bg-green-500 hover:bg-green-400'
+                                    } hover:scale-105 ${isLoading ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
+                                    title={isCurrentlyPlaying ? 'Pausar' : isPaused ? 'Retomar' : isLoading ? 'Carregando...' : 'Reproduzir preview'}
+                                  >
+                                    {isCurrentlyPlaying ? (
+                                      <Pause size={16} className="text-black fill-current" />
+                                    ) : (
+                                      <Play size={16} className="text-black ml-0.5" fill="currentColor" />
+                                    )}
+                                  </button>
                                 </div>
-                              </div>
+                              )}
                             </div>
                             
                             {/* Título, Sub-título e Duração */}
@@ -1888,12 +2046,24 @@ export default function OnboardingClient() {
             )}
 
             <RadioGroup
-              value={selectedKey || recommendedOriginalIndex}
+              value={selectedKey}
               onValueChange={(key) => {
                 setSelectedKey(key);
                 const index = Number(key);
                 const chosen = playlists?.[index];
-                if (chosen) setSelected(chosen.id || '');
+                if (chosen) {
+                  setSelected(chosen.id || '');
+                  // Auto-avançar para o próximo step quando uma opção for selecionada
+                  const finalSelectedId = chosen.id || '';
+                  const payload = { option: finalSelectedId, playlist_title: chosen.title || null };
+                  // Salvar no localStorage para usuários anônimos
+                  if (finalSelectedId && typeof window !== 'undefined') {
+                    try {
+                      window.localStorage.setItem('ag_onb_selected_playlist', finalSelectedId);
+                    } catch {}
+                  }
+                  void submitAndGoNext(payload);
+                }
               }}
               className="space-y-3"
             >
@@ -1903,10 +2073,23 @@ export default function OnboardingClient() {
                   <div key={pl.id}>
                     <label
                       htmlFor={`opt-${originalIndex}`}
-                      className="flex items-center justify-between gap-4 w-full p-4 rounded-lg border border-gray-800 hover:bg-gray-800/40 cursor-pointer"
+                      className={`flex items-center justify-between gap-4 w-full p-4 rounded-lg border cursor-pointer ${
+                        pl.id === recommendedId 
+                          ? 'bg-amber-50 border-gray-800 hover:bg-amber-100' 
+                          : 'border-gray-800 hover:bg-gray-800/40'
+                      }`}
                       onClick={() => {
                         setSelectedKey(String(originalIndex));
                         setSelected(pl.id);
+                        // Auto-avançar para o próximo step quando uma opção for selecionada
+                        const payload = { option: pl.id, playlist_title: pl.title || null };
+                        // Salvar no localStorage para usuários anônimos
+                        if (pl.id && typeof window !== 'undefined') {
+                          try {
+                            window.localStorage.setItem('ag_onb_selected_playlist', pl.id);
+                          } catch {}
+                        }
+                        void submitAndGoNext(payload);
                       }}
                     >
                       <div className="flex items-center gap-4">
@@ -1925,7 +2108,7 @@ export default function OnboardingClient() {
             </RadioGroup>
 
             <div className="flex justify-between">
-              <Button variant="ghost" onClick={skip} disabled={submitting}>Agora não</Button>
+              <Button variant="ghost" onClick={skip} disabled={submitting} className="hidden">Agora não</Button>
               <Button onClick={() => {
                 // Garantir que sempre temos um ID válido: usar selected, ou recommendedId como fallback
                 const finalSelectedId = selected || recommendedId || '';
@@ -1938,7 +2121,7 @@ export default function OnboardingClient() {
                   } catch {}
                 }
                 void submitAndGoNext(payload);
-              }} disabled={(!selected && !recommendedId) || submitting}>{submitting ? 'Enviando...' : 'Enviar'}</Button>
+              }} disabled={(!selected && !recommendedId) || submitting} className="hidden">{submitting ? 'Enviando...' : 'Enviar'}</Button>
             </div>
           </CardContent>
         </Card>
@@ -2091,7 +2274,7 @@ export default function OnboardingClient() {
             )}
               <Input placeholder="Digite sua resposta..." value={shortText} onChange={(e) => setShortText(e.target.value)} />
               <div className="flex justify-between">
-                <Button variant="ghost" onClick={skip} disabled={submitting}>Agora não</Button>
+                <Button variant="ghost" onClick={skip} disabled={submitting} className="hidden">Agora não</Button>
                 <Button onClick={() => submitAndGoNext({ text: shortText })} disabled={submitting || !shortText.trim()}>Enviar</Button>
               </div>
             </CardContent>
@@ -2168,7 +2351,7 @@ export default function OnboardingClient() {
               </div>
 
               <div className="flex justify-between">
-                <Button variant="ghost" onClick={skip} disabled={submitting}>Agora não</Button>
+                <Button variant="ghost" onClick={skip} disabled={submitting} className="hidden">Agora não</Button>
                 <Button onClick={() => submitAndGoNext({ options: multiLabels })} disabled={multiLabels.length === 0 || submitting}>{submitting ? 'Enviando...' : 'Enviar'}</Button>
               </div>
             </CardContent>
@@ -2225,7 +2408,7 @@ export default function OnboardingClient() {
             </RadioGroup>
 
             <div className="flex justify-between">
-              <Button variant="ghost" onClick={skip} disabled={submitting}>Agora não</Button>
+              <Button variant="ghost" onClick={skip} disabled={submitting} className="hidden">Agora não</Button>
               <Button onClick={() => submitAndGoNext({ option: selected })} disabled={!selected || submitting}>{submitting ? 'Enviando...' : 'Enviar'}</Button>
             </div>
           </CardContent>
@@ -2291,9 +2474,15 @@ export default function OnboardingClient() {
                 const index = Number(key);
                 const chosen = form.schema?.[index];
                 if (chosen) {
-                  setSelected(chosen.category_id);
+                  const categoryId = chosen.category_id;
+                  setSelected(categoryId);
                   // Limpar campo "Outros" quando selecionar uma opção
                   setOtherOptionText('');
+                  // Avançar automaticamente para o próximo step após um pequeno delay para feedback visual
+                  // Passar o categoryId diretamente para evitar problemas de timing com o estado
+                  setTimeout(() => {
+                    void submit(categoryId);
+                  }, 300);
                 }
               }
             }}
@@ -2330,31 +2519,42 @@ export default function OnboardingClient() {
                 </div>
                 {selectedKey === 'other' && (
                   <div className="pl-9 pr-4">
-                    <Input
+                    <Textarea
                       id="opt-other-input"
-                      placeholder="Digite sua opção..."
+                      placeholder="Escreva aqui o que está pesando seu coração..."
                       value={otherOptionText}
                       onChange={(e) => {
-                        setOtherOptionText(e.target.value);
+                        const value = e.target.value;
+                        // Limitar a 500 caracteres
+                        if (value.length <= 500) {
+                          setOtherOptionText(value);
+                        }
                       }}
-                      className="w-full"
+                      className="w-full min-h-[60px] max-h-[80px] resize-none"
+                      rows={3}
+                      maxLength={500}
                       autoFocus
                     />
+                    <div className="text-xs text-muted-foreground mt-1 text-right">
+                      {otherOptionText.length}/500 caracteres
+                    </div>
                   </div>
                 )}
               </div>
             )}
           </RadioGroup>
 
-          <div className="flex justify-between">
-            <Button variant="ghost" onClick={skip} disabled={submitting}>Agora não</Button>
-            <Button 
-              onClick={submit} 
-              disabled={(!selected && !(form.allow_other_option && otherOptionText.trim())) || submitting}
-            >
-              {submitting ? 'Enviando...' : 'Enviar'}
-            </Button>
-          </div>
+          {selectedKey === 'other' && (
+            <div className="flex justify-between">
+              <Button variant="ghost" onClick={skip} disabled={submitting} className="hidden">Agora não</Button>
+              <Button 
+                onClick={submit} 
+                disabled={(!selected && !(form.allow_other_option && otherOptionText.trim())) || submitting}
+              >
+                {submitting ? 'Enviando...' : 'Enviar'}
+              </Button>
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>
