@@ -16,6 +16,8 @@ interface AppSettings {
   prayer_quote_reference: string;
   show_prayer_stats: string;
   logo_url: string;
+  // Regras de assistentes do WhatsApp (JSON string: AssistantConfig)
+  whatsapp_assistant_rules?: string;
   // Lista global de nomes para "Objetivos espirituais" (string JSON: string[])
   spiritual_goals?: string;
   // Prompts por campo do GManual (string)
@@ -86,6 +88,7 @@ const DEFAULT_SETTINGS: AppSettings = {
   prayer_quote_reference: 'Mateus 18:20',
   show_prayer_stats: 'true',
   logo_url: '',
+  whatsapp_assistant_rules: '',
   spiritual_goals: '[]',
   // Prompts padrão do GManual (PT-BR, reverente e objetivos claros)
   gmanual_title_prompt: 'Escreva um título curto (máximo 60 caracteres), claro e inspirador, adequado para uma oração cristã brasileira. Use linguagem simples e reverente. Retorne apenas o título, sem aspas.',

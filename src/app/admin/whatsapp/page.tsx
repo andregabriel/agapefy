@@ -73,7 +73,7 @@ interface AssistantConfig {
 }
 
 export default function WhatsAppAdminPage() {
-  const { settings, updateSetting } = useAppSettings();
+  const { settings, updateSetting, loading: settingsLoading } = useAppSettings();
   const [users, setUsers] = useState<WhatsAppUser[]>([]);
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [loading, setLoading] = useState(false);
@@ -111,93 +111,101 @@ export default function WhatsAppAdminPage() {
   }, [mounted]);
 
   useEffect(() => {
+    // Aguardar settings carregarem da API
+    if (settingsLoading) {
+      return;
+    }
+
+    // Só inicializar uma vez por ciclo de vida do componente
     if (assistantsInitialized) return;
-    
-    if (settings.whatsapp_assistant_rules !== undefined) {
-      setAssistantRules(settings.whatsapp_assistant_rules);
-      
-      // Tentar carregar configuração estruturada
-      try {
-        const config: AssistantConfig = JSON.parse(settings.whatsapp_assistant_rules);
-        if (config.assistants && Array.isArray(config.assistants) && config.assistants.length > 0) {
-          setAssistants(config.assistants);
-          setAssistantsInitialized(true);
+
+    // Função auxiliar para criar assistentes padrão
+    const createDefaultAssistants = () => [
+      {
+        id: 'biblical',
+        name: 'Mentor Bíblico',
+        assistantId: '',
+        type: 'biblical' as const,
+        description: 'Assistente especializado em respostas baseadas na Bíblia',
+        keywords: ['bíblia', 'versículo', 'jesus', 'deus', 'bíblico', 'escritura', 'parábola', 'evangelho'],
+        enabled: true
+      },
+      {
+        id: 'support',
+        name: 'Suporte e Vendas',
+        assistantId: '',
+        type: 'support' as const,
+        description: 'Assistente para vendas, suporte e questões sobre o app',
+        keywords: ['pagamento', 'assinatura', 'preço', 'como usar', 'funcionamento', 'ajuda', 'suporte', 'comprar', 'vender'],
+        enabled: true
+      }
+    ];
+
+    const rawRules = settings.whatsapp_assistant_rules || '';
+
+    // Se não há configuração salva, usar padrão
+    if (!rawRules.trim()) {
+      setAssistants(createDefaultAssistants());
+      setAssistantsInitialized(true);
+      return;
+    }
+
+    // Tentar carregar configuração estruturada
+    try {
+      const config: AssistantConfig = JSON.parse(rawRules);
+
+      if (config.assistants && Array.isArray(config.assistants) && config.assistants.length > 0) {
+        const biblicalAssistant = config.assistants.find(a => a.type === 'biblical');
+        const supportAssistant = config.assistants.find(a => a.type === 'support' || a.type === 'sales');
+
+        const finalAssistants: Assistant[] = [];
+
+        // Bíblico
+        if (biblicalAssistant) {
+          finalAssistants.push({
+            id: 'biblical',
+            name: biblicalAssistant.name || 'Mentor Bíblico',
+            assistantId: biblicalAssistant.assistantId || '',
+            type: 'biblical',
+            description: biblicalAssistant.description || 'Assistente especializado em respostas baseadas na Bíblia',
+            keywords: biblicalAssistant.keywords && Array.isArray(biblicalAssistant.keywords) && biblicalAssistant.keywords.length > 0
+              ? biblicalAssistant.keywords
+              : ['bíblia', 'versículo', 'jesus', 'deus', 'bíblico', 'escritura', 'parábola', 'evangelho'],
+            enabled: biblicalAssistant.enabled !== undefined ? biblicalAssistant.enabled : true
+          });
         } else {
-          // Se não for JSON estruturado, criar assistentes padrão
-          const defaultAssistants = [
-            {
-              id: '1',
-              name: 'Mentor Bíblico',
-              assistantId: 'asst_I7wKwxVNjTtkO0lgaBVYkkGX',
-              type: 'biblical' as const,
-              description: 'Assistente especializado em respostas baseadas na Bíblia',
-              keywords: ['bíblia', 'versículo', 'jesus', 'deus', 'bíblico', 'escritura', 'parábola', 'evangelho'],
-              enabled: true
-            },
-            {
-              id: '2',
-              name: 'Vendas e Suporte',
-              assistantId: 'asst_UXfZfMv9k0pPzTU4CiQRrpSR',
-              type: 'sales' as const,
-              description: 'Assistente para vendas, suporte e questões sobre o app',
-              keywords: ['pagamento', 'assinatura', 'preço', 'como usar', 'funcionamento', 'ajuda', 'suporte', 'comprar', 'vender'],
-              enabled: true
-            }
-          ];
-          setAssistants(defaultAssistants);
-          setAssistantsInitialized(true);
+          finalAssistants.push(createDefaultAssistants()[0]);
         }
-      } catch {
-        // Se não for JSON válido, usar como texto simples e inicializar padrão
-        const defaultAssistants = [
-          {
-            id: '1',
-            name: 'Mentor Bíblico',
-            assistantId: 'asst_I7wKwxVNjTtkO0lgaBVYkkGX',
-            type: 'biblical' as const,
-            description: 'Assistente especializado em respostas baseadas na Bíblia',
-            keywords: ['bíblia', 'versículo', 'jesus', 'deus', 'bíblico', 'escritura', 'parábola', 'evangelho'],
-            enabled: true
-          },
-          {
-            id: '2',
-            name: 'Vendas e Suporte',
-            assistantId: 'asst_UXfZfMv9k0pPzTU4CiQRrpSR',
-            type: 'sales' as const,
-            description: 'Assistente para vendas, suporte e questões sobre o app',
-            keywords: ['pagamento', 'assinatura', 'preço', 'como usar', 'funcionamento', 'ajuda', 'suporte', 'comprar', 'vender'],
-            enabled: true
-          }
-        ];
-        setAssistants(defaultAssistants);
+
+        // Suporte
+        if (supportAssistant) {
+          finalAssistants.push({
+            id: 'support',
+            name: supportAssistant.name || 'Suporte e Vendas',
+            assistantId: supportAssistant.assistantId || '',
+            type: 'support',
+            description: supportAssistant.description || 'Assistente para vendas, suporte e questões sobre o app',
+            keywords: supportAssistant.keywords && Array.isArray(supportAssistant.keywords) && supportAssistant.keywords.length > 0
+              ? supportAssistant.keywords
+              : ['pagamento', 'assinatura', 'preço', 'como usar', 'funcionamento', 'ajuda', 'suporte', 'comprar', 'vender'],
+            enabled: supportAssistant.enabled !== undefined ? supportAssistant.enabled : true
+          });
+        } else {
+          finalAssistants.push(createDefaultAssistants()[1]);
+        }
+
+        setAssistants(finalAssistants);
+        setAssistantsInitialized(true);
+      } else {
+        setAssistants(createDefaultAssistants());
         setAssistantsInitialized(true);
       }
-    } else {
-      // Inicializar com padrão se não houver configuração
-      const defaultAssistants = [
-        {
-          id: '1',
-          name: 'Mentor Bíblico',
-          assistantId: 'asst_I7wKwxVNjTtkO0lgaBVYkkGX',
-          type: 'biblical' as const,
-          description: 'Assistente especializado em respostas baseadas na Bíblia',
-          keywords: ['bíblia', 'versículo', 'jesus', 'deus', 'bíblico', 'escritura', 'parábola', 'evangelho'],
-          enabled: true
-        },
-        {
-          id: '2',
-          name: 'Vendas e Suporte',
-          assistantId: 'asst_UXfZfMv9k0pPzTU4CiQRrpSR',
-          type: 'sales' as const,
-          description: 'Assistente para vendas, suporte e questões sobre o app',
-          keywords: ['pagamento', 'assinatura', 'preço', 'como usar', 'funcionamento', 'ajuda', 'suporte', 'comprar', 'vender'],
-          enabled: true
-        }
-      ];
-      setAssistants(defaultAssistants);
+    } catch (error) {
+      console.error('Erro ao fazer parse da configuração de assistentes:', error);
+      setAssistants(createDefaultAssistants());
       setAssistantsInitialized(true);
     }
-  }, [settings.whatsapp_assistant_rules, assistantsInitialized]);
+  }, [settings.whatsapp_assistant_rules, settingsLoading, assistantsInitialized]);
 
   const loadUsers = async () => {
     try {
@@ -441,18 +449,75 @@ export default function WhatsAppAdminPage() {
   const saveAssistantRules = async () => {
     setSavingRules(true);
     try {
-      // Salvar como JSON estruturado
+      // Buscar os dois assistentes principais do estado atual
+      const biblicalAssistant = assistants.find(a => a.type === 'biblical');
+      const supportAssistant = assistants.find(a => a.type === 'support' || a.type === 'sales');
+      
+      // Garantir que temos os dois assistentes principais
+      if (!biblicalAssistant || !supportAssistant) {
+        toast.error('É necessário configurar ambos os assistentes (Bíblico e Suporte)');
+        setSavingRules(false);
+        return;
+      }
+      
+      // Criar cópias completas dos assistentes preservando todos os campos
+      // IMPORTANTE: Preservar exatamente o que o usuário digitou, sem trim ou conversões desnecessárias
+      const biblicalToSave: Assistant = {
+        id: 'biblical',
+        name: biblicalAssistant.name || 'Mentor Bíblico',
+        assistantId: biblicalAssistant.assistantId || '', // Preservar exatamente como está, mesmo se vazio
+        type: 'biblical' as const,
+        description: biblicalAssistant.description || 'Assistente especializado em respostas baseadas na Bíblia',
+        keywords: biblicalAssistant.keywords && Array.isArray(biblicalAssistant.keywords) && biblicalAssistant.keywords.length > 0 
+          ? biblicalAssistant.keywords 
+          : ['bíblia', 'versículo', 'jesus', 'deus', 'bíblico', 'escritura', 'parábola', 'evangelho'],
+        enabled: biblicalAssistant.enabled !== undefined ? biblicalAssistant.enabled : true
+      };
+      
+      const supportToSave: Assistant = {
+        id: 'support',
+        name: supportAssistant.name || 'Suporte e Vendas',
+        assistantId: supportAssistant.assistantId || '', // Preservar exatamente como está, mesmo se vazio
+        type: 'support' as const,
+        description: supportAssistant.description || 'Assistente para vendas, suporte e questões sobre o app',
+        keywords: supportAssistant.keywords && Array.isArray(supportAssistant.keywords) && supportAssistant.keywords.length > 0 
+          ? supportAssistant.keywords 
+          : ['pagamento', 'assinatura', 'preço', 'como usar', 'funcionamento', 'ajuda', 'suporte', 'comprar', 'vender'],
+        enabled: supportAssistant.enabled !== undefined ? supportAssistant.enabled : true
+      };
+      
+      console.log('💾 ANTES DE SALVAR:');
+      console.log('  Bíblico ID:', biblicalToSave.assistantId);
+      console.log('  Suporte ID:', supportToSave.assistantId);
+      console.log('  Bíblico Keywords:', biblicalToSave.keywords);
+      console.log('  Suporte Keywords:', supportToSave.keywords);
+      
+      // Salvar como JSON estruturado apenas com os dois assistentes principais
       const config: AssistantConfig = {
-        assistants: assistants,
-        defaultAssistantId: assistants.find(a => a.enabled)?.id
+        assistants: [biblicalToSave, supportToSave],
+        defaultAssistantId: biblicalToSave.enabled ? biblicalToSave.id : supportToSave.id
       };
       const configJson = JSON.stringify(config, null, 2);
       
+      console.log('💾 JSON que será salvo:', configJson);
+      
       const result = await updateSetting('whatsapp_assistant_rules', configJson);
       if (result.success) {
-        toast.success('Configuração de assistentes salva com sucesso!');
+        console.log('✅ Configuração salva com sucesso no banco');
+        console.log('📋 Assistentes que foram salvos:');
+        console.log('  - Bíblico ID:', biblicalToSave.assistantId);
+        console.log('  - Suporte ID:', supportToSave.assistantId);
+        console.log('  - Bíblico Keywords:', biblicalToSave.keywords);
+        console.log('  - Suporte Keywords:', supportToSave.keywords);
+
+        // Atualizar estado local para refletir os dados salvos
+        setAssistants([biblicalToSave, supportToSave]);
         setAssistantRules(configJson);
+        setAssistantsInitialized(true);
+
+        toast.success('Configuração de assistentes salva com sucesso!');
       } else {
+        console.error('❌ Erro ao salvar:', result.error);
         toast.error(result.error || 'Erro ao salvar configuração');
       }
     } catch (error) {
@@ -512,29 +577,102 @@ export default function WhatsAppAdminPage() {
     }
 
     const message = testAssistantMessage.toLowerCase();
+    const normalizedMessage = message.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
     let selectedAssistant: Assistant | null = null;
     let reason = '';
 
-    // Verificar palavras-chave de cada assistente
-    for (const assistant of assistants.filter(a => a.enabled)) {
-      const matchedKeywords = assistant.keywords.filter(kw => 
-        message.includes(kw.toLowerCase())
+    // PRIORIDADE 0: Verificar palavras de suporte explícitas
+    const explicitSupportKeywords = ['suporte', 'quero suporte', 'preciso suporte', 'falar com suporte', 'atendimento'];
+    if (explicitSupportKeywords.some(keyword => normalizedMessage.includes(keyword))) {
+      const supportAssistant = assistants.find(a => 
+        a.enabled && a.type === 'support'
+      ) || assistants.find(a => 
+        a.enabled && a.type === 'sales'
       );
+      if (supportAssistant) {
+        selectedAssistant = supportAssistant;
+        reason = `Palavra-chave de suporte explícita encontrada: "${explicitSupportKeywords.find(k => normalizedMessage.includes(k))}"`;
+        setTestResult({ assistant: selectedAssistant, reason });
+        return;
+      }
+    }
+
+    // PRIORIDADE 1: Verificar palavras-chave explícitas de cada assistente habilitado
+    for (const assistant of assistants.filter(a => a.enabled)) {
+      const matchedKeywords = assistant.keywords.filter(kw => {
+        const kwNormalized = kw.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+        return normalizedMessage.includes(kwNormalized);
+      });
       
       if (matchedKeywords.length > 0) {
         selectedAssistant = assistant;
         reason = `Palavras-chave encontradas: ${matchedKeywords.join(', ')}`;
-        break;
+        setTestResult({ assistant: selectedAssistant, reason });
+        return;
       }
     }
 
-    if (!selectedAssistant) {
-      // Usar assistente padrão ou primeiro disponível
-      selectedAssistant = assistants.find(a => a.enabled) || null;
-      reason = selectedAssistant 
-        ? 'Nenhuma palavra-chave encontrada, usando assistente padrão'
-        : 'Nenhum assistente habilitado encontrado';
+    // PRIORIDADE 2: Detecção inteligente de contexto
+    const supportSalesPatterns = [
+      /\b(não consigo|não funciona|não está funcionando|erro|problema|dificuldade|preciso de ajuda|como fazer|como usar|login|conta|senha|app|aplicativo|plataforma)\b/i,
+      /\b(pagamento|pagar|comprar|assinatura|plano|preço|custo|valor|quanto custa|desconto|promoção)\b/i,
+    ];
+    
+    const biblicalPatterns = [
+      /\b(bíblia|biblia|versículo|versiculo|jesus|cristo|deus|senhor|evangelho|parábola|parabola|oração|orações)\b/i,
+    ];
+
+    const isSupportSalesQuestion = supportSalesPatterns.some(pattern => pattern.test(message));
+    if (isSupportSalesQuestion) {
+      const supportAssistant = assistants.find(a => 
+        a.enabled && a.type === 'support'
+      ) || assistants.find(a => 
+        a.enabled && a.type === 'sales'
+      );
+      if (supportAssistant) {
+        selectedAssistant = supportAssistant;
+        reason = 'Contexto detectado: Pergunta de suporte/vendas (detecção inteligente)';
+        setTestResult({ assistant: selectedAssistant, reason });
+        return;
+      }
     }
+
+    const isBiblicalQuestion = biblicalPatterns.some(pattern => pattern.test(message));
+    if (isBiblicalQuestion) {
+      const biblicalAssistant = assistants.find(a => 
+        a.enabled && a.type === 'biblical'
+      );
+      if (biblicalAssistant) {
+        selectedAssistant = biblicalAssistant;
+        reason = 'Contexto detectado: Pergunta bíblica/espiritual (detecção inteligente)';
+        setTestResult({ assistant: selectedAssistant, reason });
+        return;
+      }
+    }
+
+    // PRIORIDADE 3: Análise de estrutura da mensagem
+    if (message.match(/^(como|o que|qual|quando|onde|por que)/i) && 
+        (message.includes('fazer') || message.includes('usar') || message.includes('funciona'))) {
+      const supportAssistant = assistants.find(a => 
+        a.enabled && (a.type === 'support' || a.type === 'sales')
+      );
+      if (supportAssistant) {
+        selectedAssistant = supportAssistant;
+        reason = 'Estrutura detectada: Pergunta funcional (análise de estrutura)';
+        setTestResult({ assistant: supportAssistant, reason });
+        return;
+      }
+    }
+
+    // PRIORIDADE 4: Assistente padrão ou primeiro disponível
+    const defaultAssistantId = assistants.find(a => a.enabled)?.id;
+    selectedAssistant = assistants.find(a => 
+      a.enabled && a.id === defaultAssistantId
+    ) || assistants.find(a => a.enabled) || null;
+    
+    reason = selectedAssistant 
+      ? 'Nenhuma palavra-chave ou contexto específico encontrado, usando assistente padrão'
+      : 'Nenhum assistente habilitado encontrado';
 
     setTestResult({ assistant: selectedAssistant, reason });
   };
@@ -876,156 +1014,254 @@ export default function WhatsAppAdminPage() {
         </TabsContent>
 
         <TabsContent value="assistants" className="space-y-6">
-          {/* Lista de Assistentes */}
+          <Alert>
+            <Bot className="h-4 w-4" />
+            <AlertDescription>
+              Configure os dois assistentes principais do WhatsApp. O sistema seleciona automaticamente qual assistente usar baseado nas palavras-chave configuradas e no conteúdo da mensagem.
+            </AlertDescription>
+          </Alert>
+
+          {/* Assistente Bíblico */}
           <Card>
             <CardHeader>
               <div className="flex items-center justify-between">
-                <div>
-                  <CardTitle className="flex items-center gap-2">
-                    <Bot className="h-5 w-5" />
-                    Assistentes OpenAI
-                  </CardTitle>
-                  <CardDescription>
-                    Configure múltiplos assistentes para diferentes funções (Bíblico, Vendas, Suporte)
-                  </CardDescription>
+                <div className="flex items-center gap-2">
+                  <BookOpen className="h-5 w-5" />
+                  <CardTitle>Assistente Bíblico</CardTitle>
                 </div>
-                <Button onClick={addAssistant} size="sm">
-                  <Plus className="h-4 w-4 mr-2" />
-                  Adicionar Assistente
-                </Button>
+                <Badge variant={assistants.find(a => a.type === 'biblical')?.enabled ? 'default' : 'secondary'}>
+                  {assistants.find(a => a.type === 'biblical')?.enabled ? 'Ativo' : 'Inativo'}
+                </Badge>
               </div>
+              <CardDescription>
+                Para perguntas relacionadas à Bíblia, versículos, estudos bíblicos e questões espirituais
+              </CardDescription>
             </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                {assistants.length === 0 ? (
-                  <p className="text-center text-muted-foreground py-8">
-                    Nenhum assistente configurado. Clique em "Adicionar Assistente" para começar.
-                  </p>
-                ) : (
-                  assistants.map((assistant) => (
-                    <div key={assistant.id} className="flex items-start justify-between p-4 border rounded-lg hover:bg-muted/50 transition-colors">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-2">
-                          {getAssistantTypeIcon(assistant.type)}
-                          <h3 className="font-semibold">{assistant.name}</h3>
-                          <Badge variant={assistant.enabled ? 'default' : 'secondary'}>
-                            {assistant.enabled ? 'Ativo' : 'Inativo'}
-                          </Badge>
-                          <Badge variant="outline">
-                            {getAssistantTypeLabel(assistant.type)}
-                          </Badge>
-                        </div>
-                        <p className="text-sm text-muted-foreground mb-2">{assistant.description}</p>
-                        <div className="text-xs text-muted-foreground space-y-1">
-                          <p><strong>ID:</strong> <code className="bg-muted px-1 rounded font-mono">{maskAssistantId(assistant.assistantId)}</code></p>
-                          <p><strong>Palavras-chave:</strong> {assistant.keywords.join(', ') || 'Nenhuma'}</p>
-                        </div>
-                      </div>
-                      <div className="flex gap-2 ml-4">
-                        <Button variant="outline" size="sm" onClick={() => editAssistant(assistant)}>
-                          Editar
-                        </Button>
-                        <Button variant="outline" size="sm" onClick={() => deleteAssistant(assistant.id)}>
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </div>
-                  ))
-                )}
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="biblical-assistant-id">ID do Assistente OpenAI</Label>
+                <Input
+                  id="biblical-assistant-id"
+                  value={assistants.find(a => a.type === 'biblical')?.assistantId || ''}
+                  onChange={(e) => {
+                    const biblical = assistants.find(a => a.type === 'biblical');
+                    if (biblical) {
+                      setAssistants(assistants.map(a => 
+                        a.type === 'biblical' ? { ...a, assistantId: e.target.value } : a
+                      ));
+                    } else {
+                      setAssistants([...assistants, {
+                        id: 'biblical',
+                        name: 'Mentor Bíblico',
+                        assistantId: e.target.value,
+                        type: 'biblical',
+                        description: 'Assistente especializado em respostas baseadas na Bíblia',
+                        keywords: ['bíblia', 'versículo', 'jesus', 'deus', 'bíblico', 'escritura', 'parábola', 'evangelho'],
+                        enabled: true
+                      }]);
+                    }
+                  }}
+                  placeholder="asst_... (mesmo ID usado em /biblicus)"
+                />
+                <p className="text-xs text-muted-foreground">
+                  Use o mesmo ID do assistente configurado em BIBLICUS_ASSISTANT_ID ou configure um novo
+                </p>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="biblical-keywords">Palavras-chave (separadas por vírgula)</Label>
+                <Input
+                  id="biblical-keywords"
+                  value={assistants.find(a => a.type === 'biblical')?.keywords.join(', ') || ''}
+                  onChange={(e) => {
+                    const keywords = e.target.value.split(',').map(k => k.trim()).filter(k => k);
+                    const biblical = assistants.find(a => a.type === 'biblical');
+                    if (biblical) {
+                      setAssistants(assistants.map(a => 
+                        a.type === 'biblical' ? { ...a, keywords } : a
+                      ));
+                    } else {
+                      setAssistants([...assistants, {
+                        id: 'biblical',
+                        name: 'Mentor Bíblico',
+                        assistantId: '',
+                        type: 'biblical',
+                        description: 'Assistente especializado em respostas baseadas na Bíblia',
+                        keywords,
+                        enabled: true
+                      }]);
+                    }
+                  }}
+                  placeholder="bíblia, versículo, jesus, deus, bíblico, escritura, parábola, evangelho"
+                />
+                <p className="text-xs text-muted-foreground">
+                  Se a mensagem contiver essas palavras, o assistente bíblico será selecionado
+                </p>
+              </div>
+              <div className="flex items-center space-x-2">
+                <input
+                  type="checkbox"
+                  id="biblical-enabled"
+                  checked={assistants.find(a => a.type === 'biblical')?.enabled ?? false}
+                  onChange={(e) => {
+                    const biblical = assistants.find(a => a.type === 'biblical');
+                    if (biblical) {
+                      setAssistants(assistants.map(a => 
+                        a.type === 'biblical' ? { ...a, enabled: e.target.checked } : a
+                      ));
+                    } else {
+                      setAssistants([...assistants, {
+                        id: 'biblical',
+                        name: 'Mentor Bíblico',
+                        assistantId: '',
+                        type: 'biblical',
+                        description: 'Assistente especializado em respostas baseadas na Bíblia',
+                        keywords: ['bíblia', 'versículo', 'jesus', 'deus'],
+                        enabled: e.target.checked
+                      }]);
+                    }
+                  }}
+                  className="h-4 w-4"
+                />
+                <Label htmlFor="biblical-enabled" className="cursor-pointer">
+                  Assistente bíblico habilitado
+                </Label>
               </div>
             </CardContent>
           </Card>
 
-          {/* Formulário de Edição */}
-          {editingAssistant && (
-            <Card>
-              <CardHeader>
-                <CardTitle>
-                  {editingAssistant.id && assistants.find(a => a.id === editingAssistant!.id) ? 'Editar' : 'Novo'} Assistente
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="assistant-name">Nome do Assistente</Label>
-                    <Input
-                      id="assistant-name"
-                      value={editingAssistant.name}
-                      onChange={(e) => setEditingAssistant({ ...editingAssistant, name: e.target.value })}
-                      placeholder="Ex: Mentor Bíblico"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="assistant-type">Tipo</Label>
-                    <select
-                      id="assistant-type"
-                      value={editingAssistant.type}
-                      onChange={(e) => setEditingAssistant({ ...editingAssistant, type: e.target.value as any })}
-                      className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background"
-                    >
-                      <option value="biblical">Bíblico</option>
-                      <option value="sales">Vendas</option>
-                      <option value="support">Suporte</option>
-                    </select>
-                  </div>
+          {/* Assistente de Suporte/Vendas */}
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Headphones className="h-5 w-5" />
+                  <CardTitle>Assistente de Suporte e Vendas</CardTitle>
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="assistant-id">ID do Assistente OpenAI</Label>
-                  <Input
-                    id="assistant-id"
-                    value={editingAssistant.assistantId}
-                    onChange={(e) => setEditingAssistant({ ...editingAssistant, assistantId: e.target.value })}
-                    placeholder="asst_..."
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="assistant-description">Descrição</Label>
-                  <Textarea
-                    id="assistant-description"
-                    value={editingAssistant.description}
-                    onChange={(e) => setEditingAssistant({ ...editingAssistant, description: e.target.value })}
-                    placeholder="Descreva a função deste assistente..."
-                    rows={2}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="assistant-keywords">Palavras-chave (separadas por vírgula)</Label>
-                  <Input
-                    id="assistant-keywords"
-                    value={editingAssistant.keywords.join(', ')}
-                    onChange={(e) => {
-                      const keywords = e.target.value.split(',').map(k => k.trim()).filter(k => k);
-                      setEditingAssistant({ ...editingAssistant, keywords });
-                    }}
-                    placeholder="bíblia, versículo, jesus, deus"
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    Quando uma mensagem contiver essas palavras, este assistente será selecionado
-                  </p>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <input
-                    type="checkbox"
-                    id="assistant-enabled"
-                    checked={editingAssistant.enabled}
-                    onChange={(e) => setEditingAssistant({ ...editingAssistant, enabled: e.target.checked })}
-                    className="h-4 w-4"
-                  />
-                  <Label htmlFor="assistant-enabled" className="cursor-pointer">
-                    Assistente habilitado
-                  </Label>
-                </div>
-                <div className="flex gap-2">
-                  <Button onClick={saveAssistant}>
-                    Salvar Assistente
-                  </Button>
-                  <Button variant="outline" onClick={() => setEditingAssistant(null)}>
-                    Cancelar
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          )}
+                <Badge variant={assistants.find(a => a.type === 'support' || a.type === 'sales')?.enabled ? 'default' : 'secondary'}>
+                  {assistants.find(a => a.type === 'support' || a.type === 'sales')?.enabled ? 'Ativo' : 'Inativo'}
+                </Badge>
+              </div>
+              <CardDescription>
+                Para questões de suporte, vendas, pagamento, assinatura e funcionamento do app
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="support-assistant-id">ID do Assistente OpenAI</Label>
+                <Input
+                  id="support-assistant-id"
+                  value={assistants.find(a => a.type === 'support' || a.type === 'sales')?.assistantId || ''}
+                  onChange={(e) => {
+                    const support = assistants.find(a => a.type === 'support' || a.type === 'sales');
+                    if (support) {
+                      setAssistants(assistants.map(a => 
+                        (a.type === 'support' || a.type === 'sales') ? { ...a, assistantId: e.target.value } : a
+                      ));
+                    } else {
+                      setAssistants([...assistants, {
+                        id: 'support',
+                        name: 'Suporte e Vendas',
+                        assistantId: e.target.value,
+                        type: 'support',
+                        description: 'Assistente para vendas, suporte e questões sobre o app',
+                        keywords: ['pagamento', 'assinatura', 'preço', 'como usar', 'funcionamento', 'ajuda', 'suporte', 'comprar'],
+                        enabled: true
+                      }]);
+                    }
+                  }}
+                  placeholder="asst_..."
+                />
+                <p className="text-xs text-muted-foreground">
+                  ID do assistente OpenAI para questões de suporte e vendas
+                </p>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="support-keywords">Palavras-chave (separadas por vírgula)</Label>
+                <Input
+                  id="support-keywords"
+                  value={assistants.find(a => a.type === 'support' || a.type === 'sales')?.keywords.join(', ') || ''}
+                  onChange={(e) => {
+                    const keywords = e.target.value.split(',').map(k => k.trim()).filter(k => k);
+                    const support = assistants.find(a => a.type === 'support' || a.type === 'sales');
+                    if (support) {
+                      setAssistants(assistants.map(a => 
+                        (a.type === 'support' || a.type === 'sales') ? { ...a, keywords } : a
+                      ));
+                    } else {
+                      setAssistants([...assistants, {
+                        id: 'support',
+                        name: 'Suporte e Vendas',
+                        assistantId: '',
+                        type: 'support',
+                        description: 'Assistente para vendas, suporte e questões sobre o app',
+                        keywords,
+                        enabled: true
+                      }]);
+                    }
+                  }}
+                  placeholder="pagamento, assinatura, preço, como usar, funcionamento, ajuda, suporte, comprar, vender"
+                />
+                <p className="text-xs text-muted-foreground">
+                  Se a mensagem contiver essas palavras, o assistente de suporte será selecionado
+                </p>
+              </div>
+              <div className="flex items-center space-x-2">
+                <input
+                  type="checkbox"
+                  id="support-enabled"
+                  checked={assistants.find(a => a.type === 'support' || a.type === 'sales')?.enabled ?? false}
+                  onChange={(e) => {
+                    const support = assistants.find(a => a.type === 'support' || a.type === 'sales');
+                    if (support) {
+                      setAssistants(assistants.map(a => 
+                        (a.type === 'support' || a.type === 'sales') ? { ...a, enabled: e.target.checked } : a
+                      ));
+                    } else {
+                      setAssistants([...assistants, {
+                        id: 'support',
+                        name: 'Suporte e Vendas',
+                        assistantId: '',
+                        type: 'support',
+                        description: 'Assistente para vendas, suporte e questões sobre o app',
+                        keywords: ['pagamento', 'assinatura', 'preço'],
+                        enabled: e.target.checked
+                      }]);
+                    }
+                  }}
+                  className="h-4 w-4"
+                />
+                <Label htmlFor="support-enabled" className="cursor-pointer">
+                  Assistente de suporte habilitado
+                </Label>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Informações sobre Detecção Inteligente */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Bot className="h-5 w-5" />
+                Como Funciona a Seleção de Assistente
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <div className="space-y-2 text-sm">
+                <p className="font-medium">O sistema seleciona o assistente na seguinte ordem:</p>
+                <ol className="list-decimal list-inside space-y-1 text-muted-foreground ml-4">
+                  <li><strong>Palavras-chave:</strong> Se a mensagem contiver palavras-chave configuradas, o assistente correspondente é selecionado</li>
+                  <li><strong>Detecção inteligente:</strong> Se não houver palavras-chave, o sistema analisa o conteúdo da mensagem para inferir qual assistente usar</li>
+                  <li><strong>Assistente padrão:</strong> Se não for possível determinar, usa o assistente bíblico como padrão</li>
+                </ol>
+                <Alert className="mt-4">
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertDescription>
+                    <strong>Detecção Inteligente:</strong> O sistema também detecta automaticamente perguntas sobre suporte/vendas (ex: "como usar", "não funciona", "pagamento") e perguntas bíblicas (ex: "versículo", "jesus", "bíblia") mesmo sem palavras-chave explícitas.
+                  </AlertDescription>
+                </Alert>
+              </div>
+            </CardContent>
+          </Card>
 
           {/* Teste de Seleção */}
           <Card>
@@ -1088,6 +1324,9 @@ export default function WhatsAppAdminPage() {
                 <Settings className="mr-2 h-4 w-4" />
                 {savingRules ? 'Salvando...' : 'Salvar Configuração de Assistentes'}
               </Button>
+              <p className="text-xs text-muted-foreground text-center mt-2">
+                As configurações serão aplicadas imediatamente após salvar
+              </p>
             </CardContent>
           </Card>
         </TabsContent>
