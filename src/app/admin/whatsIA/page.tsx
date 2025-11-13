@@ -75,7 +75,7 @@ export default function WhatsAppIAPage() {
     setWelcome(settings.whatsapp_welcome_message || "");
     setSendWelcome((settings.whatsapp_send_welcome_enabled ?? 'true') === 'true');
     setMenuMessage(settings.whatsapp_menu_message || '');
-    setWaitingMessage(settings.bw_waiting_message || ' Buscando a resposta na Bíblia, aguarde alguns segundos… ');
+    setWaitingMessage(settings.bw_waiting_message || '');
     // Parse intents config
     try {
       const parsed = settings.bw_intents_config ? JSON.parse(settings.bw_intents_config) : {};
@@ -481,7 +481,7 @@ export default function WhatsAppIAPage() {
                   <div className="space-y-2">
                     <Label>Motor</Label>
                     <Select
-                      value={(cfg as any).engine || 'assistant'}
+                      value={(cfg as any).engine || 'prompt'}
                       onValueChange={(v) => setIntentsConfig((prev) => ({ ...prev, [key]: { ...prev[key], engine: v as any } }))}
                     >
                       <SelectTrigger><SelectValue placeholder="Escolha" /></SelectTrigger>
@@ -496,7 +496,7 @@ export default function WhatsAppIAPage() {
                       <Input
                         value={waitingMessage}
                         onChange={(e) => setWaitingMessage(e.target.value)}
-                        placeholder={' Buscando a resposta na Bíblia, aguarde alguns segundos… '}
+                        placeholder={''}
                       />
                       <div className="flex items-center gap-2">
                         <Button variant="outline" onClick={saveWaitingMessage} disabled={settingsLoading}>
@@ -507,7 +507,7 @@ export default function WhatsAppIAPage() {
                     </div>
                   </div>
                 )}
-                {!(key === 'general_conversation' && ((cfg as any).engine || 'assistant') === 'assistant') && (
+                {!(key === 'general_conversation' && ((cfg as any).engine || 'prompt') === 'assistant') && (
                   <div className="space-y-2">
                     <Label>Prompt (opcional)</Label>
                     <Textarea
@@ -533,7 +533,7 @@ export default function WhatsAppIAPage() {
                   />
                   <p className="text-xs text-muted-foreground">Para persistir, use "Salvar comandos curtos" abaixo.</p>
                 </div>
-                {!(key === 'daily_verse' || key === 'prayer_request' || (key === 'general_conversation' && (((cfg as any).engine || 'assistant') === 'assistant'))) && (
+                {!(key === 'daily_verse' || key === 'prayer_request' || (key === 'general_conversation' && (((cfg as any).engine || 'prompt') === 'assistant'))) && (
                   <div className="space-y-2">
                     <Label>Prompt padrão vigente (somente leitura)</Label>
                     <Textarea

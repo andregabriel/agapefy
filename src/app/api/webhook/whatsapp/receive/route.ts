@@ -54,8 +54,7 @@ export async function POST(request: NextRequest) {
       'whatsapp_welcome_message',
       'whatsapp_menu_message',
       'bw_intents_config',
-      'bw_short_commands',
-      'bw_waiting_message'
+      'bw_short_commands'
     ]);
     const settingsMap: Record<string, string> = {};
     for (const r of settingsRows.data || []) settingsMap[r.key] = r.value as string;
@@ -66,7 +65,7 @@ export async function POST(request: NextRequest) {
       .select('*', { count: 'exact', head: true })
       .eq('user_phone', userPhone);
 
-    // Detectar rapidamente a intenção para possível ack imediato
+    // Detectar rapidamente a intenção (sem enviar mensagem de espera)
     const quickTriggers: Record<string, string[]> = (() => {
       if (settingsMap && typeof settingsMap['bw_short_commands'] === 'string') {
         try { return JSON.parse(settingsMap['bw_short_commands']); } catch { return {}; }
@@ -80,13 +79,8 @@ export async function POST(request: NextRequest) {
     const quickCfg = intentsCfgQuick[quickIntent] || {};
     if (quickCfg && quickCfg.enabled === false) quickIntent = 'general_conversation';
 
-    // Enviar ack imediato para conversa geral
-    if (quickIntent === 'general_conversation') {
-      const waiting = (settingsMap['bw_waiting_message'] || ' Buscando a resposta na Bíblia, aguarde alguns segundos… ').trim();
-      if (waiting) {
-        await sendWhatsAppMessage(userPhone, waiting);
-      }
-    }
+    // NOTA: Mensagem de espera (bw_waiting_message) foi completamente removida
+    // Não enviar nenhuma mensagem antes da resposta principal
 
     // Gerar resposta inteligente com IA
     console.log('🤖 Gerando resposta inteligente...');
@@ -240,9 +234,11 @@ async function generateIntelligentResponse(request: NextRequest, message: string
     }
 
     // 3) Conversa geral: usar Assistente Biblicus quando configurado
-    const useAssistant = intention === 'general_conversation' && (currentIntentCfg?.engine || 'assistant') === 'assistant';
+    // NOTA: Não enviar mensagem de espera (bw_waiting_message) - foi completamente removida
+    const useAssistant = intention === 'general_conversation' && (currentIntentCfg?.engine || 'prompt') === 'assistant';
     if (useAssistant) {
       const base = request.nextUrl.origin;
+      // NÃO enviar mensagem de espera antes de chamar o Biblicus
       const chatRes = await fetch(`${base}/api/biblicus/chat`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

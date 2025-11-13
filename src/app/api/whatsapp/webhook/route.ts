@@ -72,7 +72,7 @@ export async function POST(request: NextRequest) {
     const settingsMap: Record<string, string> = {};
     for (const r of settingsRows.data || []) settingsMap[r.key] = r.value as string;
 
-    // Ack imediato se conversa geral (mas não para cumprimentos simples)
+    // Detectar intenção rapidamente (sem enviar mensagem de espera)
     const quickTriggers: Record<string, string[]> = (() => {
       if (settingsMap && typeof settingsMap['bw_short_commands'] === 'string') {
         try { return JSON.parse(settingsMap['bw_short_commands']); } catch { return {}; }
@@ -86,7 +86,8 @@ export async function POST(request: NextRequest) {
     const quickCfg = intentsCfgQuick[quickIntent] || {};
     if (quickCfg && quickCfg.enabled === false) quickIntent = 'general_conversation';
     
-    // Mensagem de "aguarde" removida - resposta será enviada diretamente
+    // NOTA: Mensagem de espera (bw_waiting_message) foi completamente removida
+    // Não enviar nenhuma mensagem antes da resposta principal
 
     // Gerar resposta inteligente
     console.log('🤖 Gerando resposta inteligente...');
@@ -248,7 +249,7 @@ async function generateIntelligentResponse(request: NextRequest, message: string
     console.log(`🧠 Contexto detectado: ${detectedContext}`);
 
     // 3) Conversa geral: usar Assistente Biblicus quando configurado (fallback)
-    const useAssistant = intention === 'general_conversation' && (currentIntentCfg?.engine || 'assistant') === 'assistant';
+    const useAssistant = intention === 'general_conversation' && (currentIntentCfg?.engine || 'prompt') === 'assistant';
     if (useAssistant && !selectedAssistant) {
       const base = request.nextUrl.origin;
       try {

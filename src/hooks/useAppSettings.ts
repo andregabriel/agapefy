@@ -104,7 +104,7 @@ const DEFAULT_SETTINGS: AppSettings = {
   whatsapp_menu_message: '1️⃣ Respostas baseadas na Bíblia (envie: biblia)\n2️⃣ Receber Versículo diariamente (envie: versículo)\n3️⃣ Buscar orações no app Agapefy (envie: buscar)',
   // Intents config padrão (string JSON) — modo simplificado com 3 intenções
   bw_intents_config: JSON.stringify({
-    general_conversation: { enabled: true, engine: 'assistant' },
+    general_conversation: { enabled: true, engine: 'prompt' },
     daily_verse: { enabled: true, prompt: '' },
     prayer_request: { enabled: true }
   }),
@@ -113,7 +113,7 @@ const DEFAULT_SETTINGS: AppSettings = {
     daily_verse: ["versículo", "/versiculo", "versículo do dia"],
     prayer_request: ["buscar", "oração", "oracao"]
   }),
-  bw_waiting_message: ' Buscando a resposta na Bíblia, aguarde alguns segundos… ',
+  bw_waiting_message: '',
   // Defaults novos
   prayer_quote_position: '0',
   prayer_quote_auto_enabled: 'true',
