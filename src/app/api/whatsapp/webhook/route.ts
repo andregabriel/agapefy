@@ -68,11 +68,11 @@ export async function POST(request: NextRequest) {
     const settingsRows = await supabase
       .from('app_settings')
       .select('key,value')
-      .in('key', ['bw_intents_config','bw_short_commands','bw_waiting_message','whatsapp_assistant_rules']);
+      .in('key', ['bw_intents_config','bw_short_commands','whatsapp_assistant_rules']);
     const settingsMap: Record<string, string> = {};
     for (const r of settingsRows.data || []) settingsMap[r.key] = r.value as string;
 
-    // Ack imediato se conversa geral
+    // Ack imediato se conversa geral (mas não para cumprimentos simples)
     const quickTriggers: Record<string, string[]> = (() => {
       if (settingsMap && typeof settingsMap['bw_short_commands'] === 'string') {
         try { return JSON.parse(settingsMap['bw_short_commands']); } catch { return {}; }
@@ -85,12 +85,8 @@ export async function POST(request: NextRequest) {
       : {};
     const quickCfg = intentsCfgQuick[quickIntent] || {};
     if (quickCfg && quickCfg.enabled === false) quickIntent = 'general_conversation';
-    if (quickIntent === 'general_conversation') {
-      const waiting = (settingsMap['bw_waiting_message'] || ' Buscando a resposta na Bíblia, aguarde alguns segundos… ').trim();
-      if (waiting) {
-        await sendWhatsAppMessage(userPhone, waiting);
-      }
-    }
+    
+    // Mensagem de "aguarde" removida - resposta será enviada diretamente
 
     // Gerar resposta inteligente
     console.log('🤖 Gerando resposta inteligente...');
@@ -196,9 +192,42 @@ async function generateIntelligentResponse(request: NextRequest, message: string
     // Selecionar assistente baseado em detecção inteligente (palavras-chave + contexto)
     let selectedAssistant: Assistant | null = null;
     
-    try {
-      selectedAssistant = await selectAssistantByMessage(message, settingsMap);
-      if (selectedAssistant) {
+    // Se detectou suporte, priorizar assistente de suporte
+    if (intention === 'support_request') {
+      console.log('🎯 Intenção de suporte detectada - priorizando assistente de suporte');
+      try {
+        selectedAssistant = await selectAssistantByMessage(message, settingsMap);
+        // Se não encontrou assistente de suporte, tentar encontrar manualmente
+        if (!selectedAssistant || selectedAssistant.type !== 'support') {
+          const assistantRules = settingsMap?.['whatsapp_assistant_rules'];
+          if (assistantRules) {
+            try {
+              const config: AssistantConfig = JSON.parse(assistantRules);
+              const supportAssistant = config.assistants?.find(a => 
+                a.enabled && (a.type === 'support' || a.type === 'sales')
+              );
+              if (supportAssistant) {
+                selectedAssistant = supportAssistant;
+                console.log(`✅ Assistente de suporte encontrado: ${supportAssistant.name}`);
+              }
+            } catch {}
+          }
+        }
+      } catch (error) {
+        console.error('❌ Erro ao buscar assistente de suporte:', error);
+      }
+    } else {
+      // Para outras intenções, usar seleção normal
+      try {
+        selectedAssistant = await selectAssistantByMessage(message, settingsMap);
+      } catch (error) {
+        console.error('❌ Erro ao chamar assistente:', error);
+      }
+    }
+    
+    // Chamar assistente selecionado
+    if (selectedAssistant) {
+      try {
         console.log(`🤖 Usando assistente: ${selectedAssistant.name} (${selectedAssistant.assistantId})`);
         const result = await callOpenAIAssistant(selectedAssistant.assistantId, message, userPhone);
         if (result && result.reply) {
@@ -207,10 +236,10 @@ async function generateIntelligentResponse(request: NextRequest, message: string
         } else {
           console.log('⚠️ Assistente não retornou resposta, usando fallback inteligente');
         }
+      } catch (error) {
+        console.error('❌ Erro ao chamar assistente:', error);
+        // Fallback para fluxo normal se assistente falhar
       }
-    } catch (error) {
-      console.error('❌ Erro ao chamar assistente:', error);
-      // Fallback para fluxo normal se assistente falhar
     }
     
     // Se nenhum assistente foi selecionado ou não retornou resposta, usar detecção inteligente de intenção
@@ -334,9 +363,41 @@ function normalizeText(text: string): string {
   }
 }
 
+function isSimpleGreeting(message: string): boolean {
+  const lowerMessage = normalizeText(message.trim());
+  // Cumprimentos muito simples (apenas 1-3 palavras)
+  const simpleGreetings = [
+    'olá', 'ola', 'oi', 'oie', 'olá!', 'ola!', 'oi!',
+    'bom dia', 'boa tarde', 'boa noite',
+    'bom dia!', 'boa tarde!', 'boa noite!',
+    'hey', 'hi', 'hello'
+  ];
+  
+  // Verificar se é apenas um cumprimento simples (sem outras palavras)
+  const words = lowerMessage.split(/\s+/).filter(w => w.length > 0);
+  if (words.length <= 3) {
+    return simpleGreetings.some(greeting => lowerMessage === greeting || lowerMessage.startsWith(greeting + ' '));
+  }
+  
+  return false;
+}
+
 function detectIntention(message: string, triggers?: Record<string, string[]>): string {
   const lowerMessage = normalizeText(message);
-  // 1) Triggers por intenção (Gatilhos)
+  
+  // 1) Detectar suporte ANTES de outras intenções (prioridade alta)
+  const supportKeywords = [
+    'suporte', 'ajuda', 'problema', 'erro', 'não funciona', 'não consigo',
+    'dificuldade', 'preciso de ajuda', 'preciso ajuda', 'como fazer', 'como usar',
+    'login', 'senha', 'conta', 'app', 'aplicativo', 'plataforma', 'sistema',
+    'quero suporte', 'preciso suporte', 'falar com suporte', 'atendimento'
+  ];
+  
+  if (supportKeywords.some(keyword => lowerMessage.includes(keyword))) {
+    return 'support_request';
+  }
+  
+  // 2) Triggers por intenção (Gatilhos)
   if (triggers) {
     for (const [intent, list] of Object.entries(triggers)) {
       for (const token of list || []) {
@@ -350,26 +411,30 @@ function detectIntention(message: string, triggers?: Record<string, string[]>): 
     }
   }
   
-  // Detectar cumprimentos
+  // 3) Detectar cumprimentos
   if (lowerMessage.includes('olá') || lowerMessage.includes('oi') || lowerMessage.includes('ola') || 
       lowerMessage.includes('bom dia') || lowerMessage.includes('boa tarde') || lowerMessage.includes('boa noite')) {
     return 'greeting';
   }
   
-  if (lowerMessage.includes('oracao') || lowerMessage.includes('ore') || lowerMessage.includes('dificuldade') || 
-      lowerMessage.includes('problema') || lowerMessage.includes('triste') || lowerMessage.includes('ansioso')) {
+  // 4) Detectar pedidos de oração (mas não confundir com suporte)
+  if ((lowerMessage.includes('oracao') || lowerMessage.includes('ore') || lowerMessage.includes('triste') || 
+       lowerMessage.includes('ansioso')) && !lowerMessage.includes('suporte') && !lowerMessage.includes('ajuda')) {
     return 'prayer_request';
   }
   
+  // 5) Detectar questões bíblicas
   if (lowerMessage.includes('biblia') || lowerMessage.includes('versiculo') || lowerMessage.includes('jesus') ||
       lowerMessage.includes('deus') || lowerMessage.includes('parabola')) {
     return 'bible_question';
   }
   
+  // 6) Versículo do dia
   if (lowerMessage.includes('versiculo do dia') || lowerMessage.includes('/versiculo')) {
     return 'daily_verse';
   }
   
+  // 7) Orientação espiritual
   if (lowerMessage.includes('conselho') || lowerMessage.includes('orientação') || lowerMessage.includes('direção')) {
     return 'spiritual_guidance';
   }
@@ -491,6 +556,24 @@ function getSystemPrompt(intention: string): string {
     prayer_request: `Você é Agape, um assistente espiritual cristão. O usuário precisa de oração. Crie uma oração personalizada e reconfortante para a situação dele. Use linguagem acolhedora.`,
     bible_question: `Você é Agape, especialista da Bíblia. Responda perguntas bíblicas com conhecimento teológico e referências bíblicas. Seja didático e acessível.`,
     spiritual_guidance: `Você é Agape, conselheiro espiritual cristão. Ofereça orientação baseada nos ensinamentos bíblicos com empatia e sabedoria.`,
+    support_request: `Você é Agape, assistente de suporte técnico da plataforma Agapefy. 
+
+SUA MISSÃO:
+- Resolver problemas do usuário de forma rápida e eficaz
+- Ser proativo e oferecer soluções práticas
+- Explicar de forma clara e didática
+- Ser empático e paciente com dificuldades técnicas
+- Se não souber algo específico, oferecer alternativas ou direcionar para onde encontrar ajuda
+- NÃO usar referências bíblicas para questões técnicas de suporte
+
+ESTILO DE RESPOSTA:
+- Seja direto mas acolhedor
+- Use passos numerados quando apropriado
+- Ofereça múltiplas soluções quando possível
+- Confirme se o problema foi resolvido
+- Use emojis moderadamente (✅ para confirmação, 🔧 para soluções técnicas)
+
+Responda de forma que o usuário se sinta ajudado e confiante em resolver seu problema.`,
     general_conversation: `Você é Agape, companheiro espiritual cristão inteligente e carinhoso. Responda naturalmente com empatia e sabedoria cristã.`,
     daily_verse: ''
   } as const;
@@ -503,6 +586,7 @@ function getResponsePrefix(intention: string): string {
     prayer_request: '🙏 ',
     bible_question: '📖 ',
     spiritual_guidance: '✨ ',
+    support_request: '🔧 ',
     general_conversation: '💙 ',
     daily_verse: ''
   } as const;
@@ -595,6 +679,20 @@ async function selectAssistantByMessage(message: string, settingsMap?: Record<st
     // Normalizar mensagem para busca
     const normalizedMessage = normalizeText(message);
     const originalMessage = message.toLowerCase();
+
+    // PRIORIDADE 0: Se mensagem contém palavras de suporte explícitas, priorizar assistente de suporte
+    const explicitSupportKeywords = ['suporte', 'quero suporte', 'preciso suporte', 'falar com suporte', 'atendimento'];
+    if (explicitSupportKeywords.some(keyword => normalizedMessage.includes(normalizeText(keyword)))) {
+      const supportAssistant = config.assistants.find(a => 
+        a.enabled && a.type === 'support'
+      ) || config.assistants.find(a => 
+        a.enabled && a.type === 'sales'
+      );
+      if (supportAssistant) {
+        console.log(`✅ Assistente de suporte selecionado por palavra-chave explícita: ${supportAssistant.name}`);
+        return supportAssistant;
+      }
+    }
 
     // PRIORIDADE 1: Verificar palavras-chave explícitas de cada assistente habilitado
     for (const assistant of config.assistants.filter(a => a.enabled)) {
