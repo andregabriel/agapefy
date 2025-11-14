@@ -20,7 +20,8 @@ import {
   TestTube,
   Webhook,
   MessageSquare,
-  TrendingUp
+  TrendingUp,
+  ShieldCheck
 } from 'lucide-react';
 
 const adminRoutes = [
@@ -29,6 +30,12 @@ const adminRoutes = [
     icon: LayoutDashboard,
     href: '/admin',
     color: 'text-sky-500'
+  },
+  {
+    label: 'Permissões',
+    icon: ShieldCheck,
+    href: '/admin/permissoes',
+    color: 'text-amber-600'
   },
   {
     label: 'Analytics',

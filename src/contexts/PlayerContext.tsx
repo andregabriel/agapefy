@@ -3,6 +3,9 @@
 import React, { createContext, useContext, useReducer, useRef, useEffect, useCallback } from 'react';
 import { useUserActivity } from '@/hooks/useUserActivity';
 import { useAuth } from '@/contexts/AuthContext';
+import { useAppSettings } from '@/hooks/useAppSettings';
+import { useSubscriptionStatus } from '@/hooks/useSubscriptionStatus';
+import { parsePaywallPermissions, type SubscriptionUserType } from '@/constants/paywall';
 
 interface Audio {
   id: string;
@@ -53,6 +56,66 @@ const initialState: PlayerState = {
   currentIndex: -1,
   isLoading: false,
 };
+
+function buildFreePlayStorageKey(userKey: string) {
+  return `agapefy_free_plays_v1_${userKey || 'anon'}`;
+}
+
+function checkAndIncrementFreePlay(
+  userKey: string,
+  maxFreePerDay: number,
+): { allowed: boolean; count: number; max: number } {
+  if (typeof window === 'undefined' || maxFreePerDay <= 0) {
+    return { allowed: true, count: 0, max: maxFreePerDay };
+  }
+
+  try {
+    const key = buildFreePlayStorageKey(userKey);
+    const today = new Date().toISOString().slice(0, 10);
+    const raw = window.localStorage.getItem(key);
+
+    let data: { date: string; count: number } = { date: today, count: 0 };
+
+    if (raw) {
+      try {
+        const parsed = JSON.parse(raw) as { date?: string; count?: number };
+        if (parsed && parsed.date === today && typeof parsed.count === 'number') {
+          data = { date: parsed.date, count: parsed.count };
+        }
+      } catch {
+        // ignora e usa defaults
+      }
+    }
+
+    if (data.date !== today) {
+      data = { date: today, count: 0 };
+    }
+
+    if (data.count >= maxFreePerDay) {
+      return { allowed: false, count: data.count, max: maxFreePerDay };
+    }
+
+    const next = { date: today, count: data.count + 1 };
+    window.localStorage.setItem(key, JSON.stringify(next));
+
+    return { allowed: true, count: next.count, max: maxFreePerDay };
+  } catch {
+    return { allowed: true, count: 0, max: maxFreePerDay };
+  }
+}
+
+function openPaywall(userType: SubscriptionUserType, reason: string) {
+  if (typeof window === 'undefined') return;
+  try {
+    window.dispatchEvent(
+      new CustomEvent('agapefy:paywall-open', {
+        detail: { userType, reason },
+      }),
+    );
+  } catch (e) {
+    console.error('Erro ao disparar evento de paywall:', e);
+  }
+}
 
 function playerReducer(state: PlayerState, action: PlayerAction): PlayerState {
   switch (action.type) {
@@ -143,6 +206,8 @@ export const PlayerProvider = ({ children }: { children: React.ReactNode }) => {
   const [state, dispatch] = useReducer(playerReducer, initialState);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const { user } = useAuth();
+  const { settings } = useAppSettings();
+  const { userType, hasActiveSubscription, hasActiveTrial } = useSubscriptionStatus();
   const { logActivity } = useUserActivity();
   
   // Refs para controle de atividade
@@ -192,6 +257,64 @@ export const PlayerProvider = ({ children }: { children: React.ReactNode }) => {
       console.error('❌ Erro ao registrar atividade de fim:', error);
     }
   };
+
+  const canCurrentUserPlayAnotherAudio = useCallback((): boolean => {
+    const effectiveUserType: SubscriptionUserType =
+      userType || (user ? 'no_subscription' : 'anonymous');
+
+    const permissions = parsePaywallPermissions(settings.paywall_permissions);
+
+    // Assinantes/trial com acesso total
+    if (effectiveUserType === 'active_subscription') {
+      if (permissions.active_subscription.full_access_enabled || hasActiveSubscription) {
+        return true;
+      }
+      // se acesso total estiver desligado, cai para regra de no_subscription
+    }
+
+    if (effectiveUserType === 'trial') {
+      if (permissions.trial.full_access_enabled || hasActiveTrial) {
+        return true;
+      }
+      // se acesso total estiver desligado, cai para regra de no_subscription
+    }
+
+    // Usuário não logado
+    if (effectiveUserType === 'anonymous') {
+      if (!permissions.anonymous.limit_enabled) return true;
+      const userKey = 'anon';
+      const result = checkAndIncrementFreePlay(
+        userKey,
+        permissions.anonymous.max_free_audios_per_day,
+      );
+      if (!result.allowed) {
+        openPaywall(effectiveUserType, 'limit_reached');
+      }
+      return result.allowed;
+    }
+
+    // Usuário logado sem assinatura ativa OU assinante/trial com acesso total desligado
+    if (effectiveUserType === 'no_subscription' || effectiveUserType === 'active_subscription' || effectiveUserType === 'trial') {
+      if (!permissions.no_subscription.limit_enabled) return true;
+      const userKey = user?.id || 'anon';
+      const result = checkAndIncrementFreePlay(
+        userKey,
+        permissions.no_subscription.max_free_audios_per_day,
+      );
+      if (!result.allowed) {
+        openPaywall(effectiveUserType, 'limit_reached');
+      }
+      return result.allowed;
+    }
+
+    return true;
+  }, [
+    userType,
+    user,
+    settings.paywall_permissions,
+    hasActiveSubscription,
+    hasActiveTrial,
+  ]);
 
   // Inicializar elemento de áudio
   useEffect(() => {
@@ -335,6 +458,11 @@ export const PlayerProvider = ({ children }: { children: React.ReactNode }) => {
   }, [state.volume]);
 
   const playAudio = (audio: Audio) => {
+    // Verificar permissões antes de iniciar um novo áudio
+    if (!canCurrentUserPlayAnotherAudio()) {
+      console.log('🎵 Reprodução bloqueada pelo limite de áudios gratuitos');
+      return;
+    }
     // Pausar e resetar áudio atual antes de tocar novo
     if (audioRef.current) {
       audioRef.current.pause();
@@ -348,6 +476,11 @@ export const PlayerProvider = ({ children }: { children: React.ReactNode }) => {
   };
 
   const playQueue = (queue: Audio[], startIndex = 0) => {
+    // Verificar permissões apenas ao iniciar uma nova fila
+    if (!canCurrentUserPlayAnotherAudio()) {
+      console.log('🎵 Reprodução de playlist bloqueada pelo limite de áudios gratuitos');
+      return;
+    }
     // Pausar e resetar áudio atual antes de tocar nova playlist
     if (audioRef.current) {
       audioRef.current.pause();

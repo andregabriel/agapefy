@@ -1,5 +1,9 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
+import {
+  DEFAULT_PAYWALL_PERMISSIONS,
+  DEFAULT_PAYWALL_SCREEN_CONFIG,
+} from '@/constants/paywall';
 
 interface AppSetting {
   id: string;
@@ -81,6 +85,9 @@ interface AppSettings {
   onboarding_hardcoded_6_position?: string;
   onboarding_hardcoded_7_position?: string;
   onboarding_hardcoded_8_position?: string;
+  // Paywall / assinaturas
+  paywall_permissions?: string;
+  paywall_screen_config?: string;
 }
 
 const DEFAULT_SETTINGS: AppSettings = {
@@ -153,6 +160,9 @@ const DEFAULT_SETTINGS: AppSettings = {
   onboarding_hardcoded_6_position: '6',
   onboarding_hardcoded_7_position: '7',
   onboarding_hardcoded_8_position: '8',
+  // Paywall / assinaturas
+  paywall_permissions: JSON.stringify(DEFAULT_PAYWALL_PERMISSIONS),
+  paywall_screen_config: JSON.stringify(DEFAULT_PAYWALL_SCREEN_CONFIG),
 };
 
 export function useAppSettings() {

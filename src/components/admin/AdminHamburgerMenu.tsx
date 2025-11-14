@@ -24,7 +24,8 @@ const adminRouteGroups = [
     title: 'Sistema',
     routes: [
       adminRoutes.find(r => r.href === '/admin/usuarios'),
-      adminRoutes.find(r => r.href === '/admin/configuracoes')
+      adminRoutes.find(r => r.href === '/admin/configuracoes'),
+      adminRoutes.find(r => r.href === '/admin/permissoes')
     ].filter(Boolean)
   },
   {

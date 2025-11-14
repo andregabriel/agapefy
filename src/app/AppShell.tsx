@@ -9,6 +9,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useMemo, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
+import { PaywallModal } from '@/components/modals/PaywallModal';
 
 export default function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -81,6 +82,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
           <BottomNavigation />
         </div>
 
+        <PaywallModal />
         <Toaster />
       </PlayerProvider>
     </AuthProvider>
