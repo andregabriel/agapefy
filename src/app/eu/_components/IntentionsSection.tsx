@@ -24,7 +24,7 @@ export function IntentionsSection({
     <section>
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-2xl font-bold text-white flex items-center">
-          Intenções
+          Minhas Intenções
           <ChevronRightIcon className="h-6 w-6 ml-2 text-gray-400" />
         </h2>
         <Button

@@ -42,22 +42,135 @@ export function useNotifications() {
   const { user } = useAuth();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [settings, setSettings] = useState<NotificationSettings>(DEFAULT_SETTINGS);
+  const [novidadesEnabled, setNovidadesEnabled] = useState(true);
   const [unreadCount, setUnreadCount] = useState(0);
   const [loading, setLoading] = useState(false);
 
-  // Carregar configurações do localStorage
-  useEffect(() => {
-    if (user) {
-      const savedSettings = localStorage.getItem(`notifications_${user.id}`);
-      if (savedSettings) {
-        try {
-          setSettings(JSON.parse(savedSettings));
-        } catch (error) {
-          console.error('Erro ao carregar configurações:', error);
-        }
+  // Carregar configuração de novidades do banco de dados
+  const loadNovidadesSetting = useCallback(async () => {
+    if (!user) return;
+    
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('notification_novidades')
+        .eq('id', user.id)
+        .single();
+
+      // Erros esperados que não devem ser logados:
+      // - PGRST116: registro não encontrado (esperado para novos usuários)
+      // - 42703: coluna não existe (esperado se migration não foi executada ainda)
+      // - 42883: coluna não existe (outro código possível)
+      const expectedErrors = ['PGRST116', '42703', '42883'];
+      const errorCode = error?.code || error?.message?.match(/42703|42883/)?.[0];
+      
+      if (error && !expectedErrors.includes(errorCode)) {
+        // Apenas logar erros reais e inesperados (sem quebrar UX)
+        const { logDbError } = await import('@/lib/utils');
+        logDbError('Erro ao carregar configuração de novidades', error);
+        // Em caso de erro inesperado, usar padrão true
+        setNovidadesEnabled(true);
+        return;
       }
+
+      // Se existe no banco, usar valor do banco; caso contrário, usar padrão true
+      if (data?.notification_novidades !== undefined && data?.notification_novidades !== null) {
+        setNovidadesEnabled(data.notification_novidades);
+      } else {
+        setNovidadesEnabled(true);
+      }
+    } catch (error: any) {
+      // Verificar se é erro esperado de coluna não encontrada
+      const errorMessage = error?.message || '';
+      const isExpectedError = errorMessage.includes('42703') || 
+                               errorMessage.includes('42883') ||
+                               (errorMessage.includes('column') && errorMessage.includes('does not exist'));
+      
+      if (!isExpectedError) {
+        // Apenas logar erros reais e inesperados (sem overlay vermelho)
+        const { logDbError } = await import('@/lib/utils');
+        logDbError('Erro ao carregar configuração de novidades (catch)', error);
+      }
+      
+      // Em qualquer caso de erro, usar padrão true
+      setNovidadesEnabled(true);
     }
   }, [user]);
+
+  useEffect(() => {
+    if (user) {
+      loadNovidadesSetting();
+      // Futuramente: podemos carregar configurações adicionais de notificação do banco, se necessário
+    }
+  }, [user, loadNovidadesSetting]);
+
+  const updateNovidades = async (enabled: boolean) => {
+    if (!user) return;
+
+    setNovidadesEnabled(enabled);
+    
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .upsert({
+          id: user.id,
+          notification_novidades: enabled,
+          updated_at: new Date().toISOString(),
+        }, {
+          onConflict: 'id'
+        });
+
+      if (error) {
+        // Verificar se é erro de coluna não existe (migration não executada)
+        const errorMessage = error?.message || '';
+        const errorCode = (error as any)?.code || '';
+        const isColumnError =
+          errorCode === '42703' ||
+          errorCode === '42883' ||
+          errorMessage.includes('42703') ||
+          errorMessage.includes('42883') ||
+          (errorMessage.includes('column') && errorMessage.includes('does not exist'));
+        
+        const { logDbError } = await import('@/lib/utils');
+
+        if (isColumnError) {
+          // Se a coluna ainda não existe, manter apenas em memória e não quebrar UX
+          logDbError('Coluna notification_novidades ausente ao salvar configuração', error);
+          return;
+        }
+        
+        // Para outros erros, logar e reverter para o valor anterior
+        logDbError('Erro ao salvar configuração de novidades', error);
+        setNovidadesEnabled(!enabled);
+        toast.error('Erro ao salvar configuração');
+      } else {
+        console.log('✅ Configuração de novidades salva no banco');
+      }
+    } catch (error: any) {
+      // Verificar se é erro de coluna não existe
+      const errorMessage = error?.message || '';
+      const errorCode = (error as any)?.code || '';
+      const isColumnError =
+        errorCode === '42703' ||
+        errorCode === '42883' ||
+        errorMessage.includes('42703') ||
+        errorMessage.includes('42883') ||
+        (errorMessage.includes('column') && errorMessage.includes('does not exist'));
+      
+      const { logDbError } = await import('@/lib/utils');
+
+      if (isColumnError) {
+        // Se a coluna ainda não existe, apenas logar e manter em memória
+        logDbError('Coluna notification_novidades ausente ao salvar configuração (catch)', error);
+        return;
+      }
+      
+      // Erro inesperado: logar e reverter para valor anterior
+      logDbError('Erro inesperado ao salvar configuração de novidades', error);
+      setNovidadesEnabled(!enabled);
+      toast.error('Erro ao salvar configuração');
+    }
+  };
 
   // Buscar dados do usuário por ID
   const fetchUserData = useCallback(async (userId: string) => {
@@ -215,10 +328,8 @@ export function useNotifications() {
     }
   }, [user, fetchNotifications]);
 
-  // Salvar configurações no localStorage
   const saveSettings = useCallback((newSettings: NotificationSettings) => {
     if (user) {
-      localStorage.setItem(`notifications_${user.id}`, JSON.stringify(newSettings));
       setSettings(newSettings);
       console.log('✅ Configurações de notificação salvas');
     }
@@ -286,6 +397,8 @@ export function useNotifications() {
   return {
     notifications,
     settings,
+    novidadesEnabled,
+    updateNovidades,
     unreadCount,
     loading,
     updateSetting,

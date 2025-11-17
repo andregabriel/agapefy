@@ -4,15 +4,21 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { NotificationSettings } from '@/components/NotificationSettings';
+import { ProfileEditCard } from './_components/ProfileEditCard';
+import { SubscriptionCard } from './_components/SubscriptionCard';
+import { PresentModal } from '@/components/modals/PresentModal';
 import { 
   ArrowLeft, 
   LogOut, 
   Bell, 
   User, 
-  Shield, 
-  Smartphone,
   Settings,
-  Loader2
+  Loader2,
+  MessageCircle,
+  Gift,
+  CreditCard,
+  FileText,
+  HelpCircle
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
@@ -23,33 +29,24 @@ import { supabase } from '@/lib/supabase';
 export default function ConfigPage() {
   const { user } = useAuth();
   const router = useRouter();
-  const [activeSection, setActiveSection] = useState<string | null>('notifications');
+  const [activeSection, setActiveSection] = useState<string | null>(null);
   const [isSigningOut, setIsSigningOut] = useState(false);
+  const [showPresentModal, setShowPresentModal] = useState(false);
 
   const handleSignOut = async () => {
     try {
-      // Imediatamente parar renderização para evitar piscar
       setIsSigningOut(true);
-      
-      // Fazer logout direto
       await supabase.auth.signOut();
-      
-      // Limpar modo convidado se existir
       localStorage.removeItem('guestMode');
-      
       toast.success('Logout realizado com sucesso');
-      
-      // Redirecionamento único e suave
       router.replace('/login');
     } catch (error) {
       console.error('Erro ao fazer logout:', error);
       toast.error('Erro ao fazer logout');
-      // Em caso de erro, voltar ao estado normal
       setIsSigningOut(false);
     }
   };
 
-  // Durante logout: renderizar tela de loading para evitar piscar
   if (isSigningOut) {
     return (
       <div className="min-h-screen bg-black text-white flex items-center justify-center">
@@ -61,46 +58,10 @@ export default function ConfigPage() {
     );
   }
 
-  // Só verificar !user se não estiver fazendo logout
   if (!user && !isSigningOut) {
     router.push('/login');
     return null;
   }
-
-  const settingSections = [
-    {
-      key: 'notifications',
-      title: 'Notificações',
-      description: 'Configure suas preferências de notificação',
-      icon: Bell,
-      color: 'text-blue-500',
-      component: NotificationSettings
-    },
-    {
-      key: 'profile',
-      title: 'Perfil',
-      description: 'Editar informações do perfil (em breve)',
-      icon: User,
-      color: 'text-green-500',
-      disabled: true
-    },
-    {
-      key: 'privacy',
-      title: 'Privacidade',
-      description: 'Configurações de privacidade (em breve)',
-      icon: Shield,
-      color: 'text-purple-500',
-      disabled: true
-    },
-    {
-      key: 'preferences',
-      title: 'Preferências',
-      description: 'Configurações gerais do app (em breve)',
-      icon: Smartphone,
-      color: 'text-orange-500',
-      disabled: true
-    }
-  ];
 
   const toggleSection = (sectionKey: string) => {
     if (activeSection === sectionKey) {
@@ -108,6 +69,11 @@ export default function ConfigPage() {
     } else {
       setActiveSection(sectionKey);
     }
+  };
+
+  const handleWhatsAppSupport = () => {
+    const whatsappUrl = 'https://api.whatsapp.com/send?phone=5531998445391&text=Ol%C3%A1%2C%20gostaria%20de%20come%C3%A7ar%20a%20receber%20minhas%20ora%C3%A7%C3%B5es%20do%20Agapefy';
+    window.open(whatsappUrl, '_blank');
   };
 
   return (
@@ -132,101 +98,206 @@ export default function ConfigPage() {
           <p className="text-gray-400">Gerencie suas preferências e configurações</p>
         </div>
 
-        {/* Seções de Configuração */}
+        {/* Cards de Configuração */}
         <div className="space-y-4">
-          {settingSections.map((section) => {
-            const Icon = section.icon;
-            const Component = section.component;
-            const isActive = activeSection === section.key;
-            
-            return (
-              <Card key={section.key} className="bg-gray-900 border-gray-800">
-                <CardHeader className="pb-3">
-                  <Button
-                    variant="ghost"
-                    onClick={() => !section.disabled && toggleSection(section.key)}
-                    disabled={section.disabled}
-                    className={`w-full justify-between p-0 h-auto ${
-                      section.disabled 
-                        ? 'opacity-50 cursor-not-allowed' 
-                        : 'hover:bg-transparent'
-                    }`}
-                  >
-                    <div className="flex items-center space-x-3 text-left">
-                      <Icon className={`h-6 w-6 ${section.color}`} />
-                      <div>
-                        <CardTitle className="text-white font-medium text-lg">
-                          {section.title}
-                        </CardTitle>
-                        <p className="text-sm text-gray-400 mt-1">{section.description}</p>
-                      </div>
-                    </div>
-                    {!section.disabled && (
-                      <div className={`transform transition-transform ${isActive ? 'rotate-180' : ''}`}>
-                        <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                        </svg>
-                      </div>
-                    )}
-                  </Button>
-                </CardHeader>
+          {/* 1. Perfil */}
+          <ProfileEditCard />
 
-                {/* Conteúdo da seção */}
-                {isActive && Component && (
-                  <CardContent className="pt-0">
-                    <div className="border-t border-gray-800 pt-4">
-                      <Component />
-                    </div>
-                  </CardContent>
-                )}
-              </Card>
-            );
-          })}
-        </div>
-
-        {/* Seção de Logout */}
-        <Card className="bg-gray-900 border-gray-800 border-red-800/30">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-3">
-                <LogOut className="h-6 w-6 text-red-500" />
-                <div>
-                  <h3 className="text-white font-medium">Sair da Conta</h3>
-                  <p className="text-sm text-gray-400">Fazer logout do aplicativo</p>
-                </div>
-              </div>
+          {/* 2. Suporte */}
+          <Card className="bg-gray-900 border-gray-800">
+            <CardHeader className="pb-3">
               <Button
-                variant="destructive"
-                onClick={handleSignOut}
-                disabled={isSigningOut}
-                className="bg-red-600 hover:bg-red-700 disabled:opacity-50"
+                variant="ghost"
+                onClick={() => toggleSection('support')}
+                className="w-full justify-between p-0 h-auto hover:bg-transparent"
               >
-                {isSigningOut ? (
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                ) : (
-                  <LogOut className="h-4 w-4 mr-2" />
-                )}
-                {isSigningOut ? 'Saindo...' : 'Sair'}
+                <div className="flex items-center space-x-3 text-left">
+                  <HelpCircle className="h-6 w-6 text-blue-500" />
+                  <div>
+                    <CardTitle className="text-white font-medium text-lg">Suporte</CardTitle>
+                    <p className="text-sm text-gray-400 mt-1">Entre em contato conosco</p>
+                  </div>
+                </div>
+                <div className={`transform transition-transform ${activeSection === 'support' ? 'rotate-180' : ''}`}>
+                  <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  </svg>
+                </div>
               </Button>
-            </div>
-          </CardContent>
-        </Card>
+            </CardHeader>
+            {activeSection === 'support' && (
+              <CardContent className="pt-0">
+                <div className="border-t border-gray-800 pt-4">
+                  <Button
+                    variant="outline"
+                    onClick={handleWhatsAppSupport}
+                    className="w-full border-green-600 text-green-400 hover:bg-green-900/20 hover:text-green-300"
+                  >
+                    <MessageCircle className="h-4 w-4 mr-2" />
+                    Suporte no WhatsApp
+                  </Button>
+                </div>
+              </CardContent>
+            )}
+          </Card>
 
-        {/* Informações da conta */}
-        <Card className="bg-gray-900 border-gray-800">
-          <CardContent className="p-6">
-            <div className="text-center">
-              <h3 className="text-white font-medium mb-2">Informações da Conta</h3>
-              <p className="text-sm text-gray-400 mb-1">
-                <strong>Email:</strong> {user.email}
-              </p>
-              <p className="text-sm text-gray-400">
-                <strong>ID:</strong> {user.id.slice(0, 8)}...
-              </p>
-            </div>
-          </CardContent>
-        </Card>
+          {/* 3. Notificações */}
+          <Card className="bg-gray-900 border-gray-800">
+            <CardHeader className="pb-3">
+              <Button
+                variant="ghost"
+                onClick={() => toggleSection('notifications')}
+                className="w-full justify-between p-0 h-auto hover:bg-transparent"
+              >
+                <div className="flex items-center space-x-3 text-left">
+                  <Bell className="h-6 w-6 text-blue-500" />
+                  <div>
+                    <CardTitle className="text-white font-medium text-lg">
+                      Notificações
+                    </CardTitle>
+                    <p className="text-sm text-gray-400 mt-1">Configure suas preferências de notificação</p>
+                  </div>
+                </div>
+                <div className={`transform transition-transform ${activeSection === 'notifications' ? 'rotate-180' : ''}`}>
+                  <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  </svg>
+                </div>
+              </Button>
+            </CardHeader>
+            {activeSection === 'notifications' && (
+              <CardContent className="pt-0">
+                <div className="border-t border-gray-800 pt-4">
+                  <NotificationSettings />
+                </div>
+              </CardContent>
+            )}
+          </Card>
+
+          {/* 4. Dê um Presente */}
+          <Card className="bg-gray-900 border-gray-800">
+            <CardHeader className="pb-3">
+              <Button
+                variant="ghost"
+                onClick={() => toggleSection('gift')}
+                className="w-full justify-between p-0 h-auto hover:bg-transparent"
+              >
+                <div className="flex items-center space-x-3 text-left">
+                  <Gift className="h-6 w-6 text-yellow-500" />
+                  <div>
+                    <CardTitle className="text-white font-medium text-lg">Dê um Presente</CardTitle>
+                    <p className="text-sm text-gray-400 mt-1">Presenteie seus amigos</p>
+                  </div>
+                </div>
+                <div className={`transform transition-transform ${activeSection === 'gift' ? 'rotate-180' : ''}`}>
+                  <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  </svg>
+                </div>
+              </Button>
+            </CardHeader>
+            {activeSection === 'gift' && (
+              <CardContent className="pt-0">
+                <div className="border-t border-gray-800 pt-4">
+                  <Button
+                    variant="outline"
+                    onClick={() => setShowPresentModal(true)}
+                    className="w-full border-yellow-600 text-yellow-400 hover:bg-yellow-900/20 hover:text-yellow-300"
+                  >
+                    <Gift className="h-4 w-4 mr-2" />
+                    Presentear Amigos
+                  </Button>
+                </div>
+              </CardContent>
+            )}
+          </Card>
+
+          {/* 5. Assinatura */}
+          <SubscriptionCard />
+
+          {/* 6. Jurídico */}
+          <Card className="bg-gray-900 border-gray-800">
+            <CardHeader className="pb-3">
+              <Button
+                variant="ghost"
+                onClick={() => toggleSection('legal')}
+                className="w-full justify-between p-0 h-auto hover:bg-transparent"
+              >
+                <div className="flex items-center space-x-3 text-left">
+                  <FileText className="h-6 w-6 text-purple-500" />
+                  <div>
+                    <CardTitle className="text-white font-medium text-lg">Jurídico</CardTitle>
+                    <p className="text-sm text-gray-400 mt-1">Documentos legais</p>
+                  </div>
+                </div>
+                <div className={`transform transition-transform ${activeSection === 'legal' ? 'rotate-180' : ''}`}>
+                  <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  </svg>
+                </div>
+              </Button>
+            </CardHeader>
+            {activeSection === 'legal' && (
+              <CardContent className="pt-0 space-y-2">
+                <div className="border-t border-gray-800 pt-4">
+                  <Link href="/termos-de-uso" className="block">
+                    <Button
+                      variant="ghost"
+                      className="w-full justify-start text-gray-300 hover:text-white hover:bg-gray-800"
+                    >
+                      <FileText className="h-4 w-4 mr-2" />
+                      Termos de Uso
+                    </Button>
+                  </Link>
+                  <Link href="/politica-de-privacidade" className="block">
+                    <Button
+                      variant="ghost"
+                      className="w-full justify-start text-gray-300 hover:text-white hover:bg-gray-800"
+                    >
+                      <FileText className="h-4 w-4 mr-2" />
+                      Política de Privacidade
+                    </Button>
+                  </Link>
+                </div>
+              </CardContent>
+            )}
+          </Card>
+
+          {/* 7. Sair */}
+          <Card className="bg-gray-900 border-gray-800 border-red-800/30">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-3">
+                  <LogOut className="h-6 w-6 text-red-500" />
+                  <div>
+                    <h3 className="text-white font-medium">Sair da Conta</h3>
+                    <p className="text-sm text-gray-400">Fazer logout do aplicativo</p>
+                  </div>
+                </div>
+                <Button
+                  variant="destructive"
+                  onClick={handleSignOut}
+                  disabled={isSigningOut}
+                  className="bg-red-600 hover:bg-red-700 disabled:opacity-50"
+                >
+                  {isSigningOut ? (
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  ) : (
+                    <LogOut className="h-4 w-4 mr-2" />
+                  )}
+                  {isSigningOut ? 'Saindo...' : 'Sair'}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
       </div>
+
+      {/* Modal de Presente */}
+      <PresentModal
+        isOpen={showPresentModal}
+        onClose={() => setShowPresentModal(false)}
+      />
     </div>
   );
 }

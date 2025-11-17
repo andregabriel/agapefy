@@ -130,28 +130,32 @@ export async function POST(request: NextRequest) {
       console.error('❌ Erro ao enviar mensagem:', sendResult.error);
     }
 
-    // Se for primeira mensagem e boas-vindas estiver ativada, enviar a mensagem de boas-vindas + menu
-    const sendWelcome = (settingsMap['whatsapp_send_welcome_enabled'] ?? 'true') === 'true';
-    const menuEnabled = (settingsMap['whatsapp_menu_enabled'] ?? 'false') === 'true';
-    const welcomeText = settingsMap['whatsapp_welcome_message'] || '';
-    const menuText = settingsMap['whatsapp_menu_message'] || '';
-    
-    if (isFirstMessage && sendWelcome) {
-      // Marcar que o usuário enviou a primeira mensagem
+    // Se for primeira mensagem, marcar que o usuário enviou a primeira mensagem
+    // IMPORTANTE: Isso deve acontecer SEMPRE, independente de enviar boas-vindas ou não
+    // Pois não podemos enviar mensagens para usuários que não enviaram a primeira mensagem
+    if (isFirstMessage) {
       await supabase
         .from('whatsapp_users')
         .update({ has_sent_first_message: true, updated_at: new Date().toISOString() })
         .eq('phone_number', userPhone);
       
-      // Montar mensagem: boas-vindas + menu (se menu estiver ativado)
-      const welcomeParts = [welcomeText];
-      if (menuEnabled && menuText) {
-        welcomeParts.push(menuText);
-      }
-      const welcomeMsg = welcomeParts.filter(Boolean).join('\n\n');
+      // Se boas-vindas estiver ativada, enviar a mensagem de boas-vindas + menu
+      const sendWelcome = (settingsMap['whatsapp_send_welcome_enabled'] ?? 'true') === 'true';
+      const menuEnabled = (settingsMap['whatsapp_menu_enabled'] ?? 'false') === 'true';
+      const welcomeText = settingsMap['whatsapp_welcome_message'] || '';
+      const menuText = settingsMap['whatsapp_menu_message'] || '';
       
-      if (welcomeMsg.trim()) {
-        await sendWhatsAppMessage(userPhone, welcomeMsg);
+      if (sendWelcome) {
+        // Montar mensagem: boas-vindas + menu (se menu estiver ativado)
+        const welcomeParts = [welcomeText];
+        if (menuEnabled && menuText) {
+          welcomeParts.push(menuText);
+        }
+        const welcomeMsg = welcomeParts.filter(Boolean).join('\n\n');
+        
+        if (welcomeMsg.trim()) {
+          await sendWhatsAppMessage(userPhone, welcomeMsg);
+        }
       }
     }
 

@@ -33,7 +33,7 @@ export function RoutineSection({
         <div>
           <h2 className="text-2xl font-bold text-white mb-1 flex items-center">
             <Clock className="h-6 w-6 mr-2 text-blue-500" />
-            Minha Rotina
+            Minha Rotina Diária
           </h2>
           <p className="text-sm text-gray-400">
             {routinePlaylist ? 
