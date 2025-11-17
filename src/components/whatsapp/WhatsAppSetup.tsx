@@ -16,6 +16,7 @@ import { Switch } from "@/components/ui/switch";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem } from "@/components/ui/command";
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from "@/components/ui/drawer";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useIsMobile } from "@/hooks/use-mobile";
 
 import { CheckCircle, AlertCircle, Sunrise, Utensils, Sunset, Moon } from "lucide-react";
@@ -28,13 +29,80 @@ interface WhatsAppSetupProps {
   onSavedPhone?: (phone: string) => void;
 }
 
+// Funções auxiliares para formatação de telefone
+function formatPhoneNumber(value: string): string {
+  // Remove tudo que não é número
+  const numbers = value.replace(/\D/g, "");
+  
+  // Se não tem números, retorna vazio
+  if (!numbers) return "";
+  
+  // Se tem menos de 2 dígitos, retorna como está
+  if (numbers.length < 2) {
+    return numbers;
+  }
+  
+  // Se tem exatamente 2 dígitos (DDD), retorna com espaço
+  if (numbers.length === 2) {
+    return `${numbers} `;
+  }
+  
+  // Se tem mais de 2 dígitos, formata DDD + número
+  const ddd = numbers.slice(0, 2);
+  const phone = numbers.slice(2);
+  
+  // Formata o número: XXXXX-XXXX (8 ou 9 dígitos)
+  if (phone.length <= 4) {
+    return `${ddd} ${phone}`;
+  } else if (phone.length <= 8) {
+    return `${ddd} ${phone.slice(0, 4)}-${phone.slice(4)}`;
+  } else {
+    // Para números com 9 dígitos (celular)
+    return `${ddd} ${phone.slice(0, 5)}-${phone.slice(5, 9)}`;
+  }
+}
+
+function parsePhoneNumber(formatted: string): string {
+  // Remove tudo que não é número
+  return formatted.replace(/\D/g, "");
+}
+
+function validatePhoneNumber(countryCode: string, phoneNumber: string): boolean {
+  const clean = parsePhoneNumber(phoneNumber);
+  // Para Brasil (+55): precisa de 11 dígitos (55 + DDD + número)
+  // DDD tem 2 dígitos, número tem 8 ou 9 dígitos
+  if (countryCode === "55") {
+    // Remove o código do país se estiver incluído
+    const withoutCountryCode = clean.startsWith("55") ? clean.slice(2) : clean;
+    // Deve ter DDD (2 dígitos) + número (8 ou 9 dígitos) = 10 ou 11 dígitos
+    return withoutCountryCode.length >= 10 && withoutCountryCode.length <= 11;
+  }
+  // Para outros países, validação básica
+  return clean.length >= 8;
+}
+
 export default function WhatsAppSetup({ variant = "standalone", redirectIfNotLoggedIn = true, onSavedPhone }: WhatsAppSetupProps) {
   const { user, loading } = useAuth();
   const router = useRouter();
   const { settings } = useAppSettings();
 
-  const [phone, setPhone] = useState("");
+  const [phone, setPhone] = useState(""); // Mantido para compatibilidade com código existente
+  const [country, setCountry] = useState("BR"); // Código do país (BR = Brasil)
+  const [countryCode, setCountryCode] = useState("55"); // Código telefônico (+55)
+  const [phoneNumber, setPhoneNumber] = useState(""); // Número formatado (DDD XXXXX-XXXX)
   const [saving, setSaving] = useState(false);
+
+  // Função helper para obter o número completo limpo (apenas dígitos)
+  const getFullPhoneNumber = (): string => {
+    const parsedNumber = parsePhoneNumber(phoneNumber);
+    // Se phoneNumber tem conteúdo, usar os campos separados
+    if (parsedNumber && parsedNumber.length >= 10) {
+      return countryCode + parsedNumber;
+    }
+    // Fallback para phone se phoneNumber estiver vazio (compatibilidade)
+    const cleanPhone = phone.replace(/\D/g, "");
+    return cleanPhone || "";
+  };
   const [testing, setTesting] = useState<null | "start" | "chat" | "verse" | "reminder" | "prayer">(null);
   const [status, setStatus] = useState<null | { ok: boolean; details?: any }>(null);
   const [isActive, setIsActive] = useState(false); // Biblicus
@@ -109,11 +177,41 @@ export default function WhatsAppSetup({ variant = "standalone", redirectIfNotLog
           // Se não encontrou nada e há um telefone no localStorage, pelo menos mostrar ele
           if (localPhone) {
             setPhone(localPhone);
+            // Processar o número para extrair país, código e número formatado
+            const clean = parsePhoneNumber(localPhone);
+            if (clean.startsWith("55") && clean.length >= 12) {
+              // Número brasileiro com código do país
+              setCountry("BR");
+              setCountryCode("55");
+              const dddAndNumber = clean.slice(2); // Remove 55
+              setPhoneNumber(formatPhoneNumber(dddAndNumber));
+            } else if (clean.length >= 10) {
+              // Número brasileiro sem código do país (assumir Brasil)
+              setCountry("BR");
+              setCountryCode("55");
+              setPhoneNumber(formatPhoneNumber(clean));
+            }
           }
           return;
         }
 
-        if (row.phone_number) setPhone(row.phone_number);
+        if (row.phone_number) {
+          setPhone(row.phone_number);
+          // Processar o número para extrair país, código e número formatado
+          const clean = parsePhoneNumber(row.phone_number);
+          if (clean.startsWith("55") && clean.length >= 12) {
+            // Número brasileiro com código do país
+            setCountry("BR");
+            setCountryCode("55");
+            const dddAndNumber = clean.slice(2); // Remove 55
+            setPhoneNumber(formatPhoneNumber(dddAndNumber));
+          } else if (clean.length >= 10) {
+            // Número brasileiro sem código do país (assumir Brasil)
+            setCountry("BR");
+            setCountryCode("55");
+            setPhoneNumber(formatPhoneNumber(clean));
+          }
+        }
         if (typeof row.is_active === 'boolean') setIsActive(Boolean(row.is_active));
         if (typeof row.receives_daily_verse === 'boolean') setDailyVerse(Boolean(row.receives_daily_verse));
         if (typeof row.receives_daily_prayer === 'boolean') setDailyPrayer(Boolean(row.receives_daily_prayer));
@@ -196,7 +294,7 @@ export default function WhatsAppSetup({ variant = "standalone", redirectIfNotLog
   useEffect(() => {
     const fetchUserChallenges = async () => {
       try {
-        const clean = phone.replace(/\D/g, "");
+        const clean = getFullPhoneNumber();
         if (!clean) {
           setSelectedChallengeId(null);
           setChallengeTime("");
@@ -225,14 +323,18 @@ export default function WhatsAppSetup({ variant = "standalone", redirectIfNotLog
       }
     };
     fetchUserChallenges();
-  }, [phone]);
+  }, [phone, phoneNumber, countryCode]);
 
   async function save() {
-    const clean = phone.replace(/\D/g, "");
-    if (!clean) {
+    // Construir número completo a partir dos campos separados
+    const parsedNumber = parsePhoneNumber(phoneNumber);
+    if (!parsedNumber || !validatePhoneNumber(countryCode, phoneNumber)) {
       toast.error("Digite um número válido");
       return;
     }
+    
+    // Construir número completo: código do país + número
+    const fullNumber = countryCode + parsedNumber;
     
     // Verificar se o usuário está logado (se redirectIfNotLoggedIn estiver ativo)
     if (redirectIfNotLoggedIn && !user?.id) {
@@ -244,7 +346,7 @@ export default function WhatsAppSetup({ variant = "standalone", redirectIfNotLog
     try {
       // Primeiro, fazer upsert básico sem user_id (como os webhooks fazem)
       const payload: any = {
-        phone_number: clean,
+        phone_number: fullNumber,
         name: user?.email?.split("@")[0] ?? "Irmão(ã)",
         is_active: true,
         receives_daily_verse: false,
@@ -287,10 +389,12 @@ export default function WhatsAppSetup({ variant = "standalone", redirectIfNotLog
       
       toast.success("Número salvo com sucesso. Envie /start no seu WhatsApp.");
       setIsActive(true);
+      // Atualizar estado phone para manter compatibilidade
+      setPhone(fullNumber);
       try {
-        if (typeof window !== 'undefined') window.localStorage.setItem('agape_whatsapp_phone', clean);
+        if (typeof window !== 'undefined') window.localStorage.setItem('agape_whatsapp_phone', fullNumber);
       } catch {}
-      if (typeof onSavedPhone === 'function') onSavedPhone(clean);
+      if (typeof onSavedPhone === 'function') onSavedPhone(fullNumber);
 
       const welcome = settings.whatsapp_welcome_message?.trim();
       if (welcome) {
@@ -301,7 +405,7 @@ export default function WhatsAppSetup({ variant = "standalone", redirectIfNotLog
             void fetch("/api/whatsapp/test-message", {
               method: "POST",
               headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ phone: clean, message: welcome })
+              body: JSON.stringify({ phone: fullNumber, message: welcome })
             });
           }
         } catch (e) {
@@ -327,7 +431,7 @@ export default function WhatsAppSetup({ variant = "standalone", redirectIfNotLog
   }
 
   async function saveChallengeSelection() {
-    const clean = phone.replace(/\D/g, "");
+    const clean = getFullPhoneNumber();
     if (!clean) {
       toast.error("Cadastre um número válido primeiro");
       return;
@@ -359,7 +463,7 @@ export default function WhatsAppSetup({ variant = "standalone", redirectIfNotLog
   }
 
   async function updatePreference(field: "is_active" | "receives_daily_verse" | "receives_daily_prayer" | "receives_daily_routine", value: boolean) {
-    const clean = phone.replace(/\D/g, "");
+    const clean = getFullPhoneNumber();
     if (!clean) {
       toast.error("Cadastre um número válido primeiro");
       return;
@@ -406,7 +510,7 @@ export default function WhatsAppSetup({ variant = "standalone", redirectIfNotLog
   }
 
   async function updatePrayerTime(field: "prayer_time_wakeup" | "prayer_time_lunch" | "prayer_time_dinner" | "prayer_time_sleep", value: string) {
-    const clean = phone.replace(/\D/g, "");
+    const clean = getFullPhoneNumber();
     if (!clean) {
       toast.error("Cadastre um número válido primeiro");
       return;
@@ -509,7 +613,7 @@ export default function WhatsAppSetup({ variant = "standalone", redirectIfNotLog
   }
 
   async function test(kind: "start" | "chat" | "verse" | "reminder" | "prayer") {
-    const clean = phone.replace(/\D/g, "");
+    const clean = getFullPhoneNumber();
     if (!clean) {
       toast.error("Cadastre um número válido primeiro");
       return;
@@ -594,13 +698,44 @@ export default function WhatsAppSetup({ variant = "standalone", redirectIfNotLog
       <CardContent className="space-y-4">
         <div className="space-y-2">
           {labelText && <Label htmlFor="wpp-number">{labelText}</Label>}
-          <div className="flex gap-2">
-            <Input
-              id="wpp-number"
-              placeholder={formattedExample}
-              value={phone}
-              onChange={(e) => setPhone(e.target.value)}
-            />
+          <div className="flex flex-col sm:flex-row gap-2">
+            <div className="flex gap-2 flex-1">
+              <Select value={country} onValueChange={(value) => {
+                setCountry(value);
+                // Por enquanto, apenas Brasil é suportado
+                if (value === "BR") {
+                  setCountryCode("55");
+                }
+              }}>
+                <SelectTrigger className="w-[140px]">
+                  <SelectValue placeholder="País" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="BR">Brasil</SelectItem>
+                </SelectContent>
+              </Select>
+              <Input
+                id="wpp-country-code"
+                value={`+${countryCode}`}
+                readOnly
+                className="w-[80px]"
+                placeholder="+55"
+              />
+              <Input
+                id="wpp-number"
+                placeholder="31 5693-8653"
+                value={phoneNumber}
+                onChange={(e) => {
+                  // Remove caracteres não numéricos antes de formatar
+                  const numbersOnly = e.target.value.replace(/\D/g, "");
+                  const formatted = formatPhoneNumber(numbersOnly);
+                  setPhoneNumber(formatted);
+                }}
+                className="flex-1"
+                maxLength={15}
+                type="tel"
+              />
+            </div>
             <Button onClick={save} disabled={saving}>
               {saving ? "Salvando..." : "Salvar"}
             </Button>
