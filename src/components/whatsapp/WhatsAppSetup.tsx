@@ -370,7 +370,7 @@ export default function WhatsAppSetup({ variant = "standalone", redirectIfNotLog
           console.warn("Coluna user_id não encontrada, salvando sem ela...");
           const { error: retryError } = await supabase.from("whatsapp_users").upsert(
             {
-              phone_number: clean,
+              phone_number: fullNumber,
               name: user?.email?.split("@")[0] ?? "Irmão(ã)",
               is_active: true,
               receives_daily_verse: false,
@@ -696,50 +696,57 @@ export default function WhatsAppSetup({ variant = "standalone", redirectIfNotLog
         {instruction && <CardDescription>{instruction}</CardDescription>}
       </CardHeader>
       <CardContent className="space-y-4">
-        <div className="space-y-2">
+        <div className="space-y-4">
           {labelText && <Label htmlFor="wpp-number">{labelText}</Label>}
-          <div className="flex flex-col sm:flex-row gap-2">
-            <div className="flex gap-2 flex-1">
-              <Select value={country} onValueChange={(value) => {
-                setCountry(value);
-                // Por enquanto, apenas Brasil é suportado
-                if (value === "BR") {
-                  setCountryCode("55");
-                }
-              }}>
-                <SelectTrigger className="w-[140px]">
-                  <SelectValue placeholder="País" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="BR">Brasil</SelectItem>
-                </SelectContent>
-              </Select>
-              <Input
-                id="wpp-country-code"
-                value={`+${countryCode}`}
-                readOnly
-                className="w-[80px]"
-                placeholder="+55"
-              />
-              <Input
-                id="wpp-number"
-                placeholder="31 5693-8653"
-                value={phoneNumber}
-                onChange={(e) => {
-                  // Remove caracteres não numéricos antes de formatar
-                  const numbersOnly = e.target.value.replace(/\D/g, "");
-                  const formatted = formatPhoneNumber(numbersOnly);
-                  setPhoneNumber(formatted);
-                }}
-                className="flex-1"
-                maxLength={15}
-                type="tel"
-              />
-            </div>
-            <Button onClick={save} disabled={saving}>
-              {saving ? "Salvando..." : "Salvar"}
-            </Button>
+          
+          {/* País - linha separada */}
+          <div>
+            <Select value={country} onValueChange={(value) => {
+              setCountry(value);
+              // Por enquanto, apenas Brasil é suportado
+              if (value === "BR") {
+                setCountryCode("55");
+              }
+            }}>
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="País" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="BR">Brasil</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
+
+          {/* Código do país e número - mesma linha */}
+          <div className="flex gap-2">
+            <Input
+              id="wpp-country-code"
+              value={`+${countryCode}`}
+              readOnly
+              className="w-[100px] flex-shrink-0"
+              placeholder="+55"
+            />
+            <Input
+              id="wpp-number"
+              placeholder="31 5693-8653"
+              value={phoneNumber}
+              onChange={(e) => {
+                // Remove caracteres não numéricos antes de formatar
+                const numbersOnly = e.target.value.replace(/\D/g, "");
+                const formatted = formatPhoneNumber(numbersOnly);
+                setPhoneNumber(formatted);
+              }}
+              className="flex-1"
+              maxLength={15}
+              type="tel"
+            />
+          </div>
+
+          {/* Botão Salvar */}
+          <Button onClick={save} disabled={saving} className="w-full">
+            {saving ? "Salvando..." : "Salvar"}
+          </Button>
+
           {privacyText && <p className="text-xs text-muted-foreground">{privacyText}</p>}
         </div>
 
