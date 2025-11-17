@@ -45,6 +45,8 @@ interface AppSettings {
   whatsapp_welcome_message?: string; // mensagem de boas-vindas enviada pelo BW
   whatsapp_send_welcome_enabled?: string; // 'true' | 'false' — controla envio de boas-vindas
   whatsapp_menu_message?: string; // mensagem de menu inicial e lembretes
+  whatsapp_menu_enabled?: string; // 'true' | 'false' — controla envio de menu inicial junto com boas-vindas
+  whatsapp_menu_reminder_enabled?: string; // 'true' | 'false' — controla envio de lembretes a cada 5 mensagens
   // Config per-intenção do BW
   bw_intents_config?: string; // JSON string: { [intention]: { enabled: boolean, prompt?: string } }
   // Comandos curtos por intenção (atalhos)
@@ -112,6 +114,8 @@ const DEFAULT_SETTINGS: AppSettings = {
   whatsapp_welcome_message: '📖 Olá! Eu sou o Biblicus\n\nUm assistente virtual da Agapefy para te acompanhar na sua jornada espiritual. ✨\n\n🙌 O que posso fazer:\n\n• Obter respostas baseadas na Bíblia\n• Enviar versículos diariamente\n• Lembrar você dos horários de oração\n• Montar orações personalizadas para você\n\n💬 Comandos disponíveis:\n\n• **/conversa** – Tire dúvidas e converse sobre a Bíblia\n• **/versículos** – Receba mensagens com passagens todos os dias\n• **/lembretes** – Ative lembretes nos horários de oração\n• **/oração** – Tenha uma oração feita especialmente para você\n\n✨ Como usar:\nCadastre seu número de WhatsApp e comece a conversar comigo. Você poderá enviar mensagens e receber respostas, versículos, lembretes e orações diretamente no seu celular.\n\n🚀 Pronto para começar?',
   whatsapp_send_welcome_enabled: 'true',
   whatsapp_menu_message: '1️⃣ Respostas baseadas na Bíblia (envie: biblia)\n2️⃣ Receber Versículo diariamente (envie: versículo)\n3️⃣ Buscar orações no app Agapefy (envie: buscar)',
+  whatsapp_menu_enabled: 'false',
+  whatsapp_menu_reminder_enabled: 'false',
   // Intents config padrão (string JSON) — modo simplificado com 3 intenções
   bw_intents_config: JSON.stringify({
     general_conversation: { enabled: true, engine: 'prompt' },

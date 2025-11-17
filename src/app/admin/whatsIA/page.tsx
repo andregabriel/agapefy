@@ -44,6 +44,8 @@ export default function WhatsAppIAPage() {
   const [welcome, setWelcome] = useState("");
   const [sendWelcome, setSendWelcome] = useState<boolean>(true);
   const [menuMessage, setMenuMessage] = useState<string>("");
+  const [menuEnabled, setMenuEnabled] = useState<boolean>(false);
+  const [menuReminderEnabled, setMenuReminderEnabled] = useState<boolean>(false);
   const [intentsConfig, setIntentsConfig] = useState<Record<string, { enabled: boolean; prompt?: string }>>({});
   const [shortCommands, setShortCommands] = useState<Record<string, string[]>>({});
   const [newIntentName, setNewIntentName] = useState("");
@@ -75,6 +77,8 @@ export default function WhatsAppIAPage() {
     setWelcome(settings.whatsapp_welcome_message || "");
     setSendWelcome((settings.whatsapp_send_welcome_enabled ?? 'true') === 'true');
     setMenuMessage(settings.whatsapp_menu_message || '');
+    setMenuEnabled((settings.whatsapp_menu_enabled ?? 'false') === 'true');
+    setMenuReminderEnabled((settings.whatsapp_menu_reminder_enabled ?? 'false') === 'true');
     setWaitingMessage(settings.bw_waiting_message || '');
     // Parse intents config
     try {
@@ -89,7 +93,7 @@ export default function WhatsAppIAPage() {
     } catch {
       setShortCommands({});
     }
-  }, [settings.whatsapp_welcome_message, settings.whatsapp_send_welcome_enabled, settings.whatsapp_menu_message, settings.bw_intents_config, settings.bw_short_commands]);
+  }, [settings.whatsapp_welcome_message, settings.whatsapp_send_welcome_enabled, settings.whatsapp_menu_message, settings.whatsapp_menu_enabled, settings.whatsapp_menu_reminder_enabled, settings.bw_intents_config, settings.bw_short_commands]);
 
   async function saveWaitingMessage() {
     try {
@@ -141,6 +145,28 @@ export default function WhatsAppIAPage() {
     } catch (e) {
       console.warn(e);
       toast.error("Erro ao salvar menu");
+    }
+  }
+
+  async function saveMenuEnabled() {
+    try {
+      const res = await updateSetting("whatsapp_menu_enabled", menuEnabled ? 'true' : 'false');
+      if (!res.success) toast.error(res.error || "Falha ao salvar");
+      else toast.success("Preferência de menu inicial atualizada");
+    } catch (e) {
+      console.warn(e);
+      toast.error("Erro ao salvar");
+    }
+  }
+
+  async function saveMenuReminderEnabled() {
+    try {
+      const res = await updateSetting("whatsapp_menu_reminder_enabled", menuReminderEnabled ? 'true' : 'false');
+      if (!res.success) toast.error(res.error || "Falha ao salvar");
+      else toast.success("Preferência de lembretes atualizada");
+    } catch (e) {
+      console.warn(e);
+      toast.error("Erro ao salvar");
     }
   }
 
@@ -435,6 +461,32 @@ export default function WhatsAppIAPage() {
               <Button onClick={saveMenuMessage} variant="outline" disabled={settingsLoading}>
                 <Save className="h-4 w-4 mr-2" /> Salvar menu inicial
               </Button>
+            </div>
+            <div className="pt-4 space-y-3 border-t mt-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <Label className="block mb-1">Enviar menu inicial</Label>
+                  <p className="text-xs text-muted-foreground">Envia o menu junto com a mensagem de boas-vindas quando o usuário envia a primeira mensagem.</p>
+                </div>
+                <Switch checked={menuEnabled} onCheckedChange={setMenuEnabled} />
+              </div>
+              <div className="flex items-center gap-3">
+                <Button onClick={saveMenuEnabled} variant="outline" disabled={settingsLoading}>
+                  <Save className="h-4 w-4 mr-2" /> Salvar preferência
+                </Button>
+              </div>
+              <div className="flex items-center justify-between">
+                <div>
+                  <Label className="block mb-1">Enviar lembretes a cada 5 mensagens</Label>
+                  <p className="text-xs text-muted-foreground">Envia o menu automaticamente a cada 5 mensagens do usuário como lembrete.</p>
+                </div>
+                <Switch checked={menuReminderEnabled} onCheckedChange={setMenuReminderEnabled} />
+              </div>
+              <div className="flex items-center gap-3">
+                <Button onClick={saveMenuReminderEnabled} variant="outline" disabled={settingsLoading}>
+                  <Save className="h-4 w-4 mr-2" /> Salvar preferência
+                </Button>
+              </div>
             </div>
           </div>
         </CardContent>

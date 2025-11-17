@@ -395,24 +395,6 @@ export default function WhatsAppSetup({ variant = "standalone", redirectIfNotLog
         if (typeof window !== 'undefined') window.localStorage.setItem('agape_whatsapp_phone', fullNumber);
       } catch {}
       if (typeof onSavedPhone === 'function') onSavedPhone(fullNumber);
-
-      const welcome = settings.whatsapp_welcome_message?.trim();
-      if (welcome) {
-        try {
-          // Só tenta enviar se a instância Z-API estiver OK
-          const status = await fetch('/api/whatsapp/status');
-          if (status.ok) {
-            void fetch("/api/whatsapp/test-message", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ phone: fullNumber, message: welcome })
-            });
-          }
-        } catch (e) {
-          // eslint-disable-next-line no-console
-          console.warn("Falha ao agendar envio de mensagem de boas-vindas", e);
-        }
-      }
     } catch (e: any) {
       console.error("Erro ao salvar número:", e);
       // Mensagens de erro mais específicas

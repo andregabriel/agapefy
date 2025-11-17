@@ -570,111 +570,44 @@ export default function WhatsAppAdminPage() {
     toast.success('Assistente salvo!');
   };
 
-  const testAssistantSelection = () => {
+  const testAssistantSelection = async () => {
     if (!testAssistantMessage.trim()) {
       toast.error('Digite uma mensagem para testar');
       return;
     }
 
-    const message = testAssistantMessage.toLowerCase();
-    const normalizedMessage = message.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-    let selectedAssistant: Assistant | null = null;
-    let reason = '';
-
-    // PRIORIDADE 0: Verificar palavras de suporte explícitas
-    const explicitSupportKeywords = ['suporte', 'quero suporte', 'preciso suporte', 'falar com suporte', 'atendimento'];
-    if (explicitSupportKeywords.some(keyword => normalizedMessage.includes(keyword))) {
-      const supportAssistant = assistants.find(a => 
-        a.enabled && a.type === 'support'
-      ) || assistants.find(a => 
-        a.enabled && a.type === 'sales'
-      );
-      if (supportAssistant) {
-        selectedAssistant = supportAssistant;
-        reason = `Palavra-chave de suporte explícita encontrada: "${explicitSupportKeywords.find(k => normalizedMessage.includes(k))}"`;
-        setTestResult({ assistant: selectedAssistant, reason });
-        return;
-      }
-    }
-
-    // PRIORIDADE 1: Verificar palavras-chave explícitas de cada assistente habilitado
-    for (const assistant of assistants.filter(a => a.enabled)) {
-      const matchedKeywords = assistant.keywords.filter(kw => {
-        const kwNormalized = kw.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-        return normalizedMessage.includes(kwNormalized);
+    try {
+      setLoading(true);
+      const response = await fetch('/api/whatsapp/test-assistant-selection', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message: testAssistantMessage }),
       });
-      
-      if (matchedKeywords.length > 0) {
-        selectedAssistant = assistant;
-        reason = `Palavras-chave encontradas: ${matchedKeywords.join(', ')}`;
-        setTestResult({ assistant: selectedAssistant, reason });
-        return;
+
+      const data = await response.json();
+
+      if (response.ok && data.success) {
+        setTestResult({ 
+          assistant: data.assistant, 
+          reason: data.reason 
+        });
+      } else {
+        toast.error(data.error || 'Erro ao testar seleção');
+        setTestResult({ 
+          assistant: null, 
+          reason: data.error || 'Erro ao testar seleção' 
+        });
       }
+    } catch (error) {
+      console.error('Erro ao testar seleção:', error);
+      toast.error('Erro ao testar seleção de assistente');
+      setTestResult({ 
+        assistant: null, 
+        reason: 'Erro ao testar seleção de assistente' 
+      });
+    } finally {
+      setLoading(false);
     }
-
-    // PRIORIDADE 2: Detecção inteligente de contexto
-    const supportSalesPatterns = [
-      /\b(não consigo|não funciona|não está funcionando|erro|problema|dificuldade|preciso de ajuda|como fazer|como usar|login|conta|senha|app|aplicativo|plataforma)\b/i,
-      /\b(pagamento|pagar|comprar|assinatura|plano|preço|custo|valor|quanto custa|desconto|promoção)\b/i,
-    ];
-    
-    const biblicalPatterns = [
-      /\b(bíblia|biblia|versículo|versiculo|jesus|cristo|deus|senhor|evangelho|parábola|parabola|oração|orações)\b/i,
-    ];
-
-    const isSupportSalesQuestion = supportSalesPatterns.some(pattern => pattern.test(message));
-    if (isSupportSalesQuestion) {
-      const supportAssistant = assistants.find(a => 
-        a.enabled && a.type === 'support'
-      ) || assistants.find(a => 
-        a.enabled && a.type === 'sales'
-      );
-      if (supportAssistant) {
-        selectedAssistant = supportAssistant;
-        reason = 'Contexto detectado: Pergunta de suporte/vendas (detecção inteligente)';
-        setTestResult({ assistant: selectedAssistant, reason });
-        return;
-      }
-    }
-
-    const isBiblicalQuestion = biblicalPatterns.some(pattern => pattern.test(message));
-    if (isBiblicalQuestion) {
-      const biblicalAssistant = assistants.find(a => 
-        a.enabled && a.type === 'biblical'
-      );
-      if (biblicalAssistant) {
-        selectedAssistant = biblicalAssistant;
-        reason = 'Contexto detectado: Pergunta bíblica/espiritual (detecção inteligente)';
-        setTestResult({ assistant: selectedAssistant, reason });
-        return;
-      }
-    }
-
-    // PRIORIDADE 3: Análise de estrutura da mensagem
-    if (message.match(/^(como|o que|qual|quando|onde|por que)/i) && 
-        (message.includes('fazer') || message.includes('usar') || message.includes('funciona'))) {
-      const supportAssistant = assistants.find(a => 
-        a.enabled && (a.type === 'support' || a.type === 'sales')
-      );
-      if (supportAssistant) {
-        selectedAssistant = supportAssistant;
-        reason = 'Estrutura detectada: Pergunta funcional (análise de estrutura)';
-        setTestResult({ assistant: supportAssistant, reason });
-        return;
-      }
-    }
-
-    // PRIORIDADE 4: Assistente padrão ou primeiro disponível
-    const defaultAssistantId = assistants.find(a => a.enabled)?.id;
-    selectedAssistant = assistants.find(a => 
-      a.enabled && a.id === defaultAssistantId
-    ) || assistants.find(a => a.enabled) || null;
-    
-    reason = selectedAssistant 
-      ? 'Nenhuma palavra-chave ou contexto específico encontrado, usando assistente padrão'
-      : 'Nenhum assistente habilitado encontrado';
-
-    setTestResult({ assistant: selectedAssistant, reason });
   };
 
   const getAssistantTypeIcon = (type: string) => {
@@ -1289,9 +1222,9 @@ export default function WhatsAppAdminPage() {
                   }}
                 />
               </div>
-              <Button onClick={testAssistantSelection} variant="outline">
+              <Button onClick={testAssistantSelection} variant="outline" disabled={loading}>
                 <TestTube className="h-4 w-4 mr-2" />
-                Testar Seleção
+                {loading ? 'Testando...' : 'Testar Seleção'}
               </Button>
               
               {testResult && (

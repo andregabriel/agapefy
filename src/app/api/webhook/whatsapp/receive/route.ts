@@ -38,13 +38,24 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ status: 'ignored', reason: 'empty_message' });
     }
 
-    // Registrar usuário no banco
-    console.log('👤 Registrando usuário...');
+    // Verificar se usuário já existe antes de fazer upsert
+    console.log('👤 Verificando/registrando usuário...');
+    const { data: existingUser } = await supabase
+      .from('whatsapp_users')
+      .select('has_sent_first_message')
+      .eq('phone_number', userPhone)
+      .maybeSingle();
+    
+    // Se não existe, criar com has_sent_first_message: false
+    // Se existe, manter o valor atual de has_sent_first_message
+    const hasSentFirstMessage = existingUser?.has_sent_first_message ?? false;
+    
     await supabase.from('whatsapp_users').upsert({
       phone_number: userPhone,
       name: userName,
       is_active: true,
       receives_daily_verse: true,
+      has_sent_first_message: hasSentFirstMessage,
       updated_at: new Date().toISOString()
     }, { onConflict: 'phone_number' });
 
@@ -54,6 +65,8 @@ export async function POST(request: NextRequest) {
       'whatsapp_send_welcome_enabled',
       'whatsapp_welcome_message',
       'whatsapp_menu_message',
+      'whatsapp_menu_enabled',
+      'whatsapp_menu_reminder_enabled',
       'bw_intents_config',
       'bw_short_commands',
       'whatsapp_assistant_rules'
@@ -63,11 +76,8 @@ export async function POST(request: NextRequest) {
     // Garantir que bw_waiting_message não seja usado mesmo se estiver no banco
     delete settingsMap['bw_waiting_message'];
 
-    // Verificar primeiro contato
-    const { count: prevCount } = await supabase
-      .from('whatsapp_conversations')
-      .select('*', { count: 'exact', head: true })
-      .eq('user_phone', userPhone);
+    // Verificar se é a primeira mensagem do usuário (usando has_sent_first_message)
+    const isFirstMessage = !hasSentFirstMessage;
 
     // Detectar rapidamente a intenção (sem enviar mensagem de espera)
     const quickTriggers: Record<string, string[]> = (() => {
@@ -120,24 +130,41 @@ export async function POST(request: NextRequest) {
       console.error('❌ Erro ao enviar mensagem:', sendResult.error);
     }
 
-    // Se for primeiro contato e boas-vindas estiver ativada, enviar a mensagem de boas-vindas + menu
+    // Se for primeira mensagem e boas-vindas estiver ativada, enviar a mensagem de boas-vindas + menu
     const sendWelcome = (settingsMap['whatsapp_send_welcome_enabled'] ?? 'true') === 'true';
+    const menuEnabled = (settingsMap['whatsapp_menu_enabled'] ?? 'false') === 'true';
     const welcomeText = settingsMap['whatsapp_welcome_message'] || '';
     const menuText = settingsMap['whatsapp_menu_message'] || '';
-    if ((prevCount || 0) === 0 && sendWelcome) {
-      const welcomeMsg = [welcomeText, menuText].filter(Boolean).join('\n\n');
+    
+    if (isFirstMessage && sendWelcome) {
+      // Marcar que o usuário enviou a primeira mensagem
+      await supabase
+        .from('whatsapp_users')
+        .update({ has_sent_first_message: true, updated_at: new Date().toISOString() })
+        .eq('phone_number', userPhone);
+      
+      // Montar mensagem: boas-vindas + menu (se menu estiver ativado)
+      const welcomeParts = [welcomeText];
+      if (menuEnabled && menuText) {
+        welcomeParts.push(menuText);
+      }
+      const welcomeMsg = welcomeParts.filter(Boolean).join('\n\n');
+      
       if (welcomeMsg.trim()) {
         await sendWhatsAppMessage(userPhone, welcomeMsg);
       }
     }
 
-    // Lembrete a cada 5 mensagens do usuário
-    const { count: convCount } = await supabase
-      .from('whatsapp_conversations')
-      .select('*', { count: 'exact', head: true })
-      .eq('user_phone', userPhone);
-    if ((convCount || 0) > 0 && (convCount as number) % 5 === 0 && menuText) {
-      await sendWhatsAppMessage(userPhone, menuText);
+    // Lembrete a cada 5 mensagens do usuário (apenas se ativado)
+    const menuReminderEnabled = (settingsMap['whatsapp_menu_reminder_enabled'] ?? 'false') === 'true';
+    if (menuReminderEnabled && menuText) {
+      const { count: convCount } = await supabase
+        .from('whatsapp_conversations')
+        .select('*', { count: 'exact', head: true })
+        .eq('user_phone', userPhone);
+      if ((convCount || 0) > 0 && (convCount as number) % 5 === 0) {
+        await sendWhatsAppMessage(userPhone, menuText);
+      }
     }
 
     return NextResponse.json({ 
@@ -585,6 +612,76 @@ interface AssistantConfig {
   defaultAssistantId?: string;
 }
 
+/**
+ * Usa GPT como classificador leve para entender a intenção principal da mensagem.
+ *
+ * Categorias possíveis:
+ * - "support_sales": dúvidas sobre funcionamento do app, uso, problemas técnicos,
+ *   login/conta/senha, pagamentos, planos, preços, compras, suporte ou vendas.
+ * - "biblical": perguntas sobre Bíblia, versículos, Jesus, Deus, temas espirituais,
+ *   orações, fé ou conteúdo religioso.
+ * - "indeterminado": quando não der para ter certeza entre as duas acima.
+ */
+async function analyzeMessageIntentWithAI(
+  message: string
+): Promise<'support_sales' | 'biblical' | 'indeterminado' | null> {
+  const openaiApiKey = process.env.OPENAI_API_KEY;
+  if (!openaiApiKey) {
+    console.log('⚠️ OPENAI_API_KEY não configurada para análise de intenção, pulando IA');
+    return null;
+  }
+
+  try {
+    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${openaiApiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'gpt-4o-mini',
+        temperature: 0.2,
+        max_tokens: 10,
+        messages: [
+          {
+            role: 'system',
+            content:
+              'Você é um classificador de intenções para mensagens do WhatsApp. ' +
+              'Analise a mensagem do usuário e escolha APENAS UMA das categorias abaixo, retornando somente o rótulo, sem explicações:\n\n' +
+              '- "support_sales": Perguntas sobre funcionamento do app, como usar, como fazer algo, login, conta, senha, cadastro, problemas técnicos, erros, dificuldades, ajuda, pagamentos, planos, preços, assinatura, suporte, vendas ou qualquer tema ligado ao uso ou compra do produto.\n' +
+              '- "biblical": Perguntas ou comentários sobre Bíblia, versículos, Jesus, Deus, Espírito Santo, temas espirituais, orações, fé, doutrina cristã ou conteúdo religioso em geral.\n' +
+              '- "indeterminado": Quando a mensagem for muito genérica, social (tipo só \"oi\", \"bom dia\") ou não der para saber com clareza se é sobre o app ou sobre Bíblia.\n\n' +
+              'Responda estritamente com UMA destas palavras: support_sales, biblical ou indeterminado.',
+          },
+          {
+            role: 'user',
+            content: message,
+          },
+        ],
+      }),
+    });
+
+    if (!response.ok) {
+      console.error('❌ Erro HTTP na análise de intenção com IA:', response.status, response.statusText);
+      return null;
+    }
+
+    const data = await response.json();
+    const raw = data?.choices?.[0]?.message?.content?.trim()?.toLowerCase();
+
+    if (raw === 'support_sales' || raw === 'biblical' || raw === 'indeterminado') {
+      console.log(`🤖 IA classificou intenção como: ${raw}`);
+      return raw;
+    }
+
+    console.log('⚠️ Resposta inesperada da IA na análise de intenção:', raw);
+    return null;
+  } catch (error) {
+    console.error('❌ Erro ao chamar IA para análise de intenção:', error);
+    return null;
+  }
+}
+
 async function selectAssistantByMessage(message: string, settingsMap?: Record<string, string>): Promise<Assistant | null> {
   try {
     // Carregar configuração de assistentes
@@ -730,10 +827,45 @@ async function selectAssistantByMessage(message: string, settingsMap?: Record<st
       }
     }
 
-    // PRIORIDADE 4: Assistente padrão configurado ou primeiro disponível
-    const defaultAssistant = config.assistants.find(a => 
-      a.enabled && (a.id === config.defaultAssistantId || !config.defaultAssistantId)
-    ) || config.assistants.find(a => a.enabled);
+    // PRIORIDADE 3.5: Análise de intenção com IA (fallback inteligente)
+    const aiClassification = await analyzeMessageIntentWithAI(message);
+
+    if (aiClassification === 'support_sales') {
+      const supportAssistant = config.assistants.find(a =>
+        a.enabled && (a.type === 'support' || a.type === 'sales')
+      );
+      if (supportAssistant) {
+        console.log(
+          `✅ Assistente selecionado por análise de IA (support_sales): ${supportAssistant.name}`
+        );
+        return supportAssistant;
+      }
+    } else if (aiClassification === 'biblical') {
+      const biblicalAssistant = config.assistants.find(a => a.enabled && a.type === 'biblical');
+      if (biblicalAssistant) {
+        console.log(
+          `✅ Assistente selecionado por análise de IA (biblical): ${biblicalAssistant.name}`
+        );
+        return biblicalAssistant;
+      }
+    }
+
+    // PRIORIDADE 4: Fallback com preferência para suporte/vendas como padrão
+    const supportOrSalesDefault =
+      config.assistants.find(a => a.enabled && (a.type === 'support' || a.type === 'sales')) ||
+      null;
+
+    if (supportOrSalesDefault) {
+      console.log(
+        `✅ Usando assistente de suporte/vendas como fallback padrão: ${supportOrSalesDefault.name}`
+      );
+      return supportOrSalesDefault;
+    }
+
+    // Se não houver suporte/vendas, usar defaultAssistantId ou primeiro habilitado
+    const defaultAssistant =
+      config.assistants.find(a => a.enabled && a.id === config.defaultAssistantId) ||
+      config.assistants.find(a => a.enabled);
 
     if (defaultAssistant) {
       console.log(`✅ Usando assistente padrão: ${defaultAssistant.name}`);
