@@ -90,6 +90,22 @@ export async function GET(_req: NextRequest) {
 
     const admin = getAdminSupabase();
 
+    // Admins têm acesso completo independente de assinatura
+    // (evita exibir paywall para usuários com role = 'admin')
+    const { data: profile } = await admin
+      .from('profiles')
+      .select('role')
+      .eq('id', user.id)
+      .maybeSingle();
+
+    if (profile?.role === 'admin') {
+      return NextResponse.json({
+        userType: 'active_subscription' as SubscriptionUserType,
+        hasActiveSubscription: true,
+        hasActiveTrial: false,
+      });
+    }
+
     const { data, error } = await admin
       .from('assinaturas')
       .select(

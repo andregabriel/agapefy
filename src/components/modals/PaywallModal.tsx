@@ -14,7 +14,7 @@ type PlanKey = 'installments' | 'upfront';
 export function PaywallModal() {
   const { settings, loading } = useAppSettings();
   const [isOpen, setIsOpen] = useState(false);
-  const [selectedPlan, setSelectedPlan] = useState<PlanKey>('installments');
+  const [selectedPlan, setSelectedPlan] = useState<PlanKey>('upfront');
   const [thumbnails, setThumbnails] = useState<string[]>([]);
 
   const config = useMemo(
@@ -160,7 +160,38 @@ export function PaywallModal() {
 
           {/* Opções de plano */}
           <div className="space-y-3 mt-4">
-            {/* Pagamento em parcelas (default selecionado no print) */}
+            {/* Pagamento à vista (Opção 1) */}
+            <button
+              type="button"
+              onClick={() => setSelectedPlan('upfront')}
+              className={`w-full flex items-center justify-between px-4 py-3 rounded-xl border ${
+                selectedPlan === 'upfront'
+                  ? 'border-purple-500 bg-purple-50'
+                  : 'border-gray-300 bg-white'
+              }`}
+            >
+              <div className="text-left">
+                <p className="font-semibold text-[15px]">
+                  {config.plans.upfront.title}
+                </p>
+                <p className="text-[11px] text-gray-700">
+                  {config.plans.upfront.subtitle}
+                </p>
+              </div>
+              <div
+                className={`w-6 h-6 rounded-full border flex items-center justify-center ${
+                  selectedPlan === 'upfront' ? 'border-purple-500' : 'border-gray-300'
+                }`}
+              >
+                <div
+                  className={`w-3.5 h-3.5 rounded-full ${
+                    selectedPlan === 'upfront' ? 'bg-purple-500' : 'bg-transparent'
+                  }`}
+                />
+              </div>
+            </button>
+
+            {/* Pagamento em parcelas (Opção 2) */}
             <button
               type="button"
               onClick={() => setSelectedPlan('installments')}
@@ -188,37 +219,6 @@ export function PaywallModal() {
                 <div
                   className={`w-3.5 h-3.5 rounded-full ${
                     selectedPlan === 'installments' ? 'bg-purple-500' : 'bg-transparent'
-                  }`}
-                />
-              </div>
-            </button>
-
-            {/* Pagamento à vista */}
-            <button
-              type="button"
-              onClick={() => setSelectedPlan('upfront')}
-              className={`w-full flex items-center justify-between px-4 py-3 rounded-xl border ${
-                selectedPlan === 'upfront'
-                  ? 'border-purple-500 bg-purple-50'
-                  : 'border-gray-300 bg-white'
-              }`}
-            >
-              <div className="text-left">
-                <p className="font-semibold text-[15px]">
-                  {config.plans.upfront.title}
-                </p>
-                <p className="text-[11px] text-gray-700">
-                  {config.plans.upfront.subtitle}
-                </p>
-              </div>
-              <div
-                className={`w-6 h-6 rounded-full border flex items-center justify-center ${
-                  selectedPlan === 'upfront' ? 'border-purple-500' : 'border-gray-300'
-                }`}
-              >
-                <div
-                  className={`w-3.5 h-3.5 rounded-full ${
-                    selectedPlan === 'upfront' ? 'bg-purple-500' : 'bg-transparent'
                   }`}
                 />
               </div>
