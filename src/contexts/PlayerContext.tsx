@@ -259,6 +259,8 @@ export const PlayerProvider = ({ children }: { children: React.ReactNode }) => {
   };
 
   const canCurrentUserPlayAnotherAudio = useCallback((): boolean => {
+    // Esta função é mantida apenas para casos totalmente síncronos (ex.: limites locais).
+    // Para anonymous usamos a versão assíncrona abaixo.
     const effectiveUserType: SubscriptionUserType =
       userType || (user ? 'no_subscription' : 'anonymous');
 
@@ -281,11 +283,18 @@ export const PlayerProvider = ({ children }: { children: React.ReactNode }) => {
 
     // Usuário não logado
     if (effectiveUserType === 'anonymous') {
+      // A verificação real para anonymous é feita na função assíncrona
       if (!permissions.anonymous.limit_enabled) return true;
-      const userKey = 'anon';
+      return true;
+    }
+
+    // Usuário logado sem assinatura ativa OU assinante/trial com acesso total desligado
+    if (effectiveUserType === 'no_subscription' || effectiveUserType === 'active_subscription' || effectiveUserType === 'trial') {
+      if (!permissions.no_subscription.limit_enabled) return true;
+      const userKey = user?.id || 'anon';
       const result = checkAndIncrementFreePlay(
         userKey,
-        permissions.anonymous.max_free_audios_per_day,
+        permissions.no_subscription.max_free_audios_per_day,
       );
       if (!result.allowed) {
         openPaywall(effectiveUserType, 'limit_reached');
@@ -293,8 +302,93 @@ export const PlayerProvider = ({ children }: { children: React.ReactNode }) => {
       return result.allowed;
     }
 
+    return true;
+  }, [
+    userType,
+    user,
+    settings.paywall_permissions,
+    hasActiveSubscription,
+    hasActiveTrial,
+  ]);
+
+  const canCurrentUserPlayAnotherAudioAsync = useCallback(async (): Promise<boolean> => {
+    const effectiveUserType: SubscriptionUserType =
+      userType || (user ? 'no_subscription' : 'anonymous');
+
+    const permissions = parsePaywallPermissions(settings.paywall_permissions);
+
+    // Assinantes/trial com acesso total
+    if (effectiveUserType === 'active_subscription') {
+      if (permissions.active_subscription.full_access_enabled || hasActiveSubscription) {
+        return true;
+      }
+      // se acesso total estiver desligado, cai para regra de no_subscription
+    }
+
+    if (effectiveUserType === 'trial') {
+      if (permissions.trial.full_access_enabled || hasActiveTrial) {
+        return true;
+      }
+      // se acesso total estiver desligado, cai para regra de no_subscription
+    }
+
+    // Usuário não logado – usar backend (IP + UA) para compartilhar limite entre abas/anônimas
+    if (effectiveUserType === 'anonymous') {
+      if (!permissions.anonymous.limit_enabled) return true;
+
+      try {
+        console.log(
+          '🎧 Verificando limite de áudio gratuito (anônimo) via /api/free-plays/check',
+          {
+            maxPerDay: permissions.anonymous.max_free_audios_per_day,
+          },
+        );
+
+        const res = await fetch('/api/free-plays/check', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            maxPerDay: permissions.anonymous.max_free_audios_per_day,
+            context: 'anonymous',
+          }),
+        });
+
+        if (res.ok) {
+          const data = (await res.json()) as { allowed?: boolean; max?: number; count?: number };
+          console.log('🎧 Resposta de /api/free-plays/check (anônimo):', data);
+
+          if (data.allowed === false) {
+            openPaywall(effectiveUserType, 'limit_reached');
+            return false;
+          }
+          return true;
+        } else {
+          console.warn(
+            '⚠️ /api/free-plays/check retornou status não-OK para anônimo:',
+            res.status,
+          );
+        }
+      } catch (e) {
+        console.error('free-plays/check (anonymous) falhou, usando fallback local', e);
+      }
+
+      // Fallback local em caso de falha de rede/backend
+      const localResult = checkAndIncrementFreePlay(
+        'anon',
+        permissions.anonymous.max_free_audios_per_day,
+      );
+      if (!localResult.allowed) {
+        openPaywall(effectiveUserType, 'limit_reached');
+      }
+      return localResult.allowed;
+    }
+
     // Usuário logado sem assinatura ativa OU assinante/trial com acesso total desligado
-    if (effectiveUserType === 'no_subscription' || effectiveUserType === 'active_subscription' || effectiveUserType === 'trial') {
+    if (
+      effectiveUserType === 'no_subscription' ||
+      effectiveUserType === 'active_subscription' ||
+      effectiveUserType === 'trial'
+    ) {
       if (!permissions.no_subscription.limit_enabled) return true;
       const userKey = user?.id || 'anon';
       const result = checkAndIncrementFreePlay(
@@ -458,38 +552,47 @@ export const PlayerProvider = ({ children }: { children: React.ReactNode }) => {
   }, [state.volume]);
 
   const playAudio = (audio: Audio) => {
-    // Verificar permissões antes de iniciar um novo áudio
-    if (!canCurrentUserPlayAnotherAudio()) {
-      console.log('🎵 Reprodução bloqueada pelo limite de áudios gratuitos');
-      return;
-    }
-    // Pausar e resetar áudio atual antes de tocar novo
-    if (audioRef.current) {
-      audioRef.current.pause();
-      audioRef.current.currentTime = 0;
-    }
-    // Resetar estado de playing antes de definir novo áudio
-    dispatch({ type: 'PAUSE' });
-    console.log('🎵 Tocando áudio individual:', audio.title);
-    dispatch({ type: 'SET_AUDIO', payload: audio });
-    dispatch({ type: 'SET_QUEUE', payload: { queue: [audio], index: 0 } });
+    void (async () => {
+      // Verificar permissões antes de iniciar um novo áudio
+      if (!(await canCurrentUserPlayAnotherAudioAsync())) {
+        console.log('🎵 Reprodução bloqueada pelo limite de áudios gratuitos');
+        return;
+      }
+      // Pausar e resetar áudio atual antes de tocar novo
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current.currentTime = 0;
+      }
+      // Resetar estado de playing antes de definir novo áudio
+      dispatch({ type: 'PAUSE' });
+      console.log('🎵 Tocando áudio individual:', audio.title);
+      dispatch({ type: 'SET_AUDIO', payload: audio });
+      dispatch({ type: 'SET_QUEUE', payload: { queue: [audio], index: 0 } });
+    })();
   };
 
   const playQueue = (queue: Audio[], startIndex = 0) => {
-    // Verificar permissões apenas ao iniciar uma nova fila
-    if (!canCurrentUserPlayAnotherAudio()) {
-      console.log('🎵 Reprodução de playlist bloqueada pelo limite de áudios gratuitos');
-      return;
-    }
-    // Pausar e resetar áudio atual antes de tocar nova playlist
-    if (audioRef.current) {
-      audioRef.current.pause();
-      audioRef.current.currentTime = 0;
-    }
-    // Resetar estado de playing antes de definir nova queue
-    dispatch({ type: 'PAUSE' });
-    console.log('🎵 Tocando playlist com', queue.length, 'áudios, iniciando no índice', startIndex);
-    dispatch({ type: 'SET_QUEUE', payload: { queue, index: startIndex } });
+    void (async () => {
+      // Verificar permissões apenas ao iniciar uma nova fila
+      if (!(await canCurrentUserPlayAnotherAudioAsync())) {
+        console.log('🎵 Reprodução de playlist bloqueada pelo limite de áudios gratuitos');
+        return;
+      }
+      // Pausar e resetar áudio atual antes de tocar nova playlist
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current.currentTime = 0;
+      }
+      // Resetar estado de playing antes de definir nova queue
+      dispatch({ type: 'PAUSE' });
+      console.log(
+        '🎵 Tocando playlist com',
+        queue.length,
+        'áudios, iniciando no índice',
+        startIndex,
+      );
+      dispatch({ type: 'SET_QUEUE', payload: { queue, index: startIndex } });
+    })();
   };
 
   const play = useCallback(() => {

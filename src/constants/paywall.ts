@@ -119,10 +119,9 @@ export function parsePaywallScreenConfig(raw?: string | null): PaywallScreenConf
           ...(parsed.plans?.installments || {}),
         },
       },
-      testimonials:
-        Array.isArray(parsed.testimonials) && parsed.testimonials.length > 0
-          ? parsed.testimonials
-          : DEFAULT_PAYWALL_SCREEN_CONFIG.testimonials,
+      testimonials: Array.isArray(parsed.testimonials)
+        ? parsed.testimonials
+        : DEFAULT_PAYWALL_SCREEN_CONFIG.testimonials,
     };
   } catch {
     return DEFAULT_PAYWALL_SCREEN_CONFIG;

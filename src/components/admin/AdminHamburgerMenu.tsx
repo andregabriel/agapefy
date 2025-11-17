@@ -25,7 +25,8 @@ const adminRouteGroups = [
     routes: [
       adminRoutes.find(r => r.href === '/admin/usuarios'),
       adminRoutes.find(r => r.href === '/admin/configuracoes'),
-      adminRoutes.find(r => r.href === '/admin/permissoes')
+      adminRoutes.find(r => r.href === '/admin/permissoes'),
+      adminRoutes.find(r => r.href === '/admin/paywall')
     ].filter(Boolean)
   },
   {

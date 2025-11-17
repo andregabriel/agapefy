@@ -3,10 +3,10 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { cn } from '@/lib/utils';
-import { 
-  LayoutDashboard, 
-  Music, 
-  Users, 
+import {
+  LayoutDashboard,
+  Music,
+  Users,
   Settings,
   MessageCircle,
   BookOpen,
@@ -21,7 +21,8 @@ import {
   Webhook,
   MessageSquare,
   TrendingUp,
-  ShieldCheck
+  ShieldCheck,
+  CreditCard,
 } from 'lucide-react';
 
 const adminRoutes = [
@@ -36,6 +37,12 @@ const adminRoutes = [
     icon: ShieldCheck,
     href: '/admin/permissoes',
     color: 'text-amber-600'
+  },
+  {
+    label: 'Paywall',
+    icon: CreditCard,
+    href: '/admin/paywall',
+    color: 'text-purple-600'
   },
   {
     label: 'Analytics',
