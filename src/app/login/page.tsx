@@ -107,7 +107,7 @@ export default function LoginPage() {
     };
   }, [showEmailAuth, authView]);
 
-  // FALLBACK JS - Forçar cor branca via inline styles
+  // FALLBACK JS - Forçar cor branca via inline styles e detectar autofill
   useEffect(() => {
     if (!showEmailAuth) return;
 
@@ -116,20 +116,116 @@ export default function LoginPage() {
         '.auth-container input.supabase-auth-ui_ui-input, .auth-container input[type="email"], .auth-container input[type="password"]'
       );
       inputs.forEach((el) => {
-        el.style.color = '#ffffff';
-        (el.style as any).webkitTextFillColor = '#ffffff';
-        el.style.caretColor = '#ffffff';
+        // Forçar cor branca do texto sempre
+        el.style.setProperty('color', '#ffffff', 'important');
+        el.style.setProperty('-webkit-text-fill-color', '#ffffff', 'important');
+        el.style.setProperty('caret-color', '#ffffff', 'important');
+        
+        // Verificar se tem autofill aplicado (via getComputedStyle ou valor preenchido)
+        const hasValue = el.value && el.value.length > 0;
+        const computedStyle = window.getComputedStyle(el);
+        const bgColor = computedStyle.backgroundColor;
+        
+        // Se o campo tem valor ou parece ter autofill, garantir fundo escuro
+        if (hasValue || bgColor === 'rgb(31, 41, 55)' || el.classList.contains('autofilled')) {
+          el.style.setProperty('background-color', '#1f2937', 'important');
+          el.style.setProperty('-webkit-box-shadow', '0 0 0 30px #1f2937 inset', 'important');
+          el.style.setProperty('box-shadow', '0 0 0 30px #1f2937 inset', 'important');
+        }
       });
     };
 
-    // Aplica agora e re-aplica brevemente para ganhar de estilos tardios
+    // Observer para detectar mudanças nos inputs (incluindo autofill)
+    const observer = new MutationObserver(() => {
+      applyInlineColor();
+    });
+
+    // Aplica imediatamente
     applyInlineColor();
+    
+    // Armazenar referências dos handlers para cleanup
+    const handlers: Array<{ element: Element; event: string; handler: EventListener }> = [];
+    
+    // Observa mudanças nos inputs
+    const inputs = document.querySelectorAll('.auth-container input');
+    inputs.forEach((input) => {
+      observer.observe(input, {
+        attributes: true,
+        attributeFilter: ['style', 'class'],
+        childList: false,
+        subtree: false,
+      });
+      
+      // Handler para animationstart (autofill)
+      const handleAnimationStart = (e: Event) => {
+        if ((e as any).animationName === 'onAutoFillStart') {
+          (input as HTMLElement).classList.add('autofilled');
+          applyInlineColor();
+        }
+      };
+      
+      // Handler para input (incluindo biometria)
+      const handleInput = () => {
+        if ((input as HTMLInputElement).value) {
+          (input as HTMLElement).classList.add('autofilled');
+        }
+        applyInlineColor();
+      };
+      
+      // Handler para change
+      const handleChange = () => {
+        if ((input as HTMLInputElement).value) {
+          (input as HTMLElement).classList.add('autofilled');
+        }
+        applyInlineColor();
+      };
+      
+      // Handler para focus (Safari/Mac autofill)
+      const handleFocus = () => {
+        setTimeout(applyInlineColor, 100);
+      };
+      
+      // Handler para blur (detectar autofill após perder foco)
+      const handleBlur = () => {
+        if ((input as HTMLInputElement).value) {
+          (input as HTMLElement).classList.add('autofilled');
+          applyInlineColor();
+        }
+      };
+      
+      // Adicionar listeners e armazenar referências
+      input.addEventListener('animationstart', handleAnimationStart);
+      handlers.push({ element: input, event: 'animationstart', handler: handleAnimationStart });
+      
+      input.addEventListener('input', handleInput);
+      handlers.push({ element: input, event: 'input', handler: handleInput });
+      
+      input.addEventListener('change', handleChange);
+      handlers.push({ element: input, event: 'change', handler: handleChange });
+      
+      input.addEventListener('focus', handleFocus);
+      handlers.push({ element: input, event: 'focus', handler: handleFocus });
+      
+      input.addEventListener('blur', handleBlur);
+      handlers.push({ element: input, event: 'blur', handler: handleBlur });
+    });
+
+    // Re-aplica em intervalos para garantir
     const t1 = setTimeout(applyInlineColor, 50);
     const t2 = setTimeout(applyInlineColor, 250);
+    const t3 = setTimeout(applyInlineColor, 500);
+    const t4 = setTimeout(applyInlineColor, 1000);
 
     return () => { 
       clearTimeout(t1); 
-      clearTimeout(t2); 
+      clearTimeout(t2);
+      clearTimeout(t3);
+      clearTimeout(t4);
+      observer.disconnect();
+      // Remover todos os listeners usando as referências armazenadas
+      handlers.forEach(({ element, event, handler }) => {
+        element.removeEventListener(event, handler);
+      });
     };
   }, [showEmailAuth]);
 
@@ -403,10 +499,74 @@ export default function LoginPage() {
         /* 4) Autofill do Chrome/Safari (mantém texto branco) */
         .auth-container input.supabase-auth-ui_ui-input:-webkit-autofill,
         .auth-container input.supabase-auth-ui_ui-input:-webkit-autofill:hover,
-        .auth-container input.supabase-auth-ui_ui-input:-webkit-autofill:focus {
+        .auth-container input.supabase-auth-ui_ui-input:-webkit-autofill:focus,
+        .auth-container input.supabase-auth-ui_ui-input:-webkit-autofill:active {
           -webkit-text-fill-color: #ffffff !important;
           -webkit-box-shadow: 0 0 0 30px #1f2937 inset !important;
+          box-shadow: 0 0 0 30px #1f2937 inset !important;
           caret-color: #ffffff !important;
+          color: #ffffff !important;
+          background-color: #1f2937 !important;
+          transition: background-color 5000s ease-in-out 0s !important;
+        }
+
+        /* 5) Animação para detectar autofill */
+        @keyframes onAutoFillStart {
+          from {
+            opacity: 0;
+          }
+          to {
+            opacity: 0;
+          }
+        }
+
+        @keyframes onAutoFillCancel {
+          from {
+            opacity: 0;
+          }
+          to {
+            opacity: 0;
+          }
+        }
+
+        .auth-container input.supabase-auth-ui_ui-input:-webkit-autofill {
+          animation-name: onAutoFillStart;
+          animation-duration: 0.001s;
+        }
+
+        /* 6) Garantir que todos os inputs tenham texto branco */
+        .auth-container input[type="email"],
+        .auth-container input[type="password"],
+        .auth-container input[type="text"] {
+          color: #ffffff !important;
+          -webkit-text-fill-color: #ffffff !important;
+        }
+
+        .auth-container input[type="email"]:-webkit-autofill,
+        .auth-container input[type="password"]:-webkit-autofill,
+        .auth-container input[type="text"]:-webkit-autofill {
+          -webkit-text-fill-color: #ffffff !important;
+          -webkit-box-shadow: 0 0 0 30px #1f2937 inset !important;
+          box-shadow: 0 0 0 30px #1f2937 inset !important;
+          color: #ffffff !important;
+        }
+
+        /* 7) Estilos para campos marcados como autofilled (biometria) */
+        .auth-container input.autofilled,
+        .auth-container input.autofilled:-webkit-autofill {
+          color: #ffffff !important;
+          -webkit-text-fill-color: #ffffff !important;
+          background-color: #1f2937 !important;
+          -webkit-box-shadow: 0 0 0 30px #1f2937 inset !important;
+          box-shadow: 0 0 0 30px #1f2937 inset !important;
+        }
+
+        /* 8) Forçar texto branco em qualquer estado do input com valor */
+        .auth-container input[type="email"]:not(:placeholder-shown),
+        .auth-container input[type="password"]:not(:placeholder-shown),
+        .auth-container input[type="text"]:not(:placeholder-shown) {
+          color: #ffffff !important;
+          -webkit-text-fill-color: #ffffff !important;
         }
 
         /* Estilos básicos do Auth UI */

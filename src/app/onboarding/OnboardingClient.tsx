@@ -78,6 +78,7 @@ export default function OnboardingClient() {
   const [playlists, setPlaylists] = useState<{ id: string; title: string; description?: string | null; cover_url?: string | null }[]>([]);
   const [hasWhatsApp, setHasWhatsApp] = useState<boolean | null>(null);
   const [phoneForWhatsApp, setPhoneForWhatsApp] = useState<string>('');
+  const [usedOtherSituation, setUsedOtherSituation] = useState<boolean>(false);
   const [dailyVerseEnabled, setDailyVerseEnabled] = useState<boolean>(true);
   const [savingVersePref, setSavingVersePref] = useState<boolean>(false);
   const [previousResponses, setPreviousResponses] = useState<Map<number, string>>(new Map());
@@ -892,6 +893,16 @@ export default function OnboardingClient() {
         const requestedStep = steps.find(s => s.position === stepParam);
         if (mounted) {
           setCurrentStepMeta(requestedStep || null);
+        }
+
+        // Regra especial: o passo informativo final de WhatsApp (step=11)
+        // só deve aparecer para quem escolheu "Outra Situação" no passo 1.
+        // Para os demais fluxos, ao tentar acessar esse passo, redirecionamos direto para a home.
+        if (requestedStep && requestedStep.type === 'info' && stepParam === 11 && !usedOtherSituation) {
+          if (mounted) {
+            router.replace('/');
+          }
+          return;
         }
         
         // Se o passo solicitado não existe ou está inativo, redirecionar para o próximo ativo
@@ -2551,9 +2562,11 @@ export default function OnboardingClient() {
             onValueChange={(key) => {
               setSelectedKey(key);
               if (key === 'other') {
+                setUsedOtherSituation(true);
                 setSelected('');
                 // Não limpar o texto quando selecionar "other"
               } else {
+                setUsedOtherSituation(false);
                 const index = Number(key);
                 const chosen = form.schema?.[index];
                 if (chosen) {
