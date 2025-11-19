@@ -19,3 +19,5 @@ comment on column public.whatsapp_prayer_log.sent_date is 'Local date (America/S
 
 
 
+
+

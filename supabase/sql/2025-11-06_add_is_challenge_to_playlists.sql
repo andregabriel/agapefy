@@ -20,3 +20,5 @@ COMMENT ON COLUMN public.playlists.is_challenge IS 'Indica se a playlist é um d
 
 
 
+
+

@@ -524,3 +524,5 @@ Precisa de ajuda adicional?
 
 *Que este aplicativo seja uma bênção em sua jornada espiritual! 🙏*
 
+
+

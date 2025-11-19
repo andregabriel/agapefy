@@ -1,17 +1,28 @@
 "use client";
 
-import { AuthProvider } from '@/contexts/AuthContext';
+import { AuthProvider, useAuth } from '@/contexts/AuthContext';
 import { PlayerProvider } from '@/contexts/PlayerContext';
 import { Toaster } from '@/components/ui/sonner';
 import { Header } from '@/components/Header';
 import { BottomNavigation } from '@/components/layout/BottomNavigation';
 import { usePathname, useRouter } from 'next/navigation';
-import { useEffect, useMemo, useState } from 'react';
-import { useAuth } from '@/contexts/AuthContext';
+import { useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import { PaywallModal } from '@/components/modals/PaywallModal';
 
 export default function AppShell({ children }: { children: React.ReactNode }) {
+  // Colocamos os providers aqui no topo, e movemos a lógica que consome o AuthContext
+  // para um componente filho, garantindo que useAuth seja sempre usado dentro do provider.
+  return (
+    <AuthProvider>
+      <PlayerProvider>
+        <AppShellInner>{children}</AppShellInner>
+      </PlayerProvider>
+    </AuthProvider>
+  );
+}
+
+function AppShellInner({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
   const { user, loading } = useAuth();
@@ -31,9 +42,10 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
       if (pathname.startsWith('/onboarding')) return; // já no fluxo de onboarding
 
       try {
-        const alreadyRedirected = typeof window !== 'undefined' && sessionStorage.getItem('onboardingRedirected') === '1';
+        const alreadyRedirected =
+          typeof window !== 'undefined' && sessionStorage.getItem('onboardingRedirected') === '1';
         const res = await fetch('/api/onboarding/status', {
-          headers: { 'x-user-id': user.id }
+          headers: { 'x-user-id': user.id },
         });
         if (!res.ok) return;
         const json = await res.json();
@@ -41,7 +53,11 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
         if (json?.pending && typeof json?.nextStep === 'number') {
           if (!alreadyRedirected) {
             router.replace(`/onboarding?step=${json.nextStep}`);
-            try { sessionStorage.setItem('onboardingRedirected', '1'); } catch {}
+            try {
+              sessionStorage.setItem('onboardingRedirected', '1');
+            } catch {
+              // ignore
+            }
           }
           return;
         }
@@ -56,7 +72,11 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
         if (!data?.phone_number) {
           if (!alreadyRedirected) {
             router.replace('/onboarding?step=7');
-            try { sessionStorage.setItem('onboardingRedirected', '1'); } catch {}
+            try {
+              sessionStorage.setItem('onboardingRedirected', '1');
+            } catch {
+              // ignore
+            }
           }
         }
       } catch {
@@ -64,29 +84,28 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
       }
     }
     void checkOnboarding();
-    return () => { aborted = true; };
+    return () => {
+      aborted = true;
+    };
   }, [user, loading, pathname, router]);
 
   return (
-    <AuthProvider>
-      <PlayerProvider>
-        <div className={hideHeader ? 'hidden' : ''}>
-          <Header />
-        </div>
+    <>
+      <div className={hideHeader ? 'hidden' : ''}>
+        <Header />
+      </div>
 
-        <main className={`flex-1 ${!hideBottomNav ? 'pb-20' : ''} ${!hideHeader ? 'pt-16' : ''}`}>
-          {children}
-        </main>
+      <main className={`flex-1 ${!hideBottomNav ? 'pb-20' : ''} ${!hideHeader ? 'pt-16' : ''}`}>
+        {children}
+      </main>
 
-        <div className={hideBottomNav ? 'hidden' : ''}>
-          <BottomNavigation />
-        </div>
+      <div className={hideBottomNav ? 'hidden' : ''}>
+        <BottomNavigation />
+      </div>
 
-        <PaywallModal />
-        <Toaster />
-      </PlayerProvider>
-    </AuthProvider>
+      <PaywallModal />
+      <Toaster />
+    </>
   );
 }
-
 
