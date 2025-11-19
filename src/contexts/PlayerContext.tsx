@@ -61,7 +61,8 @@ function buildFreePlayStorageKey(userKey: string) {
   return `agapefy_free_plays_v1_${userKey || 'anon'}`;
 }
 
-function checkAndIncrementFreePlay(
+// Função legada para fallback local (apenas quando API falhar)
+function checkAndIncrementFreePlayLocal(
   userKey: string,
   maxFreePerDay: number,
 ): { allowed: boolean; count: number; max: number } {
@@ -289,10 +290,12 @@ export const PlayerProvider = ({ children }: { children: React.ReactNode }) => {
     }
 
     // Usuário logado sem assinatura ativa OU assinante/trial com acesso total desligado
+    // Esta função síncrona usa apenas fallback local (a versão assíncrona usa API)
     if (effectiveUserType === 'no_subscription' || effectiveUserType === 'active_subscription' || effectiveUserType === 'trial') {
       if (!permissions.no_subscription.limit_enabled) return true;
+      // Fallback local apenas (não ideal, mas necessário para casos síncronos)
       const userKey = user?.id || 'anon';
-      const result = checkAndIncrementFreePlay(
+      const result = checkAndIncrementFreePlayLocal(
         userKey,
         permissions.no_subscription.max_free_audios_per_day,
       );
@@ -373,7 +376,7 @@ export const PlayerProvider = ({ children }: { children: React.ReactNode }) => {
       }
 
       // Fallback local em caso de falha de rede/backend
-      const localResult = checkAndIncrementFreePlay(
+      const localResult = checkAndIncrementFreePlayLocal(
         'anon',
         permissions.anonymous.max_free_audios_per_day,
       );

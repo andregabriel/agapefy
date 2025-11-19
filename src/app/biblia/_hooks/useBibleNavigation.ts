@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useCallback, useEffect } from 'react';
+import { useBiblePreferences } from '@/hooks/useBiblePreferences';
 
 interface LastRead {
   book: string;
@@ -100,7 +101,7 @@ const devError = (category: string, ...args: any[]) => {
 };
 
 // Função para extrair estado inicial
-function getInitialState(): { book: string; chapter: number; verse: number | null } {
+function getInitialState(preferences: { last_read_book?: string | null; last_read_chapter?: number | null; last_read_verse?: number | null } | null): { book: string; chapter: number; verse: number | null } {
   if (typeof window !== "undefined") {
     const urlParams = new URLSearchParams(window.location.search);
     const livroParam = urlParams.get('livro');
@@ -115,6 +116,16 @@ function getInitialState(): { book: string; chapter: number; verse: number | nul
         devLog('init', 'Using query params:', { book: livroParam, chapter, verse });
         return { book: livroParam, chapter, verse };
       }
+    }
+    
+    // Prioridade: Supabase > localStorage > default
+    if (preferences?.last_read_book && preferences?.last_read_chapter && preferences?.last_read_verse) {
+      devLog('init', 'Using Supabase preferences:', preferences);
+      return {
+        book: preferences.last_read_book,
+        chapter: preferences.last_read_chapter,
+        verse: preferences.last_read_verse
+      };
     }
     
     try {
@@ -138,41 +149,69 @@ function getInitialState(): { book: string; chapter: number; verse: number | nul
 }
 
 export function useBibleNavigation() {
+  const { preferences, saveLastRead: saveLastReadToSupabase, loading: preferencesLoading } = useBiblePreferences();
   const [book, setBook] = useState<string>('GEN');
   const [chapter, setChapter] = useState<number>(1);
   const [lastRead, setLastRead] = useState<LastRead | null>(null);
+  const [isInitialized, setIsInitialized] = useState(false);
 
   // Obter informações do livro atual
   const currentBook = BOOKS.find(b => b.code === book);
   const bookName = currentBook?.name || 'Gênesis';
   const maxChapters = currentBook?.chapters || 50;
 
-  // Salvar no localStorage
-  const saveLastRead = useCallback((bookCode: string, chapterNum: number, verseNum: number) => {
+  // Inicializar quando as preferências forem carregadas
+  useEffect(() => {
+    if (!isInitialized && !preferencesLoading) {
+      const initialState = getInitialState(preferences);
+      setBook(initialState.book);
+      setChapter(initialState.chapter);
+      
+      // Carregar lastRead das preferências ou localStorage
+      if (preferences?.last_read_book && preferences?.last_read_chapter && preferences?.last_read_verse) {
+        setLastRead({
+          book: preferences.last_read_book,
+          chapter: preferences.last_read_chapter,
+          verse: preferences.last_read_verse
+        });
+      } else if (typeof window !== "undefined") {
+        try {
+          const savedLastRead = localStorage.getItem('biblia_last_read');
+          if (savedLastRead) {
+            const lastReadData: LastRead = JSON.parse(savedLastRead);
+            setLastRead(lastReadData);
+          }
+        } catch (err) {
+          devError('init', 'Failed to parse localStorage:', err);
+        }
+      }
+      
+      setIsInitialized(true);
+    }
+  }, [preferences, preferencesLoading, isInitialized]);
+
+  // Salvar última leitura (localStorage + Supabase)
+  const saveLastRead = useCallback(async (bookCode: string, chapterNum: number, verseNum: number) => {
     const newLastRead: LastRead = {
       book: bookCode,
       chapter: chapterNum,
       verse: verseNum
     };
     
-    if (typeof window !== "undefined") {
-      try {
-        localStorage.setItem('biblia_last_read', JSON.stringify(newLastRead));
-        setLastRead(newLastRead);
-        devLog('storage', 'Saved last read:', newLastRead);
-      } catch (err) {
-        devError('storage', 'Failed to save last read', err);
-      }
-    }
-  }, []);
+    setLastRead(newLastRead);
+    devLog('storage', 'Saving last read:', newLastRead);
+    
+    // Salvar no Supabase (que também salva no localStorage como cache)
+    await saveLastReadToSupabase(bookCode, chapterNum, verseNum);
+  }, [saveLastReadToSupabase]);
 
   // Navegar para capítulo específico
   const navigateToChapter = useCallback((newBook: string, newChapter: number, targetVerseNum?: number) => {
     setBook(newBook);
     setChapter(newChapter);
     
-    // Salvar progresso
-    saveLastRead(newBook, newChapter, targetVerseNum || 1);
+    // Salvar progresso (async, mas não bloqueia navegação)
+    void saveLastRead(newBook, newChapter, targetVerseNum || 1);
     
     return { book: newBook, chapter: newChapter, verse: targetVerseNum || null };
   }, [saveLastRead]);
@@ -218,27 +257,13 @@ export function useBibleNavigation() {
     return currentBookIndex < BOOKS.length - 1;
   }, [book, chapter, maxChapters]);
 
-  // Inicialização
+  // Inicialização (mantida para compatibilidade, mas a inicialização real acontece no useEffect acima)
   const initializeFromState = useCallback(() => {
-    const initialState = getInitialState();
-    setBook(initialState.book);
-    setChapter(initialState.chapter);
-    
-    // Carregar lastRead do localStorage
-    if (typeof window !== "undefined") {
-      try {
-        const savedLastRead = localStorage.getItem('biblia_last_read');
-        if (savedLastRead) {
-          const lastReadData: LastRead = JSON.parse(savedLastRead);
-          setLastRead(lastReadData);
-        }
-      } catch (err) {
-        devError('init', 'Failed to parse localStorage:', err);
-      }
-    }
-    
+    const initialState = getInitialState(preferences);
+    // Não atualizar estado aqui, pois já é feito no useEffect
+    // Apenas retornar o estado inicial para compatibilidade
     return initialState;
-  }, []);
+  }, [preferences]);
 
   return {
     // Estado

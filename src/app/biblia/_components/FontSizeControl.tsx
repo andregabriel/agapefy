@@ -3,21 +3,29 @@
 
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
+import { useBiblePreferences } from '@/hooks/useBiblePreferences';
 
 interface FontSizeControlProps {
   onScaleChange: (scale: number) => void;
 }
 
 export default function FontSizeControl({ onScaleChange }: FontSizeControlProps) {
+  const { preferences, saveFontScale: saveFontScaleToSupabase } = useBiblePreferences();
   const [scale, setScale] = useState<number>(1.0);
   
   const MIN_SCALE = 0.90;
   const MAX_SCALE = 1.30;
   const STEP = 0.05;
 
-  // Carregar escala do localStorage (client-only)
+  // Carregar escala das preferências (Supabase > localStorage)
   useEffect(() => {
-    if (typeof window !== "undefined") {
+    if (preferences?.font_scale) {
+      const parsedScale = preferences.font_scale;
+      if (!isNaN(parsedScale) && parsedScale >= MIN_SCALE && parsedScale <= MAX_SCALE) {
+        setScale(parsedScale);
+        onScaleChange(parsedScale);
+      }
+    } else if (typeof window !== "undefined") {
       try {
         const savedScale = localStorage.getItem('biblia_font_scale');
         if (savedScale) {
@@ -31,25 +39,15 @@ export default function FontSizeControl({ onScaleChange }: FontSizeControlProps)
         console.warn('[font-control] Failed to load font scale from localStorage');
       }
     }
-  }, [onScaleChange]);
-
-  // Salvar escala no localStorage
-  const saveScale = (newScale: number) => {
-    if (typeof window !== "undefined") {
-      try {
-        localStorage.setItem('biblia_font_scale', newScale.toString());
-      } catch (err) {
-        console.warn('[font-control] Failed to save font scale to localStorage');
-      }
-    }
-  };
+  }, [preferences, onScaleChange]);
 
   // Diminuir fonte
   const decreaseFont = () => {
     const newScale = Math.max(MIN_SCALE, Math.round((scale - STEP) * 100) / 100);
     setScale(newScale);
     onScaleChange(newScale);
-    saveScale(newScale);
+    // Salvar no Supabase (que também salva no localStorage como cache)
+    void saveFontScaleToSupabase(newScale);
   };
 
   // Aumentar fonte
@@ -57,7 +55,8 @@ export default function FontSizeControl({ onScaleChange }: FontSizeControlProps)
     const newScale = Math.min(MAX_SCALE, Math.round((scale + STEP) * 100) / 100);
     setScale(newScale);
     onScaleChange(newScale);
-    saveScale(newScale);
+    // Salvar no Supabase (que também salva no localStorage como cache)
+    void saveFontScaleToSupabase(newScale);
   };
 
   // Formatar indicador de escala

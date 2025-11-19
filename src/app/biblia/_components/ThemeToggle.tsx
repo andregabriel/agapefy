@@ -4,17 +4,23 @@
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Moon, Sun } from 'lucide-react';
+import { useBiblePreferences } from '@/hooks/useBiblePreferences';
 
 interface ThemeToggleProps {
   onThemeChange: (isDark: boolean) => void;
 }
 
 export default function ThemeToggle({ onThemeChange }: ThemeToggleProps) {
+  const { preferences, saveTheme: saveThemeToSupabase } = useBiblePreferences();
   const [isDark, setIsDark] = useState<boolean>(false);
 
-  // Carregar tema do localStorage (client-only)
+  // Carregar tema das preferências (Supabase > localStorage)
   useEffect(() => {
-    if (typeof window !== "undefined") {
+    if (preferences?.theme) {
+      const isDarkTheme = preferences.theme === 'dark';
+      setIsDark(isDarkTheme);
+      onThemeChange(isDarkTheme);
+    } else if (typeof window !== "undefined") {
       try {
         const savedTheme = localStorage.getItem('biblia_theme');
         if (savedTheme) {
@@ -26,25 +32,15 @@ export default function ThemeToggle({ onThemeChange }: ThemeToggleProps) {
         console.warn('[theme-toggle] Failed to load theme from localStorage');
       }
     }
-  }, [onThemeChange]);
-
-  // Salvar tema no localStorage
-  const saveTheme = (isDarkTheme: boolean) => {
-    if (typeof window !== "undefined") {
-      try {
-        localStorage.setItem('biblia_theme', isDarkTheme ? 'dark' : 'light');
-      } catch (err) {
-        console.warn('[theme-toggle] Failed to save theme to localStorage');
-      }
-    }
-  };
+  }, [preferences, onThemeChange]);
 
   // Toggle tema
   const toggleTheme = () => {
     const newIsDark = !isDark;
     setIsDark(newIsDark);
     onThemeChange(newIsDark);
-    saveTheme(newIsDark);
+    // Salvar no Supabase (que também salva no localStorage como cache)
+    void saveThemeToSupabase(newIsDark ? 'dark' : 'light');
   };
 
   return (
