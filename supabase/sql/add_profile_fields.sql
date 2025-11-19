@@ -12,3 +12,4 @@ comment on column public.profiles.whatsapp is 'Número de WhatsApp do usuário';
 comment on column public.profiles.notification_novidades is 'Preferência de notificação para novidades da Agapefy';
 
 
+

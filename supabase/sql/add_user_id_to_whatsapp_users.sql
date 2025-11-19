@@ -11,3 +11,4 @@ create index if not exists idx_whatsapp_users_user_id on public.whatsapp_users(u
 comment on column public.whatsapp_users.user_id is 'ID do usuário logado vinculado ao número do WhatsApp. Permite buscar dados do usuário incluindo WhatsApp e email.';
 
 
+
