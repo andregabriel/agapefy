@@ -1,18 +1,6 @@
 {
   "crons": [
     {
-      "path": "/api/cron",
-      "schedule": "*/5 * * * *"
-    },
-    {
-      "path": "/api/cron-send-verse",
-      "schedule": "1 12 * * *"
-    },
-    {
-      "path": "/api/cron-prayers",
-      "schedule": "*/5 * * * *"
-    },
-    {
       "path": "/api/cron-challenge",
       "schedule": "*/5 * * * *"
     }
