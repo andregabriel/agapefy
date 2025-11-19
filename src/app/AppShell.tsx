@@ -2,6 +2,7 @@
 
 import { AuthProvider, useAuth } from '@/contexts/AuthContext';
 import { PlayerProvider } from '@/contexts/PlayerContext';
+import { RoutineProvider } from '@/contexts/RoutineContext';
 import { Toaster } from '@/components/ui/sonner';
 import { Header } from '@/components/Header';
 import { BottomNavigation } from '@/components/layout/BottomNavigation';
@@ -15,9 +16,11 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   // para um componente filho, garantindo que useAuth seja sempre usado dentro do provider.
   return (
     <AuthProvider>
-      <PlayerProvider>
-        <AppShellInner>{children}</AppShellInner>
-      </PlayerProvider>
+      <RoutineProvider>
+        <PlayerProvider>
+          <AppShellInner>{children}</AppShellInner>
+        </PlayerProvider>
+      </RoutineProvider>
     </AuthProvider>
   );
 }

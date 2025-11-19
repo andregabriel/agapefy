@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
-import { Search, Plus, Check, Play } from 'lucide-react';
+import { Search, Plus, Check, Play, X } from 'lucide-react';
 import { searchAudios, getCategories } from '@/lib/supabase-queries';
 import type { Audio, Category } from '@/lib/supabase-queries';
 import { useRoutinePlaylist } from '@/hooks/useRoutinePlaylist';
@@ -24,7 +24,7 @@ export function AddAudioToRoutineModal({ open, onOpenChange }: AddAudioToRoutine
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(false);
   
-  const { addAudioToRoutine, isAudioInRoutine } = useRoutinePlaylist();
+  const { addAudioToRoutine, removeAudioFromRoutine, isAudioInRoutine } = useRoutinePlaylist();
 
   // Carregar categorias
   useEffect(() => {
@@ -73,11 +73,28 @@ export function AddAudioToRoutineModal({ open, onOpenChange }: AddAudioToRoutine
       const success = await addAudioToRoutine(audio.id);
       if (success) {
         toast.success(`"${audio.title}" adicionado à sua rotina!`);
+        // O estado já foi atualizado de forma otimista no hook
       } else {
         toast.error('Erro ao adicionar áudio à rotina');
       }
     } catch (error) {
       console.error('Erro ao adicionar áudio:', error);
+      toast.error('Erro inesperado');
+    }
+  };
+
+  // Remover áudio da rotina
+  const handleRemoveAudio = async (audio: Audio) => {
+    try {
+      const success = await removeAudioFromRoutine(audio.id);
+      if (success) {
+        toast.success(`"${audio.title}" removido da sua rotina!`);
+        // O estado já foi atualizado de forma otimista no hook
+      } else {
+        toast.error('Erro ao remover áudio da rotina');
+      }
+    } catch (error) {
+      console.error('Erro ao remover áudio:', error);
       toast.error('Erro inesperado');
     }
   };
@@ -197,14 +214,14 @@ export function AddAudioToRoutineModal({ open, onOpenChange }: AddAudioToRoutine
                       <Button
                         size="sm"
                         variant={inRoutine ? "secondary" : "default"}
-                        onClick={() => handleAddAudio(audio)}
-                        disabled={inRoutine}
-                        className={inRoutine ? "bg-green-600 hover:bg-green-700" : ""}
+                        onClick={() => inRoutine ? handleRemoveAudio(audio) : handleAddAudio(audio)}
+                        className={inRoutine ? "bg-green-600 hover:bg-red-600 transition-colors" : ""}
+                        title={inRoutine ? "Clique para remover da rotina" : "Clique para adicionar à rotina"}
                       >
                         {inRoutine ? (
                           <>
-                            <Check className="h-4 w-4 mr-1" />
-                            Na Rotina
+                            <X className="h-4 w-4 mr-1" />
+                            Remover
                           </>
                         ) : (
                           <>

@@ -23,6 +23,7 @@ import {
   TrendingUp,
   ShieldCheck,
   CreditCard,
+  Wand2,
 } from 'lucide-react';
 
 const adminRoutes = [
@@ -103,6 +104,12 @@ const adminRoutes = [
     icon: PlayCircle,
     href: '/admin/gerar-serie',
     color: 'text-pink-500'
+  },
+  {
+    label: 'Gerar em Massa',
+    icon: Wand2,
+    href: '/admin/gm',
+    color: 'text-purple-400'
   },
   {
     label: 'NPS',

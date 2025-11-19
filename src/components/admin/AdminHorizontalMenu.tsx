@@ -23,6 +23,7 @@ const adminRouteGroups: { title: string; routes: AdminRoute[] }[] = [
     routes: [
       adminRoutes.find((r) => r.href === '/admin/usuarios'),
       adminRoutes.find((r) => r.href === '/admin/configuracoes'),
+      adminRoutes.find((r) => r.href === '/admin/onboarding'),
     ].filter(Boolean) as AdminRoute[],
   },
   {
@@ -39,6 +40,7 @@ const adminRouteGroups: { title: string; routes: AdminRoute[] }[] = [
       adminRoutes.find((r) => r.href === '/admin/go'),
       adminRoutes.find((r) => r.href === '/admin/gerar-lote'),
       adminRoutes.find((r) => r.href === '/admin/gerar-serie'),
+      adminRoutes.find((r) => r.href === '/admin/gm'),
     ].filter(Boolean) as AdminRoute[],
   },
   {
