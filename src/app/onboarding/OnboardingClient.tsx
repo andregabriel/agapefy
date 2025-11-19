@@ -410,9 +410,92 @@ export default function OnboardingClient() {
   }
 
   // Função helper para navegar para a próxima etapa após salvar WhatsApp
+  // e conectar a playlist de desafio escolhida no onboarding com whatsapp_user_challenges
   async function handleWhatsAppSaved(phone: string) {
     setHasWhatsApp(true);
     try {
+      const cleanPhone = (phone || '').replace(/\D/g, '');
+
+      // Se o usuário estiver logado e tivermos um telefone válido,
+      // tentar vincular automaticamente a playlist de desafio escolhida no passo 2
+      if (user?.id && cleanPhone) {
+        try {
+          // Descobrir o formulário do passo 2 (mesma lógica usada para recuperar a playlist no passo 3)
+          let step2Form: any = null;
+          const parentFormId = activeFormId || form?.id || '';
+
+          try {
+            const primary = await supabase
+              .from('admin_forms')
+              .select('id')
+              .eq('form_type', 'onboarding')
+              .eq('is_active', true)
+              .eq('onboard_step', 2)
+              .eq('parent_form_id', parentFormId || '-')
+              .maybeSingle();
+            if (!primary.error && primary.data) {
+              step2Form = primary.data;
+            }
+          } catch (e) {
+            console.warn('Falha ao buscar formulário principal do passo 2:', e);
+          }
+
+          // Fallback: buscar qualquer formulário ativo do passo 2 se não houver parent_form_id
+          if (!step2Form) {
+            try {
+              const fallback = await supabase
+                .from('admin_forms')
+                .select('id')
+                .eq('form_type', 'onboarding')
+                .eq('is_active', true)
+                .eq('onboard_step', 2)
+                .maybeSingle();
+              if (!fallback.error && fallback.data) {
+                step2Form = fallback.data;
+              }
+            } catch (e) {
+              console.warn('Falha ao buscar formulário fallback do passo 2:', e);
+            }
+          }
+
+          // Se existe formulário do passo 2, buscar a última resposta do usuário
+          if (step2Form?.id) {
+            const resp = await supabase
+              .from('admin_form_responses')
+              .select('answers, created_at')
+              .eq('user_id', user.id)
+              .eq('form_id', step2Form.id)
+              .order('created_at', { ascending: false })
+              .limit(1)
+              .maybeSingle();
+
+            const ans: any = (resp.data as any)?.answers || {};
+            const playlistId = typeof ans?.option === 'string' ? ans.option : null;
+
+            // Se o usuário escolheu uma playlist de desafio, criar/atualizar o vínculo em whatsapp_user_challenges
+            if (playlistId) {
+              const payload: any = {
+                phone_number: cleanPhone,
+                playlist_id: playlistId,
+                // Horário padrão para início da jornada, caso o usuário ainda não defina outro em /whatsapp
+                send_time: '08:00',
+              };
+
+              try {
+                await supabase
+                  .from('whatsapp_user_challenges')
+                  .upsert(payload, { onConflict: 'phone_number,playlist_id' });
+              } catch (e) {
+                // Não quebrar o fluxo do onboarding se esse vínculo falhar
+                console.warn('Erro ao vincular desafio do onboarding ao WhatsApp:', e);
+              }
+            }
+          }
+        } catch (e) {
+          console.warn('Falha ao vincular desafio do onboarding ao WhatsApp:', e);
+        }
+      }
+
       const nextUrl = await getNextStepUrl(desiredStep, { categoryId: currentCategoryId || undefined });
       router.replace(nextUrl);
     } catch (error) {

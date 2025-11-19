@@ -968,6 +968,37 @@ export default function WhatsAppSetup({ variant = "standalone", redirectIfNotLog
                     />
                     </div>
                   </div>
+
+                  <div className="flex flex-col sm:flex-row gap-3 pt-2">
+                    <Button
+                      type="button"
+                      variant="default"
+                      className="sm:w-auto"
+                      disabled={!selectedChallengeId || !challengeTime || challengeTime.length < 4}
+                      onClick={async () => {
+                        // Garantir que seleção + horário estejam persistidos
+                        await saveChallengeSelection();
+                        // Ativar flag de desafio diário
+                        if (!dailyPrayer) {
+                          await updatePreference('receives_daily_prayer', true);
+                        }
+                      }}
+                    >
+                      Iniciar novo desafio
+                    </Button>
+                    {selectedChallengeId && dailyPrayer && (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        className="sm:w-auto"
+                        onClick={async () => {
+                          await updatePreference('receives_daily_prayer', false);
+                        }}
+                      >
+                        Pausar desafio
+                      </Button>
+                    )}
+                  </div>
                 </>
               )}
             </div>
