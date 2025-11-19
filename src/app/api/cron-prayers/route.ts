@@ -113,6 +113,20 @@ async function inlineSend(test: boolean, limit?: number) {
   const perSlotResults: Record<string, number> = {};
 
   for (const s of slots) {
+    // Concurrency guard: acquire a per-slot/day lock before processing to avoid duplicate runs
+    if (!test) {
+      const lockKey = `prayer_lock_${s.slot}_${dateStr}`;
+      const { error: lockError } = await adminSupabase
+        .from('app_settings')
+        .insert({ key: lockKey, value: new Date().toISOString(), type: 'text' });
+      if (lockError) {
+        // If the row already exists (duplicate key), consider it locked and skip this slot
+        console.log(`Slot ${s.slot} locked for ${dateStr}, skipping to avoid duplicates`);
+        perSlotResults[s.slot] = 0;
+        continue;
+      }
+    }
+
     // Fetch users eligible for this slot
     // Only users with receives_daily_routine = true (Minha Rotina) should receive routine prayers
     const q = adminSupabase
@@ -123,11 +137,15 @@ async function inlineSend(test: boolean, limit?: number) {
       .not(s.column as any, 'is', null);
 
     let { data: users, error } = await q;
-    if (error) continue;
+    if (error) {
+      perSlotResults[s.slot] = 0;
+      continue;
+    }
     users = users || [];
 
     // Filter users whose selected prayer time has just passed (within last 5 minutes)
     // This ensures we send only once when the selected time arrives, not every 5 minutes
+    // IMPORTANT: Only send for TODAY, not for past days
     const eligibleUsers = users.filter((u: any) => {
       const userTimeStr = (u[s.column] as string) || '';
       if (!userTimeStr || userTimeStr.length < 5) return false;
@@ -159,15 +177,24 @@ async function inlineSend(test: boolean, limit?: number) {
     for (const u of eligibleUsers) {
       const phone = (u as any).phone_number as string;
 
-      // Idempotency per user/slot/day
+      // Idempotency per user/slot/day - CHECK BEFORE SENDING
+      // This ensures we never send duplicates, even if multiple cron runs happen
       const { data: already } = await adminSupabase
         .from('whatsapp_prayer_log')
         .select('id')
         .eq('user_phone', phone)
         .eq('slot', s.slot)
-        .eq('sent_date', dateStr)
+        .eq('sent_date', dateStr) // Only check for TODAY, not past days
         .limit(1);
-      if ((already && already.length > 0) && !test) continue;
+      
+      // Skip if already sent today (even in test mode, we check but don't enforce)
+      if (already && already.length > 0) {
+        if (!test) {
+          continue; // Skip this user, already sent today
+        }
+        // In test mode, log but don't skip
+        console.log(`Test mode: User ${phone} already has log for ${s.slot} on ${dateStr}`);
+      }
 
       const prompt = getSlotPrompt(s.slot);
       const prayer = await generatePrayerText(prompt);
@@ -177,13 +204,30 @@ async function inlineSend(test: boolean, limit?: number) {
 \n_Agape - Seu companheiro espiritual_ ✨`;
 
       if (!test) {
+        // Insert log BEFORE sending to prevent race conditions
+        // If insert fails (duplicate), skip sending
+        const { error: logError } = await adminSupabase
+          .from('whatsapp_prayer_log')
+          .insert({ user_phone: phone, slot: s.slot, sent_date: dateStr });
+        
+        if (logError) {
+          // If log insert fails (duplicate key), skip sending to avoid duplicates
+          console.log(`Duplicate log detected for ${phone} ${s.slot} ${dateStr}, skipping send`);
+          continue;
+        }
+
         const res = await sendWhatsAppText(phone, message);
         if (res.ok) {
-          await adminSupabase
-            .from('whatsapp_prayer_log')
-            .insert({ user_phone: phone, slot: s.slot, sent_date: dateStr });
           totalSent++;
           perSlotResults[s.slot]! += 1;
+        } else {
+          // If send failed, remove the log entry so it can be retried later
+          await adminSupabase
+            .from('whatsapp_prayer_log')
+            .delete()
+            .eq('user_phone', phone)
+            .eq('slot', s.slot)
+            .eq('sent_date', dateStr);
         }
         await new Promise(r => setTimeout(r, 700));
       }

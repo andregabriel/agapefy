@@ -49,28 +49,58 @@ async function inlineSend(test: boolean, limit?: number) {
   let sent = 0;
   for (const u of users) {
     const phone = (u as any).phone_number as string;
-    // idempotência
+    // idempotência - verificar se já enviou HOJE (não dias anteriores)
     const today = new Date().toISOString().split('T')[0];
     const { data: already } = await adminSupabase
       .from('daily_verse_log')
       .select('id')
       .eq('user_phone', phone)
       .gte('sent_at', `${today}T00:00:00.000Z`)
+      .lt('sent_at', `${today}T23:59:59.999Z`)
       .limit(1);
     if (already && already.length > 0 && !test) continue;
 
     if (!test) {
+      // Insert log BEFORE sending to prevent race conditions
+      // If insert fails (duplicate), skip sending
+      const { error: logError } = await adminSupabase
+        .from('daily_verse_log')
+        .insert({ user_phone: phone, verse_id: verseId || null, delivery_status: 'pending' });
+      
+      if (logError) {
+        // If log insert fails (duplicate key), skip sending to avoid duplicates
+        console.log(`Duplicate log detected for ${phone} on ${today}, skipping send`);
+        continue;
+      }
+
       const res = await fetch(`${ZAPI_BASE_URL}/send-text`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Client-Token': ZAPI_CLIENT_TOKEN },
         body: JSON.stringify({ phone, message })
       });
+      
       if (res.ok) {
         sent++;
-        await adminSupabase.from('daily_verse_log').insert({ user_phone: phone, verse_id: verseId || null, delivery_status: 'sent' });
+        // Update log status to 'sent'
+        await adminSupabase
+          .from('daily_verse_log')
+          .update({ delivery_status: 'sent' })
+          .eq('user_phone', phone)
+          .gte('sent_at', `${today}T00:00:00.000Z`)
+          .lt('sent_at', `${today}T23:59:59.999Z`)
+          .eq('delivery_status', 'pending')
+          .limit(1);
       } else {
         const errTxt = await res.text().catch(()=> '');
-        await adminSupabase.from('daily_verse_log').insert({ user_phone: phone, verse_id: verseId || null, delivery_status: 'failed', error_msg: errTxt.slice(0,500) });
+        // Update log status to 'failed'
+        await adminSupabase
+          .from('daily_verse_log')
+          .update({ delivery_status: 'failed', error_msg: errTxt.slice(0,500) })
+          .eq('user_phone', phone)
+          .gte('sent_at', `${today}T00:00:00.000Z`)
+          .lt('sent_at', `${today}T23:59:59.999Z`)
+          .eq('delivery_status', 'pending')
+          .limit(1);
       }
       await new Promise(r => setTimeout(r, 800));
     }

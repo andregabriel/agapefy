@@ -8,49 +8,126 @@ const ZAPI_BASE_URL = `https://api.z-api.io/instances/${ZAPI_INSTANCE_NAME}/toke
 
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json();
+    // Tentar ler o body de diferentes formas
+    let body: any;
+    try {
+      const text = await request.text();
+      console.log('📥 Body recebido (raw):', text.substring(0, 500));
+      
+      if (!text || text.trim() === '') {
+        console.log('⚠️ Body vazio recebido');
+        return NextResponse.json({ status: 'ignored', reason: 'empty_body' }, { status: 200 });
+      }
+      
+      body = JSON.parse(text);
+    } catch (parseError) {
+      console.error('❌ Erro ao fazer parse do JSON:', parseError);
+      // Tentar ler como JSON diretamente
+      try {
+        body = await request.json();
+      } catch (jsonError) {
+        console.error('❌ Erro ao ler body como JSON:', jsonError);
+        return NextResponse.json({ 
+          status: 'error', 
+          reason: 'invalid_json',
+          error: parseError instanceof Error ? parseError.message : 'Erro desconhecido'
+        }, { status: 200 });
+      }
+    }
+    
     console.log('🔔 Webhook RECEIVE recebido:', JSON.stringify(body, null, 2));
+    
+    // Verificar se body é válido
+    if (!body || typeof body !== 'object') {
+      console.log('❌ Body inválido ou não é um objeto');
+      return NextResponse.json({ status: 'ignored', reason: 'invalid_body' }, { status: 200 });
+    }
 
-    // Normalizar campos do Z-API: pode vir como body.message.* (testes) ou body.text.message (produção)
-    const userPhoneRaw = body.phone || body.remoteJid || body.chatId || '';
+    // Verificar se é mensagem nossa (deve ser ignorada)
+    if (body.fromMe === true) {
+      console.log('⚠️ Mensagem ignorada - é nossa própria mensagem (fromMe=true)');
+      return NextResponse.json({ status: 'ignored', reason: 'own_message' });
+    }
+
+    // Normalizar campos do Z-API: pode vir em diferentes formatos
+    // Formato 1: body.phone (padrão Z-API)
+    // Formato 2: body.remoteJid (formato WhatsApp Business API)
+    // Formato 3: body.chatId (formato alternativo)
+    // Formato 4: body.data?.phone (formato aninhado)
+    const userPhoneRaw = body.phone || body.remoteJid || body.chatId || body.data?.phone || '';
     const userPhone = typeof userPhoneRaw === 'string' ? userPhoneRaw.replace(/\D/g, '') : '';
+    
+    // Normalizar conteúdo da mensagem - Z-API pode enviar em diferentes formatos
     const messageContent = (
                           body.message?.conversation || 
                           body.message?.text || 
                           body.message?.extendedTextMessage?.text || 
                           body.message?.imageMessage?.caption ||
+                          body.message?.videoMessage?.caption ||
+                          body.message?.documentMessage?.caption ||
                           body.text?.message ||
+                          body.text ||
+                          body.data?.message ||
+                          body.data?.text ||
+                          (typeof body.message === 'string' ? body.message : '') ||
                           (typeof body.text === 'string' ? body.text : '') ||
                           ''
                         ) as string;
-    const userName = body.senderName || body.pushName || body.chatName || 'Irmão(ã)';
+    
+    const userName = body.senderName || body.pushName || body.chatName || body.data?.senderName || body.data?.pushName || 'Irmão(ã)';
 
-    // Validar se é uma mensagem válida e não é nossa própria mensagem
-    if (!userPhone || !messageContent || body.fromMe) {
-      console.log('❌ Mensagem ignorada - critérios não atendidos');
-      return NextResponse.json({ status: 'ignored', reason: 'invalid_message' });
+    // Log detalhado do que foi extraído
+    console.log('📋 Dados extraídos do webhook:');
+    console.log(`  - userPhoneRaw: "${userPhoneRaw}"`);
+    console.log(`  - userPhone (normalizado): "${userPhone}"`);
+    console.log(`  - messageContent: "${messageContent.substring(0, 100)}${messageContent.length > 100 ? '...' : ''}"`);
+    console.log(`  - userName: "${userName}"`);
+    console.log(`  - fromMe: ${body.fromMe}`);
+
+    // Validar se é uma mensagem válida
+    if (!userPhone) {
+      console.log('❌ Mensagem ignorada - número de telefone não encontrado');
+      console.log('  Campos disponíveis no body:', Object.keys(body));
+      return NextResponse.json({ 
+        status: 'ignored', 
+        reason: 'no_phone',
+        available_fields: Object.keys(body)
+      });
+    }
+    
+    if (!messageContent || !messageContent.trim()) {
+      console.log('❌ Mensagem ignorada - conteúdo vazio');
+      console.log('  Estrutura do body.message:', JSON.stringify(body.message, null, 2));
+      return NextResponse.json({ 
+        status: 'ignored', 
+        reason: 'empty_message',
+        message_structure: body.message
+      });
     }
 
     console.log(`📱 Processando mensagem de ${userName} (${userPhone}): "${messageContent}"`);
 
-    if (!messageContent.trim()) {
-      console.log('❌ Mensagem vazia ignorada');
-      return NextResponse.json({ status: 'ignored', reason: 'empty_message' });
-    }
-
     // Verificar se usuário já existe antes de fazer upsert
     console.log('👤 Verificando/registrando usuário...');
-    const { data: existingUser } = await supabase
+    console.log(`📞 Número normalizado: ${userPhone} (original: ${userPhoneRaw})`);
+    
+    const { data: existingUser, error: userError } = await supabase
       .from('whatsapp_users')
       .select('has_sent_first_message')
       .eq('phone_number', userPhone)
       .maybeSingle();
     
+    if (userError) {
+      console.error('❌ Erro ao buscar usuário:', userError);
+    }
+    
     // Se não existe, criar com has_sent_first_message: false
     // Se existe, manter o valor atual de has_sent_first_message
     const hasSentFirstMessage = existingUser?.has_sent_first_message ?? false;
     
-    await supabase.from('whatsapp_users').upsert({
+    console.log(`👤 Usuário existente: ${existingUser ? 'SIM' : 'NÃO'}, has_sent_first_message: ${hasSentFirstMessage}`);
+    
+    const upsertResult = await supabase.from('whatsapp_users').upsert({
       phone_number: userPhone,
       name: userName,
       is_active: true,
@@ -58,6 +135,12 @@ export async function POST(request: NextRequest) {
       has_sent_first_message: hasSentFirstMessage,
       updated_at: new Date().toISOString()
     }, { onConflict: 'phone_number' });
+    
+    if (upsertResult.error) {
+      console.error('❌ Erro ao fazer upsert do usuário:', upsertResult.error);
+    } else {
+      console.log(`✅ Usuário ${userPhone} registrado/atualizado com sucesso`);
+    }
 
     // Carregar configurações úteis (boas-vindas, menu, assistentes)
     // NOTA: NÃO carregar bw_waiting_message - foi completamente removida
@@ -71,13 +154,32 @@ export async function POST(request: NextRequest) {
       'bw_short_commands',
       'whatsapp_assistant_rules'
     ]);
+    
+    if (settingsRows.error) {
+      console.error('❌ Erro ao carregar configurações:', settingsRows.error);
+    }
+    
     const settingsMap: Record<string, string> = {};
     for (const r of settingsRows.data || []) settingsMap[r.key] = r.value as string;
     // Garantir que bw_waiting_message não seja usado mesmo se estiver no banco
     delete settingsMap['bw_waiting_message'];
+    
+    console.log('⚙️ Configurações carregadas:', {
+      'whatsapp_send_welcome_enabled': settingsMap['whatsapp_send_welcome_enabled'] ?? 'não encontrado',
+      'whatsapp_welcome_message': settingsMap['whatsapp_welcome_message'] ? `${settingsMap['whatsapp_welcome_message'].length} caracteres` : 'não encontrado',
+      'whatsapp_menu_enabled': settingsMap['whatsapp_menu_enabled'] ?? 'não encontrado',
+      'whatsapp_menu_message': settingsMap['whatsapp_menu_message'] ? `${settingsMap['whatsapp_menu_message'].length} caracteres` : 'não encontrado',
+    });
 
     // Verificar se é a primeira mensagem do usuário (usando has_sent_first_message)
+    // IMPORTANTE: Se o usuário não existia antes, isFirstMessage será true
+    // Se existia mas has_sent_first_message era false, também será true
     const isFirstMessage = !hasSentFirstMessage;
+    
+    console.log(`🔍 Verificação de primeira mensagem para ${userPhone}:`);
+    console.log(`  - existingUser: ${existingUser ? 'existe' : 'não existe'}`);
+    console.log(`  - hasSentFirstMessage: ${hasSentFirstMessage}`);
+    console.log(`  - isFirstMessage: ${isFirstMessage}`);
 
     // Detectar rapidamente a intenção (sem enviar mensagem de espera)
     const quickTriggers: Record<string, string[]> = (() => {
@@ -134,6 +236,8 @@ export async function POST(request: NextRequest) {
     // IMPORTANTE: Isso deve acontecer SEMPRE, independente de enviar boas-vindas ou não
     // Pois não podemos enviar mensagens para usuários que não enviaram a primeira mensagem
     if (isFirstMessage) {
+      console.log(`🎉 Primeira mensagem detectada para ${userPhone} (${userName})`);
+      
       await supabase
         .from('whatsapp_users')
         .update({ has_sent_first_message: true, updated_at: new Date().toISOString() })
@@ -145,6 +249,12 @@ export async function POST(request: NextRequest) {
       const welcomeText = settingsMap['whatsapp_welcome_message'] || '';
       const menuText = settingsMap['whatsapp_menu_message'] || '';
       
+      console.log(`📋 Configurações de boas-vindas para ${userPhone}:`);
+      console.log(`  - sendWelcome: ${sendWelcome}`);
+      console.log(`  - menuEnabled: ${menuEnabled}`);
+      console.log(`  - welcomeText length: ${welcomeText.length}`);
+      console.log(`  - menuText length: ${menuText.length}`);
+      
       if (sendWelcome) {
         // Montar mensagem: boas-vindas + menu (se menu estiver ativado)
         const welcomeParts = [welcomeText];
@@ -153,10 +263,39 @@ export async function POST(request: NextRequest) {
         }
         const welcomeMsg = welcomeParts.filter(Boolean).join('\n\n');
         
+        console.log(`📝 Mensagem de boas-vindas montada (${welcomeMsg.length} caracteres):`);
+        console.log(`  "${welcomeMsg.substring(0, 100)}${welcomeMsg.length > 100 ? '...' : ''}"`);
+        
         if (welcomeMsg.trim()) {
-          await sendWhatsAppMessage(userPhone, welcomeMsg);
+          console.log(`📤 Enviando mensagem de boas-vindas para ${userPhone}...`);
+          // Adicionar um pequeno delay para garantir que a resposta principal foi enviada primeiro
+          await new Promise(resolve => setTimeout(resolve, 500));
+          const welcomeResult = await sendWhatsAppMessage(userPhone, welcomeMsg);
+          if (welcomeResult.success) {
+            console.log(`✅ Mensagem de boas-vindas enviada com sucesso para ${userPhone}`);
+          } else {
+            console.error(`❌ Erro ao enviar mensagem de boas-vindas para ${userPhone}:`, welcomeResult.error);
+            // Tentar novamente após 1 segundo em caso de erro
+            console.log(`🔄 Tentando reenviar mensagem de boas-vindas para ${userPhone}...`);
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            const retryResult = await sendWhatsAppMessage(userPhone, welcomeMsg);
+            if (retryResult.success) {
+              console.log(`✅ Mensagem de boas-vindas reenviada com sucesso para ${userPhone}`);
+            } else {
+              console.error(`❌ Erro ao reenviar mensagem de boas-vindas para ${userPhone}:`, retryResult.error);
+            }
+          }
+        } else {
+          console.warn(`⚠️ Mensagem de boas-vindas está vazia após trim, não enviando para ${userPhone}`);
+          console.warn(`  - welcomeText: "${welcomeText.substring(0, 50)}${welcomeText.length > 50 ? '...' : ''}"`);
+          console.warn(`  - menuEnabled: ${menuEnabled}`);
+          console.warn(`  - menuText: "${menuText.substring(0, 50)}${menuText.length > 50 ? '...' : ''}"`);
         }
+      } else {
+        console.log(`⚠️ Boas-vindas desativada nas configurações para ${userPhone}`);
       }
+    } else {
+      console.log(`ℹ️ Não é primeira mensagem para ${userPhone} (has_sent_first_message=${hasSentFirstMessage})`);
     }
 
     // Lembrete a cada 5 mensagens do usuário (apenas se ativado)
@@ -183,11 +322,21 @@ export async function POST(request: NextRequest) {
 
   } catch (error) {
     console.error('💥 Erro no webhook receive:', error);
+    
+    // Log detalhado do erro
+    if (error instanceof Error) {
+      console.error('  - Mensagem:', error.message);
+      console.error('  - Stack:', error.stack);
+    }
+    
+    // Sempre retornar 200 para o Z-API para evitar reenvios
+    // Mas logar o erro para debug
     return NextResponse.json({ 
+      status: 'error',
       error: 'Erro interno do servidor',
       details: error instanceof Error ? error.message : 'Erro desconhecido',
       timestamp: new Date().toISOString()
-    }, { status: 500 });
+    }, { status: 200 });
   }
 }
 

@@ -8,35 +8,96 @@ const ZAPI_BASE_URL = `https://api.z-api.io/instances/${ZAPI_INSTANCE_NAME}/toke
 
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json();
+    // Tentar ler o body de diferentes formas
+    let body: any;
+    try {
+      const text = await request.text();
+      console.log('📥 Body recebido (raw):', text.substring(0, 500));
+      
+      if (!text || text.trim() === '') {
+        console.log('⚠️ Body vazio recebido');
+        return NextResponse.json({ status: 'ignored', reason: 'empty_body' }, { status: 200 });
+      }
+      
+      body = JSON.parse(text);
+    } catch (parseError) {
+      console.error('❌ Erro ao fazer parse do JSON:', parseError);
+      try {
+        body = await request.json();
+      } catch (jsonError) {
+        console.error('❌ Erro ao ler body como JSON:', jsonError);
+        return NextResponse.json({ 
+          status: 'error', 
+          reason: 'invalid_json',
+          error: parseError instanceof Error ? parseError.message : 'Erro desconhecido'
+        }, { status: 200 });
+      }
+    }
+    
     console.log('🔔 Webhook recebido:', JSON.stringify(body, null, 2));
+    
+    // Verificar se body é válido
+    if (!body || typeof body !== 'object') {
+      console.log('❌ Body inválido ou não é um objeto');
+      return NextResponse.json({ status: 'ignored', reason: 'invalid_body' }, { status: 200 });
+    }
 
-    // Normalizar payload (produção Z-API pode enviar em body.text.message)
-    const userPhoneRaw = body.phone || body.remoteJid || body.chatId || '';
+    // Verificar se é mensagem nossa (deve ser ignorada)
+    if (body.fromMe === true) {
+      console.log('⚠️ Mensagem ignorada - é nossa própria mensagem (fromMe=true)');
+      return NextResponse.json({ status: 'ignored', reason: 'own_message' }, { status: 200 });
+    }
+
+    // Normalizar payload (produção Z-API pode enviar em diferentes formatos)
+    const userPhoneRaw = body.phone || body.remoteJid || body.chatId || body.data?.phone || '';
     const userPhone = typeof userPhoneRaw === 'string' ? userPhoneRaw.replace(/\D/g, '') : '';
     const messageContent = (
       body.message?.conversation ||
       body.message?.text ||
       body.message?.extendedTextMessage?.text ||
       body.message?.imageMessage?.caption ||
+      body.message?.videoMessage?.caption ||
+      body.message?.documentMessage?.caption ||
       body.text?.message ||
+      body.text ||
+      body.data?.message ||
+      body.data?.text ||
+      (typeof body.message === 'string' ? body.message : '') ||
       (typeof body.text === 'string' ? body.text : '') ||
       ''
     ) as string;
-    const userName = body.senderName || body.pushName || body.chatName || 'Irmão(ã)';
+    const userName = body.senderName || body.pushName || body.chatName || body.data?.senderName || body.data?.pushName || 'Irmão(ã)';
+
+    // Log detalhado do que foi extraído
+    console.log('📋 Dados extraídos do webhook:');
+    console.log(`  - userPhoneRaw: "${userPhoneRaw}"`);
+    console.log(`  - userPhone (normalizado): "${userPhone}"`);
+    console.log(`  - messageContent: "${messageContent.substring(0, 100)}${messageContent.length > 100 ? '...' : ''}"`);
+    console.log(`  - userName: "${userName}"`);
+    console.log(`  - fromMe: ${body.fromMe}`);
 
     // Validar se é uma mensagem válida
-    if (!userPhone || !messageContent || body.fromMe) {
-      console.log('❌ Mensagem ignorada - critérios não atendidos');
-      return NextResponse.json({ status: 'ignored', reason: 'invalid_message' });
+    if (!userPhone) {
+      console.log('❌ Mensagem ignorada - número de telefone não encontrado');
+      console.log('  Campos disponíveis no body:', Object.keys(body));
+      return NextResponse.json({ 
+        status: 'ignored', 
+        reason: 'no_phone',
+        available_fields: Object.keys(body)
+      }, { status: 200 });
+    }
+    
+    if (!messageContent || !messageContent.trim()) {
+      console.log('❌ Mensagem ignorada - conteúdo vazio');
+      console.log('  Estrutura do body.message:', JSON.stringify(body.message, null, 2));
+      return NextResponse.json({ 
+        status: 'ignored', 
+        reason: 'empty_message',
+        message_structure: body.message
+      }, { status: 200 });
     }
 
     console.log(`📱 Processando mensagem de ${userName} (${userPhone}): "${messageContent}"`);
-
-    if (!messageContent.trim()) {
-      console.log('❌ Mensagem vazia ignorada');
-      return NextResponse.json({ status: 'ignored', reason: 'empty_message' });
-    }
 
     // Verificar se usuário já existe antes de fazer upsert
     console.log('👤 Verificando/registrando usuário...');
@@ -194,10 +255,21 @@ export async function POST(request: NextRequest) {
 
   } catch (error) {
     console.error('💥 Erro no webhook:', error);
+    
+    // Log detalhado do erro
+    if (error instanceof Error) {
+      console.error('  - Mensagem:', error.message);
+      console.error('  - Stack:', error.stack);
+    }
+    
+    // Sempre retornar 200 para o Z-API para evitar reenvios
+    // Mas logar o erro para debug
     return NextResponse.json({ 
-      error: 'Erro interno',
-      details: error instanceof Error ? error.message : 'Erro desconhecido'
-    }, { status: 500 });
+      status: 'error',
+      error: 'Erro interno do servidor',
+      details: error instanceof Error ? error.message : 'Erro desconhecido',
+      timestamp: new Date().toISOString()
+    }, { status: 200 });
   }
 }
 

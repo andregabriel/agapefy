@@ -154,24 +154,27 @@ async function inlineSend(test: boolean, limit?: number) {
     const trackList = audiosByPlaylist[playlistId] || [];
     if (trackList.length === 0) continue;
 
-    // Idempotência diária por usuário/playlist
+    // Idempotência diária por usuário/playlist - verificar ANTES de processar
     const { data: alreadyToday, error: alreadyErr } = await adminSupabase
       .from('whatsapp_challenge_log')
       .select('id')
       .eq('user_phone', phone)
       .eq('playlist_id', playlistId)
-      .eq('sent_date', dateStr)
+      .eq('sent_date', dateStr) // Apenas HOJE, não dias anteriores
       .limit(1);
     if (!alreadyErr && alreadyToday && alreadyToday.length > 0 && !test) {
+      // Já enviou hoje, pular
       continue;
     }
 
     // Descobrir o próximo índice da jornada (1..N)
+    // Buscar apenas logs do dia atual ou anteriores (não futuros)
     const { data: lastLog } = await adminSupabase
       .from('whatsapp_challenge_log')
       .select('sequence_index')
       .eq('user_phone', phone)
       .eq('playlist_id', playlistId)
+      .lte('sent_date', dateStr) // Apenas até hoje, não futuros
       .order('sequence_index', { ascending: false })
       .limit(1);
 
@@ -200,18 +203,36 @@ Ouça agora: ${audioUrl}
 _Agape - Seu companheiro espiritual_ ✨`;
 
     if (!test) {
+      // Insert log BEFORE sending to prevent race conditions
+      // If insert fails (duplicate), skip sending
+      const { error: logError } = await adminSupabase
+        .from('whatsapp_challenge_log')
+        .insert({
+          user_phone: phone,
+          playlist_id: playlistId,
+          audio_id: audioId,
+          sequence_index: nextIndex,
+          sent_date: dateStr, // Apenas HOJE
+        });
+      
+      if (logError) {
+        // If log insert fails (duplicate key), skip sending to avoid duplicates
+        console.log(`Duplicate log detected for ${phone} ${playlistId} ${dateStr}, skipping send`);
+        continue;
+      }
+
       const res = await sendWhatsAppText(phone, message);
       if (res.ok) {
+        sentCount++;
+      } else {
+        // If send failed, remove the log entry so it can be retried later
         await adminSupabase
           .from('whatsapp_challenge_log')
-          .insert({
-            user_phone: phone,
-            playlist_id: playlistId,
-            audio_id: audioId,
-            sequence_index: nextIndex,
-            sent_date: dateStr,
-          });
-        sentCount++;
+          .delete()
+          .eq('user_phone', phone)
+          .eq('playlist_id', playlistId)
+          .eq('sent_date', dateStr)
+          .eq('sequence_index', nextIndex);
       }
       // Evitar estourar limite de provider
       await new Promise(r => setTimeout(r, 700));
