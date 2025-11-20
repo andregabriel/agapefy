@@ -135,12 +135,12 @@ export default function AudioPlayerPage({ params }: AudioPlayerPageProps) {
   }
 
   return (
-    <div className="min-h-screen bg-black text-white flex flex-col">
-      {/* Header */}
-      <div className="flex items-center justify-between p-4 pt-12">
-        <Button 
-          variant="ghost" 
-          size="icon" 
+    <div className="min-h-screen bg-black text-white flex flex-col relative">
+      {/* Back Button */}
+      <div className="absolute left-4 top-12">
+        <Button
+          variant="ghost"
+          size="icon"
           className="text-white hover:bg-gray-800"
           onClick={() => router.back()}
         >
@@ -148,16 +148,15 @@ export default function AudioPlayerPage({ params }: AudioPlayerPageProps) {
         </Button>
       </div>
 
-      {/* Main Content */}
-      <div className="flex-1 px-4 pb-64">
-        {/* Single Cover Image */}
-        <div className="mb-6">
-          <div className="aspect-square max-w-80 mx-auto">
+      {/* Header / Cover */}
+      <div className="px-4 pt-12">
+        <div className="flex justify-center">
+          <div className="w-[159px] h-[159px] md:w-72 md:h-72 lg:w-80 lg:h-80">
             <div className="w-full h-full bg-gray-800 rounded-lg overflow-hidden shadow-2xl">
               {/** Preferir a capa do próprio áudio; fallback para imagem da categoria */}
               {audio.cover_url || audio.category?.image_url ? (
-                <img 
-                  src={audio.cover_url || (audio.category?.image_url as string)} 
+                <img
+                  src={audio.cover_url || (audio.category?.image_url as string)}
                   alt={audio.title}
                   className="w-full h-full object-cover"
                 />
@@ -172,9 +171,13 @@ export default function AudioPlayerPage({ params }: AudioPlayerPageProps) {
             </div>
           </div>
         </div>
+      </div>
+
+      {/* Main Content */}
+      <div className="flex-1 px-4 pb-64">
 
         {/* Audio Info */}
-        <div className="mb-6">
+        <div className="mt-6 md:mt-8 mb-6">
           <h1 className="text-2xl font-bold mb-3 leading-tight">
             {audio.title}
           </h1>
