@@ -97,6 +97,54 @@ export default function OnboardingClient() {
   // Determinar tipo de passo estático (definido cedo para uso em múltiplos lugares)
   const showStaticKind = searchParams?.get('showStatic') || '';
 
+  // Verificar se usuário é admin ou já completou onboarding - redirecionar para home se necessário
+  useEffect(() => {
+    let mounted = true;
+    async function checkAccess() {
+      if (!user) return; // aguardar autenticação
+      
+      try {
+        // Verificar se é admin
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('role')
+          .eq('id', user.id)
+          .single();
+        
+        if (!mounted) return;
+        
+        if (profile?.role === 'admin') {
+          // Admin não deve ver onboarding
+          router.replace('/');
+          return;
+        }
+
+        // Verificar se já completou o onboarding
+        const res = await fetch('/api/onboarding/status', {
+          headers: { 'x-user-id': user.id },
+        });
+        
+        if (!mounted) return;
+        
+        if (res.ok) {
+          const json = await res.json();
+          // Se não há passos pendentes, o onboarding foi completado
+          if (!json?.pending) {
+            router.replace('/');
+            return;
+          }
+        }
+      } catch (error) {
+        // eslint-disable-next-line no-console
+        console.warn('Erro ao verificar acesso ao onboarding:', error);
+        // Em caso de erro, permitir acesso (não bloquear)
+      }
+    }
+    
+    void checkAccess();
+    return () => { mounted = false; };
+  }, [user, router]);
+
   // Helpers
   function parseDaysFromTitle(title?: string | null): number {
     if (!title) return 0;

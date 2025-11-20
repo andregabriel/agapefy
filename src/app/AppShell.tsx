@@ -45,6 +45,20 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
       if (pathname.startsWith('/onboarding')) return; // já no fluxo de onboarding
 
       try {
+        // Verificar se é admin - admin não deve ser redirecionado para onboarding
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('role')
+          .eq('id', user.id)
+          .single();
+        
+        if (aborted) return;
+        
+        if (profile?.role === 'admin') {
+          // Admin não deve ver onboarding
+          return;
+        }
+
         const alreadyRedirected =
           typeof window !== 'undefined' && sessionStorage.getItem('onboardingRedirected') === '1';
         const res = await fetch('/api/onboarding/status', {
