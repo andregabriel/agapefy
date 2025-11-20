@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
-import { X, Upload, Image, Plus, Trash2, GripVertical } from 'lucide-react';
+import { X, Upload, Image, Plus, Trash2, GripVertical, Search, ChevronUp, ChevronDown } from 'lucide-react';
 
 interface PlaylistModalProps {
   playlist: any;
@@ -24,6 +24,7 @@ export default function PlaylistModal({ playlist, isOpen, onClose, onSave }: Pla
   const [audios, setAudios] = useState<any[]>([]);
   const [selectedAudios, setSelectedAudios] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
+  const [audioSearchTerm, setAudioSearchTerm] = useState('');
 
   // Helpers para draft persistence
   const getDraftKey = () => {
@@ -142,14 +143,17 @@ export default function PlaylistModal({ playlist, isOpen, onClose, onSave }: Pla
           audios (id, title, duration)
         `)
         .eq('playlist_id', playlist.id)
-        .order('position');
+        .order('position', { ascending: true });
 
       if (error) throw error;
       
-      const playlistAudios = data?.map(item => ({
-        ...item.audios,
-        position: item.position
-      })) || [];
+      // Ordenar por position e garantir que está na ordem correta
+      const playlistAudios = (data || [])
+        .map(item => ({
+          ...item.audios,
+          position: item.position
+        }))
+        .sort((a, b) => (a.position ?? 0) - (b.position ?? 0));
       
       setSelectedAudios(playlistAudios);
     } catch (error) {
@@ -158,14 +162,42 @@ export default function PlaylistModal({ playlist, isOpen, onClose, onSave }: Pla
   };
 
   const addAudioToPlaylist = (audio: any) => {
-    if (!selectedAudios.find(a => a.id === audio.id)) {
-      setSelectedAudios([...selectedAudios, { ...audio, position: selectedAudios.length }]);
-    }
+    setSelectedAudios(prev => {
+      if (prev.find(a => a.id === audio.id)) return prev;
+      const next = [...prev, { ...audio }];
+      // Normalizar posições para manter consistente com a ordem visual
+      return next.map((item, index) => ({ ...item, position: index }));
+    });
   };
 
   const removeAudioFromPlaylist = (audioId: string) => {
-    setSelectedAudios(selectedAudios.filter(a => a.id !== audioId));
+    setSelectedAudios(prev => {
+      const updated = prev.filter(a => a.id !== audioId);
+      // Recalcular posições após remoção
+      return updated.map((item, index) => ({ ...item, position: index }));
+    });
   };
+
+  const moveAudio = (fromIndex: number, toIndex: number) => {
+    setSelectedAudios(prev => {
+      const working = [...prev];
+      if (toIndex < 0 || toIndex >= working.length) return working;
+
+      const [moved] = working.splice(fromIndex, 1);
+      working.splice(toIndex, 0, moved);
+
+      // Normalizar posições com base na nova ordem
+      return working.map((item, index) => ({ ...item, position: index }));
+    });
+  };
+
+  // Filtrar áudios disponíveis baseado na busca e excluir os já selecionados
+  const availableAudios = audios.filter(audio => {
+    const isNotSelected = !selectedAudios.find(a => a.id === audio.id);
+    const matchesSearch = audioSearchTerm.trim() === '' || 
+      audio.title.toLowerCase().includes(audioSearchTerm.toLowerCase());
+    return isNotSelected && matchesSearch;
+  });
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -533,28 +565,48 @@ export default function PlaylistModal({ playlist, isOpen, onClose, onSave }: Pla
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Adicionar Áudios
                 </label>
+                <div className="mb-2">
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                    <input
+                      type="text"
+                      value={audioSearchTerm}
+                      onChange={(e) => setAudioSearchTerm(e.target.value)}
+                      placeholder="Buscar áudio..."
+                      className="w-full pl-10 pr-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm text-black"
+                    />
+                  </div>
+                </div>
                 <div className="max-h-40 overflow-y-auto border rounded-lg">
-                  {audios.map((audio) => (
-                    <div
-                      key={audio.id}
-                      className="flex items-center justify-between p-2 hover:bg-gray-50 border-b last:border-b-0"
-                    >
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-gray-900 truncate">{audio.title}</p>
-                        <p className="text-xs text-gray-500">
-                          {audio.duration ? `${Math.floor(audio.duration / 60)}:${(audio.duration % 60).toString().padStart(2, '0')}` : 'Duração não definida'}
-                        </p>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => addAudioToPlaylist(audio)}
-                        disabled={selectedAudios.find(a => a.id === audio.id)}
-                        className="ml-2 p-1 text-blue-600 hover:text-blue-800 disabled:text-gray-400 disabled:cursor-not-allowed"
+                  {availableAudios.length === 0 ? (
+                    <p className="p-4 text-sm text-gray-500 text-center">
+                      {audioSearchTerm.trim() ? 'Nenhum áudio encontrado' : 'Nenhum áudio disponível'}
+                    </p>
+                  ) : (
+                    availableAudios.map((audio) => (
+                      <div
+                        key={audio.id}
+                        className="flex items-center justify-between p-2 hover:bg-gray-50 border-b last:border-b-0"
                       >
-                        <Plus className="h-4 w-4" />
-                      </button>
-                    </div>
-                  ))}
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-gray-900 truncate">{audio.title}</p>
+                          <p className="text-xs text-gray-500">
+                            {audio.duration ? `${Math.floor(audio.duration / 60)}:${(audio.duration % 60).toString().padStart(2, '0')}` : 'Duração não definida'}
+                          </p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            addAudioToPlaylist(audio);
+                            setAudioSearchTerm(''); // Limpar busca após adicionar
+                          }}
+                          className="ml-2 p-1 text-blue-600 hover:text-blue-800"
+                        >
+                          <Plus className="h-4 w-4" />
+                        </button>
+                      </div>
+                    ))
+                  )}
                 </div>
               </div>
 
@@ -577,19 +629,50 @@ export default function PlaylistModal({ playlist, isOpen, onClose, onSave }: Pla
                         <div className="flex items-center space-x-2 flex-1 min-w-0">
                           <GripVertical className="h-4 w-4 text-gray-400" />
                           <div className="flex-1 min-w-0">
-                            <p className="text-sm font-medium text-gray-900 truncate">{audio.title}</p>
+                            <p className="text-sm font-medium text-gray-900 truncate">
+                              {audio.title}
+                            </p>
                             <p className="text-xs text-gray-500">
-                              Posição {index + 1} • {audio.duration ? `${Math.floor(audio.duration / 60)}:${(audio.duration % 60).toString().padStart(2, '0')}` : 'Duração não definida'}
+                              Posição {index + 1} •{' '}
+                              {audio.duration
+                                ? `${Math.floor(audio.duration / 60)}:${(
+                                    audio.duration % 60
+                                  )
+                                    .toString()
+                                    .padStart(2, '0')}`
+                                : 'Duração não definida'}
                             </p>
                           </div>
                         </div>
-                        <button
-                          type="button"
-                          onClick={() => removeAudioFromPlaylist(audio.id)}
-                          className="ml-2 p-1 text-red-600 hover:text-red-800"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </button>
+
+                        <div className="flex items-center space-x-1">
+                          <button
+                            type="button"
+                            onClick={() => moveAudio(index, index - 1)}
+                            disabled={index === 0}
+                            className="p-1 text-gray-500 hover:text-gray-800 disabled:opacity-30 disabled:cursor-not-allowed"
+                            aria-label="Mover para cima"
+                          >
+                            <ChevronUp className="h-4 w-4" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => moveAudio(index, index + 1)}
+                            disabled={index === selectedAudios.length - 1}
+                            className="p-1 text-gray-500 hover:text-gray-800 disabled:opacity-30 disabled:cursor-not-allowed"
+                            aria-label="Mover para baixo"
+                          >
+                            <ChevronDown className="h-4 w-4" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => removeAudioFromPlaylist(audio.id)}
+                            className="p-1 text-red-600 hover:text-red-800"
+                            aria-label="Remover áudio"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+                        </div>
                       </div>
                     ))
                   )}

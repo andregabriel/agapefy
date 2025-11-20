@@ -13,3 +13,5 @@ comment on column public.whatsapp_users.user_id is 'ID do usuário logado vincul
 
 
 
+
+

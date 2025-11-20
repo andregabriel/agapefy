@@ -126,24 +126,29 @@ async function inlineSend(test: boolean, limit?: number) {
         title
       )
     `)
-    .in('playlist_id', uniquePlaylistIds);
+    .in('playlist_id', uniquePlaylistIds)
+    // Garantir ordem consistente por posição dentro de cada playlist
+    .order('position', { ascending: true });
 
   if (paError || !playlistAudios) {
     return { ok: true, sent: 0, totalCandidates: 0, reason: 'playlist_audios_error' as const };
   }
 
-  const audiosByPlaylist: Record<string, { audio_id: string; title: string | null }[]> = {};
+  const audiosByPlaylist: Record<string, { audio_id: string; title: string | null; position: number }[]> = {};
   for (const row of playlistAudios as any[]) {
     const pid = row.playlist_id as string;
     if (!audiosByPlaylist[pid]) audiosByPlaylist[pid] = [];
+    const rawPos = Number(row.position);
     audiosByPlaylist[pid].push({
       audio_id: row.audio_id as string,
       title: (row.audios?.title as string) || null,
+      // Normalizar posição; aceita tanto 0-based quanto 1-based, usamos apenas para ordenação relativa
+      position: Number.isFinite(rawPos) ? rawPos : 0,
     });
   }
   // Ordenar por posição para garantir sequência 1..N
   for (const pid of Object.keys(audiosByPlaylist)) {
-    audiosByPlaylist[pid] = audiosByPlaylist[pid];
+    audiosByPlaylist[pid] = audiosByPlaylist[pid].sort((a, b) => a.position - b.position);
   }
 
   let sentCount = 0;

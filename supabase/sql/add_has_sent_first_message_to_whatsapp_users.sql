@@ -11,3 +11,5 @@ comment on column public.whatsapp_users.has_sent_first_message is 'Indica se o u
 
 
 
+
+

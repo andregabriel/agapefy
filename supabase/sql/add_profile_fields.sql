@@ -14,3 +14,5 @@ comment on column public.profiles.notification_novidades is 'Preferência de not
 
 
 
+
+
