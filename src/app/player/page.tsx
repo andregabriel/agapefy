@@ -92,33 +92,33 @@ export default function PlayerPage() {
   }
 
   return (
-    <div className="min-h-screen bg-black text-white flex flex-col">
-      {/* Header + Cover */}
-      <div className="px-4 pt-12">
-        <div className="flex items-start">
-          <Button variant="ghost" size="icon" className="text-white hover:bg-gray-800 flex-shrink-0 mr-4">
-            <ArrowLeft size={24} />
-          </Button>
+    <div className="min-h-screen bg-black text-white flex flex-col relative">
+      {/* Back Button */}
+      <div className="absolute left-4 top-12">
+        <Button variant="ghost" size="icon" className="text-white hover:bg-gray-800">
+          <ArrowLeft size={24} />
+        </Button>
+      </div>
 
-          {/* Single Cover Image - Centered */}
-          <div className="flex-1 flex justify-center">
-            <div className="w-[190px] h-[190px] md:w-72 md:h-72 lg:w-80 lg:h-80">
-              <div className="w-full h-full bg-gray-800 rounded-lg overflow-hidden shadow-2xl">
-                {playlist.cover_url ? (
-                  <img 
-                    src={playlist.cover_url} 
-                    alt={playlist.title}
-                    className="w-full h-full object-cover"
-                  />
-                ) : (
-                  <div className="w-full h-full bg-gradient-to-br from-purple-600 via-blue-600 to-green-500 flex items-center justify-center">
-                    <div className="text-center">
-                      <div className="text-white text-2xl font-bold mb-2">PLAYLIST</div>
-                      <div className="text-white/80 text-lg font-medium">{playlist.title}</div>
-                    </div>
+      {/* Header / Cover */}
+      <div className="px-4 pt-12">
+        <div className="flex justify-center">
+          <div className="w-[190px] h-[190px] md:w-72 md:h-72 lg:w-80 lg:h-80">
+            <div className="w-full h-full bg-gray-800 rounded-lg overflow-hidden shadow-2xl">
+              {playlist.cover_url ? (
+                <img 
+                  src={playlist.cover_url} 
+                  alt={playlist.title}
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <div className="w-full h-full bg-gradient-to-br from-purple-600 via-blue-600 to-green-500 flex items-center justify-center">
+                  <div className="text-center">
+                    <div className="text-white text-2xl font-bold mb-2">PLAYLIST</div>
+                    <div className="text-white/80 text-lg font-medium">{playlist.title}</div>
                   </div>
-                )}
-              </div>
+                </div>
+              )}
             </div>
           </div>
         </div>
