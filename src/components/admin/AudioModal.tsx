@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
-import { X, Upload, Music, Image } from 'lucide-react';
+import { X, Upload, Music, Image, Plus, Trash2 } from 'lucide-react';
 
 interface AudioModalProps {
   audio: any;
@@ -24,6 +24,10 @@ export default function AudioModal({ audio, isOpen, onClose, onSave }: AudioModa
   });
   const [categories, setCategories] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
+  const [audioPlaylists, setAudioPlaylists] = useState<any[]>([]);
+  const [allPlaylists, setAllPlaylists] = useState<any[]>([]);
+  const [playlistsLoading, setPlaylistsLoading] = useState(false);
+  const [selectedPlaylistToAdd, setSelectedPlaylistToAdd] = useState<string>('');
 
   // Helpers para draft persistence
   const getDraftKey = () => {
@@ -35,6 +39,13 @@ export default function AudioModal({ audio, isOpen, onClose, onSave }: AudioModa
   useEffect(() => {
     fetchCategories();
   }, []);
+
+  useEffect(() => {
+    if (audio?.id && isOpen) {
+      fetchAudioPlaylists();
+      fetchAllPlaylists();
+    }
+  }, [audio?.id, isOpen]);
 
   useEffect(() => {
     if (audio) {
@@ -113,6 +124,126 @@ export default function AudioModal({ audio, isOpen, onClose, onSave }: AudioModa
       setCategories(data || []);
     } catch (error) {
       console.error('Erro ao buscar categorias:', error);
+    }
+  };
+
+  const fetchAudioPlaylists = async () => {
+    if (!audio?.id) return;
+    
+    try {
+      setPlaylistsLoading(true);
+      const { data, error } = await supabase
+        .from('playlist_audios')
+        .select(`
+          playlist_id,
+          playlists (
+            id,
+            title,
+            description
+          )
+        `)
+        .eq('audio_id', audio.id);
+
+      if (error) throw error;
+      
+      const playlists = (data || [])
+        .filter((item: any) => item.playlists) // Filtrar casos onde playlists pode ser null
+        .map((item: any) => ({
+          id: item.playlists.id,
+          title: item.playlists.title,
+          description: item.playlists.description,
+        }));
+      
+      setAudioPlaylists(playlists);
+    } catch (error) {
+      console.error('Erro ao buscar playlists do áudio:', error);
+    } finally {
+      setPlaylistsLoading(false);
+    }
+  };
+
+  const fetchAllPlaylists = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('playlists')
+        .select('id, title, description')
+        .order('title');
+
+      if (error) throw error;
+      setAllPlaylists(data || []);
+    } catch (error) {
+      console.error('Erro ao buscar todas as playlists:', error);
+    }
+  };
+
+  const handleRemoveFromPlaylist = async (playlistId: string) => {
+    if (!audio?.id) return;
+    
+    try {
+      const { error } = await supabase
+        .from('playlist_audios')
+        .delete()
+        .eq('playlist_id', playlistId)
+        .eq('audio_id', audio.id);
+
+      if (error) throw error;
+      
+      // Atualizar lista local
+      setAudioPlaylists(prev => prev.filter(p => p.id !== playlistId));
+    } catch (error) {
+      console.error('Erro ao remover áudio da playlist:', error);
+      alert('Erro ao remover áudio da playlist');
+    }
+  };
+
+  const handleAddToPlaylist = async () => {
+    if (!audio?.id || !selectedPlaylistToAdd) return;
+    
+    // Verificar se já está na playlist
+    if (audioPlaylists.some(p => p.id === selectedPlaylistToAdd)) {
+      alert('Este áudio já está nesta playlist');
+      return;
+    }
+
+    try {
+      // Buscar a posição máxima na playlist para adicionar no final
+      const { data: existingPositions, error: posError } = await supabase
+        .from('playlist_audios')
+        .select('position')
+        .eq('playlist_id', selectedPlaylistToAdd)
+        .order('position', { ascending: false })
+        .limit(1);
+
+      if (posError) throw posError;
+
+      const nextPosition = existingPositions && existingPositions.length > 0 
+        ? existingPositions[0].position + 1 
+        : 0;
+
+      const { error } = await supabase
+        .from('playlist_audios')
+        .insert([{
+          playlist_id: selectedPlaylistToAdd,
+          audio_id: audio.id,
+          position: nextPosition,
+        }]);
+
+      if (error) throw error;
+      
+      // Buscar dados da playlist adicionada
+      const playlist = allPlaylists.find(p => p.id === selectedPlaylistToAdd);
+      if (playlist) {
+        setAudioPlaylists(prev => [...prev, playlist]);
+      }
+      
+      setSelectedPlaylistToAdd('');
+    } catch (error: any) {
+      console.error('Erro ao adicionar áudio à playlist:', error);
+      if (error.code === '23505') {
+        alert('Este áudio já está nesta playlist');
+      } else {
+        alert('Erro ao adicionar áudio à playlist');
+      }
     }
   };
 
@@ -375,6 +506,83 @@ export default function AudioModal({ audio, isOpen, onClose, onSave }: AudioModa
               placeholder="Texto completo da oração (opcional)..."
             />
           </div>
+
+          {/* Seção de Playlists - apenas para edição */}
+          {audio?.id && (
+            <div className="pt-4 border-t">
+              <label className="block text-sm font-medium text-gray-700 mb-3">
+                Playlists
+              </label>
+              
+              {/* Lista de playlists que o áudio está */}
+              {playlistsLoading ? (
+                <div className="text-sm text-gray-500 mb-3">Carregando playlists...</div>
+              ) : (
+                <>
+                  {audioPlaylists.length > 0 ? (
+                    <div className="space-y-2 mb-4">
+                      {audioPlaylists.map((playlist) => (
+                        <div
+                          key={playlist.id}
+                          className="flex items-center justify-between p-2 bg-gray-50 rounded-lg border"
+                        >
+                          <div className="flex-1">
+                            <div className="text-sm font-medium text-gray-900">
+                              {playlist.title}
+                            </div>
+                            {playlist.description && (
+                              <div className="text-xs text-gray-500 mt-1">
+                                {playlist.description}
+                              </div>
+                            )}
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveFromPlaylist(playlist.id)}
+                            className="ml-3 p-1.5 text-red-600 hover:bg-red-50 rounded transition-colors"
+                            title="Remover da playlist"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-sm text-gray-500 mb-4">
+                      Este áudio não está em nenhuma playlist
+                    </div>
+                  )}
+
+                  {/* Adicionar a uma playlist */}
+                  <div className="flex gap-2">
+                    <select
+                      value={selectedPlaylistToAdd}
+                      onChange={(e) => setSelectedPlaylistToAdd(e.target.value)}
+                      className="flex-1 px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm text-black"
+                    >
+                      <option value="">Selecione uma playlist para adicionar</option>
+                      {allPlaylists
+                        .filter(p => !audioPlaylists.some(ap => ap.id === p.id))
+                        .map((playlist) => (
+                          <option key={playlist.id} value={playlist.id}>
+                            {playlist.title}
+                          </option>
+                        ))}
+                    </select>
+                    <button
+                      type="button"
+                      onClick={handleAddToPlaylist}
+                      disabled={!selectedPlaylistToAdd}
+                      className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center transition-colors"
+                      title="Adicionar à playlist"
+                    >
+                      <Plus className="h-4 w-4" />
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
+          )}
 
           <div className="flex flex-col sm:flex-row justify-end space-y-3 sm:space-y-0 sm:space-x-3 pt-4 border-t">
             <button
