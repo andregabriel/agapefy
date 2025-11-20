@@ -26,29 +26,34 @@ export function CarouselIndicators({ totalItems, currentIndex, containerRef }: C
     return null;
   }
 
-  return (
-    <div className="flex justify-center gap-1.5 mt-4 md:hidden">
-      {Array.from({ length: totalItems }).map((_, index) => (
-        <button
-          key={index}
-          className={`w-2 h-2 rounded-full transition-all duration-300 ${
-            index === currentIndex
-              ? 'bg-white scale-125'
-              : 'bg-white/40 hover:bg-white/60'
-          }`}
-          onClick={() => {
-            if (containerRef.current) {
-              const container = containerRef.current;
-              const itemWidth = container.scrollWidth / totalItems;
-              container.scrollTo({
-                left: itemWidth * index,
-                behavior: 'smooth'
-              });
-            }
-          }}
-          aria-label={`Ir para item ${index + 1}`}
-        />
-      ))}
-    </div>
-  );
+  // Ocultar todos os carrosséis de indicadores (dots) no mobile
+  // Caso queira reativar no futuro, basta remover o `return null` abaixo
+  return null;
+
+  // Código original mantido como referência:
+  // return (
+  //   <div className="flex justify-center gap-1.5 mt-4 md:hidden">
+  //     {Array.from({ length: totalItems }).map((_, index) => (
+  //       <button
+  //         key={index}
+  //         className={`w-2 h-2 rounded-full transition-all duration-300 ${
+  //           index === currentIndex
+  //             ? 'bg-white scale-125'
+  //             : 'bg-white/40 hover:bg-white/60'
+  //         }`}
+  //         onClick={() => {
+  //           if (containerRef.current) {
+  //             const container = containerRef.current;
+  //             const itemWidth = container.scrollWidth / totalItems;
+  //             container.scrollTo({
+  //               left: itemWidth * index,
+  //               behavior: 'smooth'
+  //             });
+  //           }
+  //         }}
+  //         aria-label={`Ir para item ${index + 1}`}
+  //       />
+  //     ))}
+  //   </div>
+  // );
 }
