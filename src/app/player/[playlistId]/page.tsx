@@ -117,45 +117,47 @@ export default function PlayerPage({ params }: PlayerPageProps) {
 
   return (
     <div className="min-h-screen bg-black text-white flex flex-col">
-      {/* Header */}
-      <div className="flex items-center justify-between p-4 pt-12">
-        <Button 
-          variant="ghost" 
-          size="icon" 
-          className="text-white hover:bg-gray-800"
-          onClick={() => router.back()}
-        >
-          <ArrowLeft size={24} />
-        </Button>
+      {/* Header + Cover */}
+      <div className="px-4 pt-12">
+        <div className="flex items-start">
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            className="text-white hover:bg-gray-800 flex-shrink-0 mr-4"
+            onClick={() => router.back()}
+          >
+            <ArrowLeft size={24} />
+          </Button>
+
+          {/* Single Cover Image - Centered */}
+          <div className="flex-1 flex justify-center">
+            <div className="w-[190px] h-[190px] md:w-72 md:h-72 lg:w-80 lg:h-80">
+              <div className="w-full h-full bg-gray-800 rounded-lg overflow-hidden shadow-2xl">
+                {playlist.cover_url ? (
+                  <img 
+                    src={playlist.cover_url} 
+                    alt={playlist.title}
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <div className="w-full h-full bg-gradient-to-br from-purple-600 via-blue-600 to-green-500 flex items-center justify-center">
+                    <div className="text-center">
+                      <div className="text-white text-2xl font-bold mb-2">PLAYLIST</div>
+                      <div className="text-white/80 text-lg font-medium">{playlist.title}</div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
 
       {/* Main Content */}
       <div className="flex-1 px-4 pb-64">
-        {/* Single Cover Image */}
-        <div className="mb-6">
-          <div className="aspect-square max-w-80 mx-auto">
-            <div className="w-full h-full bg-gray-800 rounded-lg overflow-hidden shadow-2xl">
-              {playlist.cover_url ? (
-                <img 
-                  src={playlist.cover_url} 
-                  alt={playlist.title}
-                  className="w-full h-full object-cover"
-                />
-              ) : (
-                <div className="w-full h-full bg-gradient-to-br from-purple-600 via-blue-600 to-green-500 flex items-center justify-center">
-                  <div className="text-center">
-                    <div className="text-white text-2xl font-bold mb-2">PLAYLIST</div>
-                    <div className="text-white/80 text-lg font-medium">{playlist.title}</div>
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-
         {/* Playlist Info */}
-        <div className="mb-6">
-          <h1 className="text-2xl font-bold mb-3 leading-tight">
+        <div className="mt-6 mb-6">
+          <h1 className="text-xl md:text-3xl lg:text-4xl font-bold mb-3 leading-tight">
             {playlist.title}
           </h1>
           
