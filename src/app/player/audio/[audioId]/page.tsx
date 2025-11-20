@@ -6,7 +6,6 @@ import { useEffect, useState, use } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useRouter } from 'next/navigation';
 import { usePlayer } from '@/contexts/PlayerContext';
-import { MiniPlayer } from '@/components/player/MiniPlayer';
 import { AudioActionButtons } from '@/components/AudioActionButtons';
 import type { Audio } from '@/lib/supabase-queries';
 
@@ -321,8 +320,6 @@ export default function AudioPlayerPage({ params }: AudioPlayerPageProps) {
         </div>
       </div>
 
-      {/* Mini Player */}
-      <MiniPlayer />
     </div>
   );
 }

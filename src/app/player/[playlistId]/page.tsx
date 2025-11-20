@@ -6,7 +6,6 @@ import { useEffect, useState, use } from 'react';
 import { getPlaylistWithAudios } from '@/lib/supabase-queries';
 import { useRouter } from 'next/navigation';
 import { usePlayer } from '@/contexts/PlayerContext';
-import { MiniPlayer } from '@/components/player/MiniPlayer';
 import type { Playlist, Audio } from '@/lib/supabase-queries';
 
 interface PlaylistWithAudios extends Playlist {
@@ -275,8 +274,6 @@ export default function PlayerPage({ params }: PlayerPageProps) {
         </div>
       </div>
 
-      {/* Mini Player */}
-      <MiniPlayer />
     </div>
   );
 }

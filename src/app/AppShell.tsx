@@ -1,11 +1,12 @@
 "use client";
 
 import { AuthProvider, useAuth } from '@/contexts/AuthContext';
-import { PlayerProvider } from '@/contexts/PlayerContext';
+import { PlayerProvider, usePlayer } from '@/contexts/PlayerContext';
 import { RoutineProvider } from '@/contexts/RoutineContext';
 import { Toaster } from '@/components/ui/sonner';
 import { Header } from '@/components/Header';
 import { BottomNavigation } from '@/components/layout/BottomNavigation';
+import { MiniPlayer } from '@/components/player/MiniPlayer';
 import { usePathname, useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
@@ -29,12 +30,15 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
   const { user, loading } = useAuth();
+  const { state } = usePlayer();
+  const hasCurrentAudio = !!state.currentAudio;
   const isLoginPage = pathname === '/login';
   const isBuscaPage = pathname === '/busca';
   const isBibliaPage = pathname === '/biblia';
   const isOnboardingPage = pathname?.startsWith('/onboarding');
   const hideHeader = isLoginPage || isBuscaPage || isBibliaPage; // mostrar Header no onboarding
   const hideBottomNav = isLoginPage || isOnboardingPage;
+  const hideMiniPlayer = isLoginPage || isOnboardingPage;
 
   // Gate de onboarding: somente primeiro acesso enquanto houver passos pendentes
   useEffect(() => {
@@ -112,9 +116,20 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
         <Header />
       </div>
 
-      <main className={`flex-1 ${!hideBottomNav ? 'pb-20' : ''} ${!hideHeader ? 'pt-16' : ''}`}>
+      <main
+        className={`flex-1 ${
+          !hideBottomNav
+            ? hasCurrentAudio && !hideMiniPlayer
+              ? 'pb-44'
+              : 'pb-24'
+            : ''
+        } ${!hideHeader ? 'pt-16' : ''}`}
+      >
         {children}
       </main>
+
+      {/* Mini player global – visível em (quase) qualquer página quando houver áudio atual */}
+      {!hideMiniPlayer && hasCurrentAudio && <MiniPlayer />}
 
       <div className={hideBottomNav ? 'hidden' : ''}>
         <BottomNavigation />
