@@ -393,8 +393,47 @@ export const PlayerProvider = ({ children }: { children: React.ReactNode }) => {
       effectiveUserType === 'trial'
     ) {
       if (!permissions.no_subscription.limit_enabled) return true;
+
+      // Primeiro tentamos usar o backend, que já considera usuário autenticado
+      try {
+        console.log(
+          '🎧 Verificando limite de áudio gratuito (logado) via /api/free-plays/check',
+          {
+            maxPerDay: permissions.no_subscription.max_free_audios_per_day,
+          },
+        );
+
+        const res = await fetch('/api/free-plays/check', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            maxPerDay: permissions.no_subscription.max_free_audios_per_day,
+            context: 'no_subscription',
+          }),
+        });
+
+        if (res.ok) {
+          const data = (await res.json()) as { allowed?: boolean; max?: number; count?: number };
+          console.log('🎧 Resposta de /api/free-plays/check (logado):', data);
+
+          if (data.allowed === false) {
+            openPaywall(effectiveUserType, 'limit_reached');
+            return false;
+          }
+          return true;
+        } else {
+          console.warn(
+            '⚠️ /api/free-plays/check retornou status não-OK para usuário logado:',
+            res.status,
+          );
+        }
+      } catch (e) {
+        console.error('free-plays/check (logado) falhou, usando fallback local', e);
+      }
+
+      // Fallback local em caso de falha de rede/backend
       const userKey = user?.id || 'anon';
-      const result = checkAndIncrementFreePlay(
+      const result = checkAndIncrementFreePlayLocal(
         userKey,
         permissions.no_subscription.max_free_audios_per_day,
       );

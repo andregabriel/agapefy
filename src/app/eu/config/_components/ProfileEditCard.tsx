@@ -471,9 +471,9 @@ export function ProfileEditCard() {
                 <Button
                   variant="outline"
                   onClick={() => setIsEditing(true)}
-                  className="w-full border-gray-600 text-gray-300 hover:bg-gray-800"
+                  className="group w-full border-gray-600 text-black hover:bg-gray-800 hover:text-white transition-colors"
                 >
-                  <Edit2 className="h-4 w-4 mr-2" />
+                  <Edit2 className="h-4 w-4 mr-2 text-black group-hover:text-white transition-colors" />
                   Editar Perfil
                 </Button>
               </div>

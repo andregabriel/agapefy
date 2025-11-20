@@ -29,8 +29,8 @@ export function ProfileHeader({ user }: ProfileHeaderProps) {
         
         <div className="flex space-x-2 ml-auto">
           <Link href="/eu/config">
-            <Button variant="outline" size="sm" className="border-gray-600 text-gray-300 hover:bg-gray-800">
-              <Settings className="h-4 w-4" />
+            <Button variant="outline" size="sm" className="group border-gray-600 text-gray-300 hover:bg-gray-800">
+              <Settings className="h-4 w-4 text-black group-hover:text-white transition-colors" />
             </Button>
           </Link>
         </div>
