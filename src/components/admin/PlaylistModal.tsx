@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
 import { X, Upload, Image, Plus, Trash2, GripVertical, Search, ChevronUp, ChevronDown } from 'lucide-react';
 
@@ -25,6 +25,8 @@ export default function PlaylistModal({ playlist, isOpen, onClose, onSave }: Pla
   const [selectedAudios, setSelectedAudios] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [audioSearchTerm, setAudioSearchTerm] = useState('');
+  const [uploadingImage, setUploadingImage] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Helpers para draft persistence
   const getDraftKey = () => {
@@ -176,6 +178,63 @@ export default function PlaylistModal({ playlist, isOpen, onClose, onSave }: Pla
       // Recalcular posições após remoção
       return updated.map((item, index) => ({ ...item, position: index }));
     });
+  };
+
+  const handleImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    // Validar tipo de arquivo
+    const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+    if (!validTypes.includes(file.type)) {
+      alert('Tipo de arquivo inválido. Use JPEG, PNG ou WebP');
+      return;
+    }
+
+    // Validar tamanho (máximo 5MB)
+    const maxSize = 5 * 1024 * 1024; // 5MB
+    if (file.size > maxSize) {
+      alert('Arquivo muito grande. Máximo 5MB permitido');
+      return;
+    }
+
+    setUploadingImage(true);
+
+    try {
+      const uploadFormData = new FormData();
+      uploadFormData.append('file', file);
+
+      const response = await fetch('/api/upload-playlist-image', {
+        method: 'POST',
+        body: uploadFormData,
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Erro ao fazer upload da imagem');
+      }
+
+      const data = await response.json();
+      
+      if (data.success && data.image_url) {
+        setFormData((prev) => ({ ...prev, cover_url: data.image_url }));
+      } else {
+        throw new Error('Resposta inválida do servidor');
+      }
+    } catch (error: any) {
+      console.error('Erro ao fazer upload da imagem:', error);
+      alert(error.message || 'Erro ao fazer upload da imagem');
+    } finally {
+      setUploadingImage(false);
+      // Limpar o input para permitir selecionar o mesmo arquivo novamente
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    }
+  };
+
+  const handleUploadButtonClick = () => {
+    fileInputRef.current?.click();
   };
 
   const moveAudio = (fromIndex: number, toIndex: number) => {
@@ -488,26 +547,58 @@ export default function PlaylistModal({ playlist, isOpen, onClose, onSave }: Pla
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   URL da Capa
                 </label>
-                <input
-                  type="url"
-                  value={formData.cover_url}
-                  onChange={(e) => setFormData({ ...formData, cover_url: e.target.value })}
-                  className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm sm:text-base text-black"
-                  placeholder="https://exemplo.com/capa.jpg"
-                />
-                {formData.cover_url && (
-                  <div className="mt-2">
-                    <img
-                      src={formData.cover_url}
-                      alt="Preview"
-                      className="w-20 h-20 object-cover rounded-lg border"
-                      onError={(e) => {
-                        const target = e.target as HTMLImageElement;
-                        target.style.display = 'none';
-                      }}
+                <div className="space-y-2">
+                  <div className="flex gap-2">
+                    <input
+                      type="url"
+                      value={formData.cover_url}
+                      onChange={(e) => setFormData({ ...formData, cover_url: e.target.value })}
+                      className="flex-1 px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm sm:text-base text-black"
+                      placeholder="https://exemplo.com/capa.jpg"
                     />
+                    <input
+                      type="file"
+                      ref={fileInputRef}
+                      onChange={handleImageUpload}
+                      accept="image/jpeg,image/jpg,image/png,image/webp"
+                      className="hidden"
+                    />
+                    <button
+                      type="button"
+                      onClick={handleUploadButtonClick}
+                      disabled={uploadingImage}
+                      className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 transition-colors whitespace-nowrap"
+                    >
+                      {uploadingImage ? (
+                        <>
+                          <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                          <span className="hidden sm:inline">Enviando...</span>
+                        </>
+                      ) : (
+                        <>
+                          <Image className="h-4 w-4" />
+                          <span className="hidden sm:inline">Upload</span>
+                        </>
+                      )}
+                    </button>
                   </div>
-                )}
+                  {formData.cover_url && (
+                    <div className="mt-2">
+                      <img
+                        src={formData.cover_url}
+                        alt="Preview"
+                        className="w-32 h-32 object-cover rounded-lg border"
+                        onError={(e) => {
+                          const target = e.target as HTMLImageElement;
+                          target.style.display = 'none';
+                        }}
+                      />
+                    </div>
+                  )}
+                </div>
+                <p className="text-xs text-gray-500 mt-1">
+                  Digite uma URL ou faça upload de uma imagem (JPEG, PNG ou WebP - máx. 5MB)
+                </p>
               </div>
 
               <div>
