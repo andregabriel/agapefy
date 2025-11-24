@@ -46,7 +46,7 @@ export async function POST(request: NextRequest) {
       model: 'dall-e-3',
       prompt: cleanPrompt,
       n: 1,
-      size: '1024x1024', // Melhor resolução para DALL-E 3
+      size: '256x256', // Tamanho menor conforme solicitado
       quality: 'hd', // Alta definição
       style: 'natural' // Estilo natural para imagens religiosas
     };
