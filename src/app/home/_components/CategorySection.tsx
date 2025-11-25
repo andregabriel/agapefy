@@ -57,7 +57,7 @@ export function CategorySection({ category, index, dailyAudioId }: CategorySecti
     is_featured: category.is_featured,
     audios_count: category.audios.length,
     playlists_count: category.playlists.length,
-    raw_content_count: raw.length,
+    raw_content_count: combined.length,
     deduplicated_count: allContent.length,
     content_items: allContent.map(item => ({ id: item.id, title: item.title, type: item.type }))
   });

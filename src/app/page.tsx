@@ -19,8 +19,18 @@ export default function RootPage() {
   // Verificar modo convidado apenas no cliente
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      const isGuest = localStorage.getItem('guestMode') === 'true';
-      console.log('🎭 Verificando modo convidado:', isGuest);
+      const storedGuestMode = localStorage.getItem('guestMode');
+
+      // Novo comportamento: se o usuário acabou de chegar e ainda não tem
+      // nenhuma preferência salva, tratamos como convidado por padrão,
+      // exatamente como se ele tivesse clicado no "X" da tela de login.
+      let isGuest = storedGuestMode === 'true';
+      if (storedGuestMode === null) {
+        isGuest = true;
+        localStorage.setItem('guestMode', 'true');
+      }
+
+      console.log('🎭 Verificando modo convidado:', isGuest, 'storedGuestMode:', storedGuestMode);
       setGuestMode(isGuest);
       setClientLoaded(true);
     }
