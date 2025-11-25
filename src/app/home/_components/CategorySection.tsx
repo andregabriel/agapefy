@@ -22,12 +22,34 @@ export function CategorySection({ category, index, dailyAudioId }: CategorySecti
   const carouselRef = useRef<HTMLDivElement | null>(null);
   const [currentIndex, setCurrentIndex] = useState(0);
 
-  // Combinar e deduplicar conteúdo
-  const raw = [
+  // Combinar conteúdo (playlists + áudios) e aplicar ordenação
+  const combined = [
     ...category.playlists.map(p => ({ ...p, type: 'playlist' as const })),
     ...category.audios.map(a => ({ ...a, type: 'audio' as const }))
   ];
-  const allContent = deduplicateById(raw);
+
+  const sorted = [...combined].sort((a: any, b: any) => {
+    const ao = typeof a.display_order === 'number' ? a.display_order : undefined;
+    const bo = typeof b.display_order === 'number' ? b.display_order : undefined;
+
+    if (ao !== undefined && bo !== undefined) {
+      if (ao !== bo) return ao - bo;
+    } else if (ao !== undefined) {
+      return -1;
+    } else if (bo !== undefined) {
+      return 1;
+    }
+
+    const aCreated = a.created_at as string | undefined;
+    const bCreated = b.created_at as string | undefined;
+    if (aCreated && bCreated) {
+      return new Date(bCreated).getTime() - new Date(aCreated).getTime();
+    }
+
+    return 0;
+  });
+
+  const allContent = deduplicateById(sorted);
 
   // DEBUG: Log detalhado para diagnosticar
   console.log(`🔍 DEBUG Categoria "${category.name}":`, {

@@ -26,6 +26,8 @@ export interface Audio {
   category_id: string | null;
   created_by: string | null;
   created_at: string;
+  // Ordem opcional de exibição combinada (áudios + playlists) na home
+  display_order?: number;
   time?: 'Wakeup' | 'Lunch' | 'Dinner' | 'Sleep' | 'Any' | null;
   spiritual_goal?: string | null;
   voice_id?: string | null;
@@ -42,11 +44,18 @@ export interface Playlist {
   created_by: string | null;
   is_public: boolean;
   created_at: string;
+  // Ordem opcional de exibição combinada (áudios + playlists) na home
+  display_order?: number;
   category?: Category;
   audios?: Audio[];
   total_duration?: number;
   audio_count?: number;
   is_challenge?: boolean;
+}
+
+export interface CategoryHomeOrderItem {
+  type: 'audio' | 'playlist';
+  id: string;
 }
 
 // Buscar todas as categorias ordenadas com categoria fixa primeiro
@@ -110,6 +119,148 @@ export async function getCategoryBannerLinks(): Promise<Record<string, string>> 
     return map;
   } catch (err) {
     logDbError('Erro inesperado ao buscar links de banner', err);
+    return {};
+  }
+}
+
+// --- Ordem combinada de conteúdo da home (áudios + playlists) por categoria ---
+
+function parseHomeOrderValue(raw: any): CategoryHomeOrderItem[] {
+  if (!raw) return [];
+
+  try {
+    // Se vier como string (ex: coluna value é text), tentar fazer parse
+    const value = typeof raw === 'string' ? JSON.parse(raw) : raw;
+    if (!Array.isArray(value)) return [];
+
+    return value
+      .map((item: any) => ({
+        type: item?.type,
+        id: item?.id
+      }))
+      .filter(
+        (item: any): item is CategoryHomeOrderItem =>
+          (item.type === 'audio' || item.type === 'playlist') &&
+          typeof item.id === 'string' &&
+          item.id.length > 0
+      );
+  } catch (err) {
+    logDbError('Erro ao fazer parse de home_content_order', err);
+    return [];
+  }
+}
+
+// Buscar ordem da home para uma categoria específica
+export async function getCategoryHomeOrder(categoryId: string): Promise<CategoryHomeOrderItem[]> {
+  if (!categoryId) return [];
+
+  try {
+    const key = `home_content_order:${categoryId}`;
+    const { data, error } = await supabase
+      .from('app_settings')
+      .select('value')
+      .eq('key', key)
+      .maybeSingle();
+
+    if (error) {
+      logDbError('Erro ao buscar ordem da home para categoria', error);
+      return [];
+    }
+
+    if (!data || data.value == null) return [];
+    return parseHomeOrderValue((data as any).value);
+  } catch (err) {
+    logDbError('Erro inesperado ao buscar ordem da home para categoria', err);
+    return [];
+  }
+}
+
+// Salvar / atualizar ordem da home para uma categoria
+export async function saveCategoryHomeOrder(
+  categoryId: string,
+  items: CategoryHomeOrderItem[]
+): Promise<{ success: boolean; error?: string }> {
+  if (!categoryId) return { success: false, error: 'categoryId inválido' };
+
+  try {
+    const key = `home_content_order:${categoryId}`;
+    const payload = items.map((item) => ({
+      type: item.type,
+      id: item.id
+    }));
+
+    const { error } = await supabase
+      .from('app_settings')
+      .upsert(
+        { key, value: payload, type: 'json' },
+        { onConflict: 'key' }
+      );
+
+    if (error) {
+      logDbError('Erro ao salvar ordem da home para categoria', error);
+      return { success: false, error: error.message };
+    }
+
+    return { success: true };
+  } catch (err: any) {
+    logDbError('Erro inesperado ao salvar ordem da home para categoria', err);
+    return { success: false, error: err?.message || 'Erro desconhecido' };
+  }
+}
+
+// Remover ordem customizada (voltar para ordem padrão por created_at)
+export async function deleteCategoryHomeOrder(
+  categoryId: string
+): Promise<{ success: boolean; error?: string }> {
+  if (!categoryId) return { success: false, error: 'categoryId inválido' };
+
+  try {
+    const key = `home_content_order:${categoryId}`;
+    const { error } = await supabase
+      .from('app_settings')
+      .delete()
+      .eq('key', key);
+
+    if (error) {
+      logDbError('Erro ao remover ordem da home para categoria', error);
+      return { success: false, error: error.message };
+    }
+
+    return { success: true };
+  } catch (err: any) {
+    logDbError('Erro inesperado ao remover ordem da home para categoria', err);
+    return { success: false, error: err?.message || 'Erro desconhecido' };
+  }
+}
+
+// Buscar ordens de home para todas as categorias em uma única chamada
+export async function getAllCategoryHomeOrders(): Promise<Record<string, CategoryHomeOrderItem[]>> {
+  try {
+    const { data, error } = await supabase
+      .from('app_settings')
+      .select('key, value')
+      .like('key', 'home_content_order:%');
+
+    if (error) {
+      logDbError('Erro ao buscar ordens da home para categorias', error);
+      return {};
+    }
+
+    const map: Record<string, CategoryHomeOrderItem[]> = {};
+
+    (data || []).forEach((row: any) => {
+      const match = /^home_content_order:(.+)$/.exec(row.key);
+      if (!match) return;
+      const categoryId = match[1];
+      const items = parseHomeOrderValue(row.value);
+      if (items.length > 0) {
+        map[categoryId] = items;
+      }
+    });
+
+    return map;
+  } catch (err) {
+    logDbError('Erro inesperado ao buscar ordens da home para categorias', err);
     return {};
   }
 }

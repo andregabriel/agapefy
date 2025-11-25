@@ -1,13 +1,15 @@
 "use client";
 
 import { useEffect, useState, useCallback, useRef } from 'react';
-import { 
-  getCategories, 
+import {
+  getCategories,
   getCategoriesContentFastBulk,
   getCategoryBannerLinks,
-  type Category, 
-  type Playlist, 
-  type Audio 
+  getAllCategoryHomeOrders,
+  type Category,
+  type Playlist,
+  type Audio,
+  type CategoryHomeOrderItem
 } from '@/lib/supabase-queries';
 
 // Componentes modulares
@@ -33,6 +35,40 @@ import { toast } from 'sonner';
 interface CategoryWithContent extends Category {
   audios: Audio[];
   playlists: Playlist[];
+}
+
+function attachDisplayOrder(
+  audios: Audio[],
+  playlists: Playlist[],
+  order: CategoryHomeOrderItem[] | undefined
+): { audios: Audio[]; playlists: Playlist[] } {
+  if (!order || order.length === 0) {
+    return { audios, playlists };
+  }
+
+  const indexMap = new Map<string, number>();
+  order.forEach((item, idx) => {
+    const key = `${item.type}:${item.id}`;
+    if (!indexMap.has(key)) {
+      indexMap.set(key, idx);
+    }
+  });
+
+  const applyOrder = <T extends { id: string }>(
+    items: T[],
+    type: 'audio' | 'playlist'
+  ): T[] => {
+    return items.map((item) => {
+      const key = `${type}:${item.id}`;
+      const display_order = indexMap.has(key) ? indexMap.get(key) : undefined;
+      return { ...item, display_order } as T & { display_order?: number };
+    });
+  };
+
+  return {
+    audios: applyOrder(audios, 'audio'),
+    playlists: applyOrder(playlists, 'playlist')
+  };
 }
 
 export default function HomePage() {
@@ -143,6 +179,8 @@ export default function HomePage() {
       // Buscar conteúdo em lote e leve (2 queries totais)
       const ids = categories.map(c => c.id);
       const contentMap = await getCategoriesContentFastBulk(ids);
+      // Buscar ordens combinadas de conteúdo para todas as categorias
+      const homeOrdersMap = await getAllCategoryHomeOrders();
 
       const resolvedBannerLinks = await bannerLinksPromise;
       setBannerLinks(resolvedBannerLinks);
@@ -159,7 +197,13 @@ export default function HomePage() {
           return { ...cat, audios: [], playlists: [] } as CategoryWithContent;
         }
         const content = contentMap[cat.id] || { audios: [], playlists: [] };
-        return { ...cat, audios: content.audios || [], playlists: content.playlists || [] } as CategoryWithContent;
+        const categoryOrder = homeOrdersMap[cat.id];
+        const withOrder = attachDisplayOrder(content.audios || [], content.playlists || [], categoryOrder);
+        return {
+          ...cat,
+          audios: withOrder.audios,
+          playlists: withOrder.playlists
+        } as CategoryWithContent;
       })
       // Não esconder categorias vazias: o admin pediu que todas (não ocultas) apareçam
       // Mantemos todas as categorias, inclusive vazias
