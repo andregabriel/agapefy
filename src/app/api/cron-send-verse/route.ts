@@ -121,6 +121,20 @@ export async function GET(req: NextRequest) {
       return new NextResponse('Unauthorized', { status: 401 });
     }
 
+    // Kill switch global: por padrão, esta CRON de versículo diário via WhatsApp
+    // fica desativada. Só será executada se WHATSAPP_DAILY_VERSE_CRON_ENABLED === 'true'.
+    const DAILY_VERSE_CRON_ENABLED = (process.env.WHATSAPP_DAILY_VERSE_CRON_ENABLED ?? 'false') === 'true';
+    if (!DAILY_VERSE_CRON_ENABLED) {
+      return NextResponse.json({
+        ok: true,
+        cron: true,
+        tz: 'America/Sao_Paulo',
+        triggered: false,
+        skipped: true,
+        reason: 'whatsapp_daily_verse_cron_disabled',
+      });
+    }
+
     const url = new URL(req.url);
     const test = url.searchParams.get('test') === 'true';
     const limit = parseInt(url.searchParams.get('limit') || '0') || undefined;

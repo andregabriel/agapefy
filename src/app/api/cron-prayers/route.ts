@@ -252,6 +252,21 @@ export async function GET(req: NextRequest) {
       return new NextResponse('Unauthorized', { status: 401 });
     }
 
+    // Kill switch global: por padrão, esta CRON fica desativada.
+    // Só será executada se WHATSAPP_PRAYER_CRON_ENABLED === 'true'.
+    const PRAYER_CRON_ENABLED = (process.env.WHATSAPP_PRAYER_CRON_ENABLED ?? 'false') === 'true';
+    if (!PRAYER_CRON_ENABLED) {
+      return NextResponse.json({
+        ok: true,
+        cron: true,
+        tz: 'America/Sao_Paulo',
+        test: false,
+        triggered: false,
+        skipped: true,
+        reason: 'whatsapp_prayer_cron_disabled',
+      });
+    }
+
     const url = new URL(req.url);
     const test = url.searchParams.get('test') === 'true';
     const limit = parseInt(url.searchParams.get('limit') || '0') || undefined;

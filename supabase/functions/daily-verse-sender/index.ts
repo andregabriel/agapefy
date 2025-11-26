@@ -21,6 +21,22 @@ serve(async (req: Request) => {
   }
 
   try {
+    // Kill switch global: por padrão, o envio de versículo diário via Edge Function
+    // fica desativado. Só será executado se WHATSAPP_DAILY_VERSE_CRON_ENABLED === 'true'.
+    const enabledFlag = Deno.env.get('WHATSAPP_DAILY_VERSE_CRON_ENABLED') ?? 'false'
+    if (enabledFlag !== 'true') {
+      return new Response(
+        JSON.stringify({
+          ok: true,
+          skipped: true,
+          reason: 'whatsapp_daily_verse_cron_disabled',
+        }),
+        {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        },
+      )
+    }
+
     const url = new URL(req.url)
     const isTest = url.searchParams.get('test') === 'true'
     const limit = parseInt(url.searchParams.get('limit') || '0') || undefined
