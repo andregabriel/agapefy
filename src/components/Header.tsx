@@ -13,7 +13,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Settings, Bell, Heart, MessageCircle, Users, Loader2 } from 'lucide-react';
+import { Settings, Bell, Heart, MessageCircle, Users, Loader2, Search } from 'lucide-react';
 import Link from 'next/link';
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
@@ -262,11 +262,43 @@ export function Header() {
               )}
             </div>
           ) : (
-            <Link href="/login">
-              <Button variant="outline" size="sm" className="border-green-500 text-green-500 hover:bg-green-500 hover:text-black">
-                Entrar
-              </Button>
-            </Link>
+            <div className="flex items-center space-x-3">
+              {/* Botão de busca - leva para a página de busca */}
+              <Link href="/busca">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="flex items-center text-gray-300 hover:text-white hover:bg-white/5 rounded-full px-4"
+                >
+                  <Search size={16} className="mr-2" />
+                  <span className="text-sm font-medium">
+                    Buscar
+                  </span>
+                </Button>
+              </Link>
+
+              {/* Link de entrar simples, minimalista */}
+              <Link href="/login">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="text-gray-300 hover:text-white hover:bg-white/5 px-4"
+                >
+                  Entrar
+                </Button>
+              </Link>
+
+              {/* CTA principal para convidado */}
+              <Link href="/login">
+                <Button
+                  variant="default"
+                  size="sm"
+                  className="rounded-full bg-white text-black hover:bg-white/90 px-5 text-sm font-semibold shadow-sm"
+                >
+                  Experimente de Graça
+                </Button>
+              </Link>
+            </div>
           )}
         </div>
       </div>
