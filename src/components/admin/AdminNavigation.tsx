@@ -19,7 +19,6 @@ import {
   Wrench,
   TestTube,
   Webhook,
-  MessageSquare,
   TrendingUp,
   ShieldCheck,
   CreditCard,
@@ -136,28 +135,10 @@ const adminRoutes = [
     color: 'text-indigo-500'
   },
   {
-    label: 'Testes',
-    icon: TestTube,
-    href: '/admin/testes',
-    color: 'text-green-500'
-  },
-  {
     label: 'Usuários',
     icon: Users,
     href: '/admin/usuarios',
     color: 'text-emerald-500'
-  },
-  {
-    label: 'Webhook Test',
-    icon: Webhook,
-    href: '/admin/webhook-test',
-    color: 'text-cyan-500'
-  },
-  {
-    label: 'WhatsApp IA',
-    icon: MessageSquare,
-    href: '/admin/whatsIA',
-    color: 'text-green-400'
   },
   {
     label: 'WhatsApp',

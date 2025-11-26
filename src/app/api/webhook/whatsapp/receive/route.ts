@@ -107,6 +107,43 @@ export async function POST(request: NextRequest) {
 
     console.log(`📱 Processando mensagem de ${userName} (${userPhone}): "${messageContent}"`);
 
+    // ------------------------------------------------------------------
+    // Proteção contra duplicidade de processamento
+    // ------------------------------------------------------------------
+    // Alguns provedores de webhook (incluindo Z-API) podem reenviar o mesmo
+    // evento em casos de timeout/intermitência de rede. Para evitar que o
+    // usuário receba respostas duplicadas e que a conversa seja registrada
+    // duas vezes, verificamos se já existe uma conversa recente com o mesmo
+    // número + conteúdo de mensagem.
+    try {
+      const duplicateWindowMs = 30 * 1000; // 30 segundos
+      const since = new Date(Date.now() - duplicateWindowMs).toISOString();
+
+      const { data: existingConversations, error: dupError } = await supabase
+        .from('whatsapp_conversations')
+        .select('id, created_at')
+        .eq('user_phone', userPhone)
+        .eq('message_content', messageContent)
+        .gte('created_at', since)
+        .limit(1);
+
+      if (dupError) {
+        console.warn('⚠️ Erro ao verificar duplicidade de conversa (receive):', dupError);
+      } else if (existingConversations && existingConversations.length > 0) {
+        console.log('⚠️ Mensagem duplicada detectada (receive) - ignorando processamento para evitar respostas em duplicidade');
+        return NextResponse.json({
+          status: 'ignored',
+          reason: 'duplicate_message',
+          phone: userPhone,
+          message_preview: messageContent.substring(0, 50),
+        }, { status: 200 });
+      }
+    } catch (dupCheckError) {
+      console.warn('⚠️ Falha inesperada ao checar duplicidade (receive):', dupCheckError);
+      // Em caso de erro na checagem, continuamos o fluxo normal para não
+      // bloquear o processamento da mensagem.
+    }
+
     // Verificar se usuário já existe antes de fazer upsert
     console.log('👤 Verificando/registrando usuário...');
     console.log(`📞 Número normalizado: ${userPhone} (original: ${userPhoneRaw})`);
@@ -142,16 +179,13 @@ export async function POST(request: NextRequest) {
       console.log(`✅ Usuário ${userPhone} registrado/atualizado com sucesso`);
     }
 
-    // Carregar configurações úteis (boas-vindas, menu, assistentes)
-    // NOTA: NÃO carregar bw_waiting_message - foi completamente removida
+    // Carregar configurações úteis (boas-vindas, menu e regras de assistentes)
     const settingsRows = await supabase.from('app_settings').select('key,value').in('key', [
       'whatsapp_send_welcome_enabled',
       'whatsapp_welcome_message',
       'whatsapp_menu_message',
       'whatsapp_menu_enabled',
       'whatsapp_menu_reminder_enabled',
-      'bw_intents_config',
-      'bw_short_commands',
       'whatsapp_assistant_rules'
     ]);
     
@@ -161,8 +195,6 @@ export async function POST(request: NextRequest) {
     
     const settingsMap: Record<string, string> = {};
     for (const r of settingsRows.data || []) settingsMap[r.key] = r.value as string;
-    // Garantir que bw_waiting_message não seja usado mesmo se estiver no banco
-    delete settingsMap['bw_waiting_message'];
     
     console.log('⚙️ Configurações carregadas:', {
       'whatsapp_send_welcome_enabled': settingsMap['whatsapp_send_welcome_enabled'] ?? 'não encontrado',
@@ -180,23 +212,6 @@ export async function POST(request: NextRequest) {
     console.log(`  - existingUser: ${existingUser ? 'existe' : 'não existe'}`);
     console.log(`  - hasSentFirstMessage: ${hasSentFirstMessage}`);
     console.log(`  - isFirstMessage: ${isFirstMessage}`);
-
-    // Detectar rapidamente a intenção (sem enviar mensagem de espera)
-    const quickTriggers: Record<string, string[]> = (() => {
-      if (settingsMap && typeof settingsMap['bw_short_commands'] === 'string') {
-        try { return JSON.parse(settingsMap['bw_short_commands']); } catch { return {}; }
-      }
-      return {};
-    })();
-    let quickIntent = detectIntention(messageContent, quickTriggers);
-    const intentsCfgQuick = settingsMap && settingsMap['bw_intents_config']
-      ? (() => { try { return JSON.parse(settingsMap['bw_intents_config']); } catch { return {}; } })()
-      : {};
-    const quickCfg = intentsCfgQuick[quickIntent] || {};
-    if (quickCfg && quickCfg.enabled === false) quickIntent = 'general_conversation';
-
-    // NOTA: Mensagem de espera (bw_waiting_message) foi completamente removida
-    // Não enviar nenhuma mensagem antes da resposta principal
 
     // Gerar resposta inteligente com IA
     console.log('🤖 Gerando resposta inteligente...');
@@ -300,13 +315,14 @@ export async function POST(request: NextRequest) {
 
     // Lembrete a cada 5 mensagens do usuário (apenas se ativado)
     const menuReminderEnabled = (settingsMap['whatsapp_menu_reminder_enabled'] ?? 'false') === 'true';
-    if (menuReminderEnabled && menuText) {
+    const menuReminderText = settingsMap['whatsapp_menu_message'] || '';
+    if (menuReminderEnabled && menuReminderText) {
       const { count: convCount } = await supabase
         .from('whatsapp_conversations')
         .select('*', { count: 'exact', head: true })
         .eq('user_phone', userPhone);
       if ((convCount || 0) > 0 && (convCount as number) % 5 === 0) {
-        await sendWhatsAppMessage(userPhone, menuText);
+        await sendWhatsAppMessage(userPhone, menuReminderText);
       }
     }
 
@@ -351,28 +367,8 @@ async function generateIntelligentResponse(request: NextRequest, message: string
       return getDefaultResponse(message, userName);
     }
 
-    // Detectar intenção da mensagem
-    // Build triggers from config/short-commands
-    const triggersMap: Record<string, string[]> = (() => {
-      if (settingsMap && typeof settingsMap['bw_short_commands'] === 'string') {
-        try { return JSON.parse(settingsMap['bw_short_commands']); } catch { return {}; }
-      }
-      return {};
-    })();
-    let intention = detectIntention(message, triggersMap);
-    // Tentar aplicar atalhos configurados pelo admin
-    const sc = (settingsMap && settingsMap['bw_short_commands']) ? {} as any : await loadShortCommands();
-    // Preferir mapa vindo do carregamento inicial (se fornecido)
-    const shortCommands = (() => {
-      if (settingsMap && typeof settingsMap['bw_short_commands'] === 'string') {
-        try { return JSON.parse(settingsMap['bw_short_commands']); } catch { return {}; }
-      }
-      return sc;
-    })();
-    const matched = matchShortCommand(shortCommands, message);
-    if (matched) {
-      intention = matched;
-    }
+    // Detectar intenção usando apenas heurísticas internas
+    let intention = detectIntention(message);
     console.log(`🎯 Intenção detectada: ${intention}`);
     
     // Buscar histórico de conversas recentes
@@ -382,16 +378,6 @@ async function generateIntelligentResponse(request: NextRequest, message: string
       .eq('user_phone', userPhone)
       .order('created_at', { ascending: false })
       .limit(3);
-
-    // Ler configuração por intenção do app_settings (se existir)
-    const intentsConfig = settingsMap && settingsMap['bw_intents_config']
-      ? (() => { try { return JSON.parse(settingsMap['bw_intents_config']); } catch { return {}; } })()
-      : await loadIntentsConfig();
-    const currentIntentCfg = intentsConfig[intention] || {};
-    if (currentIntentCfg && currentIntentCfg.enabled === false) {
-      // Intenção desativada: cair para conversa geral
-      intention = 'general_conversation';
-    }
 
     // Fluxos especiais
     // 1) Toggle de versículo diário
@@ -404,21 +390,21 @@ async function generateIntelligentResponse(request: NextRequest, message: string
           .from('whatsapp_users')
           .update({ receives_daily_verse: enable, updated_at: new Date().toISOString() })
           .eq('phone_number', userPhone);
-        const onMsg = (currentIntentCfg.messages?.confirm_on as string) || '✅ Versículo diário ativado. Você começará a receber todos os dias.';
-        const offMsg = (currentIntentCfg.messages?.confirm_off as string) || '❌ Versículo diário desativado. Você pode ativar quando quiser.';
+        const onMsg = '✅ Versículo diário ativado. Você começará a receber todos os dias.';
+        const offMsg = '❌ Versículo diário desativado. Você pode ativar quando quiser.';
         return enable ? onMsg : offMsg;
       }
       // Nenhuma ação explícita: instruir
-      return (currentIntentCfg.messages?.help as string) || 'Para receber o versículo do dia, envie: "ativar versículo diário". Para parar, envie: "parar versículo diário".';
+      return 'Para receber o versículo do dia, envie: "ativar versículo diário". Para parar, envie: "parar versículo diário".';
     }
 
     // 2) Busca de orações (links do app)
     if (intention === 'prayer_request') {
       const query = extractPrayerQuery(message);
-      const limit = Number(currentIntentCfg.max_results || 3) || 3;
+      const limit = 3;
       const results = await searchPrayers(query);
-      const header = (currentIntentCfg.messages?.header as string) || 'Encontrei estas orações no app:';
-      const none = (currentIntentCfg.messages?.no_results as string) || 'Não encontrei orações para esse tema. Tente outra palavra, como "fé", "família" ou "gratidão".';
+      const header = 'Encontrei estas orações no app:';
+      const none = 'Não encontrei orações para esse tema. Tente outra palavra, como "fé", "família" ou "gratidão".';
       if (results.length === 0) {
         return none;
       }
@@ -479,27 +465,8 @@ async function generateIntelligentResponse(request: NextRequest, message: string
       }
     }
 
-    // 3) Conversa geral: usar Assistente Biblicus quando configurado (fallback)
-    // NOTA: Não enviar mensagem de espera (bw_waiting_message) - foi completamente removida
-    const useAssistant = intention === 'general_conversation' && (currentIntentCfg?.engine || 'prompt') === 'assistant';
-    if (useAssistant && !selectedAssistant) {
-      const base = request.nextUrl.origin;
-      // NÃO enviar mensagem de espera antes de chamar o Biblicus
-      const chatRes = await fetch(`${base}/api/biblicus/chat`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message })
-      });
-      if (chatRes.ok) {
-        const data = await chatRes.json();
-        const reply = (data && (data.reply || data?.reply === '' ? data.reply : data?.response)) || '';
-        if (reply) return reply;
-      }
-      // fallback se Assistente falhar: cai para prompt padrão abaixo
-    }
-
-    // Definir prompt do sistema baseado na intenção (considerando override do admin)
-    let systemPrompt = currentIntentCfg?.prompt?.trim() || getSystemPrompt(intention);
+    // Definir prompt do sistema baseado na intenção (apenas configuração interna)
+    let systemPrompt = getSystemPrompt(intention);
     let responsePrefix = getResponsePrefix(intention);
 
     // Se for versículo do dia, retornar diretamente
@@ -613,49 +580,6 @@ function getSystemPrompt(intention: string): string {
   };
 
   return prompts[intention as keyof typeof prompts] || prompts.general_conversation;
-}
-
-async function loadIntentsConfig(): Promise<Record<string, { enabled?: boolean; prompt?: string }>> {
-  try {
-    const { data, error } = await supabase
-      .from('app_settings')
-      .select('key, value')
-      .eq('key', 'bw_intents_config')
-      .maybeSingle();
-    if (error || !data?.value) return {};
-    const parsed = JSON.parse(data.value);
-    if (parsed && typeof parsed === 'object') return parsed as Record<string, { enabled?: boolean; prompt?: string }>;
-    return {};
-  } catch {
-    return {};
-  }
-}
-
-async function loadShortCommands(): Promise<Record<string, string[]>> {
-  try {
-    const { data, error } = await supabase
-      .from('app_settings')
-      .select('key, value')
-      .eq('key', 'bw_short_commands')
-      .maybeSingle();
-    if (error || !data?.value) return {};
-    const parsed = JSON.parse(data.value);
-    if (parsed && typeof parsed === 'object') return parsed as Record<string, string[]>;
-    return {};
-  } catch {
-    return {};
-  }
-}
-
-function matchShortCommand(shortCommands: Record<string, string[]>, message: string): string | null {
-  const text = normalizeText(message);
-  for (const [intent, cmds] of Object.entries(shortCommands)) {
-    for (const cmd of cmds || []) {
-      const token = normalizeText(cmd || '');
-      if (token && text.includes(token)) return intent;
-    }
-  }
-  return null;
 }
 
 function getResponsePrefix(intention: string): string {

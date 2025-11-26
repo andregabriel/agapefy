@@ -47,10 +47,7 @@ const adminRouteGroups: { title: string; routes: AdminRoute[] }[] = [
     title: 'Whatsapp',
     routes: [
       adminRoutes.find((r) => r.href === '/admin/whatsapp'),
-      adminRoutes.find((r) => r.href === '/admin/whatsIA'),
       adminRoutes.find((r) => r.href === '/admin/setup'),
-      adminRoutes.find((r) => r.href === '/admin/testes'),
-      adminRoutes.find((r) => r.href === '/admin/webhook-test'),
     ].filter(Boolean) as AdminRoute[],
   },
   {
@@ -62,8 +59,6 @@ const adminRouteGroups: { title: string; routes: AdminRoute[] }[] = [
 // Mesmas renomeações utilizadas no menu hambúrguer
 const labelOverrides: Record<string, string> = {
   '/admin/whatsapp': 'Gerenciador da IA',
-  '/admin/whatsIA': 'Comandos da IA',
-  '/admin/webhook-test': 'Webhook Testes',
 };
 
 export default function AdminHorizontalMenu() {

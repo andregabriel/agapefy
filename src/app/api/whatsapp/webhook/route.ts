@@ -99,6 +99,42 @@ export async function POST(request: NextRequest) {
 
     console.log(`📱 Processando mensagem de ${userName} (${userPhone}): "${messageContent}"`);
 
+    // ------------------------------------------------------------------
+    // Proteção contra duplicidade de processamento
+    // ------------------------------------------------------------------
+    // Assim como no endpoint /api/webhook/whatsapp/receive, garantimos aqui
+    // que a mesma mensagem (telefone + conteúdo) não seja processada mais
+    // de uma vez em um curto intervalo de tempo. Isso evita respostas
+    // duplicadas para o usuário caso o webhook seja reenviado.
+    try {
+      const duplicateWindowMs = 30 * 1000; // 30 segundos
+      const since = new Date(Date.now() - duplicateWindowMs).toISOString();
+
+      const { data: existingConversations, error: dupError } = await supabase
+        .from('whatsapp_conversations')
+        .select('id, created_at')
+        .eq('user_phone', userPhone)
+        .eq('message_content', messageContent)
+        .gte('created_at', since)
+        .limit(1);
+
+      if (dupError) {
+        console.warn('⚠️ Erro ao verificar duplicidade de conversa (webhook):', dupError);
+      } else if (existingConversations && existingConversations.length > 0) {
+        console.log('⚠️ Mensagem duplicada detectada (webhook) - ignorando processamento para evitar respostas em duplicidade');
+        return NextResponse.json({
+          status: 'ignored',
+          reason: 'duplicate_message',
+          phone: userPhone,
+          message_preview: messageContent.substring(0, 50),
+        }, { status: 200 });
+      }
+    } catch (dupCheckError) {
+      console.warn('⚠️ Falha inesperada ao checar duplicidade (webhook):', dupCheckError);
+      // Se a checagem falhar, seguimos o fluxo normal para não interromper
+      // o atendimento ao usuário.
+    }
+
     // Verificar se usuário já existe antes de fazer upsert
     console.log('👤 Verificando/registrando usuário...');
     const { data: existingUser } = await supabase
@@ -130,8 +166,7 @@ export async function POST(request: NextRequest) {
       updated_at: new Date().toISOString()
     }, { onConflict: 'phone_number' });
 
-    // Carregar configurações úteis (boas-vindas, menu, short-commands, intents, assistant rules)
-    // NOTA: NÃO carregar bw_waiting_message - foi completamente removida
+    // Carregar configurações úteis (boas-vindas, menu e regras de assistentes)
     const settingsRows = await supabase
       .from('app_settings')
       .select('key,value')
@@ -141,34 +176,13 @@ export async function POST(request: NextRequest) {
         'whatsapp_menu_message',
         'whatsapp_menu_enabled',
         'whatsapp_menu_reminder_enabled',
-        'bw_intents_config',
-        'bw_short_commands',
         'whatsapp_assistant_rules'
       ]);
     const settingsMap: Record<string, string> = {};
     for (const r of settingsRows.data || []) settingsMap[r.key] = r.value as string;
-    // Garantir que bw_waiting_message não seja usado mesmo se estiver no banco
-    delete settingsMap['bw_waiting_message'];
 
     // Verificar se é a primeira mensagem do usuário (usando has_sent_first_message)
     const isFirstMessage = !hasSentFirstMessage;
-
-    // Detectar intenção rapidamente (sem enviar mensagem de espera)
-    const quickTriggers: Record<string, string[]> = (() => {
-      if (settingsMap && typeof settingsMap['bw_short_commands'] === 'string') {
-        try { return JSON.parse(settingsMap['bw_short_commands']); } catch { return {}; }
-      }
-      return {};
-    })();
-    let quickIntent = detectIntention(messageContent, quickTriggers);
-    const intentsCfgQuick = settingsMap && settingsMap['bw_intents_config']
-      ? (() => { try { return JSON.parse(settingsMap['bw_intents_config']); } catch { return {}; } })()
-      : {};
-    const quickCfg = intentsCfgQuick[quickIntent] || {};
-    if (quickCfg && quickCfg.enabled === false) quickIntent = 'general_conversation';
-    
-    // NOTA: Mensagem de espera (bw_waiting_message) foi completamente removida
-    // Não enviar nenhuma mensagem antes da resposta principal
 
     // Gerar resposta inteligente
     console.log('🤖 Gerando resposta inteligente...');
@@ -235,13 +249,14 @@ export async function POST(request: NextRequest) {
 
     // Lembrete a cada 5 mensagens do usuário (apenas se ativado)
     const menuReminderEnabled = (settingsMap['whatsapp_menu_reminder_enabled'] ?? 'false') === 'true';
-    if (menuReminderEnabled && menuText) {
+    const menuReminderText = settingsMap['whatsapp_menu_message'] || '';
+    if (menuReminderEnabled && menuReminderText) {
       const { count: convCount } = await supabase
         .from('whatsapp_conversations')
         .select('*', { count: 'exact', head: true })
         .eq('user_phone', userPhone);
       if ((convCount || 0) > 0 && (convCount as number) % 5 === 0) {
-        await sendWhatsAppMessage(userPhone, menuText);
+        await sendWhatsAppMessage(userPhone, menuReminderText);
       }
     }
 
@@ -284,26 +299,8 @@ async function generateIntelligentResponse(request: NextRequest, message: string
       return `🤗 Olá ${userName}! Sou o Agape, seu companheiro espiritual. Como posso te ajudar hoje? 😊`;
     }
 
-    // Detectar intenção com triggers de config (se houver)
-    const triggersMap: Record<string, string[]> = (() => {
-      if (settingsMap && typeof settingsMap['bw_short_commands'] === 'string') {
-        try { return JSON.parse(settingsMap['bw_short_commands']); } catch { return {}; }
-      }
-      return {};
-    })();
-    let intention = detectIntention(message, triggersMap);
-    // Aplicar atalhos configurados pelo admin (fallback para leitura direta)
-    const sc = (settingsMap && settingsMap['bw_short_commands']) ? {} as any : await loadShortCommands();
-    const shortCommands = (() => {
-      if (settingsMap && typeof settingsMap['bw_short_commands'] === 'string') {
-        try { return JSON.parse(settingsMap['bw_short_commands']); } catch { return {}; }
-      }
-      return sc;
-    })();
-    const matched = matchShortCommand(shortCommands, message);
-    if (matched) {
-      intention = matched;
-    }
+    // Detectar intenção usando apenas heurísticas internas
+    let intention = detectIntention(message);
     console.log(`🎯 Intenção detectada: ${intention}`);
     
     // Buscar histórico de conversas
@@ -313,15 +310,6 @@ async function generateIntelligentResponse(request: NextRequest, message: string
       .eq('user_phone', userPhone)
       .order('created_at', { ascending: false })
       .limit(3);
-
-    // Ler configuração por intenção do app_settings (se existir)
-    const intentsConfig = settingsMap && settingsMap['bw_intents_config']
-      ? (() => { try { return JSON.parse(settingsMap['bw_intents_config']); } catch { return {}; } })()
-      : await loadIntentsConfig();
-    const currentIntentCfg = intentsConfig[intention];
-    if (currentIntentCfg && currentIntentCfg.enabled === false) {
-      intention = 'general_conversation';
-    }
 
     // Selecionar assistente baseado em detecção inteligente (palavras-chave + contexto)
     let selectedAssistant: Assistant | null = null;
@@ -381,29 +369,8 @@ async function generateIntelligentResponse(request: NextRequest, message: string
     const detectedContext = detectMessageContext(message);
     console.log(`🧠 Contexto detectado: ${detectedContext}`);
 
-    // 3) Conversa geral: usar Assistente Biblicus quando configurado (fallback)
-    // NOTA: Não enviar mensagem de espera (bw_waiting_message) - foi completamente removida
-    const useAssistant = intention === 'general_conversation' && (currentIntentCfg?.engine || 'prompt') === 'assistant';
-    if (useAssistant && !selectedAssistant) {
-      const base = request.nextUrl.origin;
-      // NÃO enviar mensagem de espera antes de chamar o Biblicus
-      try {
-        const chatRes = await fetch(`${base}/api/biblicus/chat`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ message })
-        });
-        if (chatRes.ok) {
-          const data = await chatRes.json();
-          const reply = (data && (data.reply || data?.reply === '' ? data.reply : data?.response)) || '';
-          if (reply) return reply;
-        }
-      } catch {}
-      // fallback se Assistente falhar: segue fluxo de prompt abaixo
-    }
-
-    // Prompt e prefixo considerando overrides e contexto detectado
-    let systemPrompt = currentIntentCfg?.prompt?.trim() || getSystemPrompt(intention);
+    // Prompt e prefixo considerando apenas configuração interna e contexto detectado
+    let systemPrompt = getSystemPrompt(intention);
     let responsePrefix = getResponsePrefix(intention);
     
     // Melhorar prompt baseado no contexto detectado se não houver assistente específico
@@ -727,51 +694,6 @@ function getResponsePrefix(intention: string): string {
     daily_verse: ''
   } as const;
   return (prefixes as any)[intention] || '💙 ';
-}
-
-async function loadShortCommands(): Promise<Record<string, string[]>> {
-  try {
-    const { data, error } = await supabase
-      .from('app_settings')
-      .select('key, value')
-      .eq('key', 'bw_short_commands')
-      .maybeSingle();
-    if (error || !data?.value) return {};
-    const parsed = JSON.parse(data.value);
-    if (parsed && typeof parsed === 'object') return parsed as Record<string, string[]>;
-    return {};
-  } catch {
-    return {};
-  }
-}
-
-function matchShortCommand(shortCommands: Record<string, string[]>, message: string): string | null {
-  const text = normalizeText(message);
-  for (const [intent, cmds] of Object.entries(shortCommands)) {
-    for (const cmd of cmds || []) {
-      const token = normalizeText(cmd || '');
-      if (token && text.includes(token)) return intent;
-    }
-  }
-  return null;
-}
-
-// removed duplicate getSystemPrompt and getResponsePrefix declarations
-
-async function loadIntentsConfig(): Promise<Record<string, { enabled?: boolean; prompt?: string }>> {
-  try {
-    const { data, error } = await supabase
-      .from('app_settings')
-      .select('key, value')
-      .eq('key', 'bw_intents_config')
-      .maybeSingle();
-    if (error || !data?.value) return {};
-    const parsed = JSON.parse(data.value);
-    if (parsed && typeof parsed === 'object') return parsed as Record<string, { enabled?: boolean; prompt?: string }>;
-    return {};
-  } catch {
-    return {};
-  }
 }
 
 interface Assistant {

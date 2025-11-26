@@ -51,10 +51,7 @@ const adminRouteGroups = [
     title: 'Whatsapp',
     routes: [
       adminRoutes.find(r => r.href === '/admin/whatsapp'),
-      adminRoutes.find(r => r.href === '/admin/whatsIA'),
-      adminRoutes.find(r => r.href === '/admin/setup'),
-      adminRoutes.find(r => r.href === '/admin/testes'),
-      adminRoutes.find(r => r.href === '/admin/webhook-test')
+      adminRoutes.find(r => r.href === '/admin/setup')
     ].filter(Boolean)
   },
   {
@@ -67,9 +64,7 @@ const adminRouteGroups = [
 
 // Renomear rótulos apenas para o menu hamburguer
 const labelOverrides: Record<string, string> = {
-  '/admin/whatsapp': 'Gerenciador da IA',
-  '/admin/whatsIA': 'Comandos da IA',
-  '/admin/webhook-test': 'Webhook Testes'
+  '/admin/whatsapp': 'Gerenciador da IA'
 };
 
 export default function AdminHamburgerMenu() {

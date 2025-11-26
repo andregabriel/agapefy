@@ -10,14 +10,14 @@ import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Switch } from '@/components/ui/switch';
 import { toast } from 'sonner';
 import { supabase } from '@/lib/supabase';
 import { useAppSettings } from '@/hooks/useAppSettings';
-import { 
-  MessageCircle, 
-  Users, 
-  Send, 
-  Settings, 
+import {
+  MessageCircle,
+  Users,
+  Settings,
   Calendar,
   Activity,
   Phone,
@@ -34,7 +34,8 @@ import {
   TestTube,
   Power,
   PowerOff,
-  Edit
+  Edit,
+  Save
 } from 'lucide-react';
 
 interface WhatsAppUser {
@@ -77,10 +78,6 @@ export default function WhatsAppAdminPage() {
   const [users, setUsers] = useState<WhatsAppUser[]>([]);
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [loading, setLoading] = useState(false);
-  const [testPhone, setTestPhone] = useState('');
-  const [testMessage, setTestMessage] = useState('');
-  const [webhookUrl, setWebhookUrl] = useState('');
-  const [webhookStatus, setWebhookStatus] = useState<any>(null);
   const [mounted, setMounted] = useState(false);
   const [assistantRules, setAssistantRules] = useState('');
   const [savingRules, setSavingRules] = useState(false);
@@ -92,6 +89,12 @@ export default function WhatsAppAdminPage() {
   const [editingUser, setEditingUser] = useState<WhatsAppUser | null>(null);
   const [editingPhone, setEditingPhone] = useState('');
   const [savingPhone, setSavingPhone] = useState(false);
+  // Configurações de boas-vindas / menu (movidas de /admin/whatsIA)
+  const [welcome, setWelcome] = useState('');
+  const [sendWelcome, setSendWelcome] = useState<boolean>(true);
+  const [menuMessage, setMenuMessage] = useState<string>('');
+  const [menuEnabled, setMenuEnabled] = useState<boolean>(false);
+  const [menuReminderEnabled, setMenuReminderEnabled] = useState<boolean>(false);
 
   // Aguardar montagem do componente para acessar window
   useEffect(() => {
@@ -102,13 +105,23 @@ export default function WhatsAppAdminPage() {
     if (mounted) {
       loadUsers();
       loadConversations();
-      checkWebhookStatus();
-      
-      // Só definir a URL do webhook após a montagem
-      const defaultWebhookUrl = `${window.location.origin}/api/whatsapp/webhook`;
-      setWebhookUrl(defaultWebhookUrl);
     }
   }, [mounted]);
+
+  // Sincronizar estados de boas-vindas com app_settings
+  useEffect(() => {
+    setWelcome(settings.whatsapp_welcome_message || '');
+    setSendWelcome((settings.whatsapp_send_welcome_enabled ?? 'true') === 'true');
+    setMenuMessage(settings.whatsapp_menu_message || '');
+    setMenuEnabled((settings.whatsapp_menu_enabled ?? 'false') === 'true');
+    setMenuReminderEnabled((settings.whatsapp_menu_reminder_enabled ?? 'false') === 'true');
+  }, [
+    settings.whatsapp_welcome_message,
+    settings.whatsapp_send_welcome_enabled,
+    settings.whatsapp_menu_message,
+    settings.whatsapp_menu_enabled,
+    settings.whatsapp_menu_reminder_enabled,
+  ]);
 
   useEffect(() => {
     // Aguardar settings carregarem da API
@@ -206,6 +219,66 @@ export default function WhatsAppAdminPage() {
       setAssistantsInitialized(true);
     }
   }, [settings.whatsapp_assistant_rules, settingsLoading, assistantsInitialized]);
+
+  // Handlers de boas-vindas / menu — iguais aos usados em /admin/whatsIA
+  async function saveWelcome() {
+    try {
+      const value = welcome?.trim() || '';
+      const res = await updateSetting('whatsapp_welcome_message', value);
+      if (res.success) {
+        toast.success('Mensagem inicial atualizada');
+      } else {
+        toast.error(res.error || 'Falha ao salvar mensagem inicial');
+      }
+    } catch (e) {
+      console.warn(e);
+      toast.error('Erro ao salvar mensagem inicial');
+    }
+  }
+
+  async function saveWelcomeSwitch() {
+    try {
+      const res = await updateSetting('whatsapp_send_welcome_enabled', sendWelcome ? 'true' : 'false');
+      if (!res.success) toast.error(res.error || 'Falha ao salvar');
+      else toast.success('Preferência de boas-vindas atualizada');
+    } catch (e) {
+      console.warn(e);
+      toast.error('Erro ao salvar');
+    }
+  }
+
+  async function saveMenuMessage() {
+    try {
+      const res = await updateSetting('whatsapp_menu_message', menuMessage || '');
+      if (!res.success) toast.error(res.error || 'Falha ao salvar menu');
+      else toast.success('Menu inicial atualizado');
+    } catch (e) {
+      console.warn(e);
+      toast.error('Erro ao salvar menu');
+    }
+  }
+
+  async function saveMenuEnabled() {
+    try {
+      const res = await updateSetting('whatsapp_menu_enabled', menuEnabled ? 'true' : 'false');
+      if (!res.success) toast.error(res.error || 'Falha ao salvar');
+      else toast.success('Preferência de menu inicial atualizada');
+    } catch (e) {
+      console.warn(e);
+      toast.error('Erro ao salvar');
+    }
+  }
+
+  async function saveMenuReminderEnabled() {
+    try {
+      const res = await updateSetting('whatsapp_menu_reminder_enabled', menuReminderEnabled ? 'true' : 'false');
+      if (!res.success) toast.error(res.error || 'Falha ao salvar');
+      else toast.success('Preferência de lembretes atualizada');
+    } catch (e) {
+      console.warn(e);
+      toast.error('Erro ao salvar');
+    }
+  }
 
   const loadUsers = async () => {
     try {
@@ -309,114 +382,6 @@ export default function WhatsAppAdminPage() {
     } catch (error) {
       console.error('Erro ao carregar conversas:', error);
       toast.error('Erro ao carregar conversas');
-    }
-  };
-
-  const checkWebhookStatus = async () => {
-    try {
-      const response = await fetch('/api/whatsapp/setup-webhook');
-      if (response.ok) {
-        const data = await response.json();
-        setWebhookStatus(data.data);
-      }
-    } catch (error) {
-      console.error('Erro ao verificar webhook:', error);
-    }
-  };
-
-  const setupWebhook = async () => {
-    if (!webhookUrl) {
-      toast.error('Digite a URL do webhook');
-      return;
-    }
-
-    setLoading(true);
-    try {
-      const response = await fetch('/api/whatsapp/setup-webhook', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ webhookUrl })
-      });
-
-      if (response.ok) {
-        toast.success('Webhook configurado com sucesso!');
-        checkWebhookStatus();
-      } else {
-        const error = await response.json();
-        toast.error(error.error || 'Erro ao configurar webhook');
-      }
-    } catch (error) {
-      console.error('Erro:', error);
-      toast.error('Erro ao configurar webhook');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const sendTestMessage = async () => {
-    if (!testPhone || !testMessage) {
-      toast.error('Digite o telefone e a mensagem');
-      return;
-    }
-
-    setLoading(true);
-    try {
-      const response = await fetch('/api/whatsapp/test-message', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          phone: testPhone, 
-          message: testMessage 
-        })
-      });
-
-      if (response.ok) {
-        toast.success('Mensagem enviada com sucesso!');
-        setTestMessage('');
-      } else {
-        const error = await response.json();
-        toast.error(error.error || 'Erro ao enviar mensagem');
-      }
-    } catch (error) {
-      console.error('Erro:', error);
-      toast.error('Erro ao enviar mensagem');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const copyWebhookUrl = () => {
-    if (typeof window !== 'undefined' && navigator.clipboard) {
-      const defaultWebhookUrl = `${window.location.origin}/api/whatsapp/webhook`;
-      navigator.clipboard.writeText(defaultWebhookUrl);
-      toast.success('URL copiada para a área de transferência!');
-    }
-  };
-
-  const testWebhook = async () => {
-    setLoading(true);
-    try {
-      const response = await fetch('/api/whatsapp/webhook', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          phone: '5511999999999',
-          message: { conversation: 'teste' },
-          senderName: 'Teste',
-          fromMe: false
-        })
-      });
-
-      if (response.ok) {
-        toast.success('Webhook está funcionando!');
-      } else {
-        toast.error('Erro no webhook');
-      }
-    } catch (error) {
-      console.error('Erro:', error);
-      toast.error('Erro ao testar webhook');
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -683,9 +648,8 @@ export default function WhatsAppAdminPage() {
           <TabsTrigger value="overview">Visão Geral</TabsTrigger>
           <TabsTrigger value="users">Usuários</TabsTrigger>
           <TabsTrigger value="conversations">Conversas</TabsTrigger>
-          <TabsTrigger value="settings">Configurações</TabsTrigger>
+          <TabsTrigger value="welcome">Boas vindas</TabsTrigger>
           <TabsTrigger value="assistants">Assistentes</TabsTrigger>
-          <TabsTrigger value="test">Testes</TabsTrigger>
         </TabsList>
 
         <TabsContent value="overview" className="space-y-6">
@@ -758,6 +722,86 @@ export default function WhatsAppAdminPage() {
               </CardContent>
             </Card>
           </div>
+        </TabsContent>
+
+        <TabsContent value="welcome" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Básico — Mensagens iniciais</CardTitle>
+              <CardDescription>Controle de boas-vindas e menu com opções.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <div className="flex items-center justify-between">
+                <div>
+                  <Label className="block mb-1">Enviar mensagem de boas-vindas</Label>
+                  <p className="text-xs text-muted-foreground">Envia apenas no primeiro contato de cada usuário.</p>
+                </div>
+                <Switch checked={sendWelcome} onCheckedChange={setSendWelcome} />
+              </div>
+              <div className="flex items-center gap-3">
+                <Button onClick={saveWelcomeSwitch} variant="outline" disabled={settingsLoading}>
+                  <Save className="h-4 w-4 mr-2" /> Salvar preferência
+                </Button>
+              </div>
+              <Textarea
+                value={welcome}
+                onChange={(e) => setWelcome(e.target.value)}
+                placeholder="Escreva a mensagem de boas-vindas"
+                className="min-h-[180px]"
+              />
+              <div className="flex items-center gap-3">
+                <Button onClick={saveWelcome} disabled={settingsLoading}>
+                  <Save className="h-4 w-4 mr-2" /> Salvar mensagem
+                </Button>
+              </div>
+              <div className="pt-2">
+                <Label>Menu inicial (também usado nos lembretes)</Label>
+                <Textarea
+                  value={menuMessage}
+                  onChange={(e) => setMenuMessage(e.target.value)}
+                  placeholder={
+                    '1️⃣ Respostas baseadas na Bíblia (envie: biblia)\n2️⃣ Receber Versículo diariamente (envie: versículo)\n3️⃣ Buscar orações no app Agapefy (envie: buscar)'
+                  }
+                  className="min-h-[140px]"
+                />
+                <div className="flex items-center gap-3 mt-2">
+                  <Button onClick={saveMenuMessage} variant="outline" disabled={settingsLoading}>
+                    <Save className="h-4 w-4 mr-2" /> Salvar menu inicial
+                  </Button>
+                </div>
+                <div className="pt-4 space-y-3 border-t mt-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <Label className="block mb-1">Enviar menu inicial</Label>
+                      <p className="text-xs text-muted-foreground">
+                        Envia o menu junto com a mensagem de boas-vindas quando o usuário envia a primeira mensagem.
+                      </p>
+                    </div>
+                    <Switch checked={menuEnabled} onCheckedChange={setMenuEnabled} />
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <Button onClick={saveMenuEnabled} variant="outline" disabled={settingsLoading}>
+                      <Save className="h-4 w-4 mr-2" /> Salvar preferência
+                    </Button>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <Label className="block mb-1">Enviar lembretes a cada 5 mensagens</Label>
+                      <p className="text-xs text-muted-foreground">
+                        Envia o menu automaticamente a cada 5 mensagens do usuário como lembrete.
+                      </p>
+                    </div>
+                    <Switch checked={menuReminderEnabled} onCheckedChange={setMenuReminderEnabled} />
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <Button onClick={saveMenuReminderEnabled} variant="outline" disabled={settingsLoading}>
+                      <Save className="h-4 w-4 mr-2" /> Salvar preferência
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
         </TabsContent>
 
         <TabsContent value="users" className="space-y-6">
@@ -885,63 +929,6 @@ export default function WhatsAppAdminPage() {
                   </p>
                 )}
               </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="settings" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Configuração do Webhook</CardTitle>
-              <CardDescription>
-                Configure o webhook para receber mensagens do Z-API
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <Alert>
-                <AlertCircle className="h-4 w-4" />
-                <AlertDescription>
-                  <strong>URL Recomendada:</strong> Use a URL abaixo (API Next.js mais estável)
-                </AlertDescription>
-              </Alert>
-              
-              <div className="space-y-2">
-                <Label htmlFor="webhook-url">URL do Webhook</Label>
-                <div className="flex space-x-2">
-                  <Input
-                    id="webhook-url"
-                    value={webhookUrl}
-                    onChange={(e) => setWebhookUrl(e.target.value)}
-                    placeholder="https://seu-dominio.vercel.app/api/whatsapp/webhook"
-                  />
-                  <Button variant="outline" onClick={copyWebhookUrl}>
-                    <Copy className="h-4 w-4" />
-                  </Button>
-                </div>
-                <p className="text-sm text-muted-foreground">
-                  Esta URL usa API Next.js (mais estável que Edge Functions)
-                </p>
-              </div>
-              
-              <div className="flex space-x-2">
-                <Button onClick={setupWebhook} disabled={loading}>
-                  <Settings className="mr-2 h-4 w-4" />
-                  {loading ? 'Configurando...' : 'Configurar Webhook'}
-                </Button>
-                <Button variant="outline" onClick={testWebhook} disabled={loading}>
-                  <CheckCircle className="mr-2 h-4 w-4" />
-                  Testar Webhook
-                </Button>
-              </div>
-              
-              {webhookStatus && (
-                <div className="mt-4 p-4 bg-muted rounded-lg">
-                  <p className="text-sm font-medium">Status do Webhook:</p>
-                  <pre className="text-xs mt-2 overflow-auto">
-                    {JSON.stringify(webhookStatus, null, 2)}
-                  </pre>
-                </div>
-              )}
             </CardContent>
           </Card>
         </TabsContent>
@@ -1260,42 +1247,6 @@ export default function WhatsAppAdminPage() {
               <p className="text-xs text-muted-foreground text-center mt-2">
                 As configurações serão aplicadas imediatamente após salvar
               </p>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="test" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Teste de Mensagem</CardTitle>
-            <CardDescription>
-              Envie uma mensagem de teste via WhatsApp (envio manual de teste, não é o webhook automático)
-            </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="test-phone">Número do Telefone</Label>
-                <Input
-                  id="test-phone"
-                  placeholder="5511999999999"
-                  value={testPhone}
-                  onChange={(e) => setTestPhone(e.target.value)}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="test-message">Mensagem</Label>
-                <Textarea
-                  id="test-message"
-                  placeholder="Digite sua mensagem de teste..."
-                  value={testMessage}
-                  onChange={(e) => setTestMessage(e.target.value)}
-                  rows={4}
-                />
-              </div>
-              <Button onClick={sendTestMessage} disabled={loading}>
-                <Send className="mr-2 h-4 w-4" />
-                {loading ? 'Enviando...' : 'Enviar Mensagem'}
-              </Button>
             </CardContent>
           </Card>
         </TabsContent>
