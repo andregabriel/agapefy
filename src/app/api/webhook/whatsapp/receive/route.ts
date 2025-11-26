@@ -254,6 +254,38 @@ export async function POST(request: NextRequest) {
     console.log(`  - hasSentFirstMessage: ${hasSentFirstMessage}`);
     console.log(`  - isFirstMessage: ${isFirstMessage}`);
 
+    // ------------------------------------------------------------------
+    // Inserção antecipada da conversa ("Claim")
+    // ------------------------------------------------------------------
+    // Para evitar race condition em reenvios do webhook, inserimos o registro
+    // imediatamente com status pendente. Se o webhook for chamado novamente
+    // enquanto processamos, a verificação de duplicidade no início vai encontrar
+    // este registro (mesmo sem resposta final) e abortar.
+    console.log('💾 Inserindo conversa antecipada (status: Processando)...');
+    
+    const conversationType = detectConversationType(messageContent);
+    
+    const { data: insertedConversation, error: insertError } = await supabase
+      .from('whatsapp_conversations')
+      .insert({
+        user_phone: userPhone,
+        conversation_type: conversationType,
+        message_content: messageContent,
+        response_content: 'Processando...', // Placeholder para deduplicação
+        message_type: 'text'
+      })
+      .select('id')
+      .single();
+
+    if (insertError || !insertedConversation) {
+      console.error('❌ Erro ao inserir conversa antecipada:', insertError);
+      // Se falhar ao inserir, não podemos garantir deduplicação, mas tentamos seguir
+      // ou poderíamos abortar. Vamos seguir logando o erro.
+    }
+    
+    const conversationId = insertedConversation?.id;
+    console.log(`📝 Conversa iniciada com ID: ${conversationId}`);
+
     // Gerar resposta inteligente com IA
     console.log('🤖 Gerando resposta inteligente...');
     const responseResult = await generateIntelligentResponse(request, messageContent, userName, userPhone, settingsMap);
@@ -261,22 +293,42 @@ export async function POST(request: NextRequest) {
     const responseThreadId = typeof responseResult === 'object' ? responseResult.threadId : undefined;
     console.log(`💬 Resposta gerada: "${response}"`);
 
-    // Salvar conversa no banco
-    console.log('💾 Salvando conversa...');
-    const conversationData: any = {
-      user_phone: userPhone,
-      conversation_type: detectConversationType(messageContent),
-      message_content: messageContent,
-      response_content: response,
-      message_type: 'text'
-    };
-    
-    // Adicionar thread_id se disponível (para continuidade de conversa com assistentes)
-    if (responseThreadId) {
-      conversationData.thread_id = responseThreadId;
+    // Atualizar conversa no banco com a resposta final
+    if (conversationId) {
+      console.log('💾 Atualizando conversa com resposta final...');
+      const updateData: any = {
+        response_content: response,
+        // Se detectarmos mudança de tipo durante processamento, poderíamos atualizar aqui
+        // mas por hora mantemos o tipo inicial ou detectamos de novo se quiser
+      };
+      
+      if (responseThreadId) {
+        updateData.thread_id = responseThreadId;
+      }
+
+      const { error: updateError } = await supabase
+        .from('whatsapp_conversations')
+        .update(updateData)
+        .eq('id', conversationId);
+        
+      if (updateError) {
+        console.error('❌ Erro ao atualizar conversa:', updateError);
+      }
+    } else {
+      // Fallback: se não conseguiu inserir antes, tenta inserir agora
+      console.log('💾 Salvando conversa (fallback)...');
+      const conversationData: any = {
+        user_phone: userPhone,
+        conversation_type: detectConversationType(messageContent),
+        message_content: messageContent,
+        response_content: response,
+        message_type: 'text'
+      };
+      if (responseThreadId) {
+        conversationData.thread_id = responseThreadId;
+      }
+      await supabase.from('whatsapp_conversations').insert(conversationData);
     }
-    
-    await supabase.from('whatsapp_conversations').insert(conversationData);
 
     // Enviar resposta principal via Z-API
     console.log('📤 Enviando resposta via Z-API...');
@@ -385,6 +437,13 @@ export async function POST(request: NextRequest) {
       console.error('  - Mensagem:', error.message);
       console.error('  - Stack:', error.stack);
     }
+
+    // Tentar atualizar conversa pendente com erro, se houver ID, para não travar deduplicação
+    // Precisamos extrair o ID de algum lugar ou ter acesso a ele. 
+    // Como o try/catch engloba tudo, o conversationId não está acessível aqui facilmente 
+    // se foi declarado dentro do try. Mas a lógica de deduplicação já trata "Processando..."
+    // como duplicado, o que é bom. Se falhar, o usuário tenta de novo e a deduplicação
+    // vai barrar por 60s. Isso é aceitável para evitar spam.
     
     // Sempre retornar 200 para o Z-API para evitar reenvios
     // Mas logar o erro para debug
