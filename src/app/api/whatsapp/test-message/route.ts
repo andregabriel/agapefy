@@ -18,8 +18,13 @@ export async function POST(request: NextRequest) {
 
     // Limpar número do telefone
     const cleanPhone = phone.replace(/\D/g, '');
+    const maskedPhone = cleanPhone.replace(/\d(?=\d{4})/g, 'x');
+    const messagePreview =
+      message && message.length > 0
+        ? `${message.substring(0, 50)}${message.length > 50 ? '...' : ''} [len=${message.length}]`
+        : '';
 
-    console.log(`Enviando mensagem de teste para ${cleanPhone}: ${message}`);
+    console.log(`Enviando mensagem de teste para ${maskedPhone}: "${messagePreview}"`);
 
     // Enviar mensagem via Z-API
     const response = await fetch(`${ZAPI_BASE_URL}/send-text`, {

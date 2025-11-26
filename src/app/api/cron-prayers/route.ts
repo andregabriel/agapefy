@@ -192,8 +192,9 @@ async function inlineSend(test: boolean, limit?: number) {
         if (!test) {
           continue; // Skip this user, already sent today
         }
-        // In test mode, log but don't skip
-        console.log(`Test mode: User ${phone} already has log for ${s.slot} on ${dateStr}`);
+        // In test mode, log masacrando o telefone mas não pular
+        const maskedPhone = phone.replace(/\d(?=\d{4})/g, 'x');
+        console.log(`Test mode: User ${maskedPhone} already has log for ${s.slot} on ${dateStr}`);
       }
 
       const prompt = getSlotPrompt(s.slot);
@@ -212,7 +213,8 @@ async function inlineSend(test: boolean, limit?: number) {
         
         if (logError) {
           // If log insert fails (duplicate key), skip sending to avoid duplicates
-          console.log(`Duplicate log detected for ${phone} ${s.slot} ${dateStr}, skipping send`);
+          const maskedPhone = phone.replace(/\d(?=\d{4})/g, 'x');
+          console.log(`Duplicate log detected for ${maskedPhone} ${s.slot} ${dateStr}, skipping send`);
           continue;
         }
 

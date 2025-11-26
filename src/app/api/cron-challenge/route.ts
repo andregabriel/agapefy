@@ -222,7 +222,8 @@ _Agape - Seu companheiro espiritual_ ✨`;
       
       if (logError) {
         // If log insert fails (duplicate key), skip sending to avoid duplicates
-        console.log(`Duplicate log detected for ${phone} ${playlistId} ${dateStr}, skipping send`);
+        const maskedPhone = phone.replace(/\d(?=\d{4})/g, 'x');
+        console.log(`Duplicate log detected for ${maskedPhone} ${playlistId} ${dateStr}, skipping send`);
         continue;
       }
 

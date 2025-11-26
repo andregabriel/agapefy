@@ -51,6 +51,8 @@ export async function POST(request: NextRequest) {
     // Normalizar payload (produção Z-API pode enviar em diferentes formatos)
     const userPhoneRaw = body.phone || body.remoteJid || body.chatId || body.data?.phone || '';
     const userPhone = typeof userPhoneRaw === 'string' ? userPhoneRaw.replace(/\D/g, '') : '';
+    // Versão mascarada para logs (mantém apenas últimos 4 dígitos)
+    const maskedUserPhone = userPhone ? userPhone.replace(/\d(?=\d{4})/g, 'x') : '';
     const messageContent = (
       body.message?.conversation ||
       body.message?.text ||
@@ -70,9 +72,17 @@ export async function POST(request: NextRequest) {
 
     // Log detalhado do que foi extraído
     console.log('📋 Dados extraídos do webhook:');
-    console.log(`  - userPhoneRaw: "${userPhoneRaw}"`);
-    console.log(`  - userPhone (normalizado): "${userPhone}"`);
-    console.log(`  - messageContent: "${messageContent.substring(0, 100)}${messageContent.length > 100 ? '...' : ''}"`);
+    const logUserPhoneRaw =
+      typeof userPhoneRaw === 'string'
+        ? String(userPhoneRaw).replace(/\d(?=\d{4})/g, 'x')
+        : '';
+    const logMessagePreview =
+      messageContent && messageContent.length > 0
+        ? `${messageContent.substring(0, 50)}${messageContent.length > 50 ? '...' : ''} [len=${messageContent.length}]`
+        : '';
+    console.log(`  - userPhoneRaw (mascarado): "${logUserPhoneRaw}"`);
+    console.log(`  - userPhone (normalizado, mascarado): "${maskedUserPhone}"`);
+    console.log(`  - messageContent (preview): "${logMessagePreview}"`);
     console.log(`  - userName: "${userName}"`);
     console.log(`  - fromMe: ${body.fromMe}`);
 
@@ -97,7 +107,7 @@ export async function POST(request: NextRequest) {
       }, { status: 200 });
     }
 
-    console.log(`📱 Processando mensagem de ${userName} (${userPhone}): "${messageContent}"`);
+    console.log(`📱 Processando mensagem de ${userName} (${maskedUserPhone}): [len=${messageContent.length}]`);
 
     // ------------------------------------------------------------------
     // Proteção contra duplicidade de processamento
@@ -145,7 +155,7 @@ export async function POST(request: NextRequest) {
     
     // Verificar se o usuário está ativo
     if (existingUser && existingUser.is_active === false) {
-      console.log(`❌ Usuário ${userPhone} está inativo - mensagem ignorada`);
+      console.log(`❌ Usuário ${maskedUserPhone || '***'} está inativo - mensagem ignorada`);
       return NextResponse.json({ 
         status: 'ignored', 
         reason: 'user_inactive',
@@ -1097,7 +1107,9 @@ async function getDailyVerse(): Promise<string> {
 
 async function sendWhatsAppMessage(phone: string, message: string): Promise<{success: boolean, error?: string}> {
   try {
-    console.log(`📤 Enviando mensagem para ${phone}: ${message}`);
+    // Mascarar telefone e não logar o conteúdo completo da mensagem
+    const maskedPhone = phone ? String(phone).replace(/\d(?=\d{4})/g, 'x') : '';
+    console.log(`📤 Enviando mensagem para ${maskedPhone}: [len=${message.length}]`);
     
     const response = await fetch(`${ZAPI_BASE_URL}/send-text`, {
       method: 'POST',

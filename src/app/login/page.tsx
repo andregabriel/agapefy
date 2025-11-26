@@ -19,7 +19,8 @@ export default function LoginPage() {
 
   useEffect(() => {
     if (user && !loading) {
-      console.log('👤 LoginPage: Usuário logado:', user.email);
+      // Não expor e-mail do usuário no console do navegador
+      console.log('👤 LoginPage: Usuário logado');
       
       // Verificar se é admin e redirecionar
       const checkAdminAndRedirect = async () => {

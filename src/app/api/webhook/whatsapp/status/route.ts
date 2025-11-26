@@ -3,11 +3,16 @@ import { NextRequest, NextResponse } from 'next/server';
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    console.log('📊 Webhook STATUS recebido:', JSON.stringify(body, null, 2));
+    const safeBody = {
+      ...body,
+      phone: body?.phone ? String(body.phone).replace(/\d(?=\d{4})/g, 'x') : body?.phone,
+    };
+    console.log('📊 Webhook STATUS recebido:', JSON.stringify(safeBody, null, 2));
 
     // Log do status da mensagem (enviada, entregue, lida, etc.)
     if (body.status) {
-      console.log(`📱 Status da mensagem: ${body.status} - ${body.phone}`);
+      const maskedPhone = body?.phone ? String(body.phone).replace(/\d(?=\d{4})/g, 'x') : '';
+      console.log(`📱 Status da mensagem: ${body.status} - ${maskedPhone}`);
     }
 
     return NextResponse.json({ 

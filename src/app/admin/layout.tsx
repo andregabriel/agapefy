@@ -70,7 +70,8 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
         if (!useOptimisticAdmin) {
           setRoleLoading(true);
         }
-        console.log('🔍 AdminLayout: Buscando role do usuário:', user.email);
+        // Não expor e-mail do usuário no console; usa apenas informação mínima
+        console.log('🔍 AdminLayout: Buscando role do usuário');
         
         const { data: profile, error } = await supabase
           .from('profiles')

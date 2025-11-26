@@ -56,6 +56,8 @@ export async function POST(request: NextRequest) {
     // Formato 4: body.data?.phone (formato aninhado)
     const userPhoneRaw = body.phone || body.remoteJid || body.chatId || body.data?.phone || '';
     const userPhone = typeof userPhoneRaw === 'string' ? userPhoneRaw.replace(/\D/g, '') : '';
+    // Versão mascarada para logs (mantém apenas últimos 4 dígitos)
+    const maskedUserPhone = userPhone ? userPhone.replace(/\d(?=\d{4})/g, 'x') : '';
     
     // Normalizar conteúdo da mensagem - Z-API pode enviar em diferentes formatos
     const messageContent = (
@@ -78,9 +80,17 @@ export async function POST(request: NextRequest) {
 
     // Log detalhado do que foi extraído
     console.log('📋 Dados extraídos do webhook:');
-    console.log(`  - userPhoneRaw: "${userPhoneRaw}"`);
-    console.log(`  - userPhone (normalizado): "${userPhone}"`);
-    console.log(`  - messageContent: "${messageContent.substring(0, 100)}${messageContent.length > 100 ? '...' : ''}"`);
+    const logUserPhoneRaw =
+      typeof userPhoneRaw === 'string'
+        ? String(userPhoneRaw).replace(/\d(?=\d{4})/g, 'x')
+        : '';
+    const logMessagePreview =
+      messageContent && messageContent.length > 0
+        ? `${messageContent.substring(0, 50)}${messageContent.length > 50 ? '...' : ''} [len=${messageContent.length}]`
+        : '';
+    console.log(`  - userPhoneRaw (mascarado): "${logUserPhoneRaw}"`);
+    console.log(`  - userPhone (normalizado, mascarado): "${maskedUserPhone}"`);
+    console.log(`  - messageContent (preview): "${logMessagePreview}"`);
     console.log(`  - userName: "${userName}"`);
     console.log(`  - fromMe: ${body.fromMe}`);
 
@@ -105,7 +115,7 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    console.log(`📱 Processando mensagem de ${userName} (${userPhone}): "${messageContent}"`);
+    console.log(`📱 Processando mensagem de ${userName} (${maskedUserPhone}): [len=${messageContent.length}]`);
 
     // ------------------------------------------------------------------
     // Proteção contra duplicidade de processamento
@@ -114,30 +124,61 @@ export async function POST(request: NextRequest) {
     // evento em casos de timeout/intermitência de rede. Para evitar que o
     // usuário receba respostas duplicadas e que a conversa seja registrada
     // duas vezes, verificamos se já existe uma conversa recente com o mesmo
-    // número + conteúdo de mensagem.
+    // número + conteúdo (normalizado) de mensagem.
     try {
-      const duplicateWindowMs = 30 * 1000; // 30 segundos
+      // Normalizar texto para deduplicação (minimiza diferenças de caixa,
+      // acentos e espaços em branco).
+      const normalizeForDedup = (text: string): string => {
+        const base = normalizeText(text || '');
+        return base.replace(/\s+/g, ' ').trim();
+      };
+
+      const normalizedCurrent = normalizeForDedup(messageContent);
+      const fingerprint = `${userPhone}|${normalizedCurrent}`;
+
+      console.log('🧬 Fingerprint de deduplicação (receive):', fingerprint.substring(0, 120));
+
+      const duplicateWindowMs = 60 * 1000; // 60 segundos
       const since = new Date(Date.now() - duplicateWindowMs).toISOString();
 
-      const { data: existingConversations, error: dupError } = await supabase
+      // Buscar últimas conversas recentes desse usuário dentro da janela
+      const { data: recentConversations, error: dupError } = await supabase
         .from('whatsapp_conversations')
-        .select('id, created_at')
+        .select('id, created_at, message_content')
         .eq('user_phone', userPhone)
-        .eq('message_content', messageContent)
         .gte('created_at', since)
-        .limit(1);
+        .order('created_at', { ascending: false })
+        .limit(5);
 
       if (dupError) {
         console.warn('⚠️ Erro ao verificar duplicidade de conversa (receive):', dupError);
-      } else if (existingConversations && existingConversations.length > 0) {
-        console.log('⚠️ Mensagem duplicada detectada (receive) - ignorando processamento para evitar respostas em duplicidade');
-        return NextResponse.json({
-          status: 'ignored',
-          reason: 'duplicate_message',
-          phone: userPhone,
-          message_preview: messageContent.substring(0, 50),
-        }, { status: 200 });
+      } else if (recentConversations && recentConversations.length > 0) {
+        const duplicateConversation = recentConversations.find(conv => {
+          const normalizedStored = normalizeForDedup(conv.message_content || '');
+          return normalizedStored === normalizedCurrent;
+        });
+
+        if (duplicateConversation) {
+          console.log(
+            '⚠️ Mensagem duplicada detectada (receive) - ignorando processamento para evitar respostas em duplicidade. Conversa correspondente:',
+            {
+              id: duplicateConversation.id,
+              created_at: duplicateConversation.created_at,
+            }
+          );
+          return NextResponse.json(
+            {
+              status: 'ignored',
+              reason: 'duplicate_message',
+              phone: userPhone,
+              message_preview: messageContent.substring(0, 80),
+            },
+            { status: 200 }
+          );
+        }
       }
+
+      console.log('✅ Nenhuma duplicidade recente detectada para este webhook (receive)');
     } catch (dupCheckError) {
       console.warn('⚠️ Falha inesperada ao checar duplicidade (receive):', dupCheckError);
       // Em caso de erro na checagem, continuamos o fluxo normal para não
@@ -146,7 +187,7 @@ export async function POST(request: NextRequest) {
 
     // Verificar se usuário já existe antes de fazer upsert
     console.log('👤 Verificando/registrando usuário...');
-    console.log(`📞 Número normalizado: ${userPhone} (original: ${userPhoneRaw})`);
+    console.log(`📞 Número normalizado (mascarado): ${maskedUserPhone}`);
     
     const { data: existingUser, error: userError } = await supabase
       .from('whatsapp_users')
@@ -251,7 +292,7 @@ export async function POST(request: NextRequest) {
     // IMPORTANTE: Isso deve acontecer SEMPRE, independente de enviar boas-vindas ou não
     // Pois não podemos enviar mensagens para usuários que não enviaram a primeira mensagem
     if (isFirstMessage) {
-      console.log(`🎉 Primeira mensagem detectada para ${userPhone} (${userName})`);
+          console.log(`🎉 Primeira mensagem detectada para ${maskedUserPhone} (${userName})`);
       
       await supabase
         .from('whatsapp_users')
@@ -1057,7 +1098,9 @@ async function callOpenAIAssistant(assistantId: string, message: string, userPho
 
 async function sendWhatsAppMessage(phone: string, message: string): Promise<{success: boolean, error?: string}> {
   try {
-    console.log(`📤 Enviando mensagem para ${phone}: ${message}`);
+    // Mascarar telefone e não logar o conteúdo completo da mensagem
+    const maskedPhone = phone ? String(phone).replace(/\d(?=\d{4})/g, 'x') : '';
+    console.log(`📤 Enviando mensagem para ${maskedPhone}: [len=${message.length}]`);
     
     const response = await fetch(`${ZAPI_BASE_URL}/send-text`, {
       method: 'POST',

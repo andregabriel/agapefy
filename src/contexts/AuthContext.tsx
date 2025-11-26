@@ -52,7 +52,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
             console.error('❌ AuthContext: Erro ao obter sessão:', error);
           }
         } else {
-          console.log('✅ AuthContext: Sessão inicial obtida:', !!session, session?.user?.email);
+          // Evita logar dados pessoais como e-mail no console do navegador
+          console.log('✅ AuthContext: Sessão inicial obtida:', !!session);
         }
         
         setSession(session);
@@ -70,7 +71,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     // Escutar mudanças de autenticação
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
-        console.log('🔄 AuthContext: Auth state changed:', event, session?.user?.email);
+        // Não logar e-mail do usuário no console do navegador
+        console.log('🔄 AuthContext: Auth state changed:', event, !!session);
         
         setSession(session);
         setUser(session?.user ?? null);

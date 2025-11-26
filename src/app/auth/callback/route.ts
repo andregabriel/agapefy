@@ -21,7 +21,8 @@ export async function GET(request: NextRequest) {
         return NextResponse.redirect(new URL('/login?error=auth_error', request.url))
       }
 
-      console.log('✅ Auth Callback: Sessão criada para:', data.user?.email)
+      // Não logar o e-mail completo do usuário nos logs do servidor
+      console.log('✅ Auth Callback: Sessão criada para usuário autenticado')
 
       // Verificar se é admin
       const { data: profile } = await supabase

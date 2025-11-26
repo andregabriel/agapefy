@@ -1196,33 +1196,25 @@ const AIGenerator = forwardRef<AIGeneratorHandle, AIGeneratorProps>(function AIG
     let fullText = '';
 
     if (pausesAutoEnabled) {
-      // Pausas automáticas via OpenAI
+      // Pausas automáticas via OpenAI (via API interna segura)
       try {
         const rawText = [preparationRaw, prayerRaw, finalMsgRaw].filter(Boolean).join('\n\n');
         const promptWithContext = autoPausesPrompt.replace(/{texto}/g, rawText);
-        
-        const openAIResponse = await fetch('https://api.openai.com/v1/chat/completions', {
+
+        const response = await fetch('/api/ai/apply-pauses', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${process.env.NEXT_PUBLIC_OPENAI_API_KEY || ''}`,
           },
-          body: JSON.stringify({
-            model: 'gpt-4',
-            messages: [
-              { role: 'system', content: 'Você é um assistente que adiciona marcações SSML de pausas (<break time="Xs" />) em textos de oração.' },
-              { role: 'user', content: promptWithContext }
-            ],
-            temperature: 0.7,
-          }),
+          body: JSON.stringify({ text: promptWithContext }),
         });
 
-        if (!openAIResponse.ok) {
+        if (!response.ok) {
           throw new Error('Erro ao gerar pausas automáticas');
         }
 
-        const openAIData = await openAIResponse.json();
-        fullText = openAIData.choices?.[0]?.message?.content || rawText;
+        const data = await response.json();
+        fullText = typeof data?.text === 'string' && data.text.trim() ? data.text : rawText;
       } catch (err) {
         console.error('Erro ao aplicar pausas automáticas, usando pausas manuais:', err);
         toast.error('Erro ao aplicar pausas automáticas, usando pausas manuais');

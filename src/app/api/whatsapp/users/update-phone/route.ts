@@ -23,7 +23,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    console.log(`Atualizando número do usuário ${user_id} para ${cleanPhone}`);
+    const maskedPhone = cleanPhone.replace(/\d(?=\d{4})/g, 'x');
+    console.log(`Atualizando número do usuário ${user_id} para ${maskedPhone}`);
 
     // Verificar se o número já está em uso por outro usuário
     const { data: existingUser } = await supabase

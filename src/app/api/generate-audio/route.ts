@@ -23,8 +23,7 @@ export async function POST(request: NextRequest) {
     const elevenlabsApiKey = process.env.ELEVENLABS_API_KEY;
     
     console.log('🔍 API generate-audio: Verificando variáveis de ambiente...');
-    console.log('🔍 API generate-audio: ELEVENLABS_API_KEY existe?', !!elevenlabsApiKey);
-    console.log('🔍 API generate-audio: ELEVENLABS_API_KEY primeiros chars:', elevenlabsApiKey ? elevenlabsApiKey.substring(0, 8) + '...' : 'undefined');
+    console.log('🔍 API generate-audio: ELEVENLABS_API_KEY configurada?', !!elevenlabsApiKey);
     
     if (!elevenlabsApiKey) {
       console.error('❌ API generate-audio: Chave da API ElevenLabs não configurada');

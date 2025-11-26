@@ -69,7 +69,8 @@ async function inlineSend(test: boolean, limit?: number) {
       
       if (logError) {
         // If log insert fails (duplicate key), skip sending to avoid duplicates
-        console.log(`Duplicate log detected for ${phone} on ${today}, skipping send`);
+        const maskedPhone = phone.replace(/\d(?=\d{4})/g, 'x');
+        console.log(`Duplicate log detected for ${maskedPhone} on ${today}, skipping send`);
         continue;
       }
 

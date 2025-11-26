@@ -14,8 +14,9 @@ export async function POST(request: NextRequest) {
 
     // Limpar número do telefone
     const cleanPhone = phone_number.replace(/\D/g, '');
+    const maskedPhone = cleanPhone.replace(/\d(?=\d{4})/g, 'x');
 
-    console.log(`Atualizando status do usuário ${cleanPhone} para ${is_active ? 'ativo' : 'inativo'}`);
+    console.log(`Atualizando status do usuário ${maskedPhone} para ${is_active ? 'ativo' : 'inativo'}`);
 
     // Atualizar status do usuário
     const { data, error } = await supabase

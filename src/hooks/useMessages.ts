@@ -45,7 +45,8 @@ export function useMessages() {
 
     try {
       setLoading(true);
-      console.log('🔍 Buscando conversas do usuário:', user.email);
+      // Evita logar e-mail do usuário no console; usa apenas o ID para debug
+      console.log('🔍 Buscando conversas do usuário (id):', user.id);
 
       const { data: conversationsData, error } = await supabase
         .from('conversations')
@@ -265,7 +266,8 @@ export function useConversationMessages(conversationId: string | null) {
     if (!conversationId || !user || !content.trim()) return false;
 
     try {
-      console.log('📤 Enviando mensagem:', content.substring(0, 50));
+      // Não logar o conteúdo da mensagem no console (dado sensível)
+      console.log('📤 Enviando mensagem (tamanho):', content.length);
 
       const { error } = await supabase
         .from('messages')
