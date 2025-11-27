@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
 import { X, Upload, Image, Layout, Smartphone, Grid3X3, MoreHorizontal } from 'lucide-react';
 import { toast } from 'sonner';
@@ -48,6 +48,8 @@ export default function CategoryModal({ category, isOpen, onClose, onSave }: Cat
     is_visible: true,
   });
   const [loading, setLoading] = useState(false);
+  const [uploadingImage, setUploadingImage] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Helpers para draft persistence
   const getDraftKey = () => {
@@ -115,6 +117,64 @@ export default function CategoryModal({ category, isOpen, onClose, onSave }: Cat
     } catch (_) {
       // ignore
     }
+  };
+
+  const handleImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    // Validar tipo de arquivo
+    const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+    if (!validTypes.includes(file.type)) {
+      toast.error('Tipo de arquivo inválido. Use JPEG, PNG ou WebP');
+      return;
+    }
+
+    // Validar tamanho (máximo 5MB)
+    const maxSize = 5 * 1024 * 1024; // 5MB
+    if (file.size > maxSize) {
+      toast.error('Arquivo muito grande. Máximo 5MB permitido');
+      return;
+    }
+
+    setUploadingImage(true);
+
+    try {
+      const uploadFormData = new FormData();
+      uploadFormData.append('file', file);
+
+      const response = await fetch('/api/upload-category-image', {
+        method: 'POST',
+        body: uploadFormData,
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Erro ao fazer upload da imagem');
+      }
+
+      const data = await response.json();
+      
+      if (data.success && data.image_url) {
+        setFormData((prev) => ({ ...prev, image_url: data.image_url }));
+        toast.success('Imagem enviada com sucesso!');
+      } else {
+        throw new Error('Resposta inválida do servidor');
+      }
+    } catch (error: any) {
+      console.error('Erro ao fazer upload da imagem:', error);
+      toast.error(error.message || 'Erro ao fazer upload da imagem');
+    } finally {
+      setUploadingImage(false);
+      // Limpar o input para permitir selecionar o mesmo arquivo novamente
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    }
+  };
+
+  const handleUploadButtonClick = () => {
+    fileInputRef.current?.click();
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -291,19 +351,46 @@ export default function CategoryModal({ category, isOpen, onClose, onSave }: Cat
               URL da Imagem
             </label>
             <div className="space-y-2">
-              <input
-                type="url"
-                value={formData.image_url}
-                onChange={(e) => setFormData({ ...formData, image_url: e.target.value })}
-                className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm sm:text-base text-black"
-                placeholder="https://exemplo.com/imagem.jpg"
-              />
+              <div className="flex gap-2">
+                <input
+                  type="url"
+                  value={formData.image_url}
+                  onChange={(e) => setFormData({ ...formData, image_url: e.target.value })}
+                  className="flex-1 px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm sm:text-base text-black"
+                  placeholder="https://exemplo.com/imagem.jpg"
+                />
+                <input
+                  type="file"
+                  ref={fileInputRef}
+                  onChange={handleImageUpload}
+                  accept="image/jpeg,image/jpg,image/png,image/webp"
+                  className="hidden"
+                />
+                <button
+                  type="button"
+                  onClick={handleUploadButtonClick}
+                  disabled={uploadingImage}
+                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 transition-colors whitespace-nowrap"
+                >
+                  {uploadingImage ? (
+                    <>
+                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                      <span className="hidden sm:inline">Enviando...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Image className="h-4 w-4" />
+                      <span className="hidden sm:inline">Upload</span>
+                    </>
+                  )}
+                </button>
+              </div>
               {formData.image_url && (
                 <div className="mt-2">
                   <img
                     src={formData.image_url}
                     alt="Preview"
-                    className="w-20 h-20 object-cover rounded-lg border"
+                    className="w-32 h-32 object-cover rounded-lg border"
                     onError={(e) => {
                       const target = e.target as HTMLImageElement;
                       target.style.display = 'none';
@@ -313,7 +400,7 @@ export default function CategoryModal({ category, isOpen, onClose, onSave }: Cat
               )}
             </div>
             <p className="text-xs text-gray-500 mt-1">
-              URL da imagem que representará a categoria
+              Digite uma URL ou faça upload de uma imagem (JPEG, PNG ou WebP - máx. 5MB)
             </p>
           </div>
 
