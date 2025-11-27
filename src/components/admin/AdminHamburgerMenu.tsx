@@ -17,7 +17,8 @@ const adminRouteGroups = [
       adminRoutes.find(r => r.href === '/admin'),
       adminRoutes.find(r => r.href === '/admin/community-analytics'),
       adminRoutes.find(r => r.href === '/admin/analytics'),
-      adminRoutes.find(r => r.href === '/admin/nps')
+      adminRoutes.find(r => r.href === '/admin/nps'),
+      adminRoutes.find(r => r.href === '/admin/feedback')
     ].filter(Boolean)
   },
   {

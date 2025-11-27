@@ -143,9 +143,8 @@ export function AddAudioToRoutineModal({ open, onOpenChange }: AddAudioToRoutine
             </div>
 
             {/* Menu horizontal de filtros */}
-            <div className="w-full overflow-x-auto scrollbar-hide scroll-smooth">
-              <div className="flex gap-2 pb-1 pr-3">
-                <Button
+            <div className="flex w-full gap-2 overflow-x-auto overflow-y-hidden scrollbar-hide scroll-smooth pb-1 pr-3 -mx-1 px-1">
+              <Button
                   variant={selectedCategory === '' ? 'default' : 'outline'}
                   size="sm"
                   onClick={() => setSelectedCategory('')}
@@ -157,25 +156,24 @@ export function AddAudioToRoutineModal({ open, onOpenChange }: AddAudioToRoutine
                 >
                   Todas
                 </Button>
-                {categories.map((category) => {
-                  const isActive = selectedCategory === category.id;
-                  return (
-                    <Button
-                      key={category.id}
-                      variant={isActive ? 'default' : 'outline'}
-                      size="sm"
-                      onClick={() => setSelectedCategory(category.id)}
-                      className={`shrink-0 touch-target whitespace-nowrap rounded-full px-4 text-xs font-medium ${
-                        isActive
-                          ? 'bg-white text-gray-900 shadow-sm'
-                          : 'bg-white/5 text-gray-200 border-white/10 hover:bg-white/10'
-                      }`}
-                    >
-                      {category.name}
-                    </Button>
-                  );
-                })}
-              </div>
+              {categories.map((category) => {
+                const isActive = selectedCategory === category.id;
+                return (
+                  <Button
+                    key={category.id}
+                    variant={isActive ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => setSelectedCategory(category.id)}
+                    className={`shrink-0 touch-target whitespace-nowrap rounded-full px-4 text-xs font-medium ${
+                      isActive
+                        ? 'bg-white text-gray-900 shadow-sm'
+                        : 'bg-white/5 text-gray-200 border-white/10 hover:bg-white/10'
+                    }`}
+                  >
+                    {category.name}
+                  </Button>
+                );
+              })}
             </div>
 
             {/* Lista de áudios */}

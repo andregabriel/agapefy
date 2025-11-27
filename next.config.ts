@@ -78,13 +78,10 @@ const nextConfig: NextConfig = {
         destination: '/admin/go',
         permanent: true,
       },
+      // Mantemos /admin/gerar-conteudo como alias legado para /admin/go,
+      // mas /admin/gtema foi removido do código para evitar confusões.
       {
         source: '/admin/gerar-conteudo',
-        destination: '/admin/go',
-        permanent: true,
-      },
-      {
-        source: '/admin/gtema',
         destination: '/admin/go',
         permanent: true,
       },
