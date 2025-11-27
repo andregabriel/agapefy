@@ -582,7 +582,7 @@ async function generateIntelligentResponse(request: NextRequest, message: string
       ).join('\n\n');
     }
 
-    console.log('🚀 Fazendo requisição para OpenAI GPT-4o...');
+    console.log('🚀 Fazendo requisição para OpenAI GPT-4o-mini...');
     const openaiResponse = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -590,7 +590,7 @@ async function generateIntelligentResponse(request: NextRequest, message: string
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'gpt-4o', // Melhor modelo disponível
+        model: 'gpt-4o-mini', // Modelo otimizado para velocidade e custo
         messages: [
           {
             role: 'system',
@@ -613,8 +613,6 @@ Nome do usuário: ${userName}`
             content: message
           }
         ],
-        max_tokens: 200,
-        temperature: 0.8,
       }),
     });
 
@@ -1110,11 +1108,10 @@ async function callOpenAIAssistant(assistantId: string, message: string, userPho
     });
 
     // Criar run do assistente
+    // NOTA: Não definimos temperature/top_p aqui para respeitar as configurações 
+    // definidas no Dashboard da OpenAI para cada assistente.
     const run = await client.beta.threads.runs.create(thread.id, {
       assistant_id: assistantId,
-      temperature: 0.2,
-      top_p: 1.0,
-      response_format: { type: 'text' },
     });
 
     // Aguardar conclusão do run (com timeout de 30 segundos)
