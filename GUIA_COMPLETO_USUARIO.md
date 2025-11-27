@@ -578,3 +578,5 @@ Acompanhamento do progresso espiritual do usuário.
 
 Este guia cobre todas as funcionalidades principais do Agapefy do ponto de vista do usuário comum. O aplicativo está em constante evolução, então novas funcionalidades podem ser adicionadas ao longo do tempo.
 
+
+
