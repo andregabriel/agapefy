@@ -59,6 +59,10 @@ export async function POST(request: NextRequest) {
     // Versão mascarada para logs (mantém apenas últimos 4 dígitos)
     const maskedUserPhone = userPhone ? userPhone.replace(/\d(?=\d{4})/g, 'x') : '';
     
+    // Extrair Message ID para Idempotência (fundamental para evitar duplicações em retries)
+    const messageId = body.messageId || body.id || body.data?.messageId || body.data?.id;
+    console.log(`🔑 Message ID recebido: ${messageId || 'NÃO ENCONTRADO'}`);
+
     // Normalizar conteúdo da mensagem - Z-API pode enviar em diferentes formatos
     const messageContent = (
                           body.message?.conversation || 
@@ -255,32 +259,52 @@ export async function POST(request: NextRequest) {
     console.log(`  - isFirstMessage: ${isFirstMessage}`);
 
     // ------------------------------------------------------------------
-    // Inserção antecipada da conversa ("Claim")
+    // Inserção antecipada da conversa ("Claim") com Idempotência
     // ------------------------------------------------------------------
     // Para evitar race condition em reenvios do webhook, inserimos o registro
-    // imediatamente com status pendente. Se o webhook for chamado novamente
-    // enquanto processamos, a verificação de duplicidade no início vai encontrar
-    // este registro (mesmo sem resposta final) e abortar.
+    // imediatamente com status pendente e o message_id ÚNICO.
+    // O banco de dados garantirá que apenas uma inserção com este message_id tenha sucesso.
     console.log('💾 Inserindo conversa antecipada (status: Processando)...');
     
     const conversationType = detectConversationType(messageContent);
     
-    const { data: insertedConversation, error: insertError } = await supabase
-      .from('whatsapp_conversations')
-      .insert({
+    const insertPayload: any = {
         user_phone: userPhone,
         conversation_type: conversationType,
         message_content: messageContent,
-        response_content: 'Processando...', // Placeholder para deduplicação
+        response_content: 'Processando...', // Placeholder
         message_type: 'text'
-      })
+    };
+
+    // Se tivermos messageId, incluímos para garantir unicidade física
+    if (messageId) {
+      insertPayload.message_id = messageId;
+    }
+
+    const { data: insertedConversation, error: insertError } = await supabase
+      .from('whatsapp_conversations')
+      .insert(insertPayload)
       .select('id')
       .single();
 
-    if (insertError || !insertedConversation) {
+    if (insertError) {
+      // Verificar se é erro de duplicidade (código 23505 no Postgres)
+      // O Supabase pode retornar isso no details ou code
+      const isDuplicate = insertError.code === '23505' || 
+                          insertError.message?.includes('duplicate key') ||
+                          insertError.details?.includes('already exists');
+
+      if (isDuplicate) {
+        console.log(`⚠️ Mensagem duplicada detectada pelo BANCO (message_id: ${messageId}) - Abortando.`);
+        return NextResponse.json({ 
+          status: 'ignored', 
+          reason: 'duplicate_message_id',
+          message_id: messageId
+        }, { status: 200 });
+      }
+
       console.error('❌ Erro ao inserir conversa antecipada:', insertError);
-      // Se falhar ao inserir, não podemos garantir deduplicação, mas tentamos seguir
-      // ou poderíamos abortar. Vamos seguir logando o erro.
+      // Se falhar por outro motivo, seguimos (mas sem proteção de ID)
     }
     
     const conversationId = insertedConversation?.id;
@@ -1146,8 +1170,29 @@ async function callOpenAIAssistant(assistantId: string, message: string, userPho
     }
 
     return null;
-  } catch (error) {
+  } catch (error: any) {
     console.error('❌ Erro ao chamar assistente OpenAI:', error);
+    
+    // Recuperação de erro de Thread: Se a thread não existe ou é inválida (400 ou 404),
+    // removemos o thread_id da última conversa do usuário para forçar criação de nova na próxima.
+    const errorMsg = error?.message || '';
+    const isThreadError = errorMsg.includes('thread_') && (errorMsg.includes('404') || errorMsg.includes('400') || errorMsg.includes('not found'));
+    
+    if (isThreadError && userPhone) {
+        console.log(`⚠️ Detectado erro de Thread inválida. Tentando limpar thread_id para usuário ${userPhone}...`);
+        try {
+            // Setar thread_id como null nas conversas recentes desse usuário para 'esquecer' a thread quebrada
+            await supabase
+                .from('whatsapp_conversations')
+                .update({ thread_id: null })
+                .eq('user_phone', userPhone)
+                .not('thread_id', 'is', null);
+            console.log('✅ Thread IDs limpos com sucesso.');
+        } catch (cleanupError) {
+            console.error('❌ Falha ao limpar thread_id:', cleanupError);
+        }
+    }
+
     return null;
   }
 }
