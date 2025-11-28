@@ -143,7 +143,11 @@ export function AddAudioToRoutineModal({ open, onOpenChange }: AddAudioToRoutine
             </div>
 
             {/* Menu horizontal de filtros */}
-            <div className="flex w-full gap-2 overflow-x-auto overflow-y-hidden scrollbar-hide scroll-smooth pb-1 pr-3 -mx-1 px-1">
+            <div
+              className="flex w-full items-center gap-2 overflow-x-auto scrollbar-hide pb-2 px-1"
+              onWheel={(e) => e.stopPropagation()}
+              onTouchMove={(e) => e.stopPropagation()}
+            >
               <Button
                   variant={selectedCategory === '' ? 'default' : 'outline'}
                   size="sm"
@@ -315,3 +319,5 @@ export function AddAudioToRoutineModal({ open, onOpenChange }: AddAudioToRoutine
     </Dialog>
   );
 }
+
+
