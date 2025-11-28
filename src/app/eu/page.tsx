@@ -384,7 +384,7 @@ export default function EuPage() {
 
   return (
     <div className="min-h-screen bg-black text-white">
-      <div className="px-4 py-6 pt-20 space-y-6">
+      <div className="px-4 py-6 space-y-6">
         {/* Cabeçalho compacto do perfil */}
         <ProfileHeader user={user} />
 

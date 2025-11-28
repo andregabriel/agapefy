@@ -1,12 +1,12 @@
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, ChangeEvent } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { User, Loader2, Save, Edit2 } from 'lucide-react';
+import { User, Loader2, Save, Edit2, Upload } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { toast } from 'sonner';
@@ -17,6 +17,7 @@ export function ProfileEditCard() {
   const [saving, setSaving] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const [profile, setProfile] = useState({
     full_name: '',
     email: '',
@@ -169,6 +170,69 @@ export function ProfileEditCard() {
     }
   };
 
+  const handleAvatarUpload = async (event: ChangeEvent<HTMLInputElement>) => {
+    if (!user) return;
+
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    setUploadingAvatar(true);
+    try {
+      const fileExt = file.name.split('.').pop() || 'jpg';
+      const filePath = `app-26/avatars/${user.id}-${Date.now()}.${fileExt}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('media')
+        .upload(filePath, file, {
+          cacheControl: '3600',
+          upsert: true,
+          contentType: file.type || 'image/jpeg',
+        });
+
+      if (uploadError) {
+        throw uploadError;
+      }
+
+      const { data } = supabase.storage.from('media').getPublicUrl(filePath);
+      if (!data?.publicUrl) {
+        throw new Error('Não foi possível obter URL pública do avatar');
+      }
+
+      setProfile((prev) => ({ ...prev, avatar_url: data.publicUrl }));
+      toast.success('Foto enviada. Clique em salvar para aplicar.');
+    } catch (error) {
+      console.error('Erro ao fazer upload do avatar:', error);
+      toast.error('Não foi possível enviar a foto. Tente novamente.');
+    } finally {
+      setUploadingAvatar(false);
+      event.target.value = '';
+    }
+  };
+
+  const saveProfileViaApiFallback = async () => {
+    const response = await fetch('/api/profile/update', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({
+        full_name: profile.full_name,
+        whatsapp: profile.whatsapp,
+        avatar_url: profile.avatar_url,
+      }),
+    });
+
+    if (!response.ok) {
+      let message = 'Falha ao salvar perfil';
+      try {
+        const body = await response.json();
+        if (body?.error) message = body.error;
+      } catch {
+        // Ignora erro de parse
+      }
+      throw new Error(message);
+    }
+  };
+
   const handleSave = async () => {
     if (!user) return;
 
@@ -309,18 +373,30 @@ export function ProfileEditCard() {
       // Recarregar página para atualizar contexto
       window.location.reload();
     } catch (error: any) {
-      // Verificar se é erro esperado de coluna não encontrada
-      const errorMessage = error?.message || '';
-      const isExpectedError = errorMessage.includes('42703') || 
-                               errorMessage.includes('42883') ||
-                               (errorMessage.includes('column') && errorMessage.includes('does not exist'));
-      
-      if (!isExpectedError) {
-        // Apenas logar erros reais e inesperados
-        console.error('Erro ao salvar perfil:', error);
+      try {
+        await saveProfileViaApiFallback();
+        toast.success('Perfil atualizado com sucesso');
+        setIsEditing(false);
+        window.location.reload();
+        return;
+      } catch (apiError: any) {
+        // Verificar se é erro esperado de coluna não encontrada
+        const errorMessage = error?.message || '';
+        const isExpectedError = errorMessage.includes('42703') || 
+                                 errorMessage.includes('42883') ||
+                                 (errorMessage.includes('column') && errorMessage.includes('does not exist'));
+        
+        if (!isExpectedError) {
+          console.error('Erro ao salvar perfil:', error);
+        }
+
+        const apiErrorMessage = apiError?.message || '';
+        if (apiErrorMessage) {
+          console.error('Erro ao salvar perfil via API:', apiErrorMessage);
+        }
+        
+        toast.error('Erro ao salvar perfil');
       }
-      
-      toast.error('Erro ao salvar perfil');
     } finally {
       setSaving(false);
     }
@@ -372,17 +448,47 @@ export function ProfileEditCard() {
                 </AvatarFallback>
               </Avatar>
               {isEditing && (
-                <div className="flex-1">
-                  <Label htmlFor="avatar_url" className="text-sm text-gray-400 mb-1 block">
-                    URL do Avatar
+                <div className="flex-1 space-y-2">
+                  <Label htmlFor="avatar_file" className="text-sm text-gray-400 mb-1 block">
+                    Foto do perfil
                   </Label>
-                  <Input
-                    id="avatar_url"
-                    value={profile.avatar_url}
-                    onChange={(e) => setProfile({ ...profile, avatar_url: e.target.value })}
-                    placeholder="https://..."
-                    className="bg-gray-800 border-gray-700 text-white"
-                  />
+                  <div className="flex items-center space-x-2">
+                    <input
+                      id="avatar_file"
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={handleAvatarUpload}
+                    />
+                    <Label htmlFor="avatar_file">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        className="border-gray-600 text-gray-200 hover:bg-gray-800"
+                        disabled={uploadingAvatar}
+                      >
+                        {uploadingAvatar ? (
+                          <>
+                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                            Enviando...
+                          </>
+                        ) : (
+                          <>
+                            <Upload className="h-4 w-4 mr-2" />
+                            Enviar foto
+                          </>
+                        )}
+                      </Button>
+                    </Label>
+                    {profile.avatar_url && (
+                      <p className="text-xs text-gray-400 truncate max-w-[200px]">
+                        Foto pronta para salvar
+                      </p>
+                    )}
+                  </div>
+                  <p className="text-xs text-gray-500">
+                    Use uma imagem quadrada para melhor resultado. O upload substitui a foto atual.
+                  </p>
                 </div>
               )}
             </div>
@@ -484,4 +590,3 @@ export function ProfileEditCard() {
     </Card>
   );
 }
-

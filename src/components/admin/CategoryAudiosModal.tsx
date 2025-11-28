@@ -132,6 +132,7 @@ export default function CategoryAudiosModal({ category, isOpen, onClose }: Categ
   const [audios, setAudios] = useState<Audio[]>([]);
   const [allAudios, setAllAudios] = useState<Audio[]>([]);
   const [playlists, setPlaylists] = useState<Playlist[]>([]);
+  const [allPlaylists, setAllPlaylists] = useState<Playlist[]>([]);
   const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [showAddAudios, setShowAddAudios] = useState(false);
@@ -156,6 +157,7 @@ export default function CategoryAudiosModal({ category, isOpen, onClose }: Categ
       fetchCategoryAudios();
       fetchAllAudios();
       fetchCategoryPlaylists();
+      fetchAllPlaylists();
     }
   }, [isOpen, category]);
 
@@ -307,6 +309,22 @@ export default function CategoryAudiosModal({ category, isOpen, onClose }: Categ
     }
   };
 
+  const fetchAllPlaylists = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('playlists')
+        .select('id,title,description,cover_url,is_public,created_at')
+        .is('category_id', null)
+        .eq('is_public', true)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      setAllPlaylists((data as Playlist[]) || []);
+    } catch (error) {
+      console.error('Erro ao buscar todas as playlists:', error);
+    }
+  };
+
   const fetchAllAudios = async () => {
     try {
       const { data, error } = await supabase
@@ -366,6 +384,46 @@ export default function CategoryAudiosModal({ category, isOpen, onClose }: Categ
     }
   };
 
+  const handleAddPlaylist = async (playlistId: string) => {
+    if (!category) return;
+
+    try {
+      const { error } = await supabase
+        .from('playlists')
+        .update({ category_id: category.id })
+        .eq('id', playlistId);
+
+      if (error) throw error;
+
+      toast.success('Playlist adicionada à categoria');
+      fetchCategoryPlaylists();
+      fetchAllPlaylists();
+    } catch (error) {
+      console.error('Erro ao adicionar playlist:', error);
+      toast.error('Erro ao adicionar playlist à categoria');
+    }
+  };
+
+  const handleRemovePlaylist = async (playlistId: string) => {
+    if (!confirm('Tem certeza que deseja remover esta playlist da categoria?')) return;
+
+    try {
+      const { error } = await supabase
+        .from('playlists')
+        .update({ category_id: null })
+        .eq('id', playlistId);
+
+      if (error) throw error;
+
+      setPlaylists(playlists.filter((playlist) => playlist.id !== playlistId));
+      toast.success('Playlist removida da categoria');
+      fetchAllPlaylists();
+    } catch (error) {
+      console.error('Erro ao remover playlist:', error);
+      toast.error('Erro ao remover playlist da categoria');
+    }
+  };
+
   const handlePlayAudio = (audio: Audio) => {
     if (state.currentAudio?.id === audio.id && state.isPlaying) {
       // Se é o mesmo áudio e está tocando, pausar
@@ -387,9 +445,19 @@ export default function CategoryAudiosModal({ category, isOpen, onClose }: Categ
     audio.description?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
+  const filteredPlaylists = playlists.filter((playlist) =>
+    playlist.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    playlist.description?.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
   const filteredAllAudios = allAudios.filter(audio =>
     audio.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
     audio.description?.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  const filteredAllPlaylists = allPlaylists.filter((playlist) =>
+    playlist.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    playlist.description?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   const handleHomeDragEnd = (event: DragEndEvent) => {
@@ -516,7 +584,7 @@ export default function CategoryAudiosModal({ category, isOpen, onClose }: Categ
                     ) : (
                       <>
                         <Plus className="h-4 w-4" />
-                        Adicionar Orações
+                        Adicionar Conteúdo
                       </>
                     )}
                   </Button>
@@ -530,126 +598,206 @@ export default function CategoryAudiosModal({ category, isOpen, onClose }: Categ
                 {showAddAudios ? (
                   /* Lista de áudios para adicionar */
                   <div>
-                    <h3 className="font-semibold mb-3 text-gray-700">
-                      Orações Disponíveis ({filteredAllAudios.length})
-                    </h3>
-                    {filteredAllAudios.length === 0 ? (
-                      <p className="text-gray-500 text-center py-8">
-                        Nenhuma oração disponível para adicionar
-                      </p>
-                    ) : (
-                      <div className="space-y-2">
-                        {filteredAllAudios.map((audio) => (
-                          <div
-                            key={audio.id}
-                            className="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50"
-                          >
-                            <div className="flex items-center gap-3 flex-1 min-w-0">
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={() => handlePlayAudio(audio)}
-                                className="flex-shrink-0"
+                    <div className="space-y-6">
+                      <div>
+                        <h3 className="font-semibold mb-3 text-gray-700">
+                          Playlists Disponíveis ({filteredAllPlaylists.length})
+                        </h3>
+                        {filteredAllPlaylists.length === 0 ? (
+                          <p className="text-gray-500 text-center py-8">
+                            Nenhuma playlist disponível para adicionar
+                          </p>
+                        ) : (
+                          <div className="space-y-2">
+                            {filteredAllPlaylists.map((playlist) => (
+                              <div
+                                key={playlist.id}
+                                className="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50"
                               >
-                                {state.currentAudio?.id === audio.id && state.isPlaying ? (
-                                  <Pause className="h-4 w-4" />
-                                ) : (
-                                  <Play className="h-4 w-4" />
-                                )}
-                              </Button>
-                              <div className="min-w-0 flex-1">
-                                <h4 className="font-medium truncate">{audio.title}</h4>
-                                <p className="text-sm text-gray-500 truncate">
-                                  {audio.description || 'Sem descrição'}
-                                </p>
+                                <div className="min-w-0 flex-1">
+                                  <h4 className="font-medium truncate">{playlist.title}</h4>
+                                  <p className="text-sm text-gray-500 truncate">
+                                    {playlist.description || 'Sem descrição'}
+                                  </p>
+                                </div>
+                                <Button
+                                  onClick={() => handleAddPlaylist(playlist.id)}
+                                  size="sm"
+                                  className="flex-shrink-0"
+                                >
+                                  <Plus className="h-4 w-4 mr-1" />
+                                  Adicionar
+                                </Button>
                               </div>
-                            </div>
-                            <Button
-                              onClick={() => handleAddAudio(audio.id)}
-                              size="sm"
-                              className="flex-shrink-0"
-                            >
-                              <Plus className="h-4 w-4 mr-1" />
-                              Adicionar
-                            </Button>
+                            ))}
                           </div>
-                        ))}
+                        )}
                       </div>
-                    )}
+
+                      <div>
+                        <h3 className="font-semibold mb-3 text-gray-700">
+                          Orações Disponíveis ({filteredAllAudios.length})
+                        </h3>
+                        {filteredAllAudios.length === 0 ? (
+                          <p className="text-gray-500 text-center py-8">
+                            Nenhuma oração disponível para adicionar
+                          </p>
+                        ) : (
+                          <div className="space-y-2">
+                            {filteredAllAudios.map((audio) => (
+                              <div
+                                key={audio.id}
+                                className="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50"
+                              >
+                                <div className="flex items-center gap-3 flex-1 min-w-0">
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    onClick={() => handlePlayAudio(audio)}
+                                    className="flex-shrink-0"
+                                  >
+                                    {state.currentAudio?.id === audio.id && state.isPlaying ? (
+                                      <Pause className="h-4 w-4" />
+                                    ) : (
+                                      <Play className="h-4 w-4" />
+                                    )}
+                                  </Button>
+                                  <div className="min-w-0 flex-1">
+                                    <h4 className="font-medium truncate">{audio.title}</h4>
+                                    <p className="text-sm text-gray-500 truncate">
+                                      {audio.description || 'Sem descrição'}
+                                    </p>
+                                  </div>
+                                </div>
+                                <Button
+                                  onClick={() => handleAddAudio(audio.id)}
+                                  size="sm"
+                                  className="flex-shrink-0"
+                                >
+                                  <Plus className="h-4 w-4 mr-1" />
+                                  Adicionar
+                                </Button>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    </div>
                   </div>
                 ) : (
                   /* Lista de áudios da categoria */
-                  <div>
-                    <h3 className="font-semibold mb-3 text-gray-700">
-                      Orações na Categoria ({filteredAudios.length})
-                    </h3>
-                    {loading ? (
-                      <div className="flex items-center justify-center py-8">
-                        <div className="w-6 h-6 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
-                      </div>
-                    ) : filteredAudios.length === 0 ? (
-                      <p className="text-gray-500 text-center py-8">
-                        {searchTerm ? 'Nenhuma oração encontrada' : 'Nenhuma oração nesta categoria'}
-                      </p>
-                    ) : (
-                      <div className="space-y-2">
-                        {filteredAudios.map((audio, index) => (
-                          <div
-                            key={audio.id}
-                            className="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50"
-                          >
-                            <div className="flex items-center gap-3 flex-1 min-w-0">
-                              <div className="flex items-center gap-2">
-                                <GripVertical className="h-4 w-4 text-gray-400" />
-                                <span className="text-sm text-gray-500 w-6">
-                                  {index + 1}
-                                </span>
+                  <div className="space-y-8">
+                    <div>
+                      <h3 className="font-semibold mb-3 text-gray-700">
+                        Playlists na Categoria ({filteredPlaylists.length})
+                      </h3>
+                      {loading ? (
+                        <div className="flex items-center justify-center py-8">
+                          <div className="w-6 h-6 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+                        </div>
+                      ) : filteredPlaylists.length === 0 ? (
+                        <p className="text-gray-500 text-center py-8">
+                          {searchTerm ? 'Nenhuma playlist encontrada' : 'Nenhuma playlist nesta categoria'}
+                        </p>
+                      ) : (
+                        <div className="space-y-2">
+                          {filteredPlaylists.map((playlist) => (
+                            <div
+                              key={playlist.id}
+                              className="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50"
+                            >
+                              <div className="min-w-0 flex-1">
+                                <h4 className="font-medium truncate">{playlist.title}</h4>
+                                <p className="text-sm text-gray-500 truncate">
+                                  {playlist.description || 'Sem descrição'}
+                                </p>
                               </div>
                               <Button
+                                onClick={() => handleRemovePlaylist(playlist.id)}
                                 variant="ghost"
                                 size="icon"
-                                onClick={() => handlePlayAudio(audio)}
-                                className="flex-shrink-0"
+                                className="text-red-600 hover:text-red-900 flex-shrink-0"
                               >
-                                {state.currentAudio?.id === audio.id && state.isPlaying ? (
-                                  <Pause className="h-4 w-4" />
-                                ) : (
-                                  <Play className="h-4 w-4" />
-                                )}
+                                <Trash2 className="h-4 w-4" />
                               </Button>
-                              <div className="min-w-0 flex-1">
-                                <h4 className="font-medium truncate">{audio.title}</h4>
-                                <p className="text-sm text-gray-500 truncate">
-                                  {audio.description || 'Sem descrição'}
-                                </p>
-                                <div className="flex items-center gap-2 text-xs text-gray-400 mt-1">
-                                  <span>
-                                    {new Date(audio.created_at).toLocaleDateString()}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+
+                    <div>
+                      <h3 className="font-semibold mb-3 text-gray-700">
+                        Orações na Categoria ({filteredAudios.length})
+                      </h3>
+                      {loading ? (
+                        <div className="flex items-center justify-center py-8">
+                          <div className="w-6 h-6 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+                        </div>
+                      ) : filteredAudios.length === 0 ? (
+                        <p className="text-gray-500 text-center py-8">
+                          {searchTerm ? 'Nenhuma oração encontrada' : 'Nenhuma oração nesta categoria'}
+                        </p>
+                      ) : (
+                        <div className="space-y-2">
+                          {filteredAudios.map((audio, index) => (
+                            <div
+                              key={audio.id}
+                              className="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50"
+                            >
+                              <div className="flex items-center gap-3 flex-1 min-w-0">
+                                <div className="flex items-center gap-2">
+                                  <GripVertical className="h-4 w-4 text-gray-400" />
+                                  <span className="text-sm text-gray-500 w-6">
+                                    {index + 1}
                                   </span>
-                                  {audio.duration && (
-                                    <>
-                                      <span>•</span>
-                                      <span>
-                                        {Math.floor(audio.duration / 60)}:
-                                        {(audio.duration % 60).toString().padStart(2, '0')}
-                                      </span>
-                                    </>
+                                </div>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={() => handlePlayAudio(audio)}
+                                  className="flex-shrink-0"
+                                >
+                                  {state.currentAudio?.id === audio.id && state.isPlaying ? (
+                                    <Pause className="h-4 w-4" />
+                                  ) : (
+                                    <Play className="h-4 w-4" />
                                   )}
+                                </Button>
+                                <div className="min-w-0 flex-1">
+                                  <h4 className="font-medium truncate">{audio.title}</h4>
+                                  <p className="text-sm text-gray-500 truncate">
+                                    {audio.description || 'Sem descrição'}
+                                  </p>
+                                  <div className="flex items-center gap-2 text-xs text-gray-400 mt-1">
+                                    <span>
+                                      {new Date(audio.created_at).toLocaleDateString()}
+                                    </span>
+                                    {audio.duration && (
+                                      <>
+                                        <span>•</span>
+                                        <span>
+                                          {Math.floor(audio.duration / 60)}:
+                                          {(audio.duration % 60).toString().padStart(2, '0')}
+                                        </span>
+                                      </>
+                                    )}
+                                  </div>
                                 </div>
                               </div>
+                              <Button
+                                onClick={() => handleRemoveAudio(audio.id)}
+                                variant="ghost"
+                                size="icon"
+                                className="text-red-600 hover:text-red-900 flex-shrink-0"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
                             </div>
-                            <Button
-                              onClick={() => handleRemoveAudio(audio.id)}
-                              variant="ghost"
-                              size="icon"
-                              className="text-red-600 hover:text-red-900 flex-shrink-0"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        ))}
-                      </div>
-                    )}
+                          ))}
+                        </div>
+                      )}
+                    </div>
                   </div>
                 )}
               </div>
@@ -720,7 +868,7 @@ export default function CategoryAudiosModal({ category, isOpen, onClose }: Categ
         {/* Footer */}
         <div className="flex justify-between items-center pt-4 border-t">
           <div className="text-sm text-gray-500">
-            {audios.length} oração(ões) nesta categoria
+            {audios.length} oração(ões) • {playlists.length} playlist(s) nesta categoria
           </div>
           <Button onClick={onClose} variant="outline">
             Fechar

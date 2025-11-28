@@ -125,7 +125,7 @@ export default function Page() {
     >
       <header className="sticky top-0 z-10 bg-white/80 backdrop-blur border-b px-4 py-3 flex items-center gap-3">
         <span className="text-2xl" aria-hidden>📖</span>
-        <h1 className="text-lg font-semibold">Biblicus - Respostas baseadas na Bíblia</h1>
+        <h1 className="text-lg font-semibold">Respostas baseadas na Bíblia</h1>
         <div className="ml-auto">
           <button
             className="text-sm underline"
@@ -300,5 +300,4 @@ export default function Page() {
     </div>
   );
 }
-
 
