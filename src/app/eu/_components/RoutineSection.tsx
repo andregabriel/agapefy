@@ -11,7 +11,7 @@ interface RoutineSectionProps {
   routineLoading: boolean;
   handlePlayRoutine: () => void;
   handleRemoveFromRoutine: (audioId: string, audioTitle: string) => void;
-  setShowAddAudioModal: (show: boolean) => void;
+  setShowAddAudioModalPremium: (show: boolean) => void;
   scrollCarousel: (ref: RefObject<HTMLDivElement>, direction: 'left' | 'right') => void;
   rotinaCarouselRef: RefObject<HTMLDivElement>;
   formatDuration: (seconds: number) => string;
@@ -22,7 +22,7 @@ export function RoutineSection({
   routineLoading,
   handlePlayRoutine,
   handleRemoveFromRoutine,
-  setShowAddAudioModal,
+  setShowAddAudioModalPremium,
   scrollCarousel,
   rotinaCarouselRef,
   formatDuration
@@ -55,8 +55,8 @@ export function RoutineSection({
           )}
           <Button
             size="sm"
-            onClick={() => setShowAddAudioModal(true)}
-            className="bg-blue-600 hover:bg-blue-700"
+            onClick={() => setShowAddAudioModalPremium(true)}
+            className="bg-gradient-to-r from-indigo-500 via-purple-500 to-blue-500 text-white shadow-md hover:shadow-lg"
           >
             <Plus className="h-4 w-4 mr-1" />
             Adicionar
@@ -195,8 +195,8 @@ export function RoutineSection({
             <h3 className="text-lg font-medium mb-2">Sua rotina está vazia</h3>
             <p className="text-sm mb-4">Adicione áudios para criar sua rotina personalizada de orações</p>
             <Button
-              onClick={() => setShowAddAudioModal(true)}
-              className="bg-blue-600 hover:bg-blue-700"
+              onClick={() => setShowAddAudioModalPremium(true)}
+              className="bg-gradient-to-r from-indigo-500 via-purple-500 to-blue-500 text-white shadow-md hover:shadow-lg"
             >
               <Plus className="h-4 w-4 mr-2" />
               Adicionar Primeiro Áudio

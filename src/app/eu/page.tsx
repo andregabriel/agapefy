@@ -21,7 +21,7 @@ import { IntentionsSection } from './_components/IntentionsSection';
 // import { WhatsAppDailyVerseCard } from './_components/WhatsAppDailyVerseCard';
 
 // Modais e componentes existentes
-import { AddAudioToRoutineModal } from '@/components/AddAudioToRoutineModal';
+import { AddAudioToRoutineModalPremium } from '@/components/AddAudioToRoutineModalPremium';
 import { IntentionModal } from '@/components/IntentionModal';
 import { ReflectionModal } from '@/components/ReflectionModal';
 
@@ -59,7 +59,7 @@ export default function EuPage() {
   const { playQueue, playAudio } = usePlayer();
 
   // Estados para modais
-  const [showAddAudioModal, setShowAddAudioModal] = useState(false);
+  const [showAddAudioModalPremium, setShowAddAudioModalPremium] = useState(false);
   const [showIntentionModal, setShowIntentionModal] = useState(false);
   const [intentionModalMode, setIntentionModalMode] = useState<'create' | 'edit'>('create');
   const [editingIntention, setEditingIntention] = useState<any>(null);
@@ -401,7 +401,7 @@ export default function EuPage() {
             routineLoading={routineLoading}
             handlePlayRoutine={handlePlayRoutine}
             handleRemoveFromRoutine={handleRemoveFromRoutine}
-            setShowAddAudioModal={setShowAddAudioModal}
+            setShowAddAudioModalPremium={setShowAddAudioModalPremium}
             scrollCarousel={scrollCarousel}
             rotinaCarouselRef={rotinaCarouselRef}
             formatDuration={formatDuration}
@@ -543,9 +543,9 @@ export default function EuPage() {
       </div>
 
       {/* Modais */}
-      <AddAudioToRoutineModal
-        open={showAddAudioModal}
-        onOpenChange={setShowAddAudioModal}
+      <AddAudioToRoutineModalPremium
+        open={showAddAudioModalPremium}
+        onOpenChange={setShowAddAudioModalPremium}
       />
 
       <IntentionModal

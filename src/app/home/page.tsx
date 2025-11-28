@@ -27,7 +27,7 @@ import { isRecentesCategoryName, isRotinaCategoryName } from '@/lib/utils';
 import { ActivitiesSection } from '@/app/eu/_components/ActivitiesSection';
 import { BannerSection } from './_components/BannerSection';
 import { RoutineSection } from '@/app/eu/_components/RoutineSection';
-import { AddAudioToRoutineModal } from '@/components/AddAudioToRoutineModal';
+import { AddAudioToRoutineModalPremium } from '@/components/AddAudioToRoutineModalPremium';
 import { useRoutinePlaylist } from '@/hooks/useRoutinePlaylist';
 import { usePlayer } from '@/contexts/PlayerContext';
 import { toast } from 'sonner';
@@ -81,7 +81,7 @@ export default function HomePage() {
   const [bannerLinks, setBannerLinks] = useState<Record<string, string>>({});
   const { routinePlaylist, loading: routineLoading, removeAudioFromRoutine } = useRoutinePlaylist();
   const { playQueue } = usePlayer();
-  const [showAddAudioModal, setShowAddAudioModal] = useState(false);
+  const [showAddAudioModalPremium, setShowAddAudioModalPremium] = useState(false);
   
   // Refs para controle de estado
   const loadingRef = useRef(false);
@@ -297,7 +297,7 @@ export default function HomePage() {
           routineLoading={routineLoading}
           handlePlayRoutine={handlePlayRoutine}
           handleRemoveFromRoutine={handleRemoveFromRoutine}
-          setShowAddAudioModal={setShowAddAudioModal}
+          setShowAddAudioModalPremium={setShowAddAudioModalPremium}
           scrollCarousel={scrollCarousel}
           rotinaCarouselRef={rotinaCarouselRef}
           formatDuration={formatDuration}
@@ -354,7 +354,7 @@ export default function HomePage() {
                       routineLoading={routineLoading}
                       handlePlayRoutine={handlePlayRoutine}
                       handleRemoveFromRoutine={handleRemoveFromRoutine}
-                      setShowAddAudioModal={setShowAddAudioModal}
+                      setShowAddAudioModalPremium={setShowAddAudioModalPremium}
                       scrollCarousel={scrollCarousel}
                       rotinaCarouselRef={rotinaCarouselRef}
                       formatDuration={formatDuration}
@@ -396,9 +396,9 @@ export default function HomePage() {
         <PrayerStatsSection />
       )}
 
-      <AddAudioToRoutineModal
-        open={showAddAudioModal}
-        onOpenChange={setShowAddAudioModal}
+      <AddAudioToRoutineModalPremium
+        open={showAddAudioModalPremium}
+        onOpenChange={setShowAddAudioModalPremium}
       />
     </div>
   );
