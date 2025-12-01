@@ -262,13 +262,13 @@ export function Header() {
               )}
             </div>
           ) : (
-            <div className="flex items-center space-x-3">
+            <div className="flex items-center space-x-2 sm:space-x-3">
               {/* Botão de busca - leva para a página de busca */}
               <Link href="/busca">
                 <Button
                   variant="ghost"
                   size="sm"
-                  className="flex items-center text-gray-300 hover:text-white hover:bg-white/5 rounded-full px-4"
+                  className="hidden sm:inline-flex items-center text-gray-300 hover:text-white hover:bg-white/5 rounded-full px-4"
                 >
                   <Search size={16} className="mr-2" />
                   <span className="text-sm font-medium">
@@ -282,7 +282,7 @@ export function Header() {
                 <Button
                   variant="ghost"
                   size="sm"
-                  className="text-gray-300 hover:text-white hover:bg-white/5 px-4"
+                  className="text-gray-300 hover:text-white hover:bg-white/5 px-3 sm:px-4"
                 >
                   Entrar
                 </Button>
@@ -293,9 +293,10 @@ export function Header() {
                 <Button
                   variant="default"
                   size="sm"
-                  className="rounded-full bg-white text-black hover:bg-white/90 px-5 text-sm font-semibold shadow-sm"
+                  className="rounded-full bg-white text-black hover:bg-white/90 px-4 sm:px-5 text-sm font-semibold shadow-sm"
                 >
-                  Experimente de Graça
+                  <span className="sm:hidden">Experimente</span>
+                  <span className="hidden sm:inline">Experimente de Graça</span>
                 </Button>
               </Link>
             </div>

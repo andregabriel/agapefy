@@ -16,6 +16,8 @@ export default function LoginPage() {
   const router = useRouter();
   const [showEmailAuth, setShowEmailAuth] = useState(false);
   const [authView, setAuthView] = useState<'sign_in' | 'sign_up' | 'forgotten_password'>('sign_in');
+  const [authError, setAuthError] = useState<string | null>(null);
+  const MIN_PASSWORD_LENGTH = 6;
 
   useEffect(() => {
     if (user && !loading) {
@@ -230,6 +232,48 @@ export default function LoginPage() {
     };
   }, [showEmailAuth]);
 
+  // Validação mínima da senha no fluxo de cadastro para evitar envio sem feedback
+  useEffect(() => {
+    if (!showEmailAuth || authView !== 'sign_up') {
+      setAuthError(null);
+      return;
+    }
+
+    const form = document.querySelector<HTMLFormElement>('.auth-container form');
+    const passwordInput = form?.querySelector<HTMLInputElement>('input[type="password"]');
+
+    if (passwordInput) {
+      passwordInput.setAttribute('minlength', MIN_PASSWORD_LENGTH.toString());
+    }
+
+    const handleInput = () => {
+      const passwordValue = passwordInput?.value || '';
+      if (passwordValue.length >= MIN_PASSWORD_LENGTH) {
+        setAuthError(null);
+      }
+    };
+
+    const handleSubmit = (event: Event) => {
+      const passwordValue = passwordInput?.value || '';
+      if (passwordValue.length < MIN_PASSWORD_LENGTH) {
+        event.preventDefault();
+        event.stopPropagation();
+        setAuthError('A senha deve ter pelo menos 6 caracteres para criar sua conta.');
+        passwordInput?.focus();
+        return;
+      }
+      setAuthError(null);
+    };
+
+    passwordInput?.addEventListener('input', handleInput);
+    form?.addEventListener('submit', handleSubmit);
+
+    return () => {
+      passwordInput?.removeEventListener('input', handleInput);
+      form?.removeEventListener('submit', handleSubmit);
+    };
+  }, [showEmailAuth, authView, MIN_PASSWORD_LENGTH]);
+
   // Função para obter o título baseado no modo atual
   const getTitle = () => {
     switch (authView) {
@@ -289,6 +333,15 @@ export default function LoginPage() {
 
           {/* Formulário de autenticação */}
           <div className="bg-gray-900/50 backdrop-blur-sm rounded-2xl p-6 border border-gray-700">
+            {authError && (
+              <div
+                className="mb-4 rounded-lg border border-red-500/40 bg-red-500/10 px-3 py-2 text-sm text-red-200"
+                role="alert"
+                aria-live="assertive"
+              >
+                {authError}
+              </div>
+            )}
             <Auth
               supabaseClient={supabase}
               providers={[]}
@@ -395,6 +448,21 @@ export default function LoginPage() {
             />
           </div>
         </div>
+        <style jsx global>{`
+          .auth-container input[type="email"],
+          .auth-container input[type="password"],
+          .auth-container input.supabase-auth-ui_ui-input {
+            color: #ffffff !important;
+            -webkit-text-fill-color: #ffffff !important;
+            caret-color: #ffffff !important;
+          }
+
+          .auth-container input[type="email"]:-webkit-autofill,
+          .auth-container input[type="password"]:-webkit-autofill,
+          .auth-container input.supabase-auth-ui_ui-input:-webkit-autofill {
+            -webkit-text-fill-color: #ffffff !important;
+          }
+        `}</style>
       </div>
     );
   }

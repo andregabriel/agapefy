@@ -63,8 +63,9 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
           return;
         }
 
+        const redirectKey = `onboardingRedirected_${user.id}`;
         const alreadyRedirected =
-          typeof window !== 'undefined' && sessionStorage.getItem('onboardingRedirected') === '1';
+          typeof window !== 'undefined' && sessionStorage.getItem(redirectKey) === '1';
         const res = await fetch('/api/onboarding/status', {
           headers: { 'x-user-id': user.id },
         });
@@ -75,7 +76,7 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
           if (!alreadyRedirected) {
             router.replace(`/onboarding?step=${json.nextStep}`);
             try {
-              sessionStorage.setItem('onboardingRedirected', '1');
+              sessionStorage.setItem(redirectKey, '1');
             } catch {
               // ignore
             }
@@ -94,7 +95,7 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
           if (!alreadyRedirected) {
             router.replace('/onboarding?step=7');
             try {
-              sessionStorage.setItem('onboardingRedirected', '1');
+              sessionStorage.setItem(redirectKey, '1');
             } catch {
               // ignore
             }
