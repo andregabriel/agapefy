@@ -5,6 +5,9 @@ import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { Label } from '@/components/ui/label';
 import { Edit, Eye, Trash, ChevronDown, ChevronUp, ArrowUp, ArrowDown } from 'lucide-react';
 import FormStepEditor from './FormStepEditor';
 import StaticStepEditor from './StaticStepEditor';
@@ -49,11 +52,25 @@ export default function StepCard({ step, steps, onUpdated, onDeleted, onMoveStep
   const [isDeleting, setIsDeleting] = useState(false);
   const [localIsActive, setLocalIsActive] = useState(step.isActive);
   const { settings, updateSetting } = useAppSettings();
+  const [otherDestination, setOtherDestination] = useState((settings as any).onboarding_other_destination || 'home');
+  const [otherStepPosition, setOtherStepPosition] = useState((settings as any).onboarding_other_step_position || '');
+  const [otherTitle, setOtherTitle] = useState((settings as any).onboarding_other_title || '');
+  const [otherSubtitle, setOtherSubtitle] = useState((settings as any).onboarding_other_subtitle || '');
+  const [otherButtonLabel, setOtherButtonLabel] = useState((settings as any).onboarding_other_button_label || '');
+  const [savingOtherConfig, setSavingOtherConfig] = useState(false);
 
   // Sincronizar estado local quando step.isActive mudar (após refresh)
   useEffect(() => {
     setLocalIsActive(step.isActive);
   }, [step.isActive]);
+
+  useEffect(() => {
+    setOtherDestination((settings as any).onboarding_other_destination || 'home');
+    setOtherStepPosition((settings as any).onboarding_other_step_position || '');
+    setOtherTitle((settings as any).onboarding_other_title || '');
+    setOtherSubtitle((settings as any).onboarding_other_subtitle || '');
+    setOtherButtonLabel((settings as any).onboarding_other_button_label || '');
+  }, [settings]);
 
   const getTypeBadge = () => {
     switch (step.type) {
@@ -177,6 +194,35 @@ export default function StepCard({ step, steps, onUpdated, onDeleted, onMoveStep
       setLocalIsActive(!checked);
       const { toast } = await import('sonner');
       toast.error('Não foi possível atualizar o status');
+    }
+  };
+
+  const handleSaveOtherConfig = async () => {
+    try {
+      setSavingOtherConfig(true);
+      const entries: Array<[keyof typeof settings, string]> = [
+        ['onboarding_other_destination', otherDestination || 'home'],
+        ['onboarding_other_step_position', otherStepPosition || ''],
+        ['onboarding_other_title', otherTitle || ''],
+        ['onboarding_other_subtitle', otherSubtitle || ''],
+        ['onboarding_other_button_label', otherButtonLabel || ''],
+      ];
+
+      const results = await Promise.all(entries.map(([key, value]) => updateSetting(key, value)));
+      const failed = results.find(r => !r.success);
+      const { toast } = await import('sonner');
+      if (failed) {
+        toast.error('Não foi possível salvar as configurações do "Outros".');
+      } else {
+        toast.success('Configurações do "Outros" salvas.');
+        onUpdated();
+      }
+    } catch (e) {
+      console.error(e);
+      const { toast } = await import('sonner');
+      toast.error('Erro ao salvar as configurações do "Outros".');
+    } finally {
+      setSavingOtherConfig(false);
     }
   };
 
@@ -337,6 +383,89 @@ export default function StepCard({ step, steps, onUpdated, onDeleted, onMoveStep
                 </p>
               </div>
             )}
+
+            {step.stepNumber === 1 && (
+              <div className="mt-6 border-t pt-4 space-y-4">
+                <div className="flex items-start justify-between">
+                  <div>
+                    <h4 className="text-sm font-semibold text-gray-900">Configurações do &quot;Outros&quot;</h4>
+                    <p className="text-xs text-gray-500">
+                      Defina para onde o usuário vai após preencher o campo Outros e o texto de agradecimento.
+                    </p>
+                  </div>
+                  <Badge variant="secondary">Fluxo especial</Badge>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="col-span-1 md:col-span-2 space-y-2">
+                    <Label htmlFor="other-destination">Destino ao escolher &quot;Outros&quot;</Label>
+                    <select
+                      id="other-destination"
+                      className="w-full border rounded-md px-3 py-2 text-sm"
+                      value={otherDestination}
+                      onChange={(e) => setOtherDestination(e.target.value)}
+                    >
+                      <option value="home">Agradecer e ir para Home</option>
+                      <option value="next">Agradecer e continuar fluxo (próximo passo ativo)</option>
+                      <option value="step">Agradecer e ir para um passo específico</option>
+                    </select>
+                    <p className="text-xs text-gray-500">
+                      Escolha &quot;Passo específico&quot; para redirecionar para um passo (ex.: 9 - Outros).
+                    </p>
+                  </div>
+                  {otherDestination === 'step' && (
+                    <div className="space-y-2">
+                      <Label htmlFor="other-step-position">Passo de destino</Label>
+                      <Input
+                        id="other-step-position"
+                        type="number"
+                        min={1}
+                        placeholder="Ex.: 9"
+                        value={otherStepPosition}
+                        onChange={(e) => setOtherStepPosition(e.target.value)}
+                      />
+                      <p className="text-xs text-gray-500">Use o número de posição exibido na timeline.</p>
+                    </div>
+                  )}
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="other-title">Título da tela de agradecimento</Label>
+                    <Input
+                      id="other-title"
+                      value={otherTitle}
+                      onChange={(e) => setOtherTitle(e.target.value)}
+                      placeholder="Obrigado por compartilhar"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="other-button">Texto do botão</Label>
+                    <Input
+                      id="other-button"
+                      value={otherButtonLabel}
+                      onChange={(e) => setOtherButtonLabel(e.target.value)}
+                      placeholder="Continuar"
+                    />
+                  </div>
+                  <div className="md:col-span-2 space-y-2">
+                    <Label htmlFor="other-subtitle">Texto/descrição da tela</Label>
+                    <Textarea
+                      id="other-subtitle"
+                      value={otherSubtitle}
+                      onChange={(e) => setOtherSubtitle(e.target.value)}
+                      placeholder="Mensagem curta de agradecimento ou instruções."
+                    />
+                  </div>
+                </div>
+
+                <div className="flex justify-end">
+                  <Button onClick={handleSaveOtherConfig} disabled={savingOtherConfig}>
+                    {savingOtherConfig ? 'Salvando...' : 'Salvar configurações do "Outros"'}
+                  </Button>
+                </div>
+              </div>
+            )}
           </CardContent>
         )}
       </Card>
@@ -378,4 +507,3 @@ export default function StepCard({ step, steps, onUpdated, onDeleted, onMoveStep
     </>
   );
 }
-

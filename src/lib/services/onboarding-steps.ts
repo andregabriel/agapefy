@@ -50,6 +50,22 @@ interface AppSettings {
  * Determina a ordem real dos passos do onboarding, replicando a lógica do admin.
  * Retorna lista ordenada por posição real (não stepNumber de exibição).
  */
+const REQUIRED_SETTINGS_KEYS: Array<keyof AppSettings> = [
+  'onboarding_step2_title',
+  'onboarding_step2_subtitle',
+  'onboarding_step3_title',
+  'onboarding_static_preview_active',
+  'onboarding_static_whatsapp_active',
+  'onboarding_hardcoded_6_active',
+  'onboarding_hardcoded_7_active',
+  'onboarding_hardcoded_8_active',
+  'onboarding_static_preview_position',
+  'onboarding_static_whatsapp_position',
+  'onboarding_hardcoded_6_position',
+  'onboarding_hardcoded_7_position',
+  'onboarding_hardcoded_8_position',
+];
+
 export async function getOnboardingStepsOrder(
   settings?: AppSettings
 ): Promise<OnboardingStep[]> {
@@ -67,27 +83,18 @@ export async function getOnboardingStepsOrder(
 
   const formsList = (forms || []) as any[];
 
-  // Buscar settings se não foram fornecidos
+  // Buscar settings se não foram fornecidos ou se vieram incompletos
   let appSettings: AppSettings = settings || {};
-  if (!settings) {
+
+  const missingKeys = REQUIRED_SETTINGS_KEYS.filter(
+    (key) => typeof (appSettings as any)[key] === 'undefined'
+  );
+
+  if (!settings || missingKeys.length > 0) {
     const { data: settingsData } = await supabase
       .from('app_settings')
       .select('key, value')
-      .in('key', [
-        'onboarding_step2_title',
-        'onboarding_step2_subtitle',
-        'onboarding_step3_title',
-        'onboarding_static_preview_active',
-        'onboarding_static_whatsapp_active',
-        'onboarding_hardcoded_6_active',
-        'onboarding_hardcoded_7_active',
-        'onboarding_hardcoded_8_active',
-        'onboarding_static_preview_position',
-        'onboarding_static_whatsapp_position',
-        'onboarding_hardcoded_6_position',
-        'onboarding_hardcoded_7_position',
-        'onboarding_hardcoded_8_position',
-      ]);
+      .in('key', missingKeys.length ? missingKeys : REQUIRED_SETTINGS_KEYS);
 
     if (settingsData) {
       settingsData.forEach((s: any) => {
@@ -349,4 +356,3 @@ export async function getStepByPosition(
   const step = steps.find((s) => s.position === position);
   return step || null;
 }
-

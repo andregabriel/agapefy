@@ -86,6 +86,8 @@ export default function OnboardingClient() {
   const [currentStepMeta, setCurrentStepMeta] = useState<OnboardingStep | null>(null);
   const [selectedChallengePlaylist, setSelectedChallengePlaylist] = useState<{ id: string; title: string; cover_url?: string | null } | null>(null);
   const [playlistAudios, setPlaylistAudios] = useState<AudioPreview[]>([]);
+  const [showOtherThankYou, setShowOtherThankYou] = useState(false);
+  const [otherNextUrl, setOtherNextUrl] = useState<string | null>(null);
   const playlistCarouselRef = useRef<HTMLDivElement | null>(null);
   const previousStepRef = useRef<number>(desiredStep);
   const pauseRef = useRef<(() => void) | null>(null);
@@ -186,6 +188,28 @@ export default function OnboardingClient() {
     return idx >= 0 ? String(idx) : '';
   }, [playlists, orderedChallengePlaylists]);
   const recommendedId = orderedChallengePlaylists[0]?.id || '';
+
+  const buildOnboardingSettingsSnapshot = () => ({
+    onboarding_step2_title: settings.onboarding_step2_title,
+    onboarding_step2_subtitle: settings.onboarding_step2_subtitle,
+    onboarding_step3_title: settings.onboarding_step3_title,
+    onboarding_step4_section_title: settings.onboarding_step4_section_title,
+    onboarding_step4_instruction: settings.onboarding_step4_instruction,
+    onboarding_step4_label: settings.onboarding_step4_label,
+    onboarding_step4_privacy_text: settings.onboarding_step4_privacy_text,
+    onboarding_step4_skip_button: settings.onboarding_step4_skip_button,
+    onboarding_step4_complete_button: settings.onboarding_step4_complete_button,
+    onboarding_static_preview_active: settings.onboarding_static_preview_active,
+    onboarding_static_whatsapp_active: settings.onboarding_static_whatsapp_active,
+    onboarding_hardcoded_6_active: settings.onboarding_hardcoded_6_active,
+    onboarding_hardcoded_7_active: settings.onboarding_hardcoded_7_active,
+    onboarding_hardcoded_8_active: settings.onboarding_hardcoded_8_active,
+    onboarding_static_preview_position: settings.onboarding_static_preview_position,
+    onboarding_static_whatsapp_position: settings.onboarding_static_whatsapp_position,
+    onboarding_hardcoded_6_position: settings.onboarding_hardcoded_6_position,
+    onboarding_hardcoded_7_position: settings.onboarding_hardcoded_7_position,
+    onboarding_hardcoded_8_position: settings.onboarding_hardcoded_8_position,
+  });
 
   // When entering step 2, clear any previous radio selection (from step 1)
   useEffect(() => {
@@ -438,23 +462,49 @@ export default function OnboardingClient() {
     opts?: { categoryId?: string }
   ): Promise<string> {
     const parentFormId = activeFormId || form?.id || '';
-    
-    // Converter settings para formato esperado pela função compartilhada
-    const settingsForShared = {
-      onboarding_step2_title: settings.onboarding_step2_title,
-      onboarding_step2_subtitle: settings.onboarding_step2_subtitle,
-      onboarding_step3_title: settings.onboarding_step3_title,
-      onboarding_static_preview_active: settings.onboarding_static_preview_active,
-      onboarding_static_whatsapp_active: settings.onboarding_static_whatsapp_active,
-      onboarding_hardcoded_6_active: settings.onboarding_hardcoded_6_active,
-      onboarding_hardcoded_7_active: settings.onboarding_hardcoded_7_active,
-      onboarding_hardcoded_8_active: settings.onboarding_hardcoded_8_active,
-    };
 
     return getNextStepUrlShared(currentStep, {
       categoryId: (opts?.categoryId ?? currentCategoryId) || undefined,
       formId: parentFormId || undefined,
-      settings: settingsForShared,
+      settings: buildOnboardingSettingsSnapshot(),
+    });
+  }
+
+  async function resolveOtherFlowNextUrl(
+    currentStep: number,
+    opts?: { categoryId?: string; parentFormId?: string }
+  ): Promise<string> {
+    const destination = (settings as any).onboarding_other_destination || 'home';
+    const parentFormId = opts?.parentFormId || activeFormId || form?.id || '';
+    const categoryIdValue = (opts?.categoryId ?? currentCategoryId) || undefined;
+
+    if (destination === 'home') {
+      return '/';
+    }
+
+    if (destination === 'step') {
+      const targetPosition = Number((settings as any).onboarding_other_step_position || '');
+      if (Number.isFinite(targetPosition)) {
+        const steps = await getOnboardingStepsOrder(buildOnboardingSettingsSnapshot());
+        const targetStep = steps.find((s) => {
+          if (s.position !== targetPosition || !s.isActive) return false;
+          if (s.type === 'static' && s.staticKind === 'preview' && !categoryIdValue) return false;
+          return true;
+        });
+        if (targetStep) {
+          return getStepUrl(targetStep, {
+            categoryId: categoryIdValue,
+            formId: parentFormId || undefined,
+          });
+        }
+      }
+    }
+
+    // Default: continuar fluxo normal
+    return getNextStepUrlShared(currentStep, {
+      categoryId: categoryIdValue || undefined,
+      formId: parentFormId || undefined,
+      settings: buildOnboardingSettingsSnapshot(),
     });
   }
 
@@ -559,20 +609,8 @@ export default function OnboardingClient() {
     }
 
     const parentFormId = activeFormId || form?.id || '';
-    
-    // Converter settings para formato esperado pela função compartilhada
-    const settingsForShared = {
-      onboarding_step2_title: settings.onboarding_step2_title,
-      onboarding_step2_subtitle: settings.onboarding_step2_subtitle,
-      onboarding_step3_title: settings.onboarding_step3_title,
-      onboarding_static_preview_active: settings.onboarding_static_preview_active,
-      onboarding_static_whatsapp_active: settings.onboarding_static_whatsapp_active,
-      onboarding_hardcoded_6_active: settings.onboarding_hardcoded_6_active,
-      onboarding_hardcoded_7_active: settings.onboarding_hardcoded_7_active,
-      onboarding_hardcoded_8_active: settings.onboarding_hardcoded_8_active,
-    };
 
-    const steps = await getOnboardingStepsOrder(settingsForShared);
+    const steps = await getOnboardingStepsOrder(buildOnboardingSettingsSnapshot());
     
     // Filtrar apenas passos ativos
     let activeSteps = steps.filter((s) => s.isActive);
@@ -926,18 +964,7 @@ export default function OnboardingClient() {
         const stepParam = Number(searchParams?.get('step') || desiredStep || 1);
         
         // VERIFICAÇÃO CRÍTICA: Verificar se o passo solicitado está ativo
-        const settingsForCheck = {
-          onboarding_step2_title: settings.onboarding_step2_title,
-          onboarding_step2_subtitle: settings.onboarding_step2_subtitle,
-          onboarding_step3_title: settings.onboarding_step3_title,
-          onboarding_static_preview_active: settings.onboarding_static_preview_active,
-          onboarding_static_whatsapp_active: settings.onboarding_static_whatsapp_active,
-          onboarding_hardcoded_6_active: settings.onboarding_hardcoded_6_active,
-          onboarding_hardcoded_7_active: settings.onboarding_hardcoded_7_active,
-          onboarding_hardcoded_8_active: settings.onboarding_hardcoded_8_active,
-        };
-        
-        const steps = await getOnboardingStepsOrder(settingsForCheck);
+        const steps = await getOnboardingStepsOrder(buildOnboardingSettingsSnapshot());
         const requestedStep = steps.find(s => s.position === stepParam);
         if (mounted) {
           setCurrentStepMeta(requestedStep || null);
@@ -1343,34 +1370,21 @@ export default function OnboardingClient() {
       // Se selecionou "Outra situação", redirecionar para o passo do WhatsApp
       if (hasOtherOption && selectedKey === 'other' && form) {
         try {
-          const parentFormId = activeFormId || form.id || '';
-          const settingsForShared = {
-            onboarding_step2_title: settings.onboarding_step2_title,
-            onboarding_step2_subtitle: settings.onboarding_step2_subtitle,
-            onboarding_step3_title: settings.onboarding_step3_title,
-            onboarding_static_preview_active: settings.onboarding_static_preview_active,
-            onboarding_static_whatsapp_active: settings.onboarding_static_whatsapp_active,
-            onboarding_hardcoded_6_active: settings.onboarding_hardcoded_6_active,
-            onboarding_hardcoded_7_active: settings.onboarding_hardcoded_7_active,
-            onboarding_hardcoded_8_active: settings.onboarding_hardcoded_8_active,
-          };
-          
-          const steps = await getOnboardingStepsOrder(settingsForShared);
-          const whatsappStep = steps.find((s) => s.type === 'static' && s.staticKind === 'whatsapp' && s.isActive);
-          
-          if (whatsappStep) {
-            const whatsappUrl = getStepUrl(whatsappStep, {
-              categoryId: currentCategoryId || undefined,
-              formId: parentFormId || undefined,
-            });
-            router.replace(whatsappUrl);
-            setSubmitting(false);
-            return;
-          }
-        } catch (whatsappError) {
+          const currentStep = form.onboard_step || desiredStep;
+          const categoryIdForNext = currentStep === 1 && optionToSubmit ? optionToSubmit : currentCategoryId;
+          const targetUrl = await resolveOtherFlowNextUrl(currentStep, {
+            categoryId: categoryIdForNext || undefined,
+            parentFormId: activeFormId || form.id || '',
+          });
+          setUsedOtherSituation(true);
+          setOtherNextUrl(targetUrl);
+          setShowOtherThankYou(true);
+          setSubmitting(false);
+          return;
+        } catch (otherFlowError) {
           // eslint-disable-next-line no-console
-          console.error('Erro ao buscar passo do WhatsApp:', whatsappError);
-          // Continuar com o fluxo normal se falhar
+          console.error('Erro ao processar fluxo "Outros":', otherFlowError);
+          // Se falhar, continuar com fluxo normal
         }
       }
       
@@ -1397,6 +1411,40 @@ export default function OnboardingClient() {
       }
       setSubmitting(false);
     }
+  }
+
+  if (showOtherThankYou) {
+    return (
+      <div className="max-w-2xl mx-auto p-4">
+        <Card>
+          <CardHeader>
+            <div className="space-y-3 text-center">
+              <CardTitle className="text-2xl md:text-3xl leading-tight max-w-3xl mx-auto">
+                {settings.onboarding_other_title || 'Obrigado por compartilhar'}
+              </CardTitle>
+              { (settings.onboarding_other_subtitle || '').trim() ? (
+                <p className="text-base text-gray-600 max-w-3xl mx-auto">
+                  {settings.onboarding_other_subtitle}
+                </p>
+              ) : null}
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <div className="flex justify-center">
+              <Button
+                onClick={() => {
+                  const target = otherNextUrl || '/';
+                  router.replace(target);
+                }}
+              >
+                {settings.onboarding_other_button_label || 'Continuar'}
+                <ArrowRight className="ml-2 h-4 w-4" />
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
   }
 
   // Passo hardcoded: rotina pronta (via metadado)
@@ -2704,5 +2752,3 @@ export default function OnboardingClient() {
     </div>
   );
 }
-
-

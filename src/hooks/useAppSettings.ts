@@ -87,6 +87,12 @@ interface AppSettings {
   onboarding_hardcoded_6_position?: string;
   onboarding_hardcoded_7_position?: string;
   onboarding_hardcoded_8_position?: string;
+  // Fluxo "Outros" (agradecimento)
+  onboarding_other_destination?: string; // 'home' | 'next' | 'step'
+  onboarding_other_step_position?: string;
+  onboarding_other_title?: string;
+  onboarding_other_subtitle?: string;
+  onboarding_other_button_label?: string;
   // Paywall / assinaturas
   paywall_permissions?: string;
   paywall_screen_config?: string;
@@ -164,6 +170,12 @@ const DEFAULT_SETTINGS: AppSettings = {
   onboarding_hardcoded_6_position: '6',
   onboarding_hardcoded_7_position: '7',
   onboarding_hardcoded_8_position: '8',
+  // Fluxo "Outros" (agradecimento)
+  onboarding_other_destination: 'home',
+  onboarding_other_step_position: '',
+  onboarding_other_title: 'Obrigado por compartilhar',
+  onboarding_other_subtitle: 'Recebemos sua situação. Vamos orar por você e em breve enviaremos conteúdos que possam ajudar.',
+  onboarding_other_button_label: 'Ir para início',
   // Paywall / assinaturas
   paywall_permissions: JSON.stringify(DEFAULT_PAYWALL_PERMISSIONS),
   paywall_screen_config: JSON.stringify(DEFAULT_PAYWALL_SCREEN_CONFIG),

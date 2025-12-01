@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { supabase } from '@/lib/supabase';
+import { getOnboardingStepsOrder } from '@/lib/services/onboarding-steps';
 
 interface OnboardingProgress {
   totalSteps: number;
@@ -21,90 +21,20 @@ export function useOnboardingProgress(currentStep: number, categoryId?: string |
 
     async function calculateProgress() {
       try {
-        // Buscar todos os formulários dinâmicos ativos
-        let { data: activeForms, error: formsError } = await supabase
-          .from('admin_forms')
-          .select('id, onboard_step, is_active')
-          .eq('form_type', 'onboarding')
-          .eq('is_active', true)
-          .not('onboard_step', 'is', null)
-          .order('onboard_step', { ascending: true });
+        const steps = await getOnboardingStepsOrder();
 
-        // Fallback quando parent_form_id não existe
-        if (formsError && (formsError.code === '42703' || /parent_form_id/i.test(String(formsError.message || '')))) {
-          const fb = await supabase
-            .from('admin_forms')
-            .select('id, onboard_step, is_active')
-            .eq('form_type', 'onboarding')
-            .eq('is_active', true)
-            .not('onboard_step', 'is', null)
-            .order('onboard_step', { ascending: true });
-          if (!fb.error) {
-            activeForms = fb.data as any;
+        // Filtrar passos ativos e considerar a regra do preview (precisa de categoria)
+        let activeSteps = steps.filter((s) => s.isActive);
+        activeSteps = activeSteps.filter((s) => {
+          if (s.type === 'static' && s.staticKind === 'preview') {
+            return Boolean(categoryId);
           }
-        }
+          return true;
+        });
 
-        // Buscar todos os formulários (ativos e inativos) para verificar quais passos estão ocupados
-        const { data: allForms } = await supabase
-          .from('admin_forms')
-          .select('onboard_step, is_active')
-          .eq('form_type', 'onboarding')
-          .not('onboard_step', 'is', null);
-
-        const occupiedSteps = new Set<number>();
-        const activeSteps = new Set<number>();
-        
-        if (allForms) {
-          allForms.forEach((f: any) => {
-            if (f.onboard_step) {
-              occupiedSteps.add(f.onboard_step);
-              if (f.is_active) {
-                activeSteps.add(f.onboard_step);
-              }
-            }
-          });
-        }
-
-        // Lista de passos estáticos possíveis
-        const staticSteps = [2, 3, 6, 7, 8];
-        
-        // Verificar quais passos estáticos estão disponíveis
-        const availableStaticSteps: number[] = [];
-        for (const stepNum of staticSteps) {
-          // Se há um formulário dinâmico neste passo, o estático não está disponível
-          if (occupiedSteps.has(stepNum)) {
-            continue;
-          }
-          
-          // Verificações específicas para cada passo estático
-          if (stepNum === 2) {
-            // Passo 2 (preview) só está disponível se tiver categoryId
-            if (categoryId) {
-              availableStaticSteps.push(stepNum);
-            }
-          } else {
-            // Passos 3, 6, 7, 8 estão sempre disponíveis se não houver formulário dinâmico
-            availableStaticSteps.push(stepNum);
-          }
-        }
-
-        // Combinar passos dinâmicos ativos + passos estáticos disponíveis
-        const allActiveSteps = new Set<number>();
-        
-        // Adicionar passos dinâmicos ativos
-        if (activeForms) {
-          activeForms.forEach((f: any) => {
-            if (f.onboard_step) {
-              allActiveSteps.add(f.onboard_step);
-            }
-          });
-        }
-        
-        // Adicionar passos estáticos disponíveis
-        availableStaticSteps.forEach(step => allActiveSteps.add(step));
-
-        // Calcular total de passos ativos
-        const totalSteps = allActiveSteps.size || 1;
+        // Ordenar por posição e calcular total
+        const sorted = activeSteps.sort((a, b) => a.position - b.position);
+        const totalSteps = sorted.length || 1;
         
         // Calcular porcentagem baseada no passo atual
         // Progresso mostra quanto já foi completado: passo 1 = início, último passo = 100%
@@ -115,17 +45,14 @@ export function useOnboardingProgress(currentStep: number, categoryId?: string |
           // Se há apenas 1 passo e estamos nele, mostrar 100%
           percentage = currentStep >= 1 ? 100 : 0;
         } else {
-          // Ordenar passos ativos
-          const sortedSteps = Array.from(allActiveSteps).sort((a, b) => a - b);
-          
           // Encontrar a posição do passo atual na sequência
           // Se o passo atual está na lista, usar sua posição
           // Se não está, encontrar o passo mais próximo menor ou igual
-          let currentIndex = sortedSteps.findIndex(step => step === currentStep);
+          let currentIndex = sorted.findIndex(step => step.position === currentStep);
           if (currentIndex === -1) {
             // Encontrar o último passo menor ou igual ao atual
-            for (let i = sortedSteps.length - 1; i >= 0; i--) {
-              if (sortedSteps[i] <= currentStep) {
+            for (let i = sorted.length - 1; i >= 0; i--) {
+              if (sorted[i].position <= currentStep) {
                 currentIndex = i;
                 break;
               }
@@ -138,7 +65,7 @@ export function useOnboardingProgress(currentStep: number, categoryId?: string |
           
           // Calcular porcentagem: primeiro passo = ~0%, último passo = 100%
           // Usar (currentIndex + 1) / totalSteps para mostrar progresso até o passo atual
-          percentage = Math.min(100, ((currentIndex + 1) / sortedSteps.length) * 100);
+          percentage = Math.min(100, ((currentIndex + 1) / sorted.length) * 100);
         }
 
         if (mounted) {
@@ -172,4 +99,3 @@ export function useOnboardingProgress(currentStep: number, categoryId?: string |
 
   return progress;
 }
-
