@@ -3,16 +3,21 @@
 import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { CreditCard, CheckCircle2, XCircle, Loader2, Sparkles } from 'lucide-react';
+import { CreditCard, CheckCircle2, XCircle, Loader2, Crown } from 'lucide-react';
 import { useSubscriptionStatus } from '@/hooks/useSubscriptionStatus';
 import { toast } from 'sonner';
-import { useRouter } from 'next/navigation';
+import { PaywallShowcase } from '@/components/paywall/PaywallShowcase';
 
 export function SubscriptionCard() {
   const { hasActiveSubscription, hasActiveTrial, loading, refetch } = useSubscriptionStatus();
   const [cancelling, setCancelling] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
-  const router = useRouter();
+
+  const handleManageSubscription = () => {
+    const manageUrl = 'https://digitalmanager.guru/myorders';
+    window.open(manageUrl, '_blank', 'noopener,noreferrer');
+    toast.info('Abrindo página de gerenciamento da assinatura');
+  };
 
   const handleCancel = async () => {
     if (!confirm('Tem certeza que deseja cancelar sua assinatura? Ela continuará ativa até o fim do período atual.')) {
@@ -40,17 +45,6 @@ export function SubscriptionCard() {
     } finally {
       setCancelling(false);
     }
-  };
-
-  const handleUpgrade = () => {
-    router.push('/');
-    // Scroll para paywall ou modal de assinatura se necessário
-    setTimeout(() => {
-      const paywallElement = document.getElementById('paywall');
-      if (paywallElement) {
-        paywallElement.scrollIntoView({ behavior: 'smooth' });
-      }
-    }, 100);
   };
 
   if (loading) {
@@ -92,87 +86,63 @@ export function SubscriptionCard() {
           <div className="border-t border-gray-800 pt-4">
             {hasActiveSubscription || hasActiveTrial ? (
               <div className="space-y-4">
-                {/* Status Ativo */}
-                <div className="flex items-center space-x-3 p-4 bg-green-500/10 border border-green-500/30 rounded-lg">
-                  <CheckCircle2 className="h-6 w-6 text-green-500 flex-shrink-0" />
-                  <div className="flex-1">
-                    <h3 className="text-white font-medium">
-                      {hasActiveTrial ? 'Período de Teste Ativo' : 'Assinatura Ativa'}
-                    </h3>
-                    <p className="text-sm text-gray-400 mt-1">
-                      {hasActiveTrial 
-                        ? 'Você está aproveitando o período de teste gratuito'
-                        : 'Sua assinatura está ativa e você tem acesso completo a todos os recursos'}
-                    </p>
+                <div className="rounded-2xl border border-emerald-500/30 bg-gradient-to-br from-emerald-500/15 via-emerald-400/10 to-cyan-500/15 p-5 shadow-[0_18px_60px_rgba(16,185,129,0.25)]">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex items-center gap-3">
+                      <div className="h-11 w-11 rounded-full bg-emerald-500/20 border border-emerald-300/50 flex items-center justify-center">
+                        <CheckCircle2 className="h-6 w-6 text-emerald-300 flex-shrink-0" />
+                      </div>
+                      <div>
+                        <h3 className="text-white font-semibold">
+                          {hasActiveTrial ? 'Período de Teste Ativo' : 'Assinatura Premium Ativa'}
+                        </h3>
+                        <p className="text-sm text-emerald-100/80 mt-1">
+                          {hasActiveTrial
+                            ? 'Você está aproveitando o período de teste gratuito'
+                            : 'Sua assinatura está ativa e você tem acesso completo a todos os recursos'}
+                        </p>
+                      </div>
+                    </div>
+                    <span className="rounded-full bg-white/10 text-emerald-100 px-3 py-1 text-xs font-semibold border border-emerald-300/30">
+                      {hasActiveTrial ? 'Teste' : 'Premium'}
+                    </span>
                   </div>
-                </div>
 
-                {/* Botão Cancelar */}
-                <Button
-                  variant="outline"
-                  onClick={handleCancel}
-                  disabled={cancelling}
-                  className="w-full border-red-600 text-red-400 hover:bg-red-900/20 hover:text-red-300"
-                >
-                  {cancelling ? (
-                    <>
-                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                      Cancelando...
-                    </>
-                  ) : (
-                    <>
-                      <XCircle className="h-4 w-4 mr-2" />
-                      Cancelar Assinatura
-                    </>
-                  )}
-                </Button>
-                <p className="text-xs text-gray-500 text-center">
-                  Sua assinatura continuará ativa até o fim do período atual
-                </p>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-4">
+                    <Button
+                      onClick={handleManageSubscription}
+                      className="w-full bg-gradient-to-r from-amber-200 via-emerald-200 to-cyan-200 text-black font-semibold shadow-[0_15px_50px_rgba(56,189,248,0.35)] hover:scale-[1.01] transition-transform"
+                    >
+                      <Crown className="h-4 w-4 mr-2" />
+                      Gerenciar assinatura
+                    </Button>
+                    <Button
+                      variant="outline"
+                      onClick={handleCancel}
+                      disabled={cancelling}
+                      className="w-full border-red-600 text-red-300 hover:bg-red-900/30 hover:text-red-100"
+                    >
+                      {cancelling ? (
+                        <>
+                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                          Cancelando...
+                        </>
+                      ) : (
+                        <>
+                          <XCircle className="h-4 w-4 mr-2" />
+                          Cancelar Assinatura
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                  <p className="text-xs text-emerald-100/80 text-center mt-3">
+                    Sua assinatura continuará ativa até o fim do período atual
+                  </p>
+                </div>
               </div>
             ) : (
               <div className="space-y-4">
-                {/* Mensagem de Engajamento */}
-                <div className="p-6 bg-gradient-to-br from-green-500/20 to-blue-500/20 border border-green-500/30 rounded-lg text-center">
-                  <div className="w-16 h-16 bg-green-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <Sparkles className="h-8 w-8 text-green-400" />
-                  </div>
-                  <h3 className="text-xl font-bold text-white mb-2">
-                    Desbloqueie Todo o Potencial da Agapefy
-                  </h3>
-                  <p className="text-gray-300 mb-4">
-                    Tenha acesso completo a todas as orações, reflexões e recursos para sua jornada espiritual
-                  </p>
-                  
-                  {/* Benefícios */}
-                  <div className="space-y-2 mb-6 text-left">
-                    <div className="flex items-center gap-2 text-sm text-gray-300">
-                      <CheckCircle2 size={16} className="text-green-400 flex-shrink-0" />
-                      <span>Acesso ilimitado a todas as orações</span>
-                    </div>
-                    <div className="flex items-center gap-2 text-sm text-gray-300">
-                      <CheckCircle2 size={16} className="text-green-400 flex-shrink-0" />
-                      <span>Reflexões e intenções personalizadas</span>
-                    </div>
-                    <div className="flex items-center gap-2 text-sm text-gray-300">
-                      <CheckCircle2 size={16} className="text-green-400 flex-shrink-0" />
-                      <span>Rotina diária de oração</span>
-                    </div>
-                    <div className="flex items-center gap-2 text-sm text-gray-300">
-                      <CheckCircle2 size={16} className="text-green-400 flex-shrink-0" />
-                      <span>Suporte prioritário</span>
-                    </div>
-                  </div>
-
-                  {/* Botão CTA */}
-                  <Button
-                    onClick={handleUpgrade}
-                    className="w-full bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white font-bold py-3"
-                  >
-                    <Sparkles className="h-4 w-4 mr-2" />
-                    Assinar Agora
-                  </Button>
-                </div>
+                <PaywallShowcase variant="inline" />
               </div>
             )}
           </div>
@@ -181,4 +151,3 @@ export function SubscriptionCard() {
     </Card>
   );
 }
-
