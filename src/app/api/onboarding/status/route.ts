@@ -1,11 +1,30 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAdminSupabase } from '@/lib/supabase-admin';
 
+const hasServiceRoleKey = Boolean(process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SB_SERVICE_ROLE_KEY);
+let hasWarnedMissingServiceRole = false;
+const logPrefix = '[onboarding-status]';
+
 export async function GET(request: NextRequest) {
   try {
     const userId = request.headers.get('x-user-id') || null;
     if (!userId) {
       return NextResponse.json({ pending: false, steps: [] });
+    }
+
+    console.info(`${logPrefix} start`, { userId });
+
+    if (!hasServiceRoleKey) {
+      if (!hasWarnedMissingServiceRole) {
+        console.warn(
+          `${logPrefix} service role key missing, returning empty (dev fallback).`
+        );
+        hasWarnedMissingServiceRole = true;
+      }
+      return NextResponse.json(
+        { pending: true, steps: [], nextStep: 1, error: 'missing_service_role' },
+        { status: 200 }
+      );
     }
 
     const supabase = getAdminSupabase();
@@ -17,7 +36,17 @@ export async function GET(request: NextRequest) {
       .select('id, onboard_step, parent_form_id, created_at, is_active, form_type')
       .order('onboard_step', { ascending: true, nullsFirst: true })
       .order('created_at', { ascending: true });
-    if (formsError) throw formsError;
+    if (formsError) {
+      console.error(`${logPrefix} admin_forms error`, {
+        message: formsError.message,
+        details: formsError.details,
+        hint: formsError.hint,
+      });
+      return NextResponse.json(
+        { pending: true, steps: [], nextStep: 1, error: 'forms_error' },
+        { status: 200 }
+      );
+    }
 
     const formsList = (forms || []).filter((form: any) => {
       const type = form.form_type;
@@ -33,6 +62,11 @@ export async function GET(request: NextRequest) {
       is_active?: boolean;
       form_type?: string | null;
     }>;
+
+    console.info(`${logPrefix} forms fetched`, {
+      total: forms?.length ?? 0,
+      filtered: formsList.length,
+    });
 
     if (formsList.length === 0) {
       // Sem passos configurados: considerar que não há pendências
@@ -84,7 +118,11 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ pending: false, steps: [], nextStep: null });
     }
 
-    const formIds = processedSteps.map(f => f.id);
+    const formIds = processedSteps.map(f => f.id).filter(Boolean);
+    if (formIds.length === 0) {
+      console.warn(`${logPrefix} no formIds after processing`, { userId });
+      return NextResponse.json({ pending: false, steps: [], nextStep: null });
+    }
 
     // Buscar respostas do usuário para esses formulários
     const { data: responses, error: respError } = await supabase
@@ -92,10 +130,26 @@ export async function GET(request: NextRequest) {
       .select('form_id')
       .eq('user_id', userId)
       .in('form_id', formIds);
-    if (respError) throw respError;
+    if (respError) {
+      console.error(`${logPrefix} admin_form_responses error`, {
+        message: respError.message,
+        details: respError.details,
+        hint: respError.hint,
+      });
+      return NextResponse.json(
+        { pending: true, steps: [], nextStep: 1, error: 'responses_error' },
+        { status: 200 }
+      );
+    }
 
     const answeredIds = new Set((responses || []).map(r => r.form_id));
     const pendingForms = processedSteps.filter(f => !answeredIds.has(f.id));
+
+    console.info(`${logPrefix} result`, {
+      userId,
+      pendingCount: pendingForms.length,
+      nextStep: pendingForms[0]?.step ?? null,
+    });
 
     return NextResponse.json({
       pending: pendingForms.length > 0,
@@ -104,7 +158,13 @@ export async function GET(request: NextRequest) {
     });
   } catch (e) {
     // eslint-disable-next-line no-console
-    console.error('GET /api/onboarding/status error', e);
-    return NextResponse.json({ error: 'failed_to_check' }, { status: 500 });
+    console.error(`${logPrefix} unexpected error`, {
+      error: e instanceof Error ? e.message : String(e),
+      stack: e instanceof Error ? e.stack : undefined,
+    });
+    return NextResponse.json(
+      { pending: true, steps: [], nextStep: 1, error: 'unexpected' },
+      { status: 200 }
+    );
   }
 }

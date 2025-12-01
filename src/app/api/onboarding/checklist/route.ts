@@ -3,10 +3,32 @@ import { getAdminSupabase } from '@/lib/supabase-admin';
 
 type StepItem = { stepNumber: number; label: string; completed: boolean };
 
+const hasServiceRoleKey = Boolean(process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SB_SERVICE_ROLE_KEY);
+let hasWarnedMissingServiceRole = false;
+const logPrefix = '[onboarding-checklist]';
+
 export async function GET(request: NextRequest) {
   try {
     const userId = request.headers.get('x-user-id') || null;
     if (!userId) return NextResponse.json({ steps: [], hasPending: false, nextStep: null });
+
+    console.info(`${logPrefix} start`, { userId });
+
+    if (!hasServiceRoleKey) {
+      if (!hasWarnedMissingServiceRole) {
+        // Log apenas uma vez para evitar ruído no console durante o desenvolvimento.
+        console.warn(
+          `${logPrefix} service role key missing, returning empty (dev fallback).`
+        );
+        hasWarnedMissingServiceRole = true;
+      }
+      return NextResponse.json({
+        steps: [{ stepNumber: 1, label: 'Onboarding pendente', completed: false }],
+        hasPending: true,
+        nextStep: 1,
+        error: 'missing_service_role',
+      });
+    }
 
     const supabase = getAdminSupabase();
 
@@ -16,7 +38,22 @@ export async function GET(request: NextRequest) {
       .select('id, name, onboard_step, is_active, parent_form_id, form_type, created_at')
       .order('onboard_step', { ascending: true, nullsFirst: true })
       .order('created_at', { ascending: true });
-    if (formsError) throw formsError;
+    if (formsError) {
+      console.error(`${logPrefix} admin_forms error`, {
+        message: formsError.message,
+        details: formsError.details,
+        hint: formsError.hint,
+      });
+      return NextResponse.json(
+        {
+          steps: [{ stepNumber: 1, label: 'Onboarding pendente', completed: false }],
+          hasPending: true,
+          nextStep: 1,
+          error: 'forms_error',
+        },
+        { status: 200 }
+      );
+    }
 
     const formsList = (forms || []).filter((form: any) => {
       const type = form.form_type;
@@ -33,6 +70,11 @@ export async function GET(request: NextRequest) {
       form_type?: string | null;
       created_at?: string | null;
     }>;
+
+    console.info(`${logPrefix} forms fetched`, {
+      total: forms?.length ?? 0,
+      filtered: formsList.length,
+    });
 
     // Mapear passo 1 com fallback para formulários legados sem onboard_step
     const byStep = new Map<number, { id: string; name: string }>();
@@ -64,7 +106,18 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    const formIds = Array.from(byStep.values()).map((x) => x.id);
+    const formIds = Array.from(byStep.values())
+      .map((x) => x.id)
+      .filter(Boolean);
+
+    if (formIds.length === 0) {
+      console.warn(`${logPrefix} no formIds, returning fallback pending`, { userId });
+      return NextResponse.json({
+        steps: [{ stepNumber: 1, label: 'Onboarding pendente', completed: false }],
+        hasPending: true,
+        nextStep: 1,
+      });
+    }
 
     // Respostas (via service role, ignora RLS)
     const { data: responses, error: respError } = await supabase
@@ -72,22 +125,44 @@ export async function GET(request: NextRequest) {
       .select('form_id')
       .eq('user_id', userId)
       .in('form_id', formIds);
-    if (respError) throw respError;
+    if (respError) {
+      console.error(`${logPrefix} admin_form_responses error`, {
+        message: respError.message,
+        details: respError.details,
+        hint: respError.hint,
+      });
+      return NextResponse.json(
+        {
+          steps: [{ stepNumber: 1, label: 'Onboarding pendente', completed: false }],
+          hasPending: true,
+          nextStep: 1,
+          error: 'responses_error',
+        },
+        { status: 200 }
+      );
+    }
     const answeredIds = new Set((responses || []).map((r: any) => r.form_id));
 
     // WhatsApp - busca por user_id primeiro
     let wa: any = null;
-    const { data: waByUserId } = await supabase
+    const { data: waByUserId, error: waError } = await supabase
       .from('whatsapp_users')
       .select('phone_number, receives_daily_verse')
       .eq('user_id', userId)
       .maybeSingle();
+    if (waError) {
+      console.error(`${logPrefix} whatsapp_users by user_id error`, {
+        message: waError.message,
+        details: waError.details,
+        hint: waError.hint,
+      });
+    }
     wa = waByUserId;
     
     // Se não encontrou por user_id, busca registros sem user_id (para compatibilidade com registros antigos)
     // Considera que se o usuário salvou o WhatsApp antes da correção, pode não ter user_id
     if (!wa || !wa.phone_number) {
-      const { data: waWithoutUserId } = await supabase
+      const { data: waWithoutUserId, error: waNullError } = await supabase
         .from('whatsapp_users')
         .select('phone_number, receives_daily_verse, user_id')
         .is('user_id', null)
@@ -95,6 +170,14 @@ export async function GET(request: NextRequest) {
         .order('updated_at', { ascending: false })
         .limit(10);
       
+      if (waNullError) {
+        console.error(`${logPrefix} whatsapp_users without user_id error`, {
+          message: waNullError.message,
+          details: waNullError.details,
+          hint: waNullError.hint,
+        });
+      }
+
       // Se encontrou registros sem user_id, usa o mais recente
       // Isso assume que registros antigos sem user_id podem ser do usuário atual
       if (waWithoutUserId && waWithoutUserId.length > 0) {
@@ -106,21 +189,35 @@ export async function GET(request: NextRequest) {
     const versePrefSet = typeof (wa as any)?.receives_daily_verse === 'boolean';
 
     // Rotina - verifica se existe playlist E se tem áudios
-    const { data: playlist } = await supabase
+    const { data: playlist, error: playlistError } = await supabase
       .from('playlists')
       .select('id')
       .eq('created_by', userId)
       .eq('title', 'Minha Rotina')
       .eq('is_public', false)
       .maybeSingle();
+    if (playlistError) {
+      console.error(`${logPrefix} playlists lookup error`, {
+        message: playlistError.message,
+        details: playlistError.details,
+        hint: playlistError.hint,
+      });
+    }
     
     let hasRoutine = false;
     if (playlist?.id) {
       // Verificar se a playlist tem pelo menos um áudio
-      const { count } = await supabase
+      const { count, error: playlistAudioError } = await supabase
         .from('playlist_audios')
         .select('*', { count: 'exact', head: true })
         .eq('playlist_id', playlist.id);
+      if (playlistAudioError) {
+        console.error(`${logPrefix} playlist_audios count error`, {
+          message: playlistAudioError.message,
+          details: playlistAudioError.details,
+          hint: playlistAudioError.hint,
+        });
+      }
       hasRoutine = (count || 0) > 0;
     }
 
@@ -142,13 +239,28 @@ export async function GET(request: NextRequest) {
     const hasPending = steps.some((s) => !s.completed);
     const nextStep = hasPending ? steps.find((s) => !s.completed)?.stepNumber ?? null : null;
 
+    console.info(`${logPrefix} result`, {
+      userId,
+      hasPending,
+      nextStep,
+      firstPending: steps.find((s) => !s.completed)?.stepNumber ?? null,
+    });
+
     return NextResponse.json({ steps, hasPending, nextStep });
   } catch (e) {
     // eslint-disable-next-line no-console
-    console.error('GET /api/onboarding/checklist error', e);
-    return NextResponse.json({ error: 'failed_to_check' }, { status: 500 });
+    console.error(`${logPrefix} unexpected error`, {
+      error: e instanceof Error ? e.message : String(e),
+      stack: e instanceof Error ? e.stack : undefined,
+    });
+    return NextResponse.json(
+      {
+        steps: [{ stepNumber: 1, label: 'Onboarding pendente', completed: false }],
+        hasPending: true,
+        nextStep: 1,
+        error: 'unexpected',
+      },
+      { status: 200 }
+    );
   }
 }
-
-
-

@@ -18,7 +18,9 @@ export default function RootPage() {
 
   // Verificar modo convidado apenas no cliente
   useEffect(() => {
-    if (typeof window !== 'undefined') {
+    if (typeof window === 'undefined') return;
+
+    try {
       const storedGuestMode = localStorage.getItem('guestMode');
 
       // Novo comportamento: se o usuário acabou de chegar e ainda não tem
@@ -32,6 +34,11 @@ export default function RootPage() {
 
       console.log('🎭 Verificando modo convidado:', isGuest, 'storedGuestMode:', storedGuestMode);
       setGuestMode(isGuest);
+    } catch (error) {
+      console.warn('⚠️ Não foi possível acessar o localStorage, ativando modo convidado por segurança.', error);
+      setGuestMode(true);
+    } finally {
+      // Garante que o cliente está marcado como carregado mesmo em caso de erro
       setClientLoaded(true);
     }
   }, []);

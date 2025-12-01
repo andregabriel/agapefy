@@ -31,6 +31,7 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const { user, loading } = useAuth();
   const { state } = usePlayer();
+  const logPrefix = '[onboarding-gate]';
   const hasCurrentAudio = !!state.currentAudio;
   const isLoginPage = pathname === '/login';
   const isBuscaPage = pathname === '/busca';
@@ -49,17 +50,28 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
       if (pathname.startsWith('/onboarding')) return; // já no fluxo de onboarding
 
       try {
+        console.info(`${logPrefix} start`, { userId: user.id, pathname });
+
         // Verificar se é admin - admin não deve ser redirecionado para onboarding
-        const { data: profile } = await supabase
+        const { data: profile, error: profileError } = await supabase
           .from('profiles')
           .select('role')
           .eq('id', user.id)
           .single();
+
+        if (profileError) {
+          console.error(`${logPrefix} profile lookup error`, {
+            message: profileError.message,
+            details: profileError.details,
+            hint: profileError.hint,
+          });
+        }
         
         if (aborted) return;
         
         if (profile?.role === 'admin') {
           // Admin não deve ver onboarding
+          console.info(`${logPrefix} admin detected, skipping onboarding`, { userId: user.id });
           return;
         }
 
@@ -69,9 +81,26 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
         const res = await fetch('/api/onboarding/status', {
           headers: { 'x-user-id': user.id },
         });
-        if (!res.ok) return;
+        if (!res.ok) {
+          console.error(`${logPrefix} status fetch failed`, { status: res.status });
+          if (!alreadyRedirected) {
+            router.replace('/onboarding?step=1');
+            try {
+              sessionStorage.setItem(redirectKey, '1');
+            } catch {
+              // ignore
+            }
+          }
+          return;
+        }
         const json = await res.json();
         if (aborted) return;
+        console.info(`${logPrefix} status response`, {
+          pending: json?.pending,
+          nextStep: json?.nextStep,
+          steps: json?.steps,
+          error: json?.error,
+        });
         if (json?.pending && typeof json?.nextStep === 'number') {
           if (!alreadyRedirected) {
             router.replace(`/onboarding?step=${json.nextStep}`);
@@ -85,11 +114,18 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
         }
 
         // Sem passos pendentes: verificar se o WhatsApp foi configurado; se não, enviar para o passo 7
-        const { data } = await supabase
+        const { data, error: whatsappError } = await supabase
           .from('whatsapp_users')
           .select('phone_number')
           .eq('user_id', user.id)
           .maybeSingle();
+        if (whatsappError) {
+          console.error(`${logPrefix} whatsapp lookup error`, {
+            message: whatsappError.message,
+            details: whatsappError.details,
+            hint: whatsappError.hint,
+          });
+        }
         if (aborted) return;
         if (!data?.phone_number) {
           if (!alreadyRedirected) {
@@ -101,8 +137,22 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
             }
           }
         }
-      } catch {
-        // Ignora erros silenciosamente para não afetar UX
+      } catch (error: any) {
+        console.error(`${logPrefix} unexpected error`, {
+          message: error?.message,
+          stack: error?.stack,
+        });
+        const redirectKey = `onboardingRedirected_${user?.id}`;
+        const alreadyRedirected =
+          typeof window !== 'undefined' && redirectKey && sessionStorage.getItem(redirectKey) === '1';
+        if (!alreadyRedirected && user?.id) {
+          router.replace('/onboarding?step=1');
+          try {
+            sessionStorage.setItem(redirectKey, '1');
+          } catch {
+            // ignore
+          }
+        }
       }
     }
     void checkOnboarding();
