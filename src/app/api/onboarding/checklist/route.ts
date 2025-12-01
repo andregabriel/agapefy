@@ -10,21 +10,58 @@ export async function GET(request: NextRequest) {
 
     const supabase = getAdminSupabase();
 
-    // Buscar forms de onboarding com steps
+    // Buscar forms de onboarding (inclui legados sem form_type definido)
     const { data: forms, error: formsError } = await supabase
       .from('admin_forms')
-      .select('id, name, onboard_step, is_active')
-      .eq('form_type', 'onboarding')
-      .not('onboard_step', 'is', null);
+      .select('id, name, onboard_step, is_active, parent_form_id, form_type, created_at')
+      .order('onboard_step', { ascending: true, nullsFirst: true })
+      .order('created_at', { ascending: true });
     if (formsError) throw formsError;
 
-    const activeForms = (forms || []).filter((f: any) => f.is_active === true);
+    const formsList = (forms || []).filter((form: any) => {
+      const type = form.form_type;
+      const isOnboarding =
+        type === 'onboarding' || type === null || typeof type === 'undefined' || type === '';
+      const isActive = form.is_active !== false; // tratar null/undefined como ativo (compat legada)
+      return isOnboarding && isActive;
+    }) as Array<{
+      id: string;
+      name: string;
+      onboard_step: number | null;
+      is_active?: boolean;
+      parent_form_id?: string | null;
+      form_type?: string | null;
+      created_at?: string | null;
+    }>;
+
+    // Mapear passo 1 com fallback para formulários legados sem onboard_step
     const byStep = new Map<number, { id: string; name: string }>();
-    for (const f of activeForms) {
+    const rootForm =
+      formsList.find(
+        (f) =>
+          f.onboard_step === 1 && (f.parent_form_id === null || f.parent_form_id === undefined)
+      ) ||
+      formsList.find(
+        (f) =>
+          (f.onboard_step === null || typeof f.onboard_step !== 'number') &&
+          (f.parent_form_id === null || f.parent_form_id === undefined)
+      ) ||
+      formsList.find((f) => f.parent_form_id === null || f.parent_form_id === undefined);
+
+    if (rootForm) {
+      byStep.set(1, { id: rootForm.id, name: rootForm.name || 'Passo 1' });
+    }
+
+    // Passos dinâmicos (>=2), mantendo o primeiro encontrado para cada posição
+    const dynamicForms = formsList.filter(
+      (f) => typeof f.onboard_step === 'number' && (f.onboard_step as number) >= 2
+    );
+    for (const f of dynamicForms) {
       const step = Number((f as any).onboard_step);
       if (!Number.isFinite(step)) continue;
-      // em caso de duplicidade, manter o primeiro nome
-      if (!byStep.has(step)) byStep.set(step, { id: (f as any).id, name: (f as any).name || `Passo ${step}` });
+      if (!byStep.has(step)) {
+        byStep.set(step, { id: (f as any).id, name: (f as any).name || `Passo ${step}` });
+      }
     }
 
     const formIds = Array.from(byStep.values()).map((x) => x.id);
@@ -112,7 +149,6 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'failed_to_check' }, { status: 500 });
   }
 }
-
 
 
 

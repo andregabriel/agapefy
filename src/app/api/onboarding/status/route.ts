@@ -10,28 +10,36 @@ export async function GET(request: NextRequest) {
 
     const supabase = getAdminSupabase();
 
-    // Buscar todos os passos de onboarding ativos, ordenados por step e criação
+    // Buscar todos os passos de onboarding (inclui legados sem form_type definido),
+    // ordenados por step e criação
     const { data: forms, error: formsError } = await supabase
       .from('admin_forms')
-      .select('id, onboard_step, parent_form_id, created_at')
-      .eq('form_type', 'onboarding')
-      .eq('is_active', true)
+      .select('id, onboard_step, parent_form_id, created_at, is_active, form_type')
       .order('onboard_step', { ascending: true, nullsFirst: true })
       .order('created_at', { ascending: true });
     if (formsError) throw formsError;
 
-    if (!forms || forms.length === 0) {
+    const formsList = (forms || []).filter((form: any) => {
+      const type = form.form_type;
+      const isOnboarding =
+        type === 'onboarding' || type === null || typeof type === 'undefined' || type === '';
+      const isActive = form.is_active !== false; // tratar null/undefined como ativo (compat legada)
+      return isOnboarding && isActive;
+    }) as Array<{
+      id: string;
+      onboard_step: number | null;
+      parent_form_id: string | null;
+      created_at: string | null;
+      is_active?: boolean;
+      form_type?: string | null;
+    }>;
+
+    if (formsList.length === 0) {
       // Sem passos configurados: considerar que não há pendências
       return NextResponse.json({ pending: false, steps: [], nextStep: null });
     }
 
     const processedSteps: Array<{ id: string; step: number; created_at: string | null }> = [];
-    const formsList = forms as Array<{
-      id: string;
-      onboard_step: number | null;
-      parent_form_id: string | null;
-      created_at: string | null;
-    }>;
 
     // Descobrir o formulário raiz (passo 1) replicando a lógica do admin
     const rootForm =
@@ -100,4 +108,3 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'failed_to_check' }, { status: 500 });
   }
 }
-
