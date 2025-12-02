@@ -8,6 +8,9 @@ import { CheckCircle, Circle, MessageSquareText } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useRoutinePlaylist } from '@/hooks/useRoutinePlaylist';
 
+// Feature flag: checklist escondida na home (pode ser reativada futuramente)
+const ONBOARDING_CHECKLIST_ENABLED = false;
+
 interface FormStep {
   id: string;
   name: string;
@@ -30,6 +33,12 @@ export default function OnboardingChecklist() {
   const { routinePlaylist } = useRoutinePlaylist();
 
   useEffect(() => {
+    if (!ONBOARDING_CHECKLIST_ENABLED) {
+      setItems([]);
+      setLoading(false);
+      return;
+    }
+
     let aborted = false;
     async function load() {
       try {
@@ -73,6 +82,7 @@ export default function OnboardingChecklist() {
   const pendingItems = useMemo(() => items.filter(i => !i.completed), [items]);
   const nextStep = useMemo(() => pendingItems[0]?.stepNumber, [pendingItems]);
 
+  if (!ONBOARDING_CHECKLIST_ENABLED) return null;
   if (loading) return null;
   if (!items.length) return null;
   // Não mostrar se tudo completo
@@ -122,5 +132,4 @@ export default function OnboardingChecklist() {
     </Card>
   );
 }
-
 
