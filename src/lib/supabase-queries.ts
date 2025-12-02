@@ -41,6 +41,7 @@ export interface Playlist {
   description: string | null;
   cover_url: string | null;
   category_id: string | null;
+  category_ids?: string[];
   created_by: string | null;
   is_public: boolean;
   created_at: string;
@@ -51,6 +52,18 @@ export interface Playlist {
   total_duration?: number;
   audio_count?: number;
   is_challenge?: boolean;
+}
+
+function normalizePlaylistCategories<T extends { category_ids?: string[] | null; category_id?: string | null }>(
+  playlist: T
+): T & { category_ids: string[] } {
+  const array = Array.isArray(playlist.category_ids)
+    ? playlist.category_ids.filter(Boolean)
+    : playlist.category_id
+      ? [playlist.category_id]
+      : [];
+  const category_ids = Array.from(new Set(array));
+  return { ...(playlist as any), category_ids };
 }
 
 export interface CategoryHomeOrderItem {
@@ -460,7 +473,7 @@ export async function getPlaylistsByCategory(categoryId: string): Promise<Playli
       *,
       category:categories(*)
     `)
-    .eq('category_id', categoryId)
+    .contains('category_ids', [categoryId])
     .eq('is_public', true)
     .order('created_at', { ascending: false });
 
@@ -469,9 +482,11 @@ export async function getPlaylistsByCategory(categoryId: string): Promise<Playli
     return [];
   }
 
+  const normalized = (data || []).map((playlist: any) => normalizePlaylistCategories(playlist));
+
   // Calcular duração e contagem para cada playlist
   const playlistsWithData = await Promise.all(
-    (data || []).map(async (playlist: any) => {
+    normalized.map(async (playlist: any) => {
       const [totalDuration, audioCount] = await Promise.all([
         getPlaylistDuration(playlist.id),
         getPlaylistAudioCount(playlist.id)
@@ -494,8 +509,8 @@ export async function getPlaylistsByCategory(categoryId: string): Promise<Playli
 export async function getPlaylistsByCategoryFast(categoryId: string): Promise<Playlist[]> {
   const { data, error } = await supabase
     .from('playlists')
-    .select('id,title,description,category_id,created_at,is_public,cover_url')
-    .eq('category_id', categoryId)
+    .select('id,title,description,category_id,category_ids,created_at,is_public,cover_url')
+    .contains('category_ids', [categoryId])
     .eq('is_public', true)
     .order('created_at', { ascending: false });
 
@@ -504,7 +519,7 @@ export async function getPlaylistsByCategoryFast(categoryId: string): Promise<Pl
     return [];
   }
 
-  const rows = (data as Playlist[]) || [];
+  const rows = ((data as Playlist[]) || []).map((p) => normalizePlaylistCategories(p));
   if (!rows.length) return rows;
 
   // Anexar contagem de áudios de forma leve (1 query adicional, agrupada)
@@ -540,8 +555,8 @@ export async function getPlaylistsByCategoryBulkFast(categoryIds: string[]): Pro
 
   const { data, error } = await supabase
     .from('playlists')
-    .select('id,title,description,category_id,created_at,is_public,cover_url')
-    .in('category_id', categoryIds)
+    .select('id,title,description,category_id,category_ids,created_at,is_public,cover_url')
+    .overlaps('category_ids', categoryIds)
     .eq('is_public', true)
     .order('created_at', { ascending: false });
 
@@ -550,7 +565,7 @@ export async function getPlaylistsByCategoryBulkFast(categoryIds: string[]): Pro
     return {};
   }
 
-  const rows = ((data as any[]) || []) as Playlist[];
+  const rows = ((data as any[]) || []).map((p) => normalizePlaylistCategories(p)) as Playlist[];
   if (!rows.length) return {};
 
   // Buscar contagens de áudios para todas as playlists envolvidas em uma única query
@@ -573,21 +588,27 @@ export async function getPlaylistsByCategoryBulkFast(categoryIds: string[]): Pro
 
     // O campo is_challenge já vem direto da query
     const map: Record<string, Playlist[]> = {};
-    rows.forEach((row) => {
-      const cid = (row as any).category_id as string | null;
-      if (!cid) return;
-      if (!map[cid]) map[cid] = [];
-      map[cid].push({ ...row, audio_count: counts[row.id] || 0 });
+    rows.forEach((row: any) => {
+      const ids = Array.isArray(row.category_ids) ? row.category_ids : [];
+      ids
+        .filter((cid) => categoryIds.includes(cid))
+        .forEach((cid) => {
+          if (!map[cid]) map[cid] = [];
+          map[cid].push({ ...row, audio_count: counts[row.id] || 0 });
+        });
     });
     return map;
   } catch (e) {
     console.warn('Erro inesperado ao anexar contagem de áudios (bulk fast):', e);
     const map: Record<string, Playlist[]> = {};
-    rows.forEach((row) => {
-      const cid = (row as any).category_id as string | null;
-      if (!cid) return;
-      if (!map[cid]) map[cid] = [];
-      map[cid].push(row as Playlist);
+    rows.forEach((row: any) => {
+      const ids = Array.isArray(row.category_ids) ? row.category_ids : [];
+      ids
+        .filter((cid) => categoryIds.includes(cid))
+        .forEach((cid) => {
+          if (!map[cid]) map[cid] = [];
+          map[cid].push(row as Playlist);
+        });
     });
     return map;
   }
@@ -694,7 +715,7 @@ export async function searchPlaylists(searchTerm: string, categoryId?: string): 
   }
 
   if (categoryId) {
-    query = query.eq('category_id', categoryId);
+    query = query.contains('category_ids', [categoryId]);
   }
 
   const { data, error } = await query
@@ -707,8 +728,10 @@ export async function searchPlaylists(searchTerm: string, categoryId?: string): 
   }
 
   // Calcular duração e contagem para cada playlist
+  const normalized = (data || []).map((playlist: any) => normalizePlaylistCategories(playlist));
+
   const playlistsWithData = await Promise.all(
-    (data || []).map(async (playlist: any) => {
+    normalized.map(async (playlist: any) => {
       const [totalDuration, audioCount] = await Promise.all([
         getPlaylistDuration(playlist.id),
         getPlaylistAudioCount(playlist.id)
@@ -802,7 +825,7 @@ export async function getPlaylistWithAudios(playlistId: string): Promise<(Playli
 
   // O campo is_challenge já vem direto da query
   return {
-    ...data,
+    ...normalizePlaylistCategories(data),
     audios
   } as Playlist & { audios: Audio[] };
 }
@@ -848,7 +871,7 @@ export async function findPlaylistByTitleInsensitive(title: string): Promise<Pla
 
   const { data, error } = await supabase
     .from('playlists')
-    .select('id,title,description,cover_url,category_id,created_by,is_public,created_at')
+    .select('id,title,description,cover_url,category_id,category_ids,created_by,is_public,created_at')
     .ilike('title', `%${title}%`);
 
   if (error) {
@@ -858,7 +881,7 @@ export async function findPlaylistByTitleInsensitive(title: string): Promise<Pla
 
   const rows: any[] = data || [];
   const exact = rows.find(row => normalizeInsensitive(row.title) === needle);
-  return (exact as Playlist) || null;
+  return exact ? (normalizePlaylistCategories(exact) as Playlist) : null;
 }
 
 export async function addAudioToPlaylist(audioId: string, playlistId: string): Promise<{ success: boolean; error?: string }> {
@@ -898,6 +921,7 @@ export async function createPlaylist(title: string, categoryId?: string | null):
         description: null,
         cover_url: null,
         category_id: categoryId || null,
+        category_ids: categoryId ? [categoryId] : [],
         created_by: createdBy,
         is_public: true,
       })

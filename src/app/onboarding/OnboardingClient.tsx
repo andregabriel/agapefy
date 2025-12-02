@@ -161,8 +161,8 @@ export default function OnboardingClient() {
   async function getChallengePlaylistsByCategory(categoryId: string): Promise<Array<{ id: string; title: string; description?: string | null; cover_url?: string | null }>> {
     const { data, error } = await supabase
       .from('playlists')
-      .select('id,title,description,cover_url,category_id,is_challenge,is_public')
-      .eq('category_id', categoryId)
+      .select('id,title,description,cover_url,category_id,category_ids,is_challenge,is_public')
+      .contains('category_ids', [categoryId])
       .eq('is_public', true)
       .eq('is_challenge', true)
       .order('created_at', { ascending: false });

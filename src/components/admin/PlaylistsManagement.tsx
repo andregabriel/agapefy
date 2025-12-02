@@ -12,6 +12,7 @@ interface Playlist {
   cover_url: string;
   is_public: boolean;
   created_at: string;
+  category_ids?: string[];
   categories?: { name: string };
   profiles?: { full_name: string };
 }

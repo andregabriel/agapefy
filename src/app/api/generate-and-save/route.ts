@@ -109,11 +109,25 @@ async function generateImage(origin: string, prompt: string): Promise<string | n
 async function ensurePlaylist(admin: any, title: string, categoryId?: string | null): Promise<string | null> {
   const needle = (title || '').toString().trim().toLowerCase();
   if (!needle) return null;
-  const { data } = await admin.from('playlists').select('id,title,category_id').ilike('title', `%${title}%`);
+  const { data } = await admin.from('playlists').select('id,title,category_id,category_ids').ilike('title', `%${title}%`);
   const rows: any[] = data || [];
   const exact = rows.find(r => (r.title || '').toString().trim().toLowerCase() === needle);
-  if (exact?.id) return exact.id as string;
-  const { data: created } = await admin.from('playlists').insert({ title, category_id: categoryId || null, is_public: true }).select().single();
+  if (exact?.id) {
+    if (categoryId) {
+      const current = Array.isArray(exact.category_ids) ? exact.category_ids.filter(Boolean) : [];
+      const nextIds = Array.from(new Set([...(current || []), categoryId]));
+      if (nextIds.length !== current.length) {
+        const primaryCategory = nextIds[0] || exact.category_id || null;
+        await admin.from('playlists').update({ category_ids: nextIds, category_id: primaryCategory }).eq('id', exact.id);
+      }
+    }
+    return exact.id as string;
+  }
+  const { data: created } = await admin
+    .from('playlists')
+    .insert({ title, category_id: categoryId || null, category_ids: categoryId ? [categoryId] : [], is_public: true })
+    .select()
+    .single();
   return created?.id || null;
 }
 
@@ -312,5 +326,4 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: false, error: e?.message || 'Erro desconhecido' }, { status: 500 });
   }
 }
-
 

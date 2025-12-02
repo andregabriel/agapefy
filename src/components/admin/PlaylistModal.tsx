@@ -1,8 +1,17 @@
 "use client";
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { supabase } from '@/lib/supabase';
 import { X, Upload, Image, Plus, Trash2, GripVertical, Search, ChevronUp, ChevronDown } from 'lucide-react';
+
+interface PlaylistFormData {
+  title: string;
+  description: string;
+  cover_url: string;
+  category_ids: string[];
+  is_public: boolean;
+  is_challenge: boolean;
+}
 
 interface PlaylistModalProps {
   playlist: any;
@@ -12,11 +21,11 @@ interface PlaylistModalProps {
 }
 
 export default function PlaylistModal({ playlist, isOpen, onClose, onSave }: PlaylistModalProps) {
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<PlaylistFormData>({
     title: '',
     description: '',
     cover_url: '',
-    category_id: '',
+    category_ids: [],
     is_public: true,
     is_challenge: false,
   });
@@ -26,7 +35,18 @@ export default function PlaylistModal({ playlist, isOpen, onClose, onSave }: Pla
   const [loading, setLoading] = useState(false);
   const [audioSearchTerm, setAudioSearchTerm] = useState('');
   const [uploadingImage, setUploadingImage] = useState(false);
+  const [categoryDropdownOpen, setCategoryDropdownOpen] = useState(false);
+  const [categorySearchTerm, setCategorySearchTerm] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const categoryDropdownRef = useRef<HTMLDivElement>(null);
+
+  const categoryMap = useMemo(() => new Map(categories.map((c) => [c.id, c])), [categories]);
+
+  const normalizeCategoryIds = (raw: any): string[] => {
+    if (Array.isArray(raw)) return raw.filter(Boolean);
+    if (typeof raw === 'string' && raw) return [raw];
+    return [];
+  };
 
   // Helpers para draft persistence
   const getDraftKey = () => {
@@ -46,7 +66,7 @@ export default function PlaylistModal({ playlist, isOpen, onClose, onSave }: Pla
         title: playlist.title || '',
         description: playlist.description || '',
         cover_url: playlist.cover_url || '',
-        category_id: playlist.category_id || '',
+        category_ids: normalizeCategoryIds((playlist as any).category_ids ?? playlist.category_id),
         is_public: playlist.is_public ?? true,
         is_challenge: playlist.is_challenge ?? false,
       });
@@ -56,7 +76,7 @@ export default function PlaylistModal({ playlist, isOpen, onClose, onSave }: Pla
         title: '',
         description: '',
         cover_url: '',
-        category_id: '',
+        category_ids: [],
         is_public: true,
         is_challenge: false,
       });
@@ -73,7 +93,19 @@ export default function PlaylistModal({ playlist, isOpen, onClose, onSave }: Pla
       const raw = localStorage.getItem(key);
       if (raw) {
         const draft = JSON.parse(raw);
-        if (draft.formData) setFormData((prev: any) => ({ ...prev, ...draft.formData }));
+        if (draft.formData) {
+          const draftCategories =
+            (draft.formData as any).category_ids ??
+            (draft.formData as any).category_id;
+          setFormData((prev: any) => ({
+            ...prev,
+            ...draft.formData,
+            category_ids:
+              draftCategories !== undefined
+                ? normalizeCategoryIds(draftCategories)
+                : prev.category_ids,
+          }));
+        }
         if (Array.isArray(draft.selectedAudios)) setSelectedAudios(draft.selectedAudios);
       }
     } catch (_) {
@@ -94,6 +126,19 @@ export default function PlaylistModal({ playlist, isOpen, onClose, onSave }: Pla
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [formData, selectedAudios, isOpen, playlist?.id]);
+
+  useEffect(() => {
+    if (!categoryDropdownOpen) return;
+
+    const handleClickOutside = (event: MouseEvent) => {
+      if (categoryDropdownRef.current && !categoryDropdownRef.current.contains(event.target as Node)) {
+        setCategoryDropdownOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [categoryDropdownOpen]);
 
   // Limpar draft ao fechar/salvar
   const clearDraft = () => {
@@ -179,6 +224,26 @@ export default function PlaylistModal({ playlist, isOpen, onClose, onSave }: Pla
       return updated.map((item, index) => ({ ...item, position: index }));
     });
   };
+
+  const toggleCategorySelection = (categoryId: string) => {
+    setFormData((prev) => {
+      const current = prev.category_ids || [];
+      const exists = current.includes(categoryId);
+      const next = exists ? current.filter((id) => id !== categoryId) : [...current, categoryId];
+      return { ...prev, category_ids: next };
+    });
+  };
+
+  const filteredCategories = useMemo(() => {
+    const term = categorySearchTerm.trim().toLowerCase();
+    if (!term) return categories;
+    return categories.filter((cat) => cat.name.toLowerCase().includes(term));
+  }, [categories, categorySearchTerm]);
+
+  const selectedCategories = useMemo(
+    () => formData.category_ids.map((id) => categoryMap.get(id)).filter(Boolean),
+    [formData.category_ids, categoryMap]
+  );
 
   const handleImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -269,6 +334,7 @@ export default function PlaylistModal({ playlist, isOpen, onClose, onSave }: Pla
     setLoading(true);
 
     try {
+      const primaryCategoryId = formData.category_ids[0] || null;
       console.log('🔄 Iniciando salvamento da playlist...');
       console.log('📝 Dados do formulário:', formData);
       console.log('🎵 Áudios selecionados:', selectedAudios.length);
@@ -298,7 +364,8 @@ export default function PlaylistModal({ playlist, isOpen, onClose, onSave }: Pla
           title: formData.title.trim(),
           description: formData.description?.trim() || null,
           cover_url: formData.cover_url?.trim() || null,
-          category_id: formData.category_id || null,
+          category_id: primaryCategoryId,
+          category_ids: formData.category_ids || [],
           is_public: formData.is_public,
           is_challenge: formData.is_challenge,
         };
@@ -331,7 +398,8 @@ export default function PlaylistModal({ playlist, isOpen, onClose, onSave }: Pla
           title: formData.title.trim(),
           description: formData.description?.trim() || null,
           cover_url: formData.cover_url?.trim() || null,
-          category_id: formData.category_id || null,
+          category_id: primaryCategoryId,
+          category_ids: formData.category_ids || [],
           is_public: formData.is_public,
           is_challenge: formData.is_challenge,
           created_by: user.id,
@@ -603,20 +671,84 @@ export default function PlaylistModal({ playlist, isOpen, onClose, onSave }: Pla
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Categoria
+                  Categorias
                 </label>
-                <select
-                  value={formData.category_id}
-                  onChange={(e) => setFormData({ ...formData, category_id: e.target.value })}
-                  className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm sm:text-base text-black"
-                >
-                  <option value="">Selecione uma categoria</option>
-                  {categories.map((category) => (
-                    <option key={category.id} value={category.id}>
-                      {category.name}
-                    </option>
-                  ))}
-                </select>
+                <div className="space-y-2">
+                  <div className="flex flex-wrap gap-2 min-h-[44px] border border-gray-200 rounded-lg px-3 py-2 bg-white">
+                    {selectedCategories.length === 0 ? (
+                      <span className="text-xs text-gray-500">Nenhuma categoria selecionada</span>
+                    ) : (
+                      selectedCategories.map((category: any) => (
+                        <span
+                          key={category.id}
+                          className="flex items-center gap-1 bg-blue-50 text-blue-700 px-2 py-1 rounded-full text-xs"
+                        >
+                          {category.name}
+                          <button
+                            type="button"
+                            onClick={() => toggleCategorySelection(category.id)}
+                            className="p-0.5 text-blue-600 hover:text-blue-800"
+                            aria-label={`Remover categoria ${category.name}`}
+                          >
+                            <X className="h-3 w-3" />
+                          </button>
+                        </span>
+                      ))
+                    )}
+                  </div>
+
+                  <div className="relative" ref={categoryDropdownRef}>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setCategoryDropdownOpen((prev) => !prev);
+                        setCategorySearchTerm('');
+                      }}
+                      className="w-full flex items-center justify-between px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm sm:text-base text-black bg-white"
+                    >
+                      <span>{categoryDropdownOpen ? 'Fechar seleção' : 'Selecionar categorias'}</span>
+                      <ChevronDown
+                        className={`h-4 w-4 text-gray-500 transition-transform ${categoryDropdownOpen ? 'rotate-180' : ''}`}
+                      />
+                    </button>
+                    {categoryDropdownOpen && (
+                      <div className="absolute z-20 mt-1 w-full bg-white border rounded-lg shadow-lg">
+                        <div className="p-2">
+                          <div className="relative mb-2">
+                            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                            <input
+                              type="text"
+                              value={categorySearchTerm}
+                              onChange={(e) => setCategorySearchTerm(e.target.value)}
+                              placeholder="Buscar categoria..."
+                              className="w-full pl-10 pr-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm text-black"
+                            />
+                          </div>
+                          <div className="max-h-48 overflow-y-auto">
+                            {filteredCategories.length === 0 ? (
+                              <p className="text-sm text-gray-500 px-2 py-2">Nenhuma categoria encontrada</p>
+                            ) : (
+                              filteredCategories.map((category: any) => (
+                                <label
+                                  key={category.id}
+                                  className="flex items-center gap-2 px-2 py-2 hover:bg-gray-50 cursor-pointer"
+                                >
+                                  <input
+                                    type="checkbox"
+                                    checked={formData.category_ids.includes(category.id)}
+                                    onChange={() => toggleCategorySelection(category.id)}
+                                    className="h-4 w-4 text-blue-600 rounded border-gray-300"
+                                  />
+                                  <span className="text-sm text-gray-900">{category.name}</span>
+                                </label>
+                              ))
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
               </div>
 
           <div className="flex items-center space-x-6">

@@ -224,8 +224,8 @@ export function useCategories() {
       console.log('🔍 Verificando playlists vinculadas...');
       const { data: playlistsData, error: playlistsError } = await supabase
         .from('playlists')
-        .select('id, title')
-        .eq('category_id', categoryId);
+        .select('id, title, category_ids, category_id')
+        .contains('category_ids', [categoryId]);
 
       if (playlistsError) {
         console.error('❌ Erro ao verificar playlists:', playlistsError);
@@ -273,18 +273,31 @@ export function useCategories() {
         // Remover a categoria das playlists
         if (playlistsData && playlistsData.length > 0) {
           console.log('🔄 Removendo categoria das playlists vinculadas...');
-          const { error: updatePlaylistsError } = await supabase
-            .from('playlists')
-            .update({ category_id: null })
-            .eq('category_id', categoryId);
+          const updates = (playlistsData || []).map((playlist) => {
+            const remaining = Array.isArray((playlist as any).category_ids)
+              ? (playlist as any).category_ids.filter((id: string) => id !== categoryId)
+              : [];
+            const primaryCategory = remaining[0] || null;
+            return {
+              id: playlist.id,
+              category_ids: remaining,
+              category_id: primaryCategory
+            };
+          });
 
-          if (updatePlaylistsError) {
-            console.error('❌ Erro ao atualizar playlists:', updatePlaylistsError);
-            toast.error('Erro ao remover categoria das playlists');
-            return;
+          if (updates.length > 0) {
+            const { error: updatePlaylistsError } = await supabase
+              .from('playlists')
+              .upsert(updates, { onConflict: 'id' });
+
+            if (updatePlaylistsError) {
+              console.error('❌ Erro ao atualizar playlists:', updatePlaylistsError);
+              toast.error('Erro ao remover categoria das playlists');
+              return;
+            }
+
+            console.log('✅ Playlists atualizadas com sucesso');
           }
-
-          console.log('✅ Playlists atualizadas com sucesso');
         }
       }
 

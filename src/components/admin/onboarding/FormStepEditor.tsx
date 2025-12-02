@@ -30,7 +30,7 @@ interface FormStepEditorProps {
 
 export default function FormStepEditor({ form, onSaved, onCancel }: FormStepEditorProps) {
   const { categories } = useCategories();
-  const [playlists, setPlaylists] = useState<Array<{ id: string; title: string; category_id: string | null }>>([]);
+  const [playlists, setPlaylists] = useState<Array<{ id: string; title: string; category_id: string | null; category_ids?: string[] | null }>>([]);
   const [formData, setFormData] = useState<AdminForm>(form);
   const [saving, setSaving] = useState(false);
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
@@ -43,11 +43,22 @@ export default function FormStepEditor({ form, onSaved, onCancel }: FormStepEdit
       try {
         const { data, error } = await supabase
           .from('playlists')
-          .select('id,title,category_id')
+          .select('id,title,category_id,category_ids')
           .eq('is_public', true)
           .order('created_at', { ascending: false });
         if (error) throw error;
-        setPlaylists((data as any[])?.map(p => ({ id: p.id, title: p.title, category_id: p.category_id })) || []);
+        setPlaylists(
+          (data as any[])?.map((p) => ({
+            id: p.id,
+            title: p.title,
+            category_id: p.category_id,
+            category_ids: Array.isArray(p.category_ids)
+              ? p.category_ids
+              : p.category_id
+                ? [p.category_id]
+                : []
+          })) || []
+        );
       } catch (e) {
         console.error('Erro ao carregar playlists', e);
       }
@@ -418,4 +429,3 @@ export default function FormStepEditor({ form, onSaved, onCancel }: FormStepEdit
     </div>
   );
 }
-

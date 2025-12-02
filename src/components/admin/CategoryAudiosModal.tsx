@@ -45,11 +45,14 @@ interface Audio {
 
 interface Playlist {
   id: string;
-  title: string;
+  title: string | null;
+  name?: string | null;
   description: string | null;
   cover_url: string | null;
   is_public: boolean;
   created_at: string;
+  category_id?: string | null;
+  category_ids?: string[] | null;
 }
 
 interface Category {
@@ -136,6 +139,7 @@ export default function CategoryAudiosModal({ category, isOpen, onClose }: Categ
   const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [showAddAudios, setShowAddAudios] = useState(false);
+  const [addPlaylistSearch, setAddPlaylistSearch] = useState('');
   const [activeTab, setActiveTab] = useState<'manage' | 'home_order'>('manage');
 
   const [homeItems, setHomeItems] = useState<HomeItem[]>([]);
@@ -148,6 +152,34 @@ export default function CategoryAudiosModal({ category, isOpen, onClose }: Categ
       activationConstraint: { distance: 5 }
     })
   );
+
+  const normalizePlaylistCategories = (playlist: Playlist) => {
+    const ids = Array.isArray(playlist.category_ids)
+      ? playlist.category_ids.filter(Boolean)
+      : playlist.category_id
+        ? [playlist.category_id]
+        : [];
+    return Array.from(new Set(ids));
+  };
+
+  const normalizeText = (text: string) =>
+    text
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/\p{Diacritic}/gu, '');
+
+  const getPlaylistTitle = (playlist: Playlist) => {
+    const title = (playlist.title || playlist.name || '').trim();
+    return title || 'Sem título';
+  };
+
+  const playlistMatchesTerm = (playlist: Playlist, term: string) => {
+    const normalized = normalizeText(term.trim());
+    if (!normalized) return true;
+    const title = normalizeText(getPlaylistTitle(playlist));
+    const description = normalizeText(playlist.description || '');
+    return title.includes(normalized) || description.includes(normalized);
+  };
   
   // Usar PlayerContext para controle de áudio
   const { state, playAudio, pause } = usePlayer();
@@ -186,6 +218,7 @@ export default function CategoryAudiosModal({ category, isOpen, onClose }: Categ
       setActiveTab('manage');
       setHomeItems([]);
       setHomeOrderDirty(false);
+      setAddPlaylistSearch('');
     }
   }, [isOpen]);
 
@@ -229,7 +262,7 @@ export default function CategoryAudiosModal({ category, isOpen, onClose }: Categ
             id: `playlist:${playlist.id}`,
             refId: playlist.id,
             type: 'playlist',
-            title: playlist.title,
+            title: getPlaylistTitle(playlist),
             description: playlist.description,
             created_at: playlist.created_at
           });
@@ -258,7 +291,7 @@ export default function CategoryAudiosModal({ category, isOpen, onClose }: Categ
           id: `playlist:${playlist.id}`,
           refId: playlist.id,
           type: 'playlist',
-          title: playlist.title,
+          title: getPlaylistTitle(playlist),
           description: playlist.description,
           created_at: playlist.created_at
         });
@@ -296,13 +329,15 @@ export default function CategoryAudiosModal({ category, isOpen, onClose }: Categ
     try {
       const { data, error } = await supabase
         .from('playlists')
-        .select('id,title,description,cover_url,is_public,created_at')
-        .eq('category_id', category.id)
+        .select('id,title,description,cover_url,is_public,created_at,category_ids,category_id')
         .eq('is_public', true)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      setPlaylists((data as Playlist[]) || []);
+      const list = ((data as Playlist[]) || []).filter((playlist) =>
+        normalizePlaylistCategories(playlist).includes(category.id)
+      );
+      setPlaylists(list);
     } catch (error) {
       console.error('Erro ao buscar playlists da categoria:', error);
       toast.error('Erro ao carregar playlists da categoria');
@@ -310,16 +345,19 @@ export default function CategoryAudiosModal({ category, isOpen, onClose }: Categ
   };
 
   const fetchAllPlaylists = async () => {
+    if (!category) return;
     try {
       const { data, error } = await supabase
         .from('playlists')
-        .select('id,title,description,cover_url,is_public,created_at')
-        .is('category_id', null)
+        .select('id,title,description,cover_url,is_public,created_at,category_ids,category_id')
         .eq('is_public', true)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      setAllPlaylists((data as Playlist[]) || []);
+      const available = ((data as Playlist[]) || []).filter(
+        (playlist) => !normalizePlaylistCategories(playlist).includes(category.id)
+      );
+      setAllPlaylists(available);
     } catch (error) {
       console.error('Erro ao buscar todas as playlists:', error);
     }
@@ -388,9 +426,18 @@ export default function CategoryAudiosModal({ category, isOpen, onClose }: Categ
     if (!category) return;
 
     try {
+      const target =
+        playlists.find((p) => p.id === playlistId) ||
+        allPlaylists.find((p) => p.id === playlistId);
+      const currentIds = Array.isArray(target?.category_ids)
+        ? target?.category_ids.filter(Boolean)
+        : [];
+      const nextIds = Array.from(new Set([...(currentIds || []), category.id]));
+      const primaryCategory = nextIds[0] || null;
+
       const { error } = await supabase
         .from('playlists')
-        .update({ category_id: category.id })
+        .update({ category_ids: nextIds, category_id: primaryCategory })
         .eq('id', playlistId);
 
       if (error) throw error;
@@ -405,12 +452,22 @@ export default function CategoryAudiosModal({ category, isOpen, onClose }: Categ
   };
 
   const handleRemovePlaylist = async (playlistId: string) => {
+    if (!category) return;
     if (!confirm('Tem certeza que deseja remover esta playlist da categoria?')) return;
 
     try {
+      const target =
+        playlists.find((p) => p.id === playlistId) ||
+        allPlaylists.find((p) => p.id === playlistId);
+      const currentIds = Array.isArray(target?.category_ids)
+        ? target?.category_ids.filter(Boolean)
+        : [];
+      const nextIds = currentIds.filter((id) => id !== category?.id);
+      const primaryCategory = nextIds[0] || null;
+
       const { error } = await supabase
         .from('playlists')
-        .update({ category_id: null })
+        .update({ category_ids: nextIds, category_id: primaryCategory })
         .eq('id', playlistId);
 
       if (error) throw error;
@@ -446,8 +503,7 @@ export default function CategoryAudiosModal({ category, isOpen, onClose }: Categ
   );
 
   const filteredPlaylists = playlists.filter((playlist) =>
-    playlist.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    playlist.description?.toLowerCase().includes(searchTerm.toLowerCase())
+    playlistMatchesTerm(playlist, searchTerm)
   );
 
   const filteredAllAudios = allAudios.filter(audio =>
@@ -456,9 +512,13 @@ export default function CategoryAudiosModal({ category, isOpen, onClose }: Categ
   );
 
   const filteredAllPlaylists = allPlaylists.filter((playlist) =>
-    playlist.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    playlist.description?.toLowerCase().includes(searchTerm.toLowerCase())
+    playlistMatchesTerm(playlist, searchTerm)
   );
+
+  const availablePlaylistResults = (addPlaylistSearch.trim()
+    ? allPlaylists.filter((playlist) => playlistMatchesTerm(playlist, addPlaylistSearch))
+    : allPlaylists
+  ).slice(0, 8);
 
   const handleHomeDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
@@ -538,8 +598,8 @@ export default function CategoryAudiosModal({ category, isOpen, onClose }: Categ
               </div>
             )}
             <div>
-              <h2 className="text-xl font-bold">{category.name}</h2>
-              <p className="text-sm text-gray-500 font-normal">
+              <h2 className="text-xl font-bold text-gray-900">{category.name}</h2>
+              <p className="text-sm text-gray-700 font-normal">
                 Gerenciar orações da categoria
               </p>
             </div>
@@ -558,10 +618,10 @@ export default function CategoryAudiosModal({ category, isOpen, onClose }: Categ
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
                 <Input
                   type="text"
-                  placeholder="Buscar orações..."
+                  placeholder="Buscar playlists ou orações..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10"
+                  className="pl-10 text-gray-900 placeholder:text-gray-500"
                   disabled={activeTab === 'home_order'}
                 />
               </div>
@@ -615,7 +675,9 @@ export default function CategoryAudiosModal({ category, isOpen, onClose }: Categ
                                 className="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50"
                               >
                                 <div className="min-w-0 flex-1">
-                                  <h4 className="font-medium truncate">{playlist.title}</h4>
+                                  <h4 className="font-medium truncate text-gray-900">
+                                    {getPlaylistTitle(playlist)}
+                                  </h4>
                                   <p className="text-sm text-gray-500 truncate">
                                     {playlist.description || 'Sem descrição'}
                                   </p>
@@ -687,6 +749,59 @@ export default function CategoryAudiosModal({ category, isOpen, onClose }: Categ
                 ) : (
                   /* Lista de áudios da categoria */
                   <div className="space-y-8">
+                    <div className="p-4 border rounded-lg bg-gray-50">
+                      <h3 className="font-semibold mb-3 text-gray-700">
+                        Adicionar playlist à categoria
+                      </h3>
+                      <div className="relative">
+                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+                        <Input
+                          placeholder="Buscar playlists disponíveis..."
+                          value={addPlaylistSearch}
+                          onChange={(e) => setAddPlaylistSearch(e.target.value)}
+                          className="pl-9 bg-white text-gray-900 placeholder:text-gray-500"
+                        />
+                      </div>
+                      <p className="text-xs text-gray-500 mt-2">
+                        Mostrando playlists públicas que ainda não estão nesta categoria.
+                      </p>
+                      <div className="mt-3 space-y-2 max-h-56 overflow-y-auto">
+                        {availablePlaylistResults.length === 0 ? (
+                          <p className="text-sm text-gray-500 text-center py-4">
+                            {allPlaylists.length === 0
+                              ? 'Nenhuma playlist disponível para adicionar'
+                              : addPlaylistSearch
+                                ? 'Nenhuma playlist encontrada'
+                                : 'Digite para buscar uma playlist'}
+                          </p>
+                        ) : (
+                          availablePlaylistResults.map((playlist) => (
+                            <div
+                              key={playlist.id}
+                              className="flex items-center justify-between p-3 border rounded-lg bg-white"
+                            >
+                              <div className="min-w-0 flex-1">
+                                <h4 className="font-medium truncate text-gray-900">
+                                  {getPlaylistTitle(playlist)}
+                                </h4>
+                                <p className="text-sm text-gray-500 truncate">
+                                  {playlist.description || 'Sem descrição'}
+                                </p>
+                              </div>
+                              <Button
+                                onClick={() => handleAddPlaylist(playlist.id)}
+                                size="sm"
+                                className="flex-shrink-0"
+                              >
+                                <Plus className="h-4 w-4 mr-1" />
+                                Adicionar
+                              </Button>
+                            </div>
+                          ))
+                        )}
+                      </div>
+                    </div>
+
                     <div>
                       <h3 className="font-semibold mb-3 text-gray-700">
                         Playlists na Categoria ({filteredPlaylists.length})
@@ -707,7 +822,9 @@ export default function CategoryAudiosModal({ category, isOpen, onClose }: Categ
                               className="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50"
                             >
                               <div className="min-w-0 flex-1">
-                                <h4 className="font-medium truncate">{playlist.title}</h4>
+                                <h4 className="font-medium truncate text-gray-900">
+                                  {getPlaylistTitle(playlist)}
+                                </h4>
                                 <p className="text-sm text-gray-500 truncate">
                                   {playlist.description || 'Sem descrição'}
                                 </p>

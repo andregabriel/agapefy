@@ -15,6 +15,7 @@ interface Playlist {
   id: string;
   title: string;
   category_id: string | null;
+  category_ids?: string[] | null;
 }
 
 interface StepOptionEditorProps {
@@ -43,7 +44,7 @@ export default function StepOptionEditor({
 
   // Filtrar playlists baseado na categoria selecionada
   const filteredPlaylists = categoryId
-    ? playlists.filter(p => p.category_id === categoryId)
+    ? playlists.filter((p) => (p.category_ids || [p.category_id]).filter(Boolean).includes(categoryId))
     : playlists;
 
   const handleSave = () => {
@@ -143,4 +144,3 @@ export default function StepOptionEditor({
     </div>
   );
 }
-

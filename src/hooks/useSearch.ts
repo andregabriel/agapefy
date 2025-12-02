@@ -37,7 +37,7 @@ export function useSearch() {
           const { data: playlists } = await supabase
             .from('playlists')
             .select('id')
-            .eq('category_id', category.id)
+            .contains('category_ids', [category.id])
             .eq('is_public', true)
             .limit(1);
 
