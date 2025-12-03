@@ -34,9 +34,13 @@ export default function RootPage() {
 
       console.log('🎭 Verificando modo convidado:', isGuest, 'storedGuestMode:', storedGuestMode);
       setGuestMode(isGuest);
+      if (isGuest) {
+        setShouldShowHome(true);
+      }
     } catch (error) {
       console.warn('⚠️ Não foi possível acessar o localStorage, ativando modo convidado por segurança.', error);
       setGuestMode(true);
+      setShouldShowHome(true);
     } finally {
       // Garante que o cliente está marcado como carregado mesmo em caso de erro
       setClientLoaded(true);
@@ -45,8 +49,8 @@ export default function RootPage() {
 
   useEffect(() => {
     const handleRedirection = async () => {
-      // Aguardar o loading do auth E verificação do cliente terminar
-      if (loading || !clientLoaded) return;
+      // Aguardar o client mount; auth pode estar travado, mas convidados podem seguir mesmo assim
+      if (!clientLoaded) return;
 
       console.log('🔄 Verificando redirecionamento - User:', !!user, 'GuestMode:', guestMode);
 
@@ -58,12 +62,18 @@ export default function RootPage() {
           setShouldShowHome(true);
           return;
         }
+
+        // Se ainda estamos carregando o auth, esperar para decidir se redireciona
+        if (loading) return;
         
         // Se não é convidado, redirecionar para login
         console.log('🔐 Usuário não logado e não é convidado, redirecionando para /login');
         router.replace('/login');
         return;
       }
+
+      // Usuário logado, mas ainda carregando sessão
+      if (loading) return;
 
       // Se há usuário logado, verificar se é admin
       try {
@@ -94,8 +104,24 @@ export default function RootPage() {
     handleRedirection();
   }, [user, loading, router, guestMode, clientLoaded]);
 
+  // Fail-safe: se o auth ficar carregando sem usuário, liberar modo convidado
+  useEffect(() => {
+    if (!clientLoaded || user) return;
+    if (!loading) return;
+
+    const timeout = window.setTimeout(() => {
+      console.warn('⚠️ Auth demorando, liberando guest fallback.');
+      setGuestMode(true);
+      setShouldShowHome(true);
+    }, 3500);
+
+    return () => window.clearTimeout(timeout);
+  }, [clientLoaded, user, loading]);
+
+  const guestReady = clientLoaded && guestMode === true && !user;
+
   // Loading state - aguardar auth E verificação do cliente
-  if (loading || !clientLoaded || (user && isAdmin === null)) {
+  if (!guestReady && (loading || !clientLoaded || (user && isAdmin === null))) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-900 via-gray-800 to-black">
         <div className="text-center text-white">

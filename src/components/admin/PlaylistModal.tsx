@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { supabase } from '@/lib/supabase';
+import { translateErrorMessage } from '@/lib/utils';
 import { X, Upload, Image, Plus, Trash2, GripVertical, Search, ChevronUp, ChevronDown } from 'lucide-react';
 
 interface PlaylistFormData {
@@ -288,7 +289,8 @@ export default function PlaylistModal({ playlist, isOpen, onClose, onSave }: Pla
       }
     } catch (error: any) {
       console.error('Erro ao fazer upload da imagem:', error);
-      alert(error.message || 'Erro ao fazer upload da imagem');
+      const errorMsg = error.message || 'Erro ao fazer upload da imagem';
+      alert(translateErrorMessage(errorMsg));
     } finally {
       setUploadingImage(false);
       // Limpar o input para permitir selecionar o mesmo arquivo novamente
@@ -541,14 +543,14 @@ export default function PlaylistModal({ playlist, isOpen, onClose, onSave }: Pla
       let errorMessage = 'Erro ao salvar playlist';
       
       if (error instanceof Error) {
-        errorMessage = error.message;
+        errorMessage = translateErrorMessage(error.message);
       } else if (typeof error === 'object' && error !== null) {
         if (error.code === '42501') {
           errorMessage = 'Você não tem permissão para salvar esta playlist. Faça login como administrador.';
         } else if (error.code === '23505') {
           errorMessage = 'Já existe uma playlist com este nome.';
         } else if (error.message) {
-          errorMessage = `Erro: ${error.message}`;
+          errorMessage = translateErrorMessage(error.message);
         }
       }
 

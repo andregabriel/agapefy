@@ -32,6 +32,11 @@ export function useSubscriptionStatus() {
       });
 
       if (!res.ok) {
+        if (res.status === 404) {
+          // Endpoint ausente ou desabilitado: tratar como anônimo sem assinatura
+          setStatus(DEFAULT_STATUS);
+          return;
+        }
         throw new Error(`HTTP ${res.status}`);
       }
 
@@ -63,5 +68,4 @@ export function useSubscriptionStatus() {
     refetch: fetchStatus,
   };
 }
-
 

@@ -30,6 +30,14 @@ interface WhatsAppSetupProps {
   onSavedPhone?: (phone: string) => void;
 }
 
+// Feature flags keep legacy flows available in the codebase while allowing
+// us to disable specific surfaces in the UI without deleting logic.
+const WHATSAPP_FEATURES = {
+  bibleResponses: false,
+  dailyVerse: false,
+  dailyRoutine: false,
+} as const;
+
 // Funções auxiliares para formatação de telefone
 function formatPhoneNumber(value: string): string {
   // Remove tudo que não é número
@@ -701,9 +709,9 @@ export default function WhatsAppSetup({ variant = "standalone", redirectIfNotLog
         case 'onboarding_step4_instruction':
           return `Informe seu número com DDD. Exemplo: ${formattedExample}`;
         case 'onboarding_step4_label':
-          return 'Número do WhatsApp';
+          return 'Digite seu número de whatsapp abaixo';
         case 'onboarding_step4_privacy_text':
-          return 'Configure sua interação no Whatsapp';
+          return 'Escolha o que quer receber:';
         default:
           return '';
       }
@@ -716,6 +724,10 @@ export default function WhatsAppSetup({ variant = "standalone", redirectIfNotLog
         switch (key) {
           case 'onboarding_step4_section_title':
             return 'Receba suas orações no Whatsapp';
+          case 'onboarding_step4_label':
+            return 'Digite seu número de whatsapp abaixo';
+          case 'onboarding_step4_privacy_text':
+            return 'Escolha o que quer receber:';
           default:
             return '';
         }
@@ -727,8 +739,8 @@ export default function WhatsAppSetup({ variant = "standalone", redirectIfNotLog
 
   const sectionTitle = getSettingValue('onboarding_step4_section_title', true) || 'Receba suas orações no Whatsapp';
   const instruction = getSettingValue('onboarding_step4_instruction', false);
-  const labelText = getSettingValue('onboarding_step4_label', false);
-  const privacyText = getSettingValue('onboarding_step4_privacy_text', false);
+  const labelText = getSettingValue('onboarding_step4_label', true) || 'Digite seu número de whatsapp abaixo';
+  const privacyText = getSettingValue('onboarding_step4_privacy_text', true) || 'Escolha o que quer receber:';
 
   const whatsappFirstMessageUrl = "https://api.whatsapp.com/send?phone=5531998445391&text=Ol%C3%A1%2C%20gostaria%20de%20come%C3%A7ar%20a%20receber%20minhas%20ora%C3%A7%C3%B5es%20do%20Agapefy.";
 
@@ -836,26 +848,34 @@ export default function WhatsAppSetup({ variant = "standalone", redirectIfNotLog
             </>
           )}
 
-          {privacyText && <p className="text-xs text-muted-foreground">{privacyText}</p>}
+          {privacyText && (
+            <p className="text-sm font-medium text-foreground">{privacyText}</p>
+          )}
         </div>
 
         {variant !== "embedded" && (
           <div className="space-y-4">
-            <div className="flex items-start justify-between gap-4 p-3 rounded-md bg-muted/40">
-              <div>
-                <div className="font-medium">Respostas baseadas na Bíblia</div>
-                <p className="text-sm text-muted-foreground">Tire dúvidas ou pergunte sobre sua vida. As respostas serão baseadas na Bíblia.</p>
-              </div>
-              <Switch checked={isActive} disabled onCheckedChange={(v) => updatePreference('is_active', v)} />
-            </div>
-
-            <div className="p-3 rounded-md bg-muted/40 space-y-3">
-              <div className="flex items-start justify-between gap-4">
+            {WHATSAPP_FEATURES.bibleResponses && (
+              <div className="flex items-start justify-between gap-4 p-3 rounded-md bg-muted/40">
                 <div>
-                  <div className="font-medium">Reze para Deus por um propósito</div>
-                  <p className="text-sm text-muted-foreground">Peça a benção de Deus orando por vários dias.</p>
+                  <div className="font-medium">Respostas baseadas na Bíblia</div>
+                  <p className="text-sm text-muted-foreground">
+                    Tire dúvidas ou pergunte sobre sua vida. As respostas serão baseadas na Bíblia.
+                  </p>
                 </div>
-                <Switch checked={dailyPrayer} onCheckedChange={(v) => updatePreference('receives_daily_prayer', v)} />
+                <Switch checked={isActive} disabled onCheckedChange={(v) => updatePreference('is_active', v)} />
+              </div>
+            )}
+
+            <div className="p-4 rounded-md bg-muted/40 space-y-4">
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                <p className="text-sm font-semibold text-foreground">
+                  Uma oração por dia do seu Desafio de orações:
+                </p>
+                <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                  <span>{dailyPrayer ? 'Ativo' : 'Pausado'}</span>
+                  <Switch checked={dailyPrayer} onCheckedChange={(v) => updatePreference('receives_daily_prayer', v)} />
+                </div>
               </div>
 
               {/* Card de desafio sempre visível, independente do toggle */}
@@ -864,10 +884,16 @@ export default function WhatsAppSetup({ variant = "standalone", redirectIfNotLog
               ) : (
                 <>
                   <div className="max-w-2xl">
-                    <label className="block text-sm font-medium mb-2">Desafio</label>
                     {isMobile ? (
                       <Drawer open={drawerOpen} onOpenChange={setDrawerOpen}>
-                        <Button variant="outline" role="combobox" aria-expanded={drawerOpen} className="w-full justify-between" onClick={() => setDrawerOpen(true)}>
+                        <Button
+                          variant="outline"
+                          role="combobox"
+                          aria-expanded={drawerOpen}
+                          aria-label="Selecione seu desafio de orações"
+                          className="w-full justify-between"
+                          onClick={() => setDrawerOpen(true)}
+                        >
                           {selectedChallengeTitle || "Selecione ou pesquise um desafio..."}
                         </Button>
                         <DrawerContent className="h-[85vh]">
@@ -909,7 +935,13 @@ export default function WhatsAppSetup({ variant = "standalone", redirectIfNotLog
                     ) : (
                       <Popover open={challengeOpen} onOpenChange={setChallengeOpen}>
                         <PopoverTrigger asChild>
-                          <Button variant="outline" role="combobox" aria-expanded={challengeOpen} className="w-full justify-between">
+                          <Button
+                            variant="outline"
+                            role="combobox"
+                            aria-expanded={challengeOpen}
+                            aria-label="Selecione seu desafio de orações"
+                            className="w-full justify-between"
+                          >
                             {selectedChallengeTitle || "Selecione ou pesquise um desafio..."}
                           </Button>
                         </PopoverTrigger>
@@ -956,7 +988,7 @@ export default function WhatsAppSetup({ variant = "standalone", redirectIfNotLog
 
                   <div className="flex items-center justify-between gap-3 p-3 rounded-md border bg-background">
                     <div className="flex items-center gap-2">
-                      <span className="text-sm">Enviar oração diária no meu Whatsapp no horário</span>
+                      <span className="text-sm font-medium text-foreground">Quero receber no horário</span>
                     </div>
                     <div className="flex items-center gap-2">
                     <TimePicker
@@ -1003,118 +1035,128 @@ export default function WhatsAppSetup({ variant = "standalone", redirectIfNotLog
               )}
             </div>
 
-            <div className="flex items-start justify-between gap-4 p-3 rounded-md bg-muted/40">
-              <div>
-                <div className="font-medium">Versículo Diário (em breve)</div>
-                <p className="text-sm text-muted-foreground">Você receberá um versículo diariamente em seu WhatsApp.</p>
-              </div>
-              <Switch checked={dailyVerse} onCheckedChange={(v) => updatePreference('receives_daily_verse', v)} />
-            </div>
-
-            <div className="flex items-start justify-between gap-4 p-3 rounded-md bg-muted/40">
-              <div>
-                <div className="font-medium">Minha Rotina Diária de Orações (em breve)</div>
-                <p className="text-sm text-muted-foreground">Você receberá as orações da sua playlist Minha Rotina diariamente em seu WhatsApp.</p>
-              </div>
-              <Switch checked={dailyRoutine} onCheckedChange={(v) => updatePreference('receives_daily_routine', v)} />
-            </div>
-
-            {dailyRoutine && (
-              <div className="p-3 rounded-md bg-muted/40 space-y-3">
+            {WHATSAPP_FEATURES.dailyVerse && (
+              <div className="flex items-start justify-between gap-4 p-3 rounded-md bg-muted/40">
                 <div>
-                  <div className="font-medium">Horários das orações</div>
-                  <p className="text-sm text-muted-foreground">Defina os melhores horários para receber as orações da sua rotina.</p>
+                  <div className="font-medium">Versículo Diário (em breve)</div>
+                  <p className="text-sm text-muted-foreground">Você receberá um versículo diariamente em seu WhatsApp.</p>
                 </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div className="flex items-center justify-between gap-3 p-3 rounded-md border bg-background">
-                    <div className="flex items-center gap-2">
-                      <Sunrise className="h-4 w-4 text-muted-foreground" />
-                      <span className="text-sm">Ao acordar</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Switch checked={wakeEnabled} onCheckedChange={(v) => toggleSlot('wakeup', v)} />
-                      <Input
-                        type="time"
-                        value={wakeTime}
-                        disabled={!wakeEnabled}
-                        step={300}
-                        onChange={(e) => {
-                          const v = e.target.value;
-                          setWakeTime(v);
-                          updatePrayerTime('prayer_time_wakeup', v);
-                        }}
-                        className="w-[120px]"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="flex items-center justify-between gap-3 p-3 rounded-md border bg-background">
-                    <div className="flex items-center gap-2">
-                      <Utensils className="h-4 w-4 text-muted-foreground" />
-                      <span className="text-sm">No almoço</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Switch checked={lunchEnabled} onCheckedChange={(v) => toggleSlot('lunch', v)} />
-                      <Input
-                        type="time"
-                        value={lunchTime}
-                        disabled={!lunchEnabled}
-                        step={300}
-                        onChange={(e) => {
-                          const v = e.target.value;
-                          setLunchTime(v);
-                          updatePrayerTime('prayer_time_lunch', v);
-                        }}
-                        className="w-[120px]"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="flex items-center justify-between gap-3 p-3 rounded-md border bg-background">
-                    <div className="flex items-center gap-2">
-                      <Sunset className="h-4 w-4 text-muted-foreground" />
-                      <span className="text-sm">No jantar</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Switch checked={dinnerEnabled} onCheckedChange={(v) => toggleSlot('dinner', v)} />
-                      <Input
-                        type="time"
-                        value={dinnerTime}
-                        disabled={!dinnerEnabled}
-                        step={300}
-                        onChange={(e) => {
-                          const v = e.target.value;
-                          setDinnerTime(v);
-                          updatePrayerTime('prayer_time_dinner', v);
-                        }}
-                        className="w-[120px]"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="flex items-center justify-between gap-3 p-3 rounded-md border bg-background">
-                    <div className="flex items-center gap-2">
-                      <Moon className="h-4 w-4 text-muted-foreground" />
-                      <span className="text-sm">Ao dormir</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Switch checked={sleepEnabled} onCheckedChange={(v) => toggleSlot('sleep', v)} />
-                      <Input
-                        type="time"
-                        value={sleepTime}
-                        disabled={!sleepEnabled}
-                        step={300}
-                        onChange={(e) => {
-                          const v = e.target.value;
-                          setSleepTime(v);
-                          updatePrayerTime('prayer_time_sleep', v);
-                        }}
-                        className="w-[120px]"
-                      />
-                    </div>
-                  </div>
-                </div>
+                <Switch checked={dailyVerse} onCheckedChange={(v) => updatePreference('receives_daily_verse', v)} />
               </div>
+            )}
+
+            {WHATSAPP_FEATURES.dailyRoutine && (
+              <>
+                <div className="flex items-start justify-between gap-4 p-3 rounded-md bg-muted/40">
+                  <div>
+                    <div className="font-medium">Minha Rotina Diária de Orações (em breve)</div>
+                    <p className="text-sm text-muted-foreground">
+                      Você receberá as orações da sua playlist Minha Rotina diariamente em seu WhatsApp.
+                    </p>
+                  </div>
+                  <Switch checked={dailyRoutine} onCheckedChange={(v) => updatePreference('receives_daily_routine', v)} />
+                </div>
+
+                {dailyRoutine && (
+                  <div className="p-3 rounded-md bg-muted/40 space-y-3">
+                    <div>
+                      <div className="font-medium">Horários das orações</div>
+                      <p className="text-sm text-muted-foreground">
+                        Defina os melhores horários para receber as orações da sua rotina.
+                      </p>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div className="flex items-center justify-between gap-3 p-3 rounded-md border bg-background">
+                        <div className="flex items-center gap-2">
+                          <Sunrise className="h-4 w-4 text-muted-foreground" />
+                          <span className="text-sm">Ao acordar</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Switch checked={wakeEnabled} onCheckedChange={(v) => toggleSlot('wakeup', v)} />
+                          <Input
+                            type="time"
+                            value={wakeTime}
+                            disabled={!wakeEnabled}
+                            step={300}
+                            onChange={(e) => {
+                              const v = e.target.value;
+                              setWakeTime(v);
+                              updatePrayerTime('prayer_time_wakeup', v);
+                            }}
+                            className="w-[120px]"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="flex items-center justify-between gap-3 p-3 rounded-md border bg-background">
+                        <div className="flex items-center gap-2">
+                          <Utensils className="h-4 w-4 text-muted-foreground" />
+                          <span className="text-sm">No almoço</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Switch checked={lunchEnabled} onCheckedChange={(v) => toggleSlot('lunch', v)} />
+                          <Input
+                            type="time"
+                            value={lunchTime}
+                            disabled={!lunchEnabled}
+                            step={300}
+                            onChange={(e) => {
+                              const v = e.target.value;
+                              setLunchTime(v);
+                              updatePrayerTime('prayer_time_lunch', v);
+                            }}
+                            className="w-[120px]"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="flex items-center justify-between gap-3 p-3 rounded-md border bg-background">
+                        <div className="flex items-center gap-2">
+                          <Sunset className="h-4 w-4 text-muted-foreground" />
+                          <span className="text-sm">No jantar</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Switch checked={dinnerEnabled} onCheckedChange={(v) => toggleSlot('dinner', v)} />
+                          <Input
+                            type="time"
+                            value={dinnerTime}
+                            disabled={!dinnerEnabled}
+                            step={300}
+                            onChange={(e) => {
+                              const v = e.target.value;
+                              setDinnerTime(v);
+                              updatePrayerTime('prayer_time_dinner', v);
+                            }}
+                            className="w-[120px]"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="flex items-center justify-between gap-3 p-3 rounded-md border bg-background">
+                        <div className="flex items-center gap-2">
+                          <Moon className="h-4 w-4 text-muted-foreground" />
+                          <span className="text-sm">Ao dormir</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Switch checked={sleepEnabled} onCheckedChange={(v) => toggleSlot('sleep', v)} />
+                          <Input
+                            type="time"
+                            value={sleepTime}
+                            disabled={!sleepEnabled}
+                            step={300}
+                            onChange={(e) => {
+                              const v = e.target.value;
+                              setSleepTime(v);
+                              updatePrayerTime('prayer_time_sleep', v);
+                            }}
+                            className="w-[120px]"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </>
             )}
           </div>
         )}

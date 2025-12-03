@@ -61,6 +61,10 @@ export default function OnboardingClient() {
     const parsed = stepParam ? Number(stepParam) : NaN;
     return Number.isFinite(parsed) && parsed > 0 ? parsed : 1;
   }, [searchParams]);
+  const isAdminPreview = useMemo(() => {
+    const raw = (searchParams?.get('adminPreview') || searchParams?.get('preview') || '').toLowerCase();
+    return raw === 'true' || raw === '1' || raw === 'yes' || raw === 'admin';
+  }, [searchParams]);
   const currentCategoryId = useMemo(() => searchParams?.get('categoryId') || '', [searchParams]);
   const activeFormId = useMemo(() => searchParams?.get('formId') || '', [searchParams]);
 
@@ -117,7 +121,15 @@ export default function OnboardingClient() {
         
         if (profile?.role === 'admin') {
           // Admin não deve ver onboarding
-          router.replace('/');
+          if (isAdminPreview) {
+            return;
+          }
+          navigateWithFallback('/');
+          return;
+        }
+
+        // Se estiver em modo de preview (flag via query), não redirecionar mesmo que não seja admin
+        if (isAdminPreview) {
           return;
         }
 
@@ -132,7 +144,9 @@ export default function OnboardingClient() {
           const json = await res.json();
           // Se não há passos pendentes, o onboarding foi completado
           if (!json?.pending) {
-            router.replace('/');
+            if (!isAdminPreview) {
+              navigateWithFallback('/');
+            }
             return;
           }
         }
@@ -145,7 +159,43 @@ export default function OnboardingClient() {
     
     void checkAccess();
     return () => { mounted = false; };
-  }, [user, router]);
+  }, [user, router, isAdminPreview]);
+
+  const withAdminPreviewFlag = (url: string): string => {
+    if (!isAdminPreview) return url;
+    if (!url || !url.startsWith('/onboarding')) return url;
+    if (url.includes('adminPreview=')) return url;
+    const separator = url.includes('?') ? '&' : '?';
+    return `${url}${separator}adminPreview=true`;
+  };
+
+  // Navegação resiliente: tenta SPA; se ficar preso, faz fallback para navegação completa.
+  const navigateWithFallback = (url: string) => {
+    if (!url) return;
+    const currentUrl = typeof window !== 'undefined'
+      ? `${window.location.pathname}${window.location.search}`
+      : '';
+
+    try {
+      if (typeof (router as any)?.prefetch === 'function') {
+        void (router as any).prefetch(url);
+      }
+      router.replace(url);
+    } catch (err) {
+      if (typeof window !== 'undefined') {
+        window.location.assign(url);
+      }
+      return;
+    }
+
+    if (typeof window === 'undefined') return;
+    window.setTimeout(() => {
+      const stillHere = `${window.location.pathname}${window.location.search}` === currentUrl;
+      if (stillHere) {
+        window.location.assign(url);
+      }
+    }, 1500);
+  };
 
   // Helpers
   function parseDaysFromTitle(title?: string | null): number {
@@ -463,11 +513,11 @@ export default function OnboardingClient() {
   ): Promise<string> {
     const parentFormId = activeFormId || form?.id || '';
 
-    return getNextStepUrlShared(currentStep, {
+    return withAdminPreviewFlag(getNextStepUrlShared(currentStep, {
       categoryId: (opts?.categoryId ?? currentCategoryId) || undefined,
       formId: parentFormId || undefined,
       settings: buildOnboardingSettingsSnapshot(),
-    });
+    }));
   }
 
   async function resolveOtherFlowNextUrl(
@@ -492,20 +542,22 @@ export default function OnboardingClient() {
           return true;
         });
         if (targetStep) {
-          return getStepUrl(targetStep, {
-            categoryId: categoryIdValue,
-            formId: parentFormId || undefined,
-          });
+          return withAdminPreviewFlag(
+            getStepUrl(targetStep, {
+              categoryId: categoryIdValue,
+              formId: parentFormId || undefined,
+            })
+          );
         }
       }
     }
 
     // Default: continuar fluxo normal
-    return getNextStepUrlShared(currentStep, {
+    return withAdminPreviewFlag(getNextStepUrlShared(currentStep, {
       categoryId: categoryIdValue || undefined,
       formId: parentFormId || undefined,
       settings: buildOnboardingSettingsSnapshot(),
-    });
+    }));
   }
 
   // Função helper para navegar para a próxima etapa após salvar WhatsApp
@@ -596,7 +648,7 @@ export default function OnboardingClient() {
       }
 
       const nextUrl = await getNextStepUrl(desiredStep, { categoryId: currentCategoryId || undefined });
-      router.replace(nextUrl);
+      navigateWithFallback(nextUrl);
     } catch (error) {
       console.error('Erro ao navegar para próxima etapa:', error);
     }
@@ -645,21 +697,23 @@ export default function OnboardingClient() {
     if (previousStep) {
       // Usar a função getStepUrl do módulo onboarding-steps
       const { getStepUrl } = await import('@/lib/services/onboarding-steps');
-      return getStepUrl(previousStep, {
-        categoryId: currentCategoryId || undefined,
-        formId: parentFormId || undefined,
-      });
+      return withAdminPreviewFlag(
+        getStepUrl(previousStep, {
+          categoryId: currentCategoryId || undefined,
+          formId: parentFormId || undefined,
+        })
+      );
     }
 
     // Se não encontrou passo anterior, voltar para o passo 1
-    return `/onboarding?step=1${currentCategoryId ? `&categoryId=${encodeURIComponent(currentCategoryId)}` : ''}${parentFormId ? `&formId=${encodeURIComponent(parentFormId)}` : ''}`;
+    return withAdminPreviewFlag(`/onboarding?step=1${currentCategoryId ? `&categoryId=${encodeURIComponent(currentCategoryId)}` : ''}${parentFormId ? `&formId=${encodeURIComponent(parentFormId)}` : ''}`);
   }
 
   // Função para voltar ao passo anterior
   async function handleGoBack() {
     const previousUrl = await getPreviousStepUrl();
     if (previousUrl) {
-      router.replace(previousUrl);
+      navigateWithFallback(previousUrl);
     }
   }
 
@@ -965,6 +1019,13 @@ export default function OnboardingClient() {
         
         // VERIFICAÇÃO CRÍTICA: Verificar se o passo solicitado está ativo
         const steps = await getOnboardingStepsOrder(buildOnboardingSettingsSnapshot());
+
+        if (!steps || steps.length === 0) {
+          console.warn('Onboarding indisponível: lista de passos vazia');
+          setCurrentStepMeta(null);
+          setLoading(false);
+          return;
+        }
         const requestedStep = steps.find(s => s.position === stepParam);
         if (mounted) {
           setCurrentStepMeta(requestedStep || null);
@@ -975,13 +1036,13 @@ export default function OnboardingClient() {
         // Para os demais fluxos, ao tentar acessar esse passo, redirecionamos direto para a home.
         if (requestedStep && requestedStep.type === 'info' && stepParam === 11 && !usedOtherSituation) {
           if (mounted) {
-            router.replace('/');
+            navigateWithFallback('/');
           }
           return;
         }
         
         // Se o passo solicitado não existe ou está inativo, redirecionar para o próximo ativo
-        if (!requestedStep || !requestedStep.isActive) {
+        if ((!requestedStep || !requestedStep.isActive) && steps.length > 0) {
           // Encontrar o último passo ativo antes do solicitado, ou usar 0 se não houver
           const activeStepsBefore = steps
             .filter(s => s.isActive && s.position < stepParam)
@@ -992,7 +1053,7 @@ export default function OnboardingClient() {
             categoryId: searchParams?.get('categoryId') || undefined,
           });
           if (mounted) {
-            router.replace(nextUrl);
+            navigateWithFallback(nextUrl);
             return;
           }
         }
@@ -1301,7 +1362,7 @@ export default function OnboardingClient() {
         } else {
           setDailyVerseEnabled(true);
         }
-        if (desiredStep === 7 && hasPhone) router.replace('/');
+        if (desiredStep === 7 && hasPhone) navigateWithFallback('/');
       } catch {
         if (mounted) setHasWhatsApp(false);
       }
@@ -1395,17 +1456,17 @@ export default function OnboardingClient() {
           // Garantir que categoryId seja passado para getNextStepUrl quando estamos no passo 1
           const categoryIdForNext = currentStep === 1 && optionToSubmit ? optionToSubmit : currentCategoryId;
           const nextUrl = await getNextStepUrl(currentStep, { categoryId: categoryIdForNext || undefined });
-          router.replace(nextUrl);
+          navigateWithFallback(nextUrl);
         } catch {
           // Fallback: usar getNextStepUrl em vez de hardcode
           try {
             const currentStep = form.onboard_step || desiredStep;
             const categoryIdForFallback = currentStep === 1 && optionToSubmit ? optionToSubmit : currentCategoryId;
             const fallbackUrl = await getNextStepUrl(currentStep, { categoryId: categoryIdForFallback || undefined });
-            router.replace(fallbackUrl);
+            navigateWithFallback(fallbackUrl);
           } catch {
             // Último fallback: ir para home se tudo falhar
-            router.replace('/');
+            navigateWithFallback('/');
           }
         }
       }
@@ -1434,7 +1495,7 @@ export default function OnboardingClient() {
               <Button
                 onClick={() => {
                   const target = otherNextUrl || '/';
-                  router.replace(target);
+                  navigateWithFallback(target);
                 }}
               >
                 {settings.onboarding_other_button_label || 'Continuar'}
@@ -1526,7 +1587,7 @@ export default function OnboardingClient() {
                 className="hidden"
                 onClick={async () => {
                   const nextUrl = await getNextStepUrl(desiredStep, { categoryId: currentCategoryId || undefined });
-                  router.replace(nextUrl);
+                  navigateWithFallback(nextUrl);
                 }}
               >
                 Pular
@@ -1534,7 +1595,7 @@ export default function OnboardingClient() {
               <Button
                 onClick={async () => {
                   const nextUrl = await getNextStepUrl(desiredStep, { categoryId: currentCategoryId || undefined });
-                  router.replace(nextUrl);
+                  navigateWithFallback(nextUrl);
                 }}
               >
                 Ver minha rotina
@@ -1555,7 +1616,7 @@ export default function OnboardingClient() {
       toast.success('Passo adiado');
       const currentStep = form.onboard_step || desiredStep;
       const nextUrl = await getNextStepUrl(currentStep, { categoryId: currentCategoryId || undefined });
-      router.replace(nextUrl);
+      navigateWithFallback(nextUrl);
     } catch (e) {
       // eslint-disable-next-line no-console
       console.error(e);
@@ -1601,7 +1662,7 @@ export default function OnboardingClient() {
           }
         }
       } catch {}
-      router.replace(nextUrl);
+      navigateWithFallback(nextUrl);
       setSubmitting(false);
     }
   }
@@ -1650,7 +1711,7 @@ export default function OnboardingClient() {
                 className="hidden"
                 onClick={async () => {
                   const nextUrl = await getNextStepUrl(desiredStep, { categoryId: currentCategoryId || undefined });
-                  router.replace(nextUrl);
+                  navigateWithFallback(nextUrl);
                 }}
               >
                 {settings.onboarding_step4_skip_button || 'Pular'}
@@ -1659,7 +1720,7 @@ export default function OnboardingClient() {
                 className="hidden"
                 onClick={async () => {
                   const nextUrl = await getNextStepUrl(desiredStep, { categoryId: currentCategoryId || undefined });
-                  router.replace(nextUrl);
+                  navigateWithFallback(nextUrl);
                 }}
               >
                 {settings.onboarding_step4_complete_button || 'Concluir'}
@@ -1749,7 +1810,7 @@ export default function OnboardingClient() {
             <div className="flex justify-end">
               <Button onClick={async () => {
                 const nextUrl = await getNextStepUrl(desiredStep, { categoryId: currentCategoryId || undefined });
-                router.replace(nextUrl);
+                navigateWithFallback(nextUrl);
               }}>
                 Avançar
                 <ArrowRight className="ml-2 h-4 w-4" />
@@ -1805,7 +1866,7 @@ export default function OnboardingClient() {
                 className="hidden"
                 onClick={async () => {
                   const nextUrl = await getNextStepUrl(desiredStep, { categoryId: currentCategoryId || undefined });
-                  router.replace(nextUrl);
+                  navigateWithFallback(nextUrl);
                 }}
               >
                 Pular
@@ -1815,7 +1876,7 @@ export default function OnboardingClient() {
                   className="hidden"
                   onClick={async () => {
                     const nextUrl = await getNextStepUrl(desiredStep, { categoryId: currentCategoryId || undefined });
-                    router.replace(nextUrl);
+                    navigateWithFallback(nextUrl);
                   }}
                 >
                   Concluir
@@ -1893,7 +1954,7 @@ export default function OnboardingClient() {
                       }
                       if (!phone) {
                         // sem telefone, apenas concluir sem gravar
-                        router.replace('/');
+                        navigateWithFallback('/');
                         return;
                       }
                       const { error } = await supabase
@@ -1904,13 +1965,13 @@ export default function OnboardingClient() {
                   } catch (e) {
                     // eslint-disable-next-line no-console
                     console.warn('Falha ao salvar preferência de versículo diário', e);
-                  } finally {
-                    setSavingVersePref(false);
-                    router.replace('/');
-                  }
-                }}
-                disabled={savingVersePref}
-              >
+                } finally {
+                  setSavingVersePref(false);
+                  navigateWithFallback('/');
+                }
+              }}
+              disabled={savingVersePref}
+            >
                 {savingVersePref ? 'Salvando...' : 'Concluir'}
               </Button>
             </div>
@@ -2129,7 +2190,7 @@ export default function OnboardingClient() {
             <div className="flex justify-end">
               <Button onClick={async () => {
                 const nextUrl = await getNextStepUrl(desiredStep, { categoryId: currentCategoryId || undefined });
-                router.replace(nextUrl);
+                navigateWithFallback(nextUrl);
               }}>
                 Avançar
                 <ArrowRight className="ml-2 h-4 w-4" />
@@ -2155,7 +2216,7 @@ export default function OnboardingClient() {
     const handleInfoNext = async () => {
       const currentStep = form.onboard_step || desiredStep;
       const nextUrl = await getNextStepUrl(currentStep, { categoryId: currentCategoryId || undefined });
-      router.replace(nextUrl);
+      navigateWithFallback(nextUrl);
     };
 
     return (

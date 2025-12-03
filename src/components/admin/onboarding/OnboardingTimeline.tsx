@@ -249,7 +249,7 @@ export default function OnboardingTimeline() {
   }, [forms, settings]);
 
   const handleTestOnboarding = () => {
-    window.open('/onboarding?step=1', '_blank');
+    window.open('/onboarding?step=1&adminPreview=true', '_blank');
   };
 
   const handleResetResponses = async () => {
@@ -548,4 +548,3 @@ export default function OnboardingTimeline() {
     </div>
   );
 }
-

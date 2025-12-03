@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
+import { translateErrorMessage } from "@/lib/utils";
 
 type Role = "user" | "assistant";
 type Msg = { role: Role; content: string; ts: number };
@@ -94,12 +95,14 @@ export default function Page() {
           const reply: string = data?.reply ?? "";
           setMessages((prev) => [...prev, { role: "assistant", content: reply, ts: Date.now() }]);
         } else {
-          const errMsg = data?.error || "Erro ao comunicar com o Biblicus";
+          const rawError = data?.error || "Erro ao comunicar com o Biblicus";
+          const errMsg = translateErrorMessage(rawError);
           setMessages((prev) => [...prev, { role: "assistant", content: `[Erro] ${errMsg}`, ts: Date.now() }]);
           setError(errMsg);
         }
       } catch (e: any) {
-        const errMsg = e?.message || "Falha de rede";
+        const rawError = e?.message || "Falha de rede";
+        const errMsg = translateErrorMessage(rawError);
         setMessages((prev) => [...prev, { role: "assistant", content: `[Erro] ${errMsg}`, ts: Date.now() }]);
         setError(errMsg);
       } finally {

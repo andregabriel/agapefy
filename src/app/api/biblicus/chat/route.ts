@@ -39,7 +39,7 @@ export async function POST(req: NextRequest) {
       const r = await client.beta.threads.runs.retrieve(thread.id, run.id);
       if (r.status === "completed") break;
       if (r.status === "failed" || r.status === "expired" || r.status === "cancelled") {
-        throw new Error("Run failed");
+        throw new Error("Falha ao processar a solicitação");
       }
       // mantém o intervalo atual de polling sem alterar UX
       await new Promise((res) => setTimeout(res, 800));

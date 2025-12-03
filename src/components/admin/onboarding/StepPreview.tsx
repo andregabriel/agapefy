@@ -89,6 +89,9 @@ export default function StepPreview({ stepNumber, formId, staticKind, onClose }:
     } else if (staticKind === 'whatsapp') {
       params.push('showStatic=whatsapp');
     }
+
+    // Indica que é uma visualização pelo admin para evitar redirecionamentos automáticos
+    params.push('adminPreview=true');
     
     return params.length > 0 ? `${baseUrl}&${params.join('&')}` : baseUrl;
   };
@@ -99,24 +102,29 @@ export default function StepPreview({ stepNumber, formId, staticKind, onClose }:
 
   return (
     <Dialog open={true} onOpenChange={onClose}>
-      <DialogContent className="max-w-4xl h-[80vh]">
-        <DialogHeader>
-          <DialogTitle>Preview - Passo {stepNumber}</DialogTitle>
-          <DialogDescription>
-            Visualização do passo {stepNumber} do onboarding
-          </DialogDescription>
-        </DialogHeader>
-        <div className="flex-1 flex flex-col gap-4">
-          <div className="flex justify-end">
+      <DialogContent
+        className="max-w-5xl h-[85vh] grid-rows-[auto,1fr] p-0 overflow-hidden"
+        style={{ padding: 0 }}
+      >
+        <div className="flex items-start justify-between gap-3 border-b px-6 py-4 bg-white">
+          <div className="space-y-1">
+            <DialogTitle className="text-xl">Preview - Passo {stepNumber}</DialogTitle>
+            <DialogDescription className="text-sm text-gray-500">
+              Visualização do passo {stepNumber} do onboarding
+            </DialogDescription>
+          </div>
+          <div className="flex items-center gap-2">
             <Button variant="outline" onClick={handleOpenInNewTab} className="gap-2">
               <ExternalLink className="h-4 w-4" />
               Abrir em nova aba
             </Button>
           </div>
-          <div className="flex-1 border rounded-lg overflow-hidden">
+        </div>
+        <div className="bg-slate-50 px-6 py-4">
+          <div className="h-full w-full overflow-hidden rounded-xl border bg-white shadow-sm">
             <iframe
               src={getPreviewUrl()}
-              className="w-full h-full"
+              className="h-full w-full"
               title={`Preview passo ${stepNumber}`}
             />
           </div>
@@ -125,4 +133,3 @@ export default function StepPreview({ stepNumber, formId, staticKind, onClose }:
     </Dialog>
   );
 }
-

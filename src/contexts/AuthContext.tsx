@@ -34,6 +34,12 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   useEffect(() => {
     console.log('🔄 AuthContext: Inicializando...');
 
+    // Fail-safe: se o Supabase travar na obtenção da sessão, liberamos o app após alguns segundos
+    const loadingTimeout = window.setTimeout(() => {
+      console.warn('⚠️ AuthContext: Timeout ao obter sessão inicial, liberando carregamento.');
+      setLoading(false);
+    }, 4000);
+
     // Obter sessão inicial
     const getInitialSession = async () => {
       try {
@@ -61,6 +67,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       } catch (error) {
         console.error('💥 AuthContext: Erro ao inicializar sessão:', error);
       } finally {
+        clearTimeout(loadingTimeout);
         setLoading(false);
         console.log('🏁 AuthContext: Loading finalizado');
       }
@@ -90,6 +97,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
     return () => {
       console.log('🧹 AuthContext: Limpando subscription');
+      clearTimeout(loadingTimeout);
       subscription.unsubscribe();
     };
   }, []);

@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
+import { translateErrorMessage } from '@/lib/utils';
 import { X, Upload, Music, Image, Plus, Trash2 } from 'lucide-react';
 
 interface AudioModalProps {
@@ -352,14 +353,14 @@ export default function AudioModal({ audio, isOpen, onClose, onSave }: AudioModa
       let errorMessage = 'Erro ao salvar áudio';
       
       if (error instanceof Error) {
-        errorMessage = error.message;
+        errorMessage = translateErrorMessage(error.message);
       } else if (typeof error === 'object' && error !== null) {
         if (error.code === '42501') {
           errorMessage = 'Você não tem permissão para salvar este áudio. Faça login como administrador.';
         } else if (error.code === '23505') {
           errorMessage = 'Já existe um áudio com este título.';
         } else if (error.message) {
-          errorMessage = `Erro: ${error.message}`;
+          errorMessage = translateErrorMessage(error.message);
         }
       }
 

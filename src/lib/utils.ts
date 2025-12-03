@@ -60,6 +60,71 @@ export function logDbError(context: string, error: any) {
   console.warn(`${context}: ${info.message}${info.code ? ` [${info.code}]` : ''}`, { details: info.details, hint: info.hint });
 }
 
+// Traduz mensagens de erro comuns do inglês para português
+export function translateErrorMessage(error: string | null | undefined): string {
+  if (!error) return 'Erro desconhecido';
+  
+  const errorLower = error.toLowerCase().trim();
+  
+  // Mapeamento de mensagens de erro comuns
+  const translations: Record<string, string> = {
+    'run failed': 'Falha ao processar a solicitação',
+    'invalid login credentials': 'Credenciais de login inválidas',
+    'user already registered': 'Usuário já cadastrado',
+    'password should be at least 6 characters': 'A senha deve ter pelo menos 6 caracteres',
+    'unable to validate email address: invalid format': 'Não foi possível validar o endereço de e-mail: formato inválido',
+    'email not confirmed': 'E-mail não confirmado',
+    'too many requests': 'Muitas tentativas. Tente novamente mais tarde',
+    'invalid email': 'E-mail inválido',
+    'password is required': 'Senha é obrigatória',
+    'email is required': 'E-mail é obrigatório',
+    'signup requires a valid password': 'O cadastro requer uma senha válida',
+    'user not found': 'Usuário não encontrado',
+    'email address not confirmed': 'Endereço de e-mail não confirmado',
+    'invalid password': 'Senha inválida',
+    'weak password': 'Senha muito fraca',
+    'password must be at least 6 characters': 'A senha deve ter pelo menos 6 caracteres',
+    'email already in use': 'E-mail já está em uso',
+    'account not found': 'Conta não encontrada',
+    'network error': 'Erro de rede. Verifique sua conexão',
+    'server error': 'Erro do servidor. Tente novamente',
+    'authentication failed': 'Falha na autenticação',
+    'session expired': 'Sessão expirada',
+    'access denied': 'Acesso negado',
+    'rate limit exceeded': 'Limite de tentativas excedido',
+    'email link is invalid or has expired': 'O link do e-mail é inválido ou expirou',
+    'token has expired or is invalid': 'O token expirou ou é inválido',
+    'unable to process request': 'Não foi possível processar a solicitação',
+    'something went wrong': 'Algo deu errado. Tente novamente',
+    'failed to fetch': 'Falha ao buscar dados',
+    'unauthorized': 'Não autorizado',
+    'forbidden': 'Acesso proibido',
+    'not found': 'Não encontrado',
+    'bad request': 'Requisição inválida',
+    'internal server error': 'Erro interno do servidor',
+    'service unavailable': 'Serviço indisponível',
+    'gateway timeout': 'Tempo limite excedido',
+    'request timeout': 'Tempo limite da requisição',
+    'connection error': 'Erro de conexão',
+    'fetch error': 'Erro ao buscar dados',
+    'network request failed': 'Falha na requisição de rede',
+    'failed to load': 'Falha ao carregar',
+    'error loading': 'Erro ao carregar',
+    'unknown error': 'Erro desconhecido',
+    'unexpected error': 'Erro inesperado',
+  };
+  
+  // Verificar correspondência exata (case-insensitive)
+  for (const [key, translation] of Object.entries(translations)) {
+    if (errorLower === key || errorLower.includes(key)) {
+      return translation;
+    }
+  }
+  
+  // Se não encontrou tradução, retornar a mensagem original
+  return error;
+}
+
 // Processa links markdown [texto](url) em HTML com target="_blank"
 export function processLinks(text: string | null | undefined): string {
   if (!text || typeof text !== 'string') return '';

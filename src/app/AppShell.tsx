@@ -8,7 +8,7 @@ import { Header } from '@/components/Header';
 import { BottomNavigation } from '@/components/layout/BottomNavigation';
 import { MiniPlayer } from '@/components/player/MiniPlayer';
 import { usePathname, useRouter } from 'next/navigation';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { PaywallModal } from '@/components/modals/PaywallModal';
 
@@ -31,6 +31,7 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const { user, loading } = useAuth();
   const { state } = usePlayer();
+  const [checkingOnboarding, setCheckingOnboarding] = useState(false);
   const logPrefix = '[onboarding-gate]';
   const hasCurrentAudio = !!state.currentAudio;
   const isLoginPage = pathname === '/login';
@@ -50,6 +51,7 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
       if (pathname.startsWith('/onboarding')) return; // já no fluxo de onboarding
 
       try {
+        setCheckingOnboarding(true);
         console.info(`${logPrefix} start`, { userId: user.id, pathname });
 
         // Verificar se é admin - admin não deve ser redirecionado para onboarding
@@ -83,14 +85,6 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
         });
         if (!res.ok) {
           console.error(`${logPrefix} status fetch failed`, { status: res.status });
-          if (!alreadyRedirected) {
-            router.replace('/onboarding?step=1');
-            try {
-              sessionStorage.setItem(redirectKey, '1');
-            } catch {
-              // ignore
-            }
-          }
           return;
         }
         const json = await res.json();
@@ -101,6 +95,10 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
           steps: json?.steps,
           error: json?.error,
         });
+        if (json?.error === 'missing_service_role') {
+          // Não forçar onboarding se backend está sem service role
+          return;
+        }
         if (json?.pending && typeof json?.nextStep === 'number') {
           if (!alreadyRedirected) {
             router.replace(`/onboarding?step=${json.nextStep}`);
@@ -146,12 +144,11 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
         const alreadyRedirected =
           typeof window !== 'undefined' && redirectKey && sessionStorage.getItem(redirectKey) === '1';
         if (!alreadyRedirected && user?.id) {
-          router.replace('/onboarding?step=1');
-          try {
-            sessionStorage.setItem(redirectKey, '1');
-          } catch {
-            // ignore
-          }
+          // não redirecionar em caso de erro para evitar loop
+        }
+      } finally {
+        if (!aborted) {
+          setCheckingOnboarding(false);
         }
       }
     }
@@ -163,7 +160,7 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
 
   return (
     <>
-      <div className={hideHeader ? 'hidden' : ''}>
+      <div className={hideHeader || (checkingOnboarding && !isOnboardingPage) ? 'hidden' : ''}>
         <Header />
       </div>
 
@@ -176,7 +173,7 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
             : ''
         } ${!hideHeader ? 'pt-16' : ''}`}
       >
-        {children}
+        {checkingOnboarding && !isOnboardingPage ? null : children}
       </main>
 
       {/* Mini player global – visível em (quase) qualquer página quando houver áudio atual */}
