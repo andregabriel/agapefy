@@ -109,17 +109,17 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
           return;
         }
         if (json?.pending && typeof json?.nextStep === 'number') {
-          keepBlocking = true;
-          setOnboardingGateReadyForUser(null);
           if (!alreadyRedirected) {
+            keepBlocking = true;
+            setOnboardingGateReadyForUser(null);
             router.replace(`/onboarding?step=${json.nextStep}`);
             try {
               sessionStorage.setItem(redirectKey, '1');
             } catch {
               // ignore
             }
+            return;
           }
-          return;
         }
 
         // Sem passos pendentes: verificar se o WhatsApp foi configurado; se não, enviar para o passo 7
@@ -128,18 +128,43 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
           .select('phone_number')
           .eq('user_id', userId)
           .maybeSingle();
+
         if (whatsappError) {
           console.error(`${logPrefix} whatsapp lookup error`, {
             message: whatsappError.message,
             details: whatsappError.details,
             hint: whatsappError.hint,
           });
+
+          // Se a coluna user_id (ou a tabela) ainda não existir neste ambiente,
+          // não devemos forçar o usuário para o passo 7, para evitar loops de redirecionamento
+          // e telas em branco. Nesses casos, apenas ignoramos o gate especifico de WhatsApp
+          // e liberamos o app normalmente.
+          const msg = whatsappError.message || '';
+          const code = (whatsappError as any).code || '';
+          const isSchemaError =
+            code === '42703' || // undefined_column
+            code === '42883' || // undefined_function (alguns casos de cache)
+            msg.toLowerCase().includes('schema cache') ||
+            (msg.toLowerCase().includes('column') &&
+              msg.toLowerCase().includes('does not exist'));
+
+          if (isSchemaError) {
+            // Ignorar falta de coluna/tabela de WhatsApp neste ambiente.
+            // O bloco finally continuará liberando o usuário normalmente.
+            return;
+          }
+
+          // Para outros erros inesperados, também não forçar o redirecionamento,
+          // apenas logar e seguir o fluxo normal (sem gate adicional de WhatsApp).
+          return;
         }
+
         if (aborted) return;
         if (!data?.phone_number) {
-          keepBlocking = true;
-          setOnboardingGateReadyForUser(null);
           if (!alreadyRedirected) {
+            keepBlocking = true;
+            setOnboardingGateReadyForUser(null);
             router.replace('/onboarding?step=7');
             try {
               sessionStorage.setItem(redirectKey, '1');
@@ -193,7 +218,7 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
         {shouldBlockRender ? null : children}
       </main>
 
-      {/* Mini player global – visível em (quase) qualquer página quando houver áudio atual */}
+      {/* Mini player global - visível em (quase) qualquer página quando houver áudio atual */}
       {!hideMiniPlayer && hasCurrentAudio && <MiniPlayer />}
 
       <div className={hideBottomNav ? 'hidden' : ''}>

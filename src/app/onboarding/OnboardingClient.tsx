@@ -144,7 +144,8 @@ export default function OnboardingClient() {
           const json = await res.json();
           // Se não há passos pendentes, o onboarding foi completado
           if (!json?.pending) {
-            if (!isAdminPreview) {
+            const stepParam = searchParams?.get('step');
+            if (!isAdminPreview && !stepParam) {
               navigateWithFallback('/');
             }
             return;
