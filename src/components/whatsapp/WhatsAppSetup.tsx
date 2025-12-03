@@ -140,6 +140,33 @@ export default function WhatsAppSetup({ variant = "standalone", redirectIfNotLog
   );
   const isMobile = useIsMobile();
 
+  const getLocalStorageKey = () => (user?.id ? `whatsapp_phone_${user.id}` : null);
+
+  // Carregar número salvo no localStorage como fallback suave
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (phone || phoneNumber) return;
+    const key = getLocalStorageKey();
+    if (!key) return;
+    try {
+      const raw = window.localStorage.getItem(key);
+      if (!raw) return;
+      const parsed = JSON.parse(raw) as {
+        full?: string;
+        formatted?: string;
+        country?: string;
+        countryCode?: string;
+      };
+      if (parsed.full) setPhone(parsed.full);
+      if (parsed.formatted) setPhoneNumber(parsed.formatted);
+      if (parsed.country) setCountry(parsed.country);
+      if (parsed.countryCode) setCountryCode(parsed.countryCode);
+    } catch (e) {
+      console.warn("Erro ao carregar telefone do localStorage:", e);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.id]);
+
   useEffect(() => {
     if (!redirectIfNotLoggedIn) return;
     if (!loading && !user) {
@@ -170,9 +197,19 @@ export default function WhatsAppSetup({ variant = "standalone", redirectIfNotLog
               }
             }
           } catch (e: any) {
-            // Ignorar erro se user_id não existir
-            if (!e?.message?.includes('user_id') && !e?.message?.includes('schema cache')) {
-              console.warn("Erro ao buscar por user_id:", e);
+            const msg = (e?.message || '').toLowerCase();
+            const code = (e?.code || '').toString();
+            const isSchemaError =
+              code === '42703' || // undefined_column
+              code === '42883' || // undefined_function / cache
+              msg.includes('schema cache') ||
+              (msg.includes('column') && msg.includes('does not exist'));
+
+            if (isSchemaError) {
+              // Em ambientes onde a migration ainda não rodou, evitamos quebrar a UX.
+              console.warn("Erro de schema ao buscar whatsapp por user_id (ignorado no cliente):", e);
+            } else {
+              console.warn("Erro ao buscar whatsapp por user_id:", e);
             }
           }
         }
@@ -199,6 +236,24 @@ export default function WhatsAppSetup({ variant = "standalone", redirectIfNotLog
             setCountry("BR");
             setCountryCode("55");
             setPhoneNumber(formatPhoneNumber(clean));
+          }
+
+          // Sincronizar também com localStorage para evitar "sumir" em futuros carregamentos
+          const key = getLocalStorageKey();
+          if (typeof window !== "undefined" && key) {
+            try {
+              window.localStorage.setItem(
+                key,
+                JSON.stringify({
+                  full: row.phone_number,
+                  formatted: phoneNumber || formatPhoneNumber(clean.startsWith("55") ? clean.slice(2) : clean),
+                  country,
+                  countryCode,
+                })
+              );
+            } catch (e) {
+              console.warn("Erro ao salvar telefone no localStorage a partir do Supabase:", e);
+            }
           }
         }
         if (typeof row.is_active === 'boolean') setIsActive(Boolean(row.is_active));
@@ -409,6 +464,24 @@ export default function WhatsAppSetup({ variant = "standalone", redirectIfNotLog
       // Atualizar estado phone para manter compatibilidade
       setPhone(fullNumber);
       setIsEditingPhone(false); // Sair do modo de edição após salvar
+
+      // Persistir número no localStorage como fonte de verdade para o frontend
+      const key = getLocalStorageKey();
+      if (typeof window !== "undefined" && key) {
+        try {
+          window.localStorage.setItem(
+            key,
+            JSON.stringify({
+              full: fullNumber,
+              formatted: formatPhoneNumber(parsedNumber),
+              country,
+              countryCode,
+            })
+          );
+        } catch (e) {
+          console.warn("Erro ao salvar telefone no localStorage após salvar número:", e);
+        }
+      }
       
       // Recarregar dados do Supabase para atualizar o estado (incluindo has_sent_first_message)
       if (user?.id) {

@@ -561,8 +561,10 @@ export default function OnboardingClient() {
     }));
   }
 
-  // Função helper para navegar para a próxima etapa após salvar WhatsApp
-  // e conectar a playlist de desafio escolhida no onboarding com whatsapp_user_challenges
+  // Função helper chamada após salvar o WhatsApp:
+  // - conecta a playlist de desafio (se houver)
+  // - atualiza o estado local de hasWhatsApp
+  // A navegação para o próximo passo fica a cargo do botão "Avançar".
   async function handleWhatsAppSaved(phone: string) {
     setHasWhatsApp(true);
     try {
@@ -647,11 +649,8 @@ export default function OnboardingClient() {
           console.warn('Falha ao vincular desafio do onboarding ao WhatsApp:', e);
         }
       }
-
-      const nextUrl = await getNextStepUrl(desiredStep, { categoryId: currentCategoryId || undefined });
-      navigateWithFallback(nextUrl);
     } catch (error) {
-      console.error('Erro ao navegar para próxima etapa:', error);
+      console.error('Erro ao processar WhatsApp salvo:', error);
     }
   }
 
@@ -1696,26 +1695,21 @@ export default function OnboardingClient() {
             </div>
           </CardHeader>
           <CardContent className="space-y-6">
-            <WhatsAppSetup variant="embedded" redirectIfNotLoggedIn={false} onSavedPhone={handleWhatsAppSaved} />
-            <div className="flex justify-between">
+            <WhatsAppSetup
+              variant="embedded"
+              redirectIfNotLoggedIn={false}
+              onSavedPhone={handleWhatsAppSaved}
+            />
+            <div className="flex justify-end">
               <Button
-                variant="ghost"
-                className="hidden"
                 onClick={async () => {
-                  const nextUrl = await getNextStepUrl(desiredStep, { categoryId: currentCategoryId || undefined });
+                  const nextUrl = await getNextStepUrl(desiredStep, {
+                    categoryId: currentCategoryId || undefined,
+                  });
                   navigateWithFallback(nextUrl);
                 }}
               >
-                {settings.onboarding_step4_skip_button || 'Pular'}
-              </Button>
-              <Button 
-                className="hidden"
-                onClick={async () => {
-                  const nextUrl = await getNextStepUrl(desiredStep, { categoryId: currentCategoryId || undefined });
-                  navigateWithFallback(nextUrl);
-                }}
-              >
-                {settings.onboarding_step4_complete_button || 'Concluir'}
+                {settings.onboarding_step4_complete_button || 'Avançar'}
               </Button>
             </div>
           </CardContent>
