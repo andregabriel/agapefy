@@ -66,22 +66,90 @@ const REQUIRED_SETTINGS_KEYS: Array<keyof AppSettings> = [
   'onboarding_hardcoded_8_position',
 ];
 
+const FORM_COLUMNS =
+  'id,name,description,schema,onboard_step,is_active,form_type,parent_form_id,created_at,allow_other_option,other_option_label';
+
+const FALLBACK_FORM_COLUMNS =
+  'id,name,description,schema,onboard_step,is_active,form_type,created_at';
+
+type RawForm = {
+  id: string;
+  name: string;
+  description?: string | null;
+  schema?: any;
+  onboard_step?: number | null;
+  is_active?: boolean | null;
+  form_type?: string | null;
+  parent_form_id?: string | null;
+  created_at?: string | null;
+  allow_other_option?: boolean | null;
+  other_option_label?: string | null;
+};
+
+const isMissingColumnError = (error: any): boolean => {
+  if (!error) return false;
+  const message = String(error.message || '').toLowerCase();
+  const code = String(error.code || '');
+  return (
+    code === '42703' ||
+    message.includes('column') && message.includes('does not exist') ||
+    message.includes('schema cache')
+  );
+};
+
+async function fetchForms(selectClause: string) {
+  return supabase
+    .from('admin_forms')
+    .select(selectClause)
+    .order('onboard_step', { ascending: true, nullsFirst: true })
+    .order('created_at', { ascending: true });
+}
+
+function normalizeForms(forms?: RawForm[] | null): RawForm[] {
+  return (forms || []).map((form) => ({
+    ...form,
+    parent_form_id:
+      typeof form.parent_form_id === 'undefined' ? null : form.parent_form_id,
+    allow_other_option:
+      typeof form.allow_other_option === 'boolean'
+        ? form.allow_other_option
+        : Boolean(form.allow_other_option),
+    other_option_label:
+      typeof form.other_option_label === 'undefined'
+        ? null
+        : form.other_option_label,
+  }));
+}
+
 export async function getOnboardingStepsOrder(
   settings?: AppSettings
 ): Promise<OnboardingStep[]> {
-  // Buscar todos os formulários
-  const { data: forms, error: formsError } = await supabase
-    .from('admin_forms')
-    .select('id, name, description, schema, onboard_step, is_active, form_type, parent_form_id')
-    .order('onboard_step', { ascending: true, nullsFirst: true })
-    .order('created_at', { ascending: true });
+  // Buscar todos os formulários, com fallback caso alguma coluna não exista
+  let formsList: RawForm[] = [];
+  const { data: primaryForms, error: primaryError } = await fetchForms(FORM_COLUMNS);
 
-  if (formsError) {
-    console.error('Erro ao buscar formulários:', formsError);
+  if (!primaryError) {
+    formsList = normalizeForms(primaryForms);
+  } else if (isMissingColumnError(primaryError)) {
+    console.warn('[onboarding] admin_forms columns missing, applying fallback select', {
+      message: primaryError.message,
+      code: primaryError.code,
+    });
+    const { data: fallbackForms, error: fallbackError } = await fetchForms(FALLBACK_FORM_COLUMNS);
+    if (fallbackError) {
+      console.error('Erro ao buscar formulários (fallback):', fallbackError);
+      return [];
+    }
+    formsList = normalizeForms(fallbackForms).map((form) => ({
+      ...form,
+      parent_form_id: form.parent_form_id ?? null,
+      allow_other_option: form.allow_other_option ?? false,
+      other_option_label: form.other_option_label ?? null,
+    }));
+  } else {
+    console.error('Erro ao buscar formulários:', primaryError);
     return [];
   }
-
-  const formsList = (forms || []) as any[];
 
   // Buscar settings se não foram fornecidos ou se vieram incompletos
   let appSettings: AppSettings = settings || {};
