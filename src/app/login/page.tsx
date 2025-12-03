@@ -11,6 +11,11 @@ import { Button } from '@/components/ui/button';
 import { X, Mail } from 'lucide-react';
 import Link from 'next/link';
 
+// Traduções simples para mensagens de erro vindas do Supabase/Auth UI
+const AUTH_ERROR_TRANSLATIONS: Record<string, string> = {
+  'Invalid login credentials': 'E-mail ou senha incorretos.',
+};
+
 export default function LoginPage() {
   const { user, loading } = useAuth();
   const router = useRouter();
@@ -229,6 +234,45 @@ export default function LoginPage() {
       handlers.forEach(({ element, event, handler }) => {
         element.removeEventListener(event, handler);
       });
+    };
+  }, [showEmailAuth]);
+
+  // Traduz mensagens de erro padrão do Supabase/Auth UI para português diretamente no DOM
+  useEffect(() => {
+    if (!showEmailAuth) return;
+
+    const container = document.querySelector('.auth-container');
+    if (!container) return;
+
+    const translateMessages = () => {
+      const messages = container.querySelectorAll<HTMLElement>('.supabase-auth-ui_ui-message');
+      messages.forEach((el) => {
+        const original = el.textContent?.trim();
+        if (!original) return;
+
+        const translated = AUTH_ERROR_TRANSLATIONS[original];
+        if (translated && el.textContent !== translated) {
+          el.textContent = translated;
+        }
+      });
+    };
+
+    // Traduz imediatamente (caso o erro já esteja visível)
+    translateMessages();
+
+    // Observa mudanças futuras (novos erros, mudança de texto, etc.)
+    const observer = new MutationObserver(() => {
+      translateMessages();
+    });
+
+    observer.observe(container, {
+      childList: true,
+      subtree: true,
+      characterData: true,
+    });
+
+    return () => {
+      observer.disconnect();
     };
   }, [showEmailAuth]);
 

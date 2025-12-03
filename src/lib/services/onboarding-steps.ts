@@ -72,7 +72,7 @@ export async function getOnboardingStepsOrder(
   // Buscar todos os formulários
   const { data: forms, error: formsError } = await supabase
     .from('admin_forms')
-    .select('*')
+    .select('id, name, description, schema, onboard_step, is_active, form_type, parent_form_id')
     .order('onboard_step', { ascending: true, nullsFirst: true })
     .order('created_at', { ascending: true });
 
