@@ -848,7 +848,7 @@ export default function WhatsAppSetup({ variant = "standalone", redirectIfNotLog
             </>
           )}
 
-          {privacyText && (
+          {variant !== "embedded" && privacyText && (
             <p className="text-sm font-medium text-foreground">{privacyText}</p>
           )}
         </div>

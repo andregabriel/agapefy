@@ -177,8 +177,8 @@ export default function OnboardingClient() {
       : '';
 
     try {
-      if (typeof (router as any)?.prefetch === 'function') {
-        void (router as any).prefetch(url);
+      if (typeof router.prefetch === 'function') {
+        void router.prefetch(url);
       }
       router.replace(url);
     } catch (err) {
@@ -1685,22 +1685,13 @@ export default function OnboardingClient() {
       <div className="max-w-2xl mx-auto p-4">
         <Card>
           <CardHeader>
-            <div className="space-y-4">
-              <div className="w-full">
-                <ProgressBar 
-                  percentage={progressPercentage} 
-                  loading={progressLoading}
-                  onBack={handleGoBack}
-                  showBackButton={desiredStep > 1}
-                />
-              </div>
-              <div className="text-center px-2 md:px-6">
-                <CardTitle className="text-xl md:text-2xl leading-snug break-words max-w-3xl mx-auto">{(() => {
-                  const raw = settings.onboarding_step3_title || 'Conecte seu WhatsApp para receber uma mensagem diária para {category}.';
-                  const replacement = category?.name || 'sua dificuldade selecionada';
-                  return raw.replace('{category}', replacement);
-                })()}</CardTitle>
-              </div>
+            <div className="w-full">
+              <ProgressBar 
+                percentage={progressPercentage} 
+                loading={progressLoading}
+                onBack={handleGoBack}
+                showBackButton={desiredStep > 1}
+              />
             </div>
           </CardHeader>
           <CardContent className="space-y-6">
@@ -1756,7 +1747,7 @@ export default function OnboardingClient() {
                 />
               </div>
               <div className="text-center px-2 md:px-6">
-                <CardTitle className="text-2xl md:text-3xl leading-tight line-clamp-2 max-w-4xl mx-auto">{settings.onboarding_step2_title || 'Parabéns pela coragem e pela abertura de dar as mãos à Jesus neste momento difícil.'}</CardTitle>
+                <CardTitle className="text-2xl md:text-3xl leading-tight line-clamp-3 max-w-4xl mx-auto">{settings.onboarding_step2_title || 'Parabéns pela coragem e pela abertura de dar as mãos à Jesus neste momento difícil.'}</CardTitle>
                 <p className="mt-3 text-black text-base md:text-lg max-w-3xl mx-auto">{settings.onboarding_step2_subtitle || 'Sua playlist foi criada, em breve você poderá escutar essas orações.'}</p>
               </div>
             </div>
@@ -1997,7 +1988,7 @@ export default function OnboardingClient() {
                 />
               </div>
               <div className="text-center px-2 md:px-6">
-                <CardTitle className="text-2xl md:text-3xl leading-tight line-clamp-2 max-w-4xl mx-auto">
+                <CardTitle className="text-2xl md:text-3xl leading-tight line-clamp-3 max-w-4xl mx-auto">
                   {settings.onboarding_step2_title || 'Parabéns pela coragem e pela abertura de dar as mãos à Jesus neste momento difícil.'}
                 </CardTitle>
                 <p className="mt-3 text-black text-base md:text-lg max-w-3xl mx-auto">
@@ -2406,7 +2397,7 @@ export default function OnboardingClient() {
                 />
               </div>
               <div className="text-center px-2 md:px-6">
-                <CardTitle className="text-2xl md:text-3xl leading-tight line-clamp-2 max-w-4xl mx-auto">{settings.onboarding_step2_title || 'Parabéns pela coragem e pela abertura de dar as mãos à Jesus neste momento difícil.'}</CardTitle>
+                <CardTitle className="text-2xl md:text-3xl leading-tight line-clamp-3 max-w-4xl mx-auto">{settings.onboarding_step2_title || 'Parabéns pela coragem e pela abertura de dar as mãos à Jesus neste momento difícil.'}</CardTitle>
                 <p className="mt-3 text-black text-base md:text-lg max-w-3xl mx-auto">{settings.onboarding_step2_subtitle || 'Sua playlist foi criada, em breve você poderá escutar essas orações.'}</p>
               </div>
             </div>
@@ -2473,7 +2464,7 @@ export default function OnboardingClient() {
             <div className="flex justify-end">
               <Button onClick={async () => {
                 const nextUrl = await getNextStepUrl(desiredStep, { categoryId: currentCategoryId || undefined });
-                router.replace(nextUrl);
+                navigateWithFallback(nextUrl);
               }}>
                 Avançar
                 <ArrowRight className="ml-2 h-4 w-4" />
@@ -2510,7 +2501,7 @@ export default function OnboardingClient() {
                 </div>
                 <div className="text-center px-2 md:px-6">
                 <CardTitle 
-                  className="text-2xl md:text-3xl leading-tight line-clamp-2 max-w-4xl mx-auto"
+                  className="text-2xl md:text-3xl leading-tight line-clamp-3 max-w-4xl mx-auto"
                   dangerouslySetInnerHTML={{ __html: processLinks(processedForm?.name || form.name) }}
                 />
               </div>
@@ -2679,7 +2670,7 @@ export default function OnboardingClient() {
           <CardContent className="space-y-4">
             <p className="text-gray-400">Nenhum formulário ativo foi encontrado para o passo 1.</p>
             <div className="flex justify-end">
-              <Button onClick={() => router.replace('/')}>Voltar para a Home</Button>
+              <Button onClick={() => navigateWithFallback('/')}>Voltar para a Home</Button>
             </div>
           </CardContent>
         </Card>

@@ -31,34 +31,43 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const { user, loading } = useAuth();
   const { state } = usePlayer();
-  const [checkingOnboarding, setCheckingOnboarding] = useState(false);
+  const [onboardingGateReadyForUser, setOnboardingGateReadyForUser] = useState<string | null>(null);
   const logPrefix = '[onboarding-gate]';
   const hasCurrentAudio = !!state.currentAudio;
+  const userId = user?.id ?? null;
   const isLoginPage = pathname === '/login';
   const isBuscaPage = pathname === '/busca';
   const isBibliaPage = pathname === '/biblia';
   const isOnboardingPage = pathname?.startsWith('/onboarding');
-  const hideHeader = isLoginPage || isBuscaPage || isBibliaPage; // mostrar Header no onboarding
-  const hideBottomNav = isLoginPage || isOnboardingPage;
-  const hideMiniPlayer = isLoginPage || isOnboardingPage;
+  const shouldCheckOnboarding = !!userId && !loading && !isOnboardingPage;
+  const shouldBlockRender = shouldCheckOnboarding && onboardingGateReadyForUser !== userId;
+  const hideHeader = isLoginPage || isBuscaPage || isBibliaPage || shouldBlockRender; // mostrar Header no onboarding
+  const hideBottomNav = isLoginPage || isOnboardingPage || shouldBlockRender;
+  const hideMiniPlayer = isLoginPage || isOnboardingPage || shouldBlockRender;
 
   // Gate de onboarding: somente primeiro acesso enquanto houver passos pendentes
   useEffect(() => {
     let aborted = false;
+    let keepBlocking = false;
     async function checkOnboarding() {
       if (loading) return; // aguardar auth
-      if (!user) return; // usuários não autenticados não são redirecionados
-      if (pathname.startsWith('/onboarding')) return; // já no fluxo de onboarding
+      if (!userId) {
+        setOnboardingGateReadyForUser(null);
+        return; // usuários não autenticados não são redirecionados
+      }
+      if (isOnboardingPage) {
+        setOnboardingGateReadyForUser(null);
+        return; // já no fluxo de onboarding
+      }
 
       try {
-        setCheckingOnboarding(true);
-        console.info(`${logPrefix} start`, { userId: user.id, pathname });
+        console.info(`${logPrefix} start`, { userId, pathname });
 
         // Verificar se é admin - admin não deve ser redirecionado para onboarding
         const { data: profile, error: profileError } = await supabase
           .from('profiles')
           .select('role')
-          .eq('id', user.id)
+          .eq('id', userId)
           .single();
 
         if (profileError) {
@@ -73,15 +82,15 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
         
         if (profile?.role === 'admin') {
           // Admin não deve ver onboarding
-          console.info(`${logPrefix} admin detected, skipping onboarding`, { userId: user.id });
+          console.info(`${logPrefix} admin detected, skipping onboarding`, { userId });
           return;
         }
 
-        const redirectKey = `onboardingRedirected_${user.id}`;
+        const redirectKey = `onboardingRedirected_${userId}`;
         const alreadyRedirected =
           typeof window !== 'undefined' && sessionStorage.getItem(redirectKey) === '1';
         const res = await fetch('/api/onboarding/status', {
-          headers: { 'x-user-id': user.id },
+          headers: { 'x-user-id': userId },
         });
         if (!res.ok) {
           console.error(`${logPrefix} status fetch failed`, { status: res.status });
@@ -100,6 +109,8 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
           return;
         }
         if (json?.pending && typeof json?.nextStep === 'number') {
+          keepBlocking = true;
+          setOnboardingGateReadyForUser(null);
           if (!alreadyRedirected) {
             router.replace(`/onboarding?step=${json.nextStep}`);
             try {
@@ -115,7 +126,7 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
         const { data, error: whatsappError } = await supabase
           .from('whatsapp_users')
           .select('phone_number')
-          .eq('user_id', user.id)
+          .eq('user_id', userId)
           .maybeSingle();
         if (whatsappError) {
           console.error(`${logPrefix} whatsapp lookup error`, {
@@ -126,6 +137,8 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
         }
         if (aborted) return;
         if (!data?.phone_number) {
+          keepBlocking = true;
+          setOnboardingGateReadyForUser(null);
           if (!alreadyRedirected) {
             router.replace('/onboarding?step=7');
             try {
@@ -140,15 +153,19 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
           message: error?.message,
           stack: error?.stack,
         });
-        const redirectKey = `onboardingRedirected_${user?.id}`;
+        const redirectKey = `onboardingRedirected_${userId}`;
         const alreadyRedirected =
           typeof window !== 'undefined' && redirectKey && sessionStorage.getItem(redirectKey) === '1';
-        if (!alreadyRedirected && user?.id) {
+        if (!alreadyRedirected && userId) {
           // não redirecionar em caso de erro para evitar loop
         }
       } finally {
         if (!aborted) {
-          setCheckingOnboarding(false);
+          if (keepBlocking) {
+            setOnboardingGateReadyForUser(null);
+          } else {
+            setOnboardingGateReadyForUser(userId);
+          }
         }
       }
     }
@@ -156,11 +173,11 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
     return () => {
       aborted = true;
     };
-  }, [user, loading, pathname, router]);
+  }, [userId, loading, pathname, router, isOnboardingPage]);
 
   return (
     <>
-      <div className={hideHeader || (checkingOnboarding && !isOnboardingPage) ? 'hidden' : ''}>
+      <div className={hideHeader ? 'hidden' : ''}>
         <Header />
       </div>
 
@@ -173,7 +190,7 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
             : ''
         } ${!hideHeader ? 'pt-16' : ''}`}
       >
-        {checkingOnboarding && !isOnboardingPage ? null : children}
+        {shouldBlockRender ? null : children}
       </main>
 
       {/* Mini player global – visível em (quase) qualquer página quando houver áudio atual */}
