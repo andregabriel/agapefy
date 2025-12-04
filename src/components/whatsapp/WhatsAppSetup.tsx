@@ -1,5 +1,6 @@
 "use client";
 
+import React from "react";
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
@@ -132,6 +133,7 @@ export default function WhatsAppSetup({ variant = "standalone", redirectIfNotLog
   const [challengeTime, setChallengeTime] = useState<string>("");
   const [challengeOpen, setChallengeOpen] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [attemptedOnboardingLink, setAttemptedOnboardingLink] = useState(false);
   const [hasSentFirstMessage, setHasSentFirstMessage] = useState<boolean | null>(null);
   const [loadingFirstMessage, setLoadingFirstMessage] = useState(true);
   const selectedChallengeTitle = useMemo(
@@ -214,9 +216,11 @@ export default function WhatsAppSetup({ variant = "standalone", redirectIfNotLog
           }
         }
 
-        // Se não encontrou nada, não há número salvo ainda
+        // Se não encontrou nada, assumimos que ainda não enviou a primeira mensagem
+        // (has_sent_first_message === false). O card de "envie sua primeira mensagem"
+        // só depende disso + existir um número salvo.
         if (!row) {
-          setHasSentFirstMessage(null);
+          setHasSentFirstMessage(false);
           setLoadingFirstMessage(false);
           return;
         }
@@ -290,30 +294,78 @@ export default function WhatsAppSetup({ variant = "standalone", redirectIfNotLog
 
   const formattedExample = useMemo(() => "+55 11 99999-9999", []);
 
-  // Load challenge playlists (admin-managed in /admin/playlists via table public.challenge)
+  // Load challenge playlists usados na jornada de orações.
+  // Estratégia:
+  // 1) Priorizar a nova coluna playlists.is_challenge = true (mesma usada no onboarding passo 2)
+  // 2) Manter fallbacks para ambientes onde a migration ainda não rodou (tabela challenge ou título contendo "desafio")
   useEffect(() => {
     const loadChallenges = async () => {
       try {
-        const { data: chRows, error: chErr } = await supabase
-          .from('challenge')
-          .select('playlist_id')
-          .order('created_at', { ascending: false });
-        if (chErr) {
-          // Fallback if table doesn't exist in the environment yet
-          const { data: pls, error: fbErr } = await supabase
+        // 1) Nova fonte canônica: playlists marcadas como desafio
+        try {
+          const { data: challengePlaylistsRows, error: challengePlaylistsError } = await supabase
             .from('playlists')
-            .select('id,title,is_public')
-            .ilike('title', '%desafio%')
+            .select('id,title,is_public,is_challenge')
             .eq('is_public', true)
+            .eq('is_challenge', true)
             .order('created_at', { ascending: false })
-            .limit(50);
-          if (fbErr) { setChallengePlaylists([]); return; }
-          setChallengePlaylists(((pls || []) as any[]).map((p: any) => ({ id: p.id as string, title: (p.title || '') as string })));
-          return;
+            .limit(100);
+
+          const isSchemaError =
+            challengePlaylistsError &&
+            (challengePlaylistsError.code === '42703' ||
+              (String(challengePlaylistsError.message || '').toLowerCase().includes('is_challenge') ||
+                String(challengePlaylistsError.message || '').toLowerCase().includes('schema cache')));
+
+          if (!challengePlaylistsError && (challengePlaylistsRows || []).length > 0) {
+            setChallengePlaylists(
+              ((challengePlaylistsRows || []) as any[]).map((p: any) => ({
+                id: p.id as string,
+                title: (p.title || '') as string,
+              }))
+            );
+            return;
+          }
+
+          // Se houve erro de schema, caímos para o fallback abaixo.
+          // Se não houve erro mas não há linhas, também usamos o fallback
+          if (challengePlaylistsError && !isSchemaError) {
+            // Em caso de erro "real" (permissão, etc), ainda assim tentamos o fallback antigo
+            // mas registramos no console para facilitar debug.
+            console.warn('Erro ao carregar playlists de desafio via is_challenge (WhatsAppSetup):', challengePlaylistsError);
+          }
+        } catch (e) {
+          // Em qualquer erro inesperado, continuar para os fallbacks antigos
+          console.warn('Erro inesperado ao carregar playlists de desafio via is_challenge (WhatsAppSetup):', e);
         }
-        const ids = (chRows || []).map((r: any) => r.playlist_id).filter(Boolean);
+
+        // 2) Fallback legacy: tabela public.challenge
+        let challengeRows: any[] = [];
+        try {
+          const { data: chRows, error: chErr } = await supabase
+            .from('challenge')
+            .select('playlist_id')
+            .order('created_at', { ascending: false });
+
+          if (!chErr && chRows) {
+            challengeRows = chRows as any[];
+            // eslint-disable-next-line no-console
+            console.log('[WPP_DEBUG] loadChallenges:legacyChallengeRows', {
+              count: (challengeRows || []).length,
+            });
+          } else if (chErr) {
+            console.warn('Erro ao buscar tabela legacy challenge (WhatsAppSetup):', chErr);
+          }
+        } catch (e) {
+          console.warn('Erro ao carregar tabela legacy challenge (WhatsAppSetup):', e);
+        }
+
+        const ids = (challengeRows || []).map((r: any) => r.playlist_id).filter(Boolean);
+        // eslint-disable-next-line no-console
+        console.log('[WPP_DEBUG] loadChallenges:legacyIds', { idsCount: ids.length });
+
+        // 3) Se não houver tabela challenge ou ela estiver vazia, manter heurística por título
         if (!ids.length) {
-          // Fallback to title heuristic if no challenge rows yet
           const { data: pls, error: fbErr } = await supabase
             .from('playlists')
             .select('id,title,is_public')
@@ -325,6 +377,7 @@ export default function WhatsAppSetup({ variant = "standalone", redirectIfNotLog
           setChallengePlaylists(((pls || []) as any[]).map((p: any) => ({ id: p.id as string, title: (p.title || '') as string })));
           return;
         }
+
         const { data: pls, error: pErr } = await supabase
           .from('playlists')
           .select('id,title')
@@ -334,6 +387,10 @@ export default function WhatsAppSetup({ variant = "standalone", redirectIfNotLog
           return;
         }
         setChallengePlaylists(((pls || []) as any[]).map((p: any) => ({ id: p.id as string, title: (p.title || '') as string })));
+        // eslint-disable-next-line no-console
+        console.log('[WPP_DEBUG] loadChallenges:finalChallengePlaylists', {
+          count: ((pls || []) as any[]).length,
+        });
       } catch (error) {
         setChallengePlaylists([]);
       }
@@ -347,6 +404,11 @@ export default function WhatsAppSetup({ variant = "standalone", redirectIfNotLog
       try {
         const clean = getFullPhoneNumber();
         let rows: any[] = [];
+        // eslint-disable-next-line no-console
+        console.log('[WPP_DEBUG] fetchUserChallenges:start', {
+          cleanPhone: clean,
+          userId: user?.id ?? null,
+        });
         
         // Primeiro, tentar buscar por número de telefone se disponível
         if (clean) {
@@ -356,6 +418,11 @@ export default function WhatsAppSetup({ variant = "standalone", redirectIfNotLog
             .eq('phone_number', clean);
           if (!error && data) {
             rows = data;
+            // eslint-disable-next-line no-console
+            console.log('[WPP_DEBUG] fetchUserChallenges:byPhone', {
+              count: (rows || []).length,
+              rows,
+            });
           }
         }
         
@@ -368,6 +435,11 @@ export default function WhatsAppSetup({ variant = "standalone", redirectIfNotLog
               .eq('user_id', user.id);
             if (!error && data) {
               rows = data;
+              // eslint-disable-next-line no-console
+              console.log('[WPP_DEBUG] fetchUserChallenges:byUserId', {
+                count: (rows || []).length,
+                rows,
+              });
             }
           } catch (e) {
             // Ignorar erro se coluna user_id não existir
@@ -378,6 +450,116 @@ export default function WhatsAppSetup({ variant = "standalone", redirectIfNotLog
         if (rows.length === 0) {
           setSelectedChallengeId(null);
           setChallengeTime("");
+
+          // Fallback: se não houver vínculo ainda, tentar reaproveitar a playlist escolhida no onboarding (passo 2)
+          // Isso cobre o caso em que o usuário escolheu o desafio no onboarding mas só cadastrou o WhatsApp depois em /whatsapp.
+          // Nota: não precisa esperar clean (telefone) porque as fontes de fallback (admin_form_responses e localStorage) não dependem dele
+          if (!attemptedOnboardingLink && user?.id) {
+            setAttemptedOnboardingLink(true);
+            try {
+              let playlistId: string | null = null;
+
+              // 1) Tentar buscar o formulário/resposta do passo 2 do onboarding
+              let step2Form: any = null;
+              try {
+                const { data: primary, error: primaryErr } = await supabase
+                  .from('admin_forms')
+                  .select('id')
+                  .eq('form_type', 'onboarding')
+                  .eq('is_active', true)
+                  .eq('onboard_step', 2)
+                  .maybeSingle();
+                if (!primaryErr && primary) {
+                  step2Form = primary;
+                }
+              } catch (e) {
+                console.warn('Falha ao buscar formulário do passo 2 (WhatsAppSetup):', e);
+              }
+
+              if (step2Form?.id) {
+                const { data: resp, error: respErr } = await supabase
+                  .from('admin_form_responses')
+                  .select('answers, created_at')
+                  .eq('user_id', user.id)
+                  .eq('form_id', step2Form.id)
+                  .order('created_at', { ascending: false })
+                  .limit(1)
+                  .maybeSingle();
+
+                if (!respErr && resp?.answers && typeof (resp as any).answers === 'object') {
+                  const ans: any = (resp as any).answers;
+                  if (typeof ans.option === 'string') {
+                    playlistId = ans.option;
+                    // eslint-disable-next-line no-console
+                    console.log('[WPP_DEBUG] fetchUserChallenges:step2Answers', {
+                      step2FormId: step2Form.id,
+                      ans,
+                      playlistId,
+                    });
+                  }
+                }
+              }
+
+              // 2) Fallback extra: se ainda não tiver playlistId, usar o localStorage do onboarding
+              if (!playlistId && typeof window !== "undefined") {
+                try {
+                  const stored = window.localStorage.getItem("ag_onb_selected_playlist");
+                  if (stored && typeof stored === "string") {
+                    playlistId = stored;
+                    // eslint-disable-next-line no-console
+                    console.log('[WPP_DEBUG] fetchUserChallenges:localStorage', {
+                      stored,
+                    });
+                  }
+                } catch {
+                  // ignore
+                }
+              }
+
+              if (playlistId) {
+                // Reconectar a jornada usando a playlist escolhida no onboarding
+                setSelectedChallengeId(playlistId);
+                const defaultTime = challengeTime && challengeTime.length >= 4 ? challengeTime : "08:00";
+                setChallengeTime(defaultTime);
+                // Se a playlist escolhida ainda não está em challengePlaylists, buscar e adicioná-la
+                try {
+                  const { data: pl, error: plErr } = await supabase
+                    .from('playlists')
+                    .select('id,title')
+                    .eq('id', playlistId)
+                    .maybeSingle();
+                  if (!plErr && pl) {
+                    setChallengePlaylists(prev => {
+                      if (prev.some(p => p.id === pl.id)) return prev;
+                      return [
+                        ...prev,
+                        {
+                          id: pl.id as string,
+                          title: (pl.title || '') as string,
+                        },
+                      ];
+                    });
+                  }
+                } catch (e) {
+                  console.warn('Falha ao garantir playlist do onboarding em challengePlaylists:', e);
+                }
+                // eslint-disable-next-line no-console
+                console.log('[WPP_DEBUG] fetchUserChallenges:usingFallbackPlaylist', {
+                  playlistId,
+                  challengeTime: defaultTime,
+                });
+
+                // Garantir que a flag de desafio diário esteja ligada para que a cron possa enviar após a primeira mensagem.
+                if (!dailyPrayer) {
+                  setTimeout(() => {
+                    updatePreference('receives_daily_prayer', true);
+                  }, 100);
+                }
+              }
+            } catch (e) {
+              console.warn('Falha ao reaproveitar playlist do onboarding em /whatsapp:', e);
+            }
+          }
           return;
         }
         
@@ -388,13 +570,18 @@ export default function WhatsAppSetup({ variant = "standalone", redirectIfNotLog
         const t = typeof row.send_time === 'string' && row.send_time.length >= 5 ? String(row.send_time).slice(0, 5) : '';
         // Se não houver horário salvo, usar padrão 08:00
         setChallengeTime(t || "08:00");
+        // eslint-disable-next-line no-console
+        console.log('[WPP_DEBUG] fetchUserChallenges:fromRows', {
+          chosenRow: row,
+          finalTime: t || '08:00',
+        });
       } catch (error) {
         setSelectedChallengeId(null);
         setChallengeTime("");
       }
     };
     fetchUserChallenges();
-  }, [phone, phoneNumber, countryCode, user?.id]);
+  }, [phone, phoneNumber, countryCode, user?.id, attemptedOnboardingLink, dailyPrayer]);
 
   // Auto-save when both challenge and time are set
   useEffect(() => {
@@ -815,7 +1002,7 @@ export default function WhatsAppSetup({ variant = "standalone", redirectIfNotLog
   const labelText = getSettingValue('onboarding_step4_label', true) || 'Digite seu número de whatsapp abaixo';
   const privacyText = getSettingValue('onboarding_step4_privacy_text', true) || 'Escolha o que quer receber:';
 
-  const whatsappFirstMessageUrl = "https://api.whatsapp.com/send?phone=5531998445391&text=Ol%C3%A1%2C%20gostaria%20de%20come%C3%A7ar%20a%20receber%20minhas%20ora%C3%A7%C3%B5es%20do%20Agapefy.";
+  const whatsappFirstMessageUrl = "https://api.whatsapp.com/send?phone=5531996302706&text=Ol%C3%A1%2C%20gostaria%20de%20come%C3%A7ar%20a%20receber%20minhas%20ora%C3%A7%C3%B5es%20do%20Agapefy.";
 
   const Content = (
     <>
@@ -829,10 +1016,10 @@ export default function WhatsAppSetup({ variant = "standalone", redirectIfNotLog
               </div>
               <div className="space-y-1.5">
                 <h3 className="text-lg font-semibold text-amber-900 dark:text-amber-100">
-                  Envie sua primeira mensagem
+                  Ative o recebimento de orações em seu whatsapp
                 </h3>
                 <p className="text-sm text-amber-700/70 dark:text-amber-300/70 px-2">
-                  Ative o recebimento de orações
+                  Envie uma primeira mensagem pra Agapefy
                 </p>
               </div>
               <Button

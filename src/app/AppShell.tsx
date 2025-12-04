@@ -130,16 +130,8 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
           .maybeSingle();
 
         if (whatsappError) {
-          console.error(`${logPrefix} whatsapp lookup error`, {
-            message: whatsappError.message,
-            details: whatsappError.details,
-            hint: whatsappError.hint,
-          });
-
-          // Se a coluna user_id (ou a tabela) ainda não existir neste ambiente,
-          // não devemos forçar o usuário para o passo 7, para evitar loops de redirecionamento
-          // e telas em branco. Nesses casos, apenas ignoramos o gate especifico de WhatsApp
-          // e liberamos o app normalmente.
+          // Erros desse lookup não devem acionar o overlay de erro do Next,
+          // então usamos apenas console.warn em vez de console.error.
           const msg = whatsappError.message || '';
           const code = (whatsappError as any).code || '';
           const isSchemaError =
@@ -149,14 +141,23 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
             (msg.toLowerCase().includes('column') &&
               msg.toLowerCase().includes('does not exist'));
 
+          const logPayload = {
+            message: msg || undefined,
+            details: (whatsappError as any).details,
+            hint: (whatsappError as any).hint,
+            code: code || undefined,
+          };
+
           if (isSchemaError) {
-            // Ignorar falta de coluna/tabela de WhatsApp neste ambiente.
-            // O bloco finally continuará liberando o usuário normalmente.
+            // Falta de coluna/tabela de WhatsApp em ambientes onde a migration ainda não rodou.
+            // Ignoramos para o gate, apenas logando como aviso.
+            console.warn(`${logPrefix} whatsapp lookup schema error (ignorado para gate)`, logPayload);
             return;
           }
 
-          // Para outros erros inesperados, também não forçar o redirecionamento,
-          // apenas logar e seguir o fluxo normal (sem gate adicional de WhatsApp).
+          // Para outros erros inesperados, apenas avisamos e seguimos o fluxo normal
+          // sem redirecionar nem bloquear renderização.
+          console.warn(`${logPrefix} whatsapp lookup error (ignorado para gate)`, logPayload);
           return;
         }
 

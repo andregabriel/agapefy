@@ -269,6 +269,19 @@ export default function OnboardingClient() {
     }
   }, [desiredStep]);
 
+  // When returning to step 1, reset radio + helper state so the user can
+  // escolher novamente o mesmo motivo sem ser "forçado" a trocar de opção.
+  // Isso evita depender apenas do onValueChange do RadioGroup (que não dispara
+  // se o value já for o mesmo), sem alterar o layout nem os textos.
+  useEffect(() => {
+    if (desiredStep === 1) {
+      setSelectedKey('');
+      setSelected('');
+      setOtherOptionText('');
+      setUsedOtherSituation(false);
+    }
+  }, [desiredStep]);
+
   // Atualizar ref da função pause (separado para evitar loops)
   useEffect(() => {
     pauseRef.current = pause;
@@ -566,9 +579,21 @@ export default function OnboardingClient() {
   // - atualiza o estado local de hasWhatsApp
   // A navegação para o próximo passo fica a cargo do botão "Avançar".
   async function handleWhatsAppSaved(phone: string) {
+    // eslint-disable-next-line no-console
+    console.log('[ONB_DEBUG] handleWhatsAppSaved:start', {
+      rawPhone: phone,
+      userId: user?.id ?? null,
+      activeFormId,
+      formId: form?.id ?? null,
+    });
     setHasWhatsApp(true);
     try {
       const cleanPhone = (phone || '').replace(/\D/g, '');
+      // eslint-disable-next-line no-console
+      console.log('[ONB_DEBUG] handleWhatsAppSaved:cleanPhone', {
+        cleanPhone,
+        hasUser: !!user?.id,
+      });
 
       // Se o usuário estiver logado e tivermos um telefone válido,
       // tentar vincular automaticamente a playlist de desafio escolhida no passo 2
@@ -589,6 +614,11 @@ export default function OnboardingClient() {
               .maybeSingle();
             if (!primary.error && primary.data) {
               step2Form = primary.data;
+              // eslint-disable-next-line no-console
+              console.log('[ONB_DEBUG] handleWhatsAppSaved:primaryStep2Form', {
+                parentFormId,
+                step2FormId: step2Form?.id,
+              });
             }
           } catch (e) {
             console.warn('Falha ao buscar formulário principal do passo 2:', e);
@@ -606,6 +636,10 @@ export default function OnboardingClient() {
                 .maybeSingle();
               if (!fallback.error && fallback.data) {
                 step2Form = fallback.data;
+              // eslint-disable-next-line no-console
+              console.log('[ONB_DEBUG] handleWhatsAppSaved:fallbackStep2Form', {
+                step2FormId: step2Form?.id,
+              });
               }
             } catch (e) {
               console.warn('Falha ao buscar formulário fallback do passo 2:', e);
@@ -625,6 +659,12 @@ export default function OnboardingClient() {
 
             const ans: any = (resp.data as any)?.answers || {};
             const playlistId = typeof ans?.option === 'string' ? ans.option : null;
+            // eslint-disable-next-line no-console
+            console.log('[ONB_DEBUG] handleWhatsAppSaved:step2Response', {
+              resp,
+              ans,
+              playlistId,
+            });
 
             // Se o usuário escolheu uma playlist de desafio, criar/atualizar o vínculo em whatsapp_user_challenges
             if (playlistId) {
@@ -639,6 +679,34 @@ export default function OnboardingClient() {
                 await supabase
                   .from('whatsapp_user_challenges')
                   .upsert(payload, { onConflict: 'phone_number,playlist_id' });
+                // eslint-disable-next-line no-console
+                console.log('[ONB_DEBUG] handleWhatsAppSaved:upsertSuccess', {
+                  payload,
+                });
+
+                // Além de vincular o desafio, garantir que a flag de jornada diária esteja ligada.
+                // Isso permite que, após a primeira mensagem no WhatsApp, a cron de desafio
+                // já encontre o usuário elegível sem exigir que ele visite /whatsapp.
+                try {
+                  await supabase
+                    .from('whatsapp_users')
+                    .upsert(
+                      {
+                        phone_number: cleanPhone,
+                        receives_daily_prayer: true,
+                        is_active: true,
+                        updated_at: new Date().toISOString(),
+                      },
+                      { onConflict: 'phone_number' }
+                    );
+                  // eslint-disable-next-line no-console
+                  console.log('[ONB_DEBUG] handleWhatsAppSaved:receivesDailyPrayerEnabled', {
+                    phone: cleanPhone,
+                    playlistId,
+                  });
+                } catch (prefErr) {
+                  console.warn('Falha ao ativar receives_daily_prayer no onboarding:', prefErr);
+                }
               } catch (e) {
                 // Não quebrar o fluxo do onboarding se esse vínculo falhar
                 console.warn('Erro ao vincular desafio do onboarding ao WhatsApp:', e);
@@ -650,7 +718,8 @@ export default function OnboardingClient() {
         }
       }
     } catch (error) {
-      console.error('Erro ao processar WhatsApp salvo:', error);
+      // eslint-disable-next-line no-console
+      console.error('[ONB_DEBUG] handleWhatsAppSaved:outerError', error);
     }
   }
 
@@ -1629,12 +1698,25 @@ export default function OnboardingClient() {
   async function submitAndGoNext(recordedAnswers: Record<string, any>) {
     if (!form) return;
     try {
+      // eslint-disable-next-line no-console
+      console.log('[ONB_DEBUG] submitAndGoNext:start', {
+        step: form.onboard_step || desiredStep,
+        formId: form.id,
+        userId: user?.id ?? null,
+        recordedAnswers,
+      });
       setSubmitting(true);
       await saveFormResponse({ formId: form.id, answers: recordedAnswers, userId: user?.id ?? null });
+      // eslint-disable-next-line no-console
+      console.log('[ONB_DEBUG] submitAndGoNext:afterSave', {
+        step: form.onboard_step || desiredStep,
+        formId: form.id,
+        userId: user?.id ?? null,
+      });
       toast.success('Resposta enviada');
     } catch (e) {
       // eslint-disable-next-line no-console
-      console.error(e);
+      console.error('[ONB_DEBUG] submitAndGoNext:error', e);
       toast.error('Não foi possível enviar. Seguimos para o próximo passo.');
     } finally {
       const currentStep = form.onboard_step || desiredStep;
@@ -1648,7 +1730,7 @@ export default function OnboardingClient() {
       } catch (err) {
         // Não bloquear o fluxo de navegação por erro aqui
         // eslint-disable-next-line no-console
-        console.error('buildRoutinePlaylistFromOnboarding error:', err);
+        console.error('[ONB_DEBUG] buildRoutinePlaylistFromOnboarding error:', err);
       }
 
       let nextUrl = await getNextStepUrl(currentStep, { categoryId: currentCategoryId || undefined });
@@ -1662,6 +1744,13 @@ export default function OnboardingClient() {
           }
         }
       } catch {}
+      // eslint-disable-next-line no-console
+      console.log('[ONB_DEBUG] submitAndGoNext:navigate', {
+        currentStep,
+        nextUrl,
+        parentFormId,
+        recordedAnswers,
+      });
       navigateWithFallback(nextUrl);
       setSubmitting(false);
     }

@@ -51,7 +51,7 @@ async function sendWhatsAppText(phone: string, message: string) {
   return { ok: res.ok, status: res.status, body: txt } as const;
 }
 
-async function inlineSend(test: boolean, limit?: number) {
+export async function inlineSend(test: boolean, limit?: number) {
   const adminSupabase = getWritableClient();
   const { timeStr, dateStr } = getNowInSaoPaulo();
   const [hStr, mStr] = timeStr.split(':');

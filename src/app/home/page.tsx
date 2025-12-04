@@ -28,6 +28,7 @@ import { ActivitiesSection } from '@/app/eu/_components/ActivitiesSection';
 import { BannerSection } from './_components/BannerSection';
 import { RoutineSection } from '@/app/eu/_components/RoutineSection';
 import { AddAudioToRoutineModalPremium } from '@/components/AddAudioToRoutineModalPremium';
+import { WhatsAppFirstMessageBanner } from '@/components/whatsapp/WhatsAppFirstMessageBanner';
 import { useRoutinePlaylist } from '@/hooks/useRoutinePlaylist';
 import { usePlayer } from '@/contexts/PlayerContext';
 import { toast } from 'sonner';
@@ -287,6 +288,8 @@ export default function HomePage() {
 
   return (
     <div className="px-4 py-6 pt-6 space-y-8">
+      {/* Aviso para enviar a primeira mensagem no WhatsApp, igual ao da página /whatsapp */}
+      <WhatsAppFirstMessageBanner />
       {/* Checklist de onboarding no topo (aparece apenas se houver pendências) */}
       <OnboardingChecklist />
       {/* A seção Minha Rotina será mostrada como categoria quando existir a categoria "Rotina".
