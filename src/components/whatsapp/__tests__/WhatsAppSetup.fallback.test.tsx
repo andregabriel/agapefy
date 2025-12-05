@@ -4,7 +4,7 @@ import { render, waitFor } from '@testing-library/react';
 
 import WhatsAppSetup from '../../whatsapp/WhatsAppSetup';
 
-// Mock hooks and supabase client used by WhatsAppSetup
+// Mock hooks e dependências usadas por WhatsAppSetup
 vi.mock('@/contexts/AuthContext', () => ({
   useAuth: () => ({ user: { id: 'user-1', email: 'test@example.com' }, loading: false }),
 }));
@@ -16,6 +16,42 @@ vi.mock('@/hooks/useAppSettings', () => ({
 vi.mock('@/hooks/use-mobile', () => ({
   useIsMobile: () => false,
 }));
+
+// Mock leve dos componentes Radix usados no combobox/toggles para evitar erros de ambiente no JSDOM
+vi.mock('@radix-ui/react-select', () => {
+  const Primitive = ({ children, ...props }: any) => <div {...props}>{children}</div>;
+  const Portal = ({ children }: any) => <>{children}</>;
+
+  return {
+    Root: Primitive,
+    Group: Primitive,
+    Value: Primitive,
+    Trigger: Primitive,
+    ScrollUpButton: Primitive,
+    ScrollDownButton: Primitive,
+    Content: Primitive,
+    Label: Primitive,
+    Item: Primitive,
+    ItemText: Primitive,
+    ItemIndicator: Primitive,
+    Separator: Primitive,
+    Icon: Primitive,
+    Viewport: Primitive,
+    Portal,
+  };
+});
+
+vi.mock('@radix-ui/react-switch', () => {
+  const Root = ({ children, ...props }: any) => (
+    <label>
+      <input type="checkbox" {...props} />
+      {children}
+    </label>
+  );
+  const Thumb = (props: any) => <span {...props} />;
+  const Switch = Root;
+  return { Root, Thumb, Switch };
+});
 
 // Mock do next/navigation para evitar erro de "app router"
 vi.mock('next/navigation', () => ({
@@ -40,14 +76,12 @@ describe('WhatsAppSetup fallback from onboarding', () => {
     vi.resetAllMocks();
 
     // Simular localStorage com playlist salva pelo onboarding
-    vi.stubGlobal('window', {
-      localStorage: {
-        getItem: (key: string) => (key === 'ag_onb_selected_playlist' ? 'playlist-onboarding' : null),
-        setItem: vi.fn(),
-        removeItem: vi.fn(),
-        clear: vi.fn(),
-      },
-    } as any);
+    (globalThis as any).localStorage = {
+      getItem: (key: string) => (key === 'ag_onb_selected_playlist' ? 'playlist-onboarding' : null),
+      setItem: vi.fn(),
+      removeItem: vi.fn(),
+      clear: vi.fn(),
+    };
 
     // Mock da cadeia supabase.from(...).select(...)
     mockFrom.mockImplementation((table: string) => {
@@ -67,6 +101,18 @@ describe('WhatsAppSetup fallback from onboarding', () => {
             const chain: any = {};
             chain.eq = () => chain;
             chain.maybeSingle = async () => ({ data: { id: 'form-step-2' }, error: null });
+            return chain;
+          },
+        } as any;
+      }
+
+      // Tabela whatsapp_users usada em fetchExisting (podemos retornar null para não interferir)
+      if (table === 'whatsapp_users') {
+        return {
+          select: () => {
+            const chain: any = {};
+            chain.eq = () => chain;
+            chain.maybeSingle = async () => ({ data: null, error: null });
             return chain;
           },
         } as any;
