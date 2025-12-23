@@ -28,6 +28,10 @@ import { Play, Pause } from 'lucide-react';
 import { normalizeImageUrl, formatDuration } from '@/app/home/_utils/homeUtils';
 import { usePlayer } from '@/contexts/PlayerContext';
 
+const ONB_DEBUG = (...args: any[]) => {
+  console.log('[ONB_DEBUG]', ...args);
+};
+
 interface FormOption { label: string; category_id: string }
 interface AdminForm { 
   id: string; 
@@ -579,8 +583,7 @@ export default function OnboardingClient() {
   // - atualiza o estado local de hasWhatsApp
   // A navegação para o próximo passo fica a cargo do botão "Avançar".
   async function handleWhatsAppSaved(phone: string) {
-    // eslint-disable-next-line no-console
-    console.log('[ONB_DEBUG] handleWhatsAppSaved:start', {
+    ONB_DEBUG('handleWhatsAppSaved:start', {
       rawPhone: phone,
       userId: user?.id ?? null,
       activeFormId,
@@ -589,8 +592,7 @@ export default function OnboardingClient() {
     setHasWhatsApp(true);
     try {
       const cleanPhone = (phone || '').replace(/\D/g, '');
-      // eslint-disable-next-line no-console
-      console.log('[ONB_DEBUG] handleWhatsAppSaved:cleanPhone', {
+      ONB_DEBUG('handleWhatsAppSaved:cleanPhone', {
         cleanPhone,
         hasUser: !!user?.id,
       });
@@ -614,8 +616,7 @@ export default function OnboardingClient() {
               .maybeSingle();
             if (!primary.error && primary.data) {
               step2Form = primary.data;
-              // eslint-disable-next-line no-console
-              console.log('[ONB_DEBUG] handleWhatsAppSaved:primaryStep2Form', {
+              ONB_DEBUG('handleWhatsAppSaved:primaryStep2Form', {
                 parentFormId,
                 step2FormId: step2Form?.id,
               });
@@ -636,8 +637,7 @@ export default function OnboardingClient() {
                 .maybeSingle();
               if (!fallback.error && fallback.data) {
                 step2Form = fallback.data;
-              // eslint-disable-next-line no-console
-              console.log('[ONB_DEBUG] handleWhatsAppSaved:fallbackStep2Form', {
+              ONB_DEBUG('handleWhatsAppSaved:fallbackStep2Form', {
                 step2FormId: step2Form?.id,
               });
               }
@@ -659,8 +659,7 @@ export default function OnboardingClient() {
 
             const ans: any = (resp.data as any)?.answers || {};
             const playlistId = typeof ans?.option === 'string' ? ans.option : null;
-            // eslint-disable-next-line no-console
-            console.log('[ONB_DEBUG] handleWhatsAppSaved:step2Response', {
+            ONB_DEBUG('handleWhatsAppSaved:step2Response', {
               resp,
               ans,
               playlistId,
@@ -679,8 +678,8 @@ export default function OnboardingClient() {
                 await supabase
                   .from('whatsapp_user_challenges')
                   .upsert(payload, { onConflict: 'phone_number,playlist_id' });
-                // eslint-disable-next-line no-console
-                console.log('[ONB_DEBUG] handleWhatsAppSaved:upsertSuccess', {
+                ONB_DEBUG('handleWhatsAppSaved:upsertPayload', payload);
+                ONB_DEBUG('handleWhatsAppSaved:upsertSuccess', {
                   payload,
                 });
 
@@ -699,8 +698,7 @@ export default function OnboardingClient() {
                       },
                       { onConflict: 'phone_number' }
                     );
-                  // eslint-disable-next-line no-console
-                  console.log('[ONB_DEBUG] handleWhatsAppSaved:receivesDailyPrayerEnabled', {
+                  ONB_DEBUG('handleWhatsAppSaved:receivesDailyPrayerEnabled', {
                     phone: cleanPhone,
                     playlistId,
                   });
@@ -1699,7 +1697,7 @@ export default function OnboardingClient() {
     if (!form) return;
     try {
       // eslint-disable-next-line no-console
-      console.log('[ONB_DEBUG] submitAndGoNext:start', {
+      ONB_DEBUG('submitAndGoNext:start', {
         step: form.onboard_step || desiredStep,
         formId: form.id,
         userId: user?.id ?? null,
@@ -1708,7 +1706,7 @@ export default function OnboardingClient() {
       setSubmitting(true);
       await saveFormResponse({ formId: form.id, answers: recordedAnswers, userId: user?.id ?? null });
       // eslint-disable-next-line no-console
-      console.log('[ONB_DEBUG] submitAndGoNext:afterSave', {
+      ONB_DEBUG('submitAndGoNext:afterSave', {
         step: form.onboard_step || desiredStep,
         formId: form.id,
         userId: user?.id ?? null,
@@ -1745,7 +1743,7 @@ export default function OnboardingClient() {
         }
       } catch {}
       // eslint-disable-next-line no-console
-      console.log('[ONB_DEBUG] submitAndGoNext:navigate', {
+      ONB_DEBUG('submitAndGoNext:navigate', {
         currentStep,
         nextUrl,
         parentFormId,
@@ -2378,10 +2376,12 @@ export default function OnboardingClient() {
                 const index = Number(key);
                 const chosen = playlists?.[index];
                 if (chosen) {
+                  ONB_DEBUG('step2:playlistSelected', { playlistId: chosen.id || '', title: chosen.title });
                   setSelected(chosen.id || '');
                   // Auto-avançar para o próximo step quando uma opção for selecionada
                   const finalSelectedId = chosen.id || '';
                   const payload = { option: finalSelectedId, playlist_title: chosen.title || null };
+                  ONB_DEBUG('step2:submitPayload', payload);
                   // Salvar no localStorage para usuários anônimos
                   if (finalSelectedId && typeof window !== 'undefined') {
                     try {
@@ -2405,10 +2405,12 @@ export default function OnboardingClient() {
                           : 'border-gray-800 hover:bg-gray-800/40'
                       }`}
                       onClick={() => {
+                        ONB_DEBUG('step2:playlistSelected', { playlistId: pl.id, title: pl.title });
                         setSelectedKey(String(originalIndex));
                         setSelected(pl.id);
                         // Auto-avançar para o próximo step quando uma opção for selecionada
                         const payload = { option: pl.id, playlist_title: pl.title || null };
+                        ONB_DEBUG('step2:submitPayload', payload);
                         // Salvar no localStorage para usuários anônimos
                         if (pl.id && typeof window !== 'undefined') {
                           try {
@@ -2440,6 +2442,7 @@ export default function OnboardingClient() {
                 const finalSelectedId = selected || recommendedId || '';
                 const chosen = playlists?.find(p => p.id === finalSelectedId) || playlists?.[Number(selectedKey)];
                 const payload = { option: finalSelectedId, playlist_title: chosen?.title || null };
+                ONB_DEBUG('step2:submitPayload', payload);
                 // Salvar no localStorage para usuários anônimos
                 if (finalSelectedId && typeof window !== 'undefined') {
                   try {
