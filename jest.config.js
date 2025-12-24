@@ -6,9 +6,10 @@ module.exports = {
     '\\.(css|less|scss|sass)$': 'identity-obj-proxy',
   },
   transform: {
-    '^.+\\.(ts|tsx|js|jsx)$': 'babel-jest',
+    '^.+\\.(ts|tsx|js|jsx)$': [
+      'babel-jest',
+      { configFile: require.resolve('./babel.jest.config.js') },
+    ],
   },
   testMatch: ['**/__tests__/**/*.test.{ts,tsx,js,jsx}'],
 };
-
-
