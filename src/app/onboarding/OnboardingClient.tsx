@@ -100,6 +100,7 @@ export default function OnboardingClient() {
   const previousStepRef = useRef<number>(desiredStep);
   const pauseRef = useRef<(() => void) | null>(null);
   const isPausingRef = useRef(false);
+  const autoSavedStep3PlaylistRef = useRef<string | null>(null);
   
   // Calcular progresso do onboarding
   const { percentage: progressPercentage, loading: progressLoading } = useOnboardingProgress(desiredStep, currentCategoryId);
@@ -427,6 +428,94 @@ export default function OnboardingClient() {
       setSelectedChallengePlaylist(selected ? { id: selected.id, title: selected.title, cover_url: selected.cover_url } : null);
     }
   }, [desiredStep, playlists, searchParams, user?.id, activeFormId]);
+
+  useEffect(() => {
+    const staticKind = searchParams?.get('showStatic') || '';
+    if (desiredStep !== 3 || staticKind === 'whatsapp') return;
+    if (!selectedChallengePlaylist?.id) return;
+    if (!user?.id) return;
+    if (isAdminPreview) return;
+
+    let canceled = false;
+    const playlistId = selectedChallengePlaylist.id;
+
+    (async () => {
+      if (autoSavedStep3PlaylistRef.current === playlistId) return;
+
+      let step2Form: { id: string; is_active?: boolean | null } | null = null;
+      const parentFormId = activeFormId || '';
+
+      try {
+        const primary = await supabase
+          .from('admin_forms')
+          .select('id,is_active')
+          .eq('form_type', 'onboarding')
+          .eq('onboard_step', 2)
+          .eq('parent_form_id', parentFormId || '-')
+          .maybeSingle();
+        if (!primary.error && primary.data) {
+          step2Form = primary.data as any;
+        }
+      } catch {}
+
+      if (!step2Form) {
+        try {
+          const fallback = await supabase
+            .from('admin_forms')
+            .select('id,is_active')
+            .eq('form_type', 'onboarding')
+            .eq('onboard_step', 2)
+            .maybeSingle();
+          if (!fallback.error && fallback.data) {
+            step2Form = fallback.data as any;
+          }
+        } catch {}
+      }
+
+      if (!step2Form?.id) return;
+      if (step2Form.is_active) return;
+
+      try {
+        const existing = await supabase
+          .from('admin_form_responses')
+          .select('id,answers,created_at')
+          .eq('user_id', user.id)
+          .eq('form_id', step2Form.id)
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+        const existingOption = (existing.data as any)?.answers?.option;
+        if (typeof existingOption === 'string' && existingOption) return;
+      } catch {}
+
+      try {
+        await saveFormResponse({
+          formId: step2Form.id,
+          answers: {
+            option: playlistId,
+            playlist_title: selectedChallengePlaylist.title || null,
+          },
+          userId: user.id,
+        });
+        if (!canceled) {
+          autoSavedStep3PlaylistRef.current = playlistId;
+        }
+      } catch {}
+    })();
+
+    return () => {
+      canceled = true;
+    };
+  }, [
+    desiredStep,
+    searchParams,
+    selectedChallengePlaylist?.id,
+    selectedChallengePlaylist?.title,
+    user?.id,
+    isAdminPreview,
+    activeFormId,
+  ]);
 
   // Buscar áudios da playlist selecionada quando ela mudar
   useEffect(() => {
