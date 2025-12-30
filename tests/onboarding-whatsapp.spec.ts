@@ -1,0 +1,320 @@
+import { test, expect } from "@playwright/test";
+import { createClient, type SupabaseClient } from "@supabase/supabase-js";
+import crypto from "crypto";
+
+type FormOption = { label?: string | null; category_id?: string | null };
+
+const SUPABASE_URL =
+  process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL || "";
+const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "";
+const SUPABASE_SERVICE_ROLE_KEY =
+  process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SB_SERVICE_ROLE_KEY || "";
+
+if (!SUPABASE_URL || !SUPABASE_ANON_KEY || !SUPABASE_SERVICE_ROLE_KEY) {
+  throw new Error(
+    "Missing Supabase env vars. Require SUPABASE_URL/NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY, and SUPABASE_SERVICE_ROLE_KEY (or SB_SERVICE_ROLE_KEY)."
+  );
+}
+
+const projectRef = new URL(SUPABASE_URL).hostname.split(".")[0];
+const storageKey = `sb-${projectRef}-auth-token`;
+
+const admin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
+  auth: { autoRefreshToken: false, persistSession: false },
+});
+const anon = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+  auth: { autoRefreshToken: false, persistSession: false },
+});
+
+let step1OptionLabel = "";
+let step1CategoryId = "";
+let step2FormId = "";
+let step2WasActive: boolean | null = null;
+let userId = "";
+let sessionPayload = "";
+let whatsappPhone = "";
+
+async function fetchStep1Option(supabase: SupabaseClient) {
+  const primary = await supabase
+    .from("admin_forms")
+    .select("id,schema,onboard_step,created_at")
+    .eq("form_type", "onboarding")
+    .eq("is_active", true)
+    .eq("onboard_step", 1)
+    .order("created_at", { ascending: true })
+    .limit(1)
+    .maybeSingle();
+
+  if (primary.error) {
+    throw new Error(`Failed to load onboarding step 1 form: ${primary.error.message}`);
+  }
+
+  let formData: any = primary.data || null;
+
+  if (!formData || !Array.isArray(formData.schema)) {
+    let fallback = await supabase
+      .from("admin_forms")
+      .select("id,schema,onboard_step,created_at")
+      .eq("form_type", "onboarding")
+      .eq("is_active", true)
+      .order("created_at", { ascending: true })
+      .limit(1)
+      .maybeSingle();
+
+    if (fallback.error) {
+      throw new Error(`Failed to load onboarding step 1 fallback form: ${fallback.error.message}`);
+    }
+    formData = fallback.data || null;
+  }
+
+  if (!formData || !Array.isArray(formData.schema)) {
+    throw new Error("No active onboarding step 1 form schema found.");
+  }
+
+  const option = (formData.schema as FormOption[]).find(
+    (opt) => opt?.label && opt?.category_id
+  );
+  if (!option?.label || !option?.category_id) {
+    throw new Error("Step 1 schema has no valid option with category_id.");
+  }
+
+  return { label: String(option.label), categoryId: String(option.category_id) };
+}
+
+async function fetchStep2Form(supabase: SupabaseClient) {
+  const { data, error } = await supabase
+    .from("admin_forms")
+    .select("id,is_active")
+    .eq("form_type", "onboarding")
+    .eq("onboard_step", 2)
+    .order("created_at", { ascending: true })
+    .limit(1)
+    .maybeSingle();
+
+  if (error) {
+    throw new Error(`Failed to load onboarding step 2 form: ${error.message}`);
+  }
+  if (!data?.id) {
+    throw new Error("No onboarding step 2 form found.");
+  }
+  return { id: String(data.id), isActive: Boolean(data.is_active ?? true) };
+}
+
+async function createTestUser() {
+  const email = `e2e_${Date.now()}_${crypto.randomUUID()}@example.com`;
+  const password = `Test#${crypto.randomUUID()}Aa1`;
+  const { data, error } = await admin.auth.admin.createUser({
+    email,
+    password,
+    email_confirm: true,
+  });
+
+  if (error || !data?.user?.id) {
+    throw new Error(`Failed to create test user: ${error?.message || "unknown error"}`);
+  }
+
+  const { data: signInData, error: signInError } = await anon.auth.signInWithPassword({
+    email,
+    password,
+  });
+
+  if (signInError || !signInData?.session) {
+    throw new Error(
+      `Failed to sign in test user: ${signInError?.message || "no session"}`
+    );
+  }
+
+  return {
+    userId: data.user.id,
+    session: signInData.session,
+  };
+}
+
+test.beforeAll(async () => {
+  const step1 = await fetchStep1Option(admin);
+  step1OptionLabel = step1.label;
+  step1CategoryId = step1.categoryId;
+
+  const step2 = await fetchStep2Form(admin);
+  step2FormId = step2.id;
+  step2WasActive = step2.isActive;
+
+  if (step2WasActive) {
+    const { error } = await admin
+      .from("admin_forms")
+      .update({ is_active: false })
+      .eq("id", step2FormId);
+    if (error) {
+      throw new Error(`Failed to disable step 2 form: ${error.message}`);
+    }
+  }
+
+  const testUser = await createTestUser();
+  userId = testUser.userId;
+  sessionPayload = JSON.stringify(testUser.session);
+});
+
+test.afterAll(async () => {
+  if (step2FormId && step2WasActive !== null) {
+    await admin
+      .from("admin_forms")
+      .update({ is_active: step2WasActive })
+      .eq("id", step2FormId);
+  }
+
+  if (userId) {
+    await admin.from("admin_form_responses").delete().eq("user_id", userId);
+    await admin.from("whatsapp_user_challenges").delete().eq("user_id", userId);
+    await admin.from("whatsapp_users").delete().eq("user_id", userId);
+    await admin.auth.admin.deleteUser(userId);
+  }
+});
+
+test("onboarding step 3 persists playlist when step 2 inactive and /whatsapp preselects it", async ({
+  page,
+}) => {
+  page.on("pageerror", (err) => {
+    console.log("[e2e] pageerror", err.message);
+  });
+  page.on("console", (msg) => {
+    if (msg.type() === "error") {
+      console.log("[e2e] console.error", msg.text());
+    }
+  });
+  page.on("requestfailed", (req) => {
+    console.log("[e2e] requestfailed", req.url(), req.failure()?.errorText);
+  });
+  page.on("response", (resp) => {
+    if (resp.status() >= 400) {
+      const url = resp.url();
+      if (url.includes("supabase.co") || url.includes("/api/")) {
+        console.log("[e2e] response", resp.status(), url);
+      }
+    }
+  });
+
+  await page.addInitScript(
+    ({ key, value }) => {
+      window.localStorage.setItem(key, value);
+    },
+    { key: storageKey, value: sessionPayload }
+  );
+
+  const onboardingResponse = await page.goto("/onboarding?step=1", {
+    waitUntil: "domcontentloaded",
+  });
+  if (!onboardingResponse) {
+    throw new Error("No response when loading /onboarding?step=1");
+  }
+  console.log("[e2e] onboarding response", onboardingResponse.status(), page.url());
+  await expect(page).toHaveURL(/\/onboarding\?step=1/);
+  const onboardingContent = await page.content();
+  console.log("[e2e] onboarding content flags", {
+    hasOnboardingUnavailable: onboardingContent.includes("Onboarding indisponível"),
+    hasQuestion: onboardingContent.includes("Por qual motivo"),
+  });
+
+  const step1Radio = page.getByRole("radio").first();
+  await expect(step1Radio).toBeVisible();
+  await step1Radio.click();
+
+  await page.waitForURL(/step=3/);
+  await expect(page).toHaveURL(/step=3/);
+
+  const playlistHeading = page.locator("h2").first();
+  await expect(playlistHeading).toBeVisible();
+  const playlistTitle = (await playlistHeading.textContent())?.trim() || "";
+  expect(playlistTitle).not.toBe("");
+
+  const { data: playlistRows, error: playlistError } = await admin
+    .from("playlists")
+    .select("id,title,category_id,category_ids")
+    .eq("title", playlistTitle);
+  if (playlistError) {
+    throw new Error(`Failed to resolve playlist by title: ${playlistError.message}`);
+  }
+
+  const resolvedPlaylist = (playlistRows || []).find((p: any) => {
+    const categoryIds = Array.isArray(p.category_ids) ? p.category_ids : [];
+    return p.category_id === step1CategoryId || categoryIds.includes(step1CategoryId);
+  });
+
+  if (!resolvedPlaylist?.id) {
+    throw new Error(
+      `Playlist not found for title "${playlistTitle}" in category ${step1CategoryId}.`
+    );
+  }
+
+  const playlistId = String(resolvedPlaylist.id);
+
+  await expect.poll(async () => {
+    const { data } = await admin
+      .from("admin_form_responses")
+      .select("id,answers,created_at,form_id")
+      .eq("form_id", step2FormId)
+      .eq("user_id", userId)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    return {
+      formId: (data as any)?.form_id || null,
+      option: (data as any)?.answers?.option || null,
+    };
+  }).toEqual({ formId: step2FormId, option: playlistId });
+
+  const ddd = crypto.randomInt(11, 99);
+  const subscriber = crypto.randomInt(900_000_000, 999_999_999);
+  whatsappPhone = `55${ddd}${subscriber}`;
+  const { error: whatsappUserError } = await admin
+    .from("whatsapp_users")
+    .upsert(
+      {
+        phone_number: whatsappPhone,
+        user_id: userId,
+        is_active: true,
+        receives_daily_prayer: true,
+        updated_at: new Date().toISOString(),
+      },
+      { onConflict: "phone_number" }
+    );
+  if (whatsappUserError) {
+    throw new Error(`Failed to seed whatsapp_users: ${whatsappUserError.message}`);
+  }
+
+  await admin.from("whatsapp_user_challenges").delete().eq("user_id", userId);
+
+  await page.evaluate(
+    ({ key }) => {
+      sessionStorage.setItem(key, "1");
+    },
+    { key: `onboardingRedirected_${userId}` }
+  );
+
+  const adminFormResponsesReadPromise = page.waitForResponse((resp) => {
+    return resp.url().includes("/rest/v1/admin_form_responses");
+  });
+
+  await page.goto("/whatsapp");
+  await page.reload();
+
+  await expect(page).toHaveURL(/\/whatsapp/);
+
+  const adminFormResponse = await adminFormResponsesReadPromise;
+  if (!adminFormResponse.ok()) {
+    throw new Error(
+      `admin_form_responses request failed with status ${adminFormResponse.status()}`
+    );
+  }
+  const adminFormPayload = (await adminFormResponse.json()) as any[];
+  const readMatch = (adminFormPayload || []).find(
+    (row) => row?.form_id === step2FormId && row?.answers?.option === playlistId
+  );
+  expect(readMatch).toBeTruthy();
+
+  const playlistTitleForId = String(resolvedPlaylist.title || "");
+  const combobox = page.getByRole("combobox", {
+    name: /selecione seu desafio de orações/i,
+  });
+  await expect(combobox).toBeVisible();
+  await expect(combobox).toHaveText(playlistTitleForId);
+});
