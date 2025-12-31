@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/contexts/AuthContext";
@@ -145,6 +145,34 @@ export default function WhatsAppSetup({ variant = "standalone", redirectIfNotLog
     [challengePlaylists, selectedChallengeId]
   );
   const isMobile = useIsMobile();
+  const whatsappChallengesSendTimeSupportRef = useRef<boolean | null>(null);
+  const whatsappChallengesSendTimeSupportPromiseRef = useRef<Promise<boolean> | null>(null);
+
+  const ensureWhatsAppChallengesSendTimeSupport = async (): Promise<boolean> => {
+    if (whatsappChallengesSendTimeSupportRef.current !== null) {
+      return whatsappChallengesSendTimeSupportRef.current;
+    }
+    if (whatsappChallengesSendTimeSupportPromiseRef.current) {
+      return whatsappChallengesSendTimeSupportPromiseRef.current;
+    }
+
+    whatsappChallengesSendTimeSupportPromiseRef.current = (async () => {
+      const { data, error } = await supabase
+        .from('whatsapp_user_challenges')
+        .select('*')
+        .limit(1)
+        .maybeSingle();
+      if (error || !data) {
+        whatsappChallengesSendTimeSupportRef.current = false;
+        return false;
+      }
+      const hasColumn = Object.prototype.hasOwnProperty.call(data, 'send_time');
+      whatsappChallengesSendTimeSupportRef.current = hasColumn;
+      return hasColumn;
+    })();
+
+    return whatsappChallengesSendTimeSupportPromiseRef.current;
+  };
 
   useEffect(() => {
     WHATS_DEBUG('stateChange', { selectedChallengeId, challengePlaylistsIds: challengePlaylists.map(p => p.id) });
@@ -452,9 +480,13 @@ export default function WhatsAppSetup({ variant = "standalone", redirectIfNotLog
         
         // Primeiro, tentar buscar por número de telefone se disponível
         if (clean) {
+          const supportsSendTime = await ensureWhatsAppChallengesSendTimeSupport();
+          const selectClause = supportsSendTime
+            ? 'playlist_id, send_time, created_at'
+            : 'playlist_id, created_at';
           const { data, error } = await supabase
             .from('whatsapp_user_challenges')
-            .select('playlist_id, send_time, created_at')
+            .select(selectClause)
             .eq('phone_number', clean);
           if (!error && data) {
             rows = data;
@@ -467,27 +499,6 @@ export default function WhatsAppSetup({ variant = "standalone", redirectIfNotLog
           }
         }
         
-        // Se não encontrou por telefone e usuário está logado, tentar buscar por user_id
-        if (rows.length === 0 && user?.id) {
-          try {
-            const { data, error } = await supabase
-              .from('whatsapp_user_challenges')
-              .select('playlist_id, send_time, created_at')
-              .eq('user_id', user.id);
-            if (!error && data) {
-              rows = data;
-              // eslint-disable-next-line no-console
-              console.log('[WPP_DEBUG] fetchUserChallenges:byUserId', {
-                count: (rows || []).length,
-                rows,
-              });
-              WHATS_DEBUG('fetchUserChallenges:byUserId', { error, data });
-            }
-          } catch (e) {
-            // Ignorar erro se coluna user_id não existir
-            console.warn('Erro ao buscar desafio por user_id:', e);
-          }
-        }
         WHATS_DEBUG('fetchUserChallenges:rowsFinal', rows);
         
         if (rows.length === 0) {
@@ -510,7 +521,6 @@ export default function WhatsAppSetup({ variant = "standalone", redirectIfNotLog
                   .from('admin_forms')
                   .select('id')
                   .eq('form_type', 'onboarding')
-                  .eq('is_active', true)
                   .eq('onboard_step', 2)
                   .maybeSingle();
                 if (!primaryErr && primary) {
@@ -544,6 +554,12 @@ export default function WhatsAppSetup({ variant = "standalone", redirectIfNotLog
                     WHATS_DEBUG('fetchUserChallenges:step2Response', { step2FormId: step2Form.id, ans, playlistId });
                   }
                 }
+              }
+              if (typeof window !== "undefined") {
+                (window as any).__wppAdminFormResponsesRead = {
+                  formId: step2Form?.id ?? null,
+                  option: playlistId,
+                };
               }
 
               // 2) Fallback extra: se ainda não tiver playlistId, usar o localStorage do onboarding
@@ -757,38 +773,28 @@ export default function WhatsAppSetup({ variant = "standalone", redirectIfNotLog
 
   async function saveChallengeSelection() {
     const clean = getFullPhoneNumber();
-    // Precisa ter pelo menos phone_number ou user_id para salvar
-    if (!clean && !user?.id) {
+    // Precisa ter phone_number para salvar
+    if (!clean) {
       return;
     }
     try {
-      if (!selectedChallengeId) {
-        return;
-      }
-      if (!challengeTime || challengeTime.length < 4) {
-        return;
-      }
-      
-      const payload: any = {
-        playlist_id: selectedChallengeId,
-        send_time: challengeTime,
-      };
+    if (!selectedChallengeId) {
+      return;
+    }
+    const supportsSendTime = await ensureWhatsAppChallengesSendTimeSupport();
+    if (supportsSendTime && (!challengeTime || challengeTime.length < 4)) {
+      return;
+    }
+    
+    const payload: any = {
+      playlist_id: selectedChallengeId,
+    };
+    if (supportsSendTime) {
+      payload.send_time = challengeTime;
+    }
       WHATS_DEBUG('autosave:payload', payload);
       
-      // Adicionar phone_number se disponível
-      if (clean) {
-        payload.phone_number = clean;
-      }
-      
-      // Adicionar user_id se disponível
-      if (user?.id) {
-        payload.user_id = user.id;
-      }
-      
-      // Validar que temos pelo menos um identificador antes de salvar
-      if (!payload.phone_number && !payload.user_id) {
-        return;
-      }
+      payload.phone_number = clean;
       
       // Keep only one selection: delete others first
       if (clean) {
@@ -799,19 +805,10 @@ export default function WhatsAppSetup({ variant = "standalone", redirectIfNotLog
           .neq('playlist_id', selectedChallengeId);
       }
       
-      if (user?.id) {
-        await supabase
-          .from('whatsapp_user_challenges')
-          .delete()
-          .eq('user_id', user.id)
-          .neq('playlist_id', selectedChallengeId);
-      }
-      
       // Upsert current selection with time
-      const conflictKey = clean ? 'phone_number,playlist_id' : 'user_id,playlist_id';
       const { error } = await supabase
         .from('whatsapp_user_challenges')
-        .upsert(payload, { onConflict: conflictKey });
+        .upsert(payload, { onConflict: 'phone_number,playlist_id' });
       WHATS_DEBUG('autosave:result', { error });
       
       if (error) {
@@ -1206,6 +1203,7 @@ export default function WhatsAppSetup({ variant = "standalone", redirectIfNotLog
                           role="combobox"
                           aria-expanded={drawerOpen}
                           aria-label="Selecione seu desafio de orações"
+                          data-selected-challenge-id={selectedChallengeId || ''}
                           className="w-full justify-between"
                           onClick={() => setDrawerOpen(true)}
                         >
@@ -1259,6 +1257,7 @@ export default function WhatsAppSetup({ variant = "standalone", redirectIfNotLog
                             role="combobox"
                             aria-expanded={challengeOpen}
                             aria-label="Selecione seu desafio de orações"
+                            data-selected-challenge-id={selectedChallengeId || ''}
                             className="w-full justify-between"
                           >
                             {selectedChallengeTitle || "Selecione ou pesquise um desafio..."}
@@ -1515,5 +1514,3 @@ export default function WhatsAppSetup({ variant = "standalone", redirectIfNotLog
     </div>
   );
 }
-
-

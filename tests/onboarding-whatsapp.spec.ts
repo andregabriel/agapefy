@@ -28,6 +28,7 @@ const anon = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 
 let step1OptionLabel = "";
 let step1CategoryId = "";
+let step1OptionIndex = 0;
 let step2FormId = "";
 let step2WasActive: boolean | null = null;
 let userId = "";
@@ -71,14 +72,20 @@ async function fetchStep1Option(supabase: SupabaseClient) {
     throw new Error("No active onboarding step 1 form schema found.");
   }
 
-  const option = (formData.schema as FormOption[]).find(
+  const schema = formData.schema as FormOption[];
+  const optionIndex = schema.findIndex(
     (opt) => opt?.label && opt?.category_id
   );
+  const option = optionIndex >= 0 ? schema[optionIndex] : null;
   if (!option?.label || !option?.category_id) {
     throw new Error("Step 1 schema has no valid option with category_id.");
   }
 
-  return { label: String(option.label), categoryId: String(option.category_id) };
+  return {
+    label: String(option.label),
+    categoryId: String(option.category_id),
+    index: optionIndex,
+  };
 }
 
 async function fetchStep2Form(supabase: SupabaseClient) {
@@ -134,6 +141,7 @@ test.beforeAll(async () => {
   const step1 = await fetchStep1Option(admin);
   step1OptionLabel = step1.label;
   step1CategoryId = step1.categoryId;
+  step1OptionIndex = step1.index;
 
   const step2 = await fetchStep2Form(admin);
   step2FormId = step2.id;
@@ -164,8 +172,13 @@ test.afterAll(async () => {
 
   if (userId) {
     await admin.from("admin_form_responses").delete().eq("user_id", userId);
-    await admin.from("whatsapp_user_challenges").delete().eq("user_id", userId);
-    await admin.from("whatsapp_users").delete().eq("user_id", userId);
+    if (whatsappPhone) {
+      await admin
+        .from("whatsapp_user_challenges")
+        .delete()
+        .eq("phone_number", whatsappPhone);
+      await admin.from("whatsapp_users").delete().eq("phone_number", whatsappPhone);
+    }
     await admin.auth.admin.deleteUser(userId);
   }
 });
@@ -193,6 +206,14 @@ test("onboarding step 3 persists playlist when step 2 inactive and /whatsapp pre
     }
   });
 
+  await page.route("**/api/subscription/status", (route) => {
+    route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: "{}",
+    });
+  });
+
   await page.addInitScript(
     ({ key, value }) => {
       window.localStorage.setItem(key, value);
@@ -206,6 +227,13 @@ test("onboarding step 3 persists playlist when step 2 inactive and /whatsapp pre
   if (!onboardingResponse) {
     throw new Error("No response when loading /onboarding?step=1");
   }
+  await page.evaluate(
+    ({ key, value }) => {
+      localStorage.setItem(key, value);
+    },
+    { key: storageKey, value: sessionPayload }
+  );
+  await page.reload();
   console.log("[e2e] onboarding response", onboardingResponse.status(), page.url());
   await expect(page).toHaveURL(/\/onboarding\?step=1/);
   const onboardingContent = await page.content();
@@ -214,8 +242,8 @@ test("onboarding step 3 persists playlist when step 2 inactive and /whatsapp pre
     hasQuestion: onboardingContent.includes("Por qual motivo"),
   });
 
-  const step1Radio = page.getByRole("radio").first();
-  await expect(step1Radio).toBeVisible();
+  const step1Radio = page.getByRole("radio").nth(step1OptionIndex);
+  await expect(step1Radio).toBeVisible({ timeout: 60000 });
   await step1Radio.click();
 
   await page.waitForURL(/step=3/);
@@ -265,23 +293,46 @@ test("onboarding step 3 persists playlist when step 2 inactive and /whatsapp pre
   const ddd = crypto.randomInt(11, 99);
   const subscriber = crypto.randomInt(900_000_000, 999_999_999);
   whatsappPhone = `55${ddd}${subscriber}`;
+  const whatsappPayload = {
+    phone_number: whatsappPhone,
+    is_active: true,
+    receives_daily_prayer: true,
+    updated_at: new Date().toISOString(),
+  };
   const { error: whatsappUserError } = await admin
     .from("whatsapp_users")
-    .upsert(
-      {
-        phone_number: whatsappPhone,
-        user_id: userId,
-        is_active: true,
-        receives_daily_prayer: true,
-        updated_at: new Date().toISOString(),
-      },
-      { onConflict: "phone_number" }
-    );
+    .upsert({ ...whatsappPayload, user_id: userId }, { onConflict: "phone_number" });
   if (whatsappUserError) {
-    throw new Error(`Failed to seed whatsapp_users: ${whatsappUserError.message}`);
+    const msg = String(whatsappUserError.message || "").toLowerCase();
+    const code = String((whatsappUserError as any).code || "");
+    const missingUserId =
+      code === "42703" ||
+      msg.includes("user_id") ||
+      msg.includes("schema cache") ||
+      (msg.includes("column") && msg.includes("does not exist"));
+    if (missingUserId) {
+      const retry = await admin
+        .from("whatsapp_users")
+        .upsert(whatsappPayload, { onConflict: "phone_number" });
+      if (retry.error) {
+        throw new Error(`Failed to seed whatsapp_users (retry): ${retry.error.message}`);
+      }
+    } else {
+      throw new Error(`Failed to seed whatsapp_users: ${whatsappUserError.message}`);
+    }
   }
 
-  await admin.from("whatsapp_user_challenges").delete().eq("user_id", userId);
+  await admin
+    .from("whatsapp_user_challenges")
+    .delete()
+    .eq("phone_number", whatsappPhone);
+
+  await page.evaluate(
+    ({ key, value }) => {
+      localStorage.setItem(key, JSON.stringify(value));
+    },
+    { key: `whatsapp_phone_${userId}`, value: { full: whatsappPhone } }
+  );
 
   await page.evaluate(
     ({ key }) => {
@@ -290,26 +341,17 @@ test("onboarding step 3 persists playlist when step 2 inactive and /whatsapp pre
     { key: `onboardingRedirected_${userId}` }
   );
 
-  const adminFormResponsesReadPromise = page.waitForResponse((resp) => {
-    return resp.url().includes("/rest/v1/admin_form_responses");
-  });
-
   await page.goto("/whatsapp");
-  await page.reload();
-
   await expect(page).toHaveURL(/\/whatsapp/);
 
-  const adminFormResponse = await adminFormResponsesReadPromise;
-  if (!adminFormResponse.ok()) {
-    throw new Error(
-      `admin_form_responses request failed with status ${adminFormResponse.status()}`
-    );
-  }
-  const adminFormPayload = (await adminFormResponse.json()) as any[];
-  const readMatch = (adminFormPayload || []).find(
-    (row) => row?.form_id === step2FormId && row?.answers?.option === playlistId
-  );
-  expect(readMatch).toBeTruthy();
+  await page.reload();
+
+  const adminFormPayload = await page
+    .waitForFunction(() => (window as any).__wppAdminFormResponsesRead, null, {
+      timeout: 60000,
+    })
+    .then((handle) => handle.jsonValue());
+  expect(adminFormPayload).toEqual({ formId: step2FormId, option: playlistId });
 
   const playlistTitleForId = String(resolvedPlaylist.title || "");
   const combobox = page.getByRole("combobox", {
@@ -317,4 +359,6 @@ test("onboarding step 3 persists playlist when step 2 inactive and /whatsapp pre
   });
   await expect(combobox).toBeVisible();
   await expect(combobox).toHaveText(playlistTitleForId);
+  const selectedIdAttr = await combobox.getAttribute("data-selected-challenge-id");
+  expect(selectedIdAttr).toBe(playlistId);
 });

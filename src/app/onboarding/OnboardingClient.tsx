@@ -101,6 +101,58 @@ export default function OnboardingClient() {
   const pauseRef = useRef<(() => void) | null>(null);
   const isPausingRef = useRef(false);
   const autoSavedStep3PlaylistRef = useRef<string | null>(null);
+  const parentFormSupportRef = useRef<boolean | null>(null);
+  const parentFormSupportPromiseRef = useRef<Promise<boolean> | null>(null);
+  const whatsappChallengesSendTimeSupportRef = useRef<boolean | null>(null);
+  const whatsappChallengesSendTimeSupportPromiseRef = useRef<Promise<boolean> | null>(null);
+
+  const ensureParentFormSupport = async (): Promise<boolean> => {
+    if (parentFormSupportRef.current !== null) return parentFormSupportRef.current;
+    if (parentFormSupportPromiseRef.current) return parentFormSupportPromiseRef.current;
+
+    parentFormSupportPromiseRef.current = (async () => {
+      const { data, error } = await supabase
+        .from('admin_forms')
+        .select('*')
+        .limit(1)
+        .maybeSingle();
+      if (error || !data) {
+        parentFormSupportRef.current = false;
+        return false;
+      }
+      const hasColumn = Object.prototype.hasOwnProperty.call(data, 'parent_form_id');
+      parentFormSupportRef.current = hasColumn;
+      return hasColumn;
+    })();
+
+    return parentFormSupportPromiseRef.current;
+  };
+
+  const ensureWhatsAppChallengesSendTimeSupport = async (): Promise<boolean> => {
+    if (whatsappChallengesSendTimeSupportRef.current !== null) {
+      return whatsappChallengesSendTimeSupportRef.current;
+    }
+    if (whatsappChallengesSendTimeSupportPromiseRef.current) {
+      return whatsappChallengesSendTimeSupportPromiseRef.current;
+    }
+
+    whatsappChallengesSendTimeSupportPromiseRef.current = (async () => {
+      const { data, error } = await supabase
+        .from('whatsapp_user_challenges')
+        .select('*')
+        .limit(1)
+        .maybeSingle();
+      if (error || !data) {
+        whatsappChallengesSendTimeSupportRef.current = false;
+        return false;
+      }
+      const hasColumn = Object.prototype.hasOwnProperty.call(data, 'send_time');
+      whatsappChallengesSendTimeSupportRef.current = hasColumn;
+      return hasColumn;
+    })();
+
+    return whatsappChallengesSendTimeSupportPromiseRef.current;
+  };
   
   // Calcular progresso do onboarding
   const { percentage: progressPercentage, loading: progressLoading } = useOnboardingProgress(desiredStep, currentCategoryId);
@@ -343,16 +395,19 @@ export default function OnboardingClient() {
       (async () => {
         try {
           let step2Form: any = null;
+          const supportsParentFormId = await ensureParentFormSupport();
           try {
-            const primary = await supabase
-              .from('admin_forms')
-              .select('id')
-              .eq('form_type', 'onboarding')
-              .eq('is_active', true)
-              .eq('onboard_step', 2)
-              .eq('parent_form_id', activeFormId || '-')
-              .maybeSingle();
-            if (!primary.error && primary.data) step2Form = primary.data;
+            if (supportsParentFormId && activeFormId) {
+              const primary = await supabase
+                .from('admin_forms')
+                .select('id')
+                .eq('form_type', 'onboarding')
+                .eq('is_active', true)
+                .eq('onboard_step', 2)
+                .eq('parent_form_id', activeFormId)
+                .maybeSingle();
+              if (!primary.error && primary.data) step2Form = primary.data;
+            }
           } catch {}
           if (!step2Form) {
             const fallback = await supabase
@@ -444,17 +499,20 @@ export default function OnboardingClient() {
 
       let step2Form: { id: string; is_active?: boolean | null } | null = null;
       const parentFormId = activeFormId || '';
+      const supportsParentFormId = await ensureParentFormSupport();
 
       try {
-        const primary = await supabase
-          .from('admin_forms')
-          .select('id,is_active')
-          .eq('form_type', 'onboarding')
-          .eq('onboard_step', 2)
-          .eq('parent_form_id', parentFormId || '-')
-          .maybeSingle();
-        if (!primary.error && primary.data) {
-          step2Form = primary.data as any;
+        if (supportsParentFormId && parentFormId) {
+          const primary = await supabase
+            .from('admin_forms')
+            .select('id,is_active')
+            .eq('form_type', 'onboarding')
+            .eq('onboard_step', 2)
+            .eq('parent_form_id', parentFormId)
+            .maybeSingle();
+          if (!primary.error && primary.data) {
+            step2Form = primary.data as any;
+          }
         }
       } catch {}
 
@@ -693,22 +751,25 @@ export default function OnboardingClient() {
           // Descobrir o formulário do passo 2 (mesma lógica usada para recuperar a playlist no passo 3)
           let step2Form: any = null;
           const parentFormId = activeFormId || form?.id || '';
+          const supportsParentFormId = await ensureParentFormSupport();
 
           try {
-            const primary = await supabase
-              .from('admin_forms')
-              .select('id')
-              .eq('form_type', 'onboarding')
-              .eq('is_active', true)
-              .eq('onboard_step', 2)
-              .eq('parent_form_id', parentFormId || '-')
-              .maybeSingle();
-            if (!primary.error && primary.data) {
-              step2Form = primary.data;
-              ONB_DEBUG('handleWhatsAppSaved:primaryStep2Form', {
-                parentFormId,
-                step2FormId: step2Form?.id,
-              });
+            if (supportsParentFormId && parentFormId) {
+              const primary = await supabase
+                .from('admin_forms')
+                .select('id')
+                .eq('form_type', 'onboarding')
+                .eq('is_active', true)
+                .eq('onboard_step', 2)
+                .eq('parent_form_id', parentFormId)
+                .maybeSingle();
+              if (!primary.error && primary.data) {
+                step2Form = primary.data;
+                ONB_DEBUG('handleWhatsAppSaved:primaryStep2Form', {
+                  parentFormId,
+                  step2FormId: step2Form?.id,
+                });
+              }
             }
           } catch (e) {
             console.warn('Falha ao buscar formulário principal do passo 2:', e);
@@ -759,9 +820,12 @@ export default function OnboardingClient() {
               const payload: any = {
                 phone_number: cleanPhone,
                 playlist_id: playlistId,
-                // Horário padrão para início da jornada, caso o usuário ainda não defina outro em /whatsapp
-                send_time: '08:00',
               };
+              const supportsSendTime = await ensureWhatsAppChallengesSendTimeSupport();
+              if (supportsSendTime) {
+                // Horário padrão para início da jornada, caso o usuário ainda não defina outro em /whatsapp
+                payload.send_time = '08:00';
+              }
 
               try {
                 await supabase
@@ -1237,16 +1301,20 @@ export default function OnboardingClient() {
             if (mounted) setForm((primary.data as AdminForm) || null);
           } else {
             // Fallback: preferir o formulário raiz mais antigo (sem parent_form_id), depois o mais antigo geral
-            const tryFetchOldestRoot = async () =>
-              supabase
+            const supportsParentFormId = await ensureParentFormSupport();
+            const tryFetchOldestRoot = async () => {
+              let query = supabase
                 .from('admin_forms')
                 .select('*')
                 .eq('form_type', 'onboarding')
                 .eq('is_active', true)
-                .is('parent_form_id', null)
                 .order('created_at', { ascending: true })
-                .limit(1)
-                .maybeSingle();
+                .limit(1);
+              if (supportsParentFormId) {
+                query = query.is('parent_form_id', null);
+              }
+              return query.maybeSingle();
+            };
 
             let fallback = await tryFetchOldestRoot();
             if (fallback.error && (fallback.error.code === '42703' || /parent_form_id/i.test(String(fallback.error.message || '')))) {
@@ -1300,22 +1368,25 @@ export default function OnboardingClient() {
             // 1) Verificar se há um formulário ativo no passo 2 associado ao parent_form_id
             let fetched: any = null;
             let fetchErr: any = null;
-            try {
-              const primary = await supabase
-                .from('admin_forms')
-                .select('*')
-                .eq('form_type', 'onboarding')
-                .eq('is_active', true)
-                .eq('onboard_step', 2)
-                .eq('parent_form_id', activeFormId || '-')
-                .maybeSingle();
-              fetched = primary.data as any;
-              fetchErr = primary.error as any;
-            } catch (e) {
-              fetchErr = e;
+            const supportsParentFormId = await ensureParentFormSupport();
+            if (supportsParentFormId && activeFormId) {
+              try {
+                const primary = await supabase
+                  .from('admin_forms')
+                  .select('*')
+                  .eq('form_type', 'onboarding')
+                  .eq('is_active', true)
+                  .eq('onboard_step', 2)
+                  .eq('parent_form_id', activeFormId)
+                  .maybeSingle();
+                fetched = primary.data as any;
+                fetchErr = primary.error as any;
+              } catch (e) {
+                fetchErr = e;
+              }
             }
             // 2) Se não encontrou (ou coluna não existe), buscar somente por onboard_step
-            if ((!fetched || fetchErr) && activeFormId) {
+            if (!fetched || fetchErr) {
               const fb = await supabase
                 .from('admin_forms')
                 .select('*')
@@ -1434,17 +1505,24 @@ export default function OnboardingClient() {
         } else {
           // Passos dinâmicos adicionais (>= 2, incluindo passos informativos)
           // Primeiro tenta buscar com parent_form_id
-          let { data, error } = await supabase
-            .from('admin_forms')
-            .select('*')
-            .eq('form_type', 'onboarding')
-            .eq('is_active', true)
-            .eq('onboard_step', desiredStep)
-            .eq('parent_form_id', activeFormId || '-')
-            .maybeSingle();
+          let data: any = null;
+          let error: any = null;
+          const supportsParentFormId = await ensureParentFormSupport();
+          if (supportsParentFormId && activeFormId) {
+            const primary = await supabase
+              .from('admin_forms')
+              .select('*')
+              .eq('form_type', 'onboarding')
+              .eq('is_active', true)
+              .eq('onboard_step', desiredStep)
+              .eq('parent_form_id', activeFormId)
+              .maybeSingle();
+            data = primary.data as any;
+            error = primary.error as any;
+          }
           
           // Se não encontrou e a coluna parent_form_id existe, tenta buscar apenas por onboard_step
-          if ((!data || error) && activeFormId) {
+          if (!data || error) {
             const fb = await supabase
               .from('admin_forms')
               .select('*')

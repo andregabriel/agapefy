@@ -105,6 +105,16 @@ async function fetchForms(selectClause: string) {
     .order('created_at', { ascending: true });
 }
 
+async function hasParentFormIdColumn(): Promise<boolean> {
+  const { data, error } = await supabase
+    .from('admin_forms')
+    .select('*')
+    .limit(1)
+    .maybeSingle();
+  if (error || !data) return false;
+  return Object.prototype.hasOwnProperty.call(data, 'parent_form_id');
+}
+
 function normalizeForms(forms?: RawForm[] | null): RawForm[] {
   return (forms || []).map((form) => ({
     ...form,
@@ -126,11 +136,21 @@ export async function getOnboardingStepsOrder(
 ): Promise<OnboardingStep[]> {
   // Buscar todos os formulários, com fallback caso alguma coluna não exista
   let formsList: RawForm[] = [];
-  const { data: primaryForms, error: primaryError } = await fetchForms(FORM_COLUMNS);
+  let selectClause = FORM_COLUMNS;
+  try {
+    const supportsParentFormId = await hasParentFormIdColumn();
+    if (!supportsParentFormId) {
+      selectClause = FALLBACK_FORM_COLUMNS;
+    }
+  } catch {
+    selectClause = FALLBACK_FORM_COLUMNS;
+  }
+
+  const { data: primaryForms, error: primaryError } = await fetchForms(selectClause);
 
   if (!primaryError) {
     formsList = normalizeForms(primaryForms);
-  } else if (isMissingColumnError(primaryError)) {
+  } else if (selectClause === FORM_COLUMNS && isMissingColumnError(primaryError)) {
     console.warn('[onboarding] admin_forms columns missing, applying fallback select', {
       message: primaryError.message,
       code: primaryError.code,
