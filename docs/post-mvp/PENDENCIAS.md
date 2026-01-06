@@ -1,4 +1,4 @@
-# Pendencias pos-MVP
+# Pendencias lançamento pos-MVP
 
 Objetivo: registrar melhorias que nao bloqueiam o MVP.
 
