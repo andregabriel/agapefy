@@ -32,6 +32,7 @@ import { WhatsAppFirstMessageBanner } from '@/components/whatsapp/WhatsAppFirstM
 import { useRoutinePlaylist } from '@/hooks/useRoutinePlaylist';
 import { usePlayer } from '@/contexts/PlayerContext';
 import { toast } from 'sonner';
+import { logger } from '@/lib/logger';
 
 interface CategoryWithContent extends Category {
   audios: Audio[];
@@ -143,7 +144,7 @@ export default function HomePage() {
   const loadCategoriesWithContent = useCallback(async (isRefresh = false) => {
     // Evitar múltiplas chamadas simultâneas
     if (loadingRef.current && !isRefresh) {
-      console.log('🔄 Carregamento já em andamento, ignorando...');
+      logger.debug('🔄 Carregamento já em andamento, ignorando...');
       return;
     }
 
@@ -157,7 +158,7 @@ export default function HomePage() {
       }
       
       setError(null);
-      console.log('🏠 Carregando categorias com conteúdo na home...');
+      logger.debug('🏠 Carregando categorias com conteúdo na home...');
       
       // Buscar categorias primeiro
       let categories = await getCategories();
@@ -167,12 +168,12 @@ export default function HomePage() {
       // Respeitar visibilidade na Home (default: true). Todas as categorias devem estar na home exceto as ocultas
       categories = categories.filter((cat) => (cat as any).is_visible !== false);
 
-      console.log('✅ Categorias encontradas:', categories.length);
+      logger.debug('✅ Categorias encontradas:', categories.length);
       
       if (!mountedRef.current) return; // Componente foi desmontado
       
       if (categories.length === 0) {
-        console.log('📭 Nenhuma categoria encontrada');
+        logger.debug('📭 Nenhuma categoria encontrada');
         setCategoriesWithContent([]);
         return;
       }
@@ -210,7 +211,7 @@ export default function HomePage() {
       // Mantemos todas as categorias, inclusive vazias
       
       setCategoriesWithContent(categoriesWithActualContent);
-      console.log('✅ Categorias com conteúdo carregadas:', categoriesWithActualContent.length);
+      logger.debug('✅ Categorias com conteúdo carregadas:', categoriesWithActualContent.length);
       
     } catch (error) {
       console.error('❌ Erro ao carregar categorias com conteúdo:', error);
@@ -244,7 +245,7 @@ export default function HomePage() {
 
   // Carregar dados na inicialização (apenas uma vez)
   useEffect(() => {
-    console.log('🚀 Inicializando home page...');
+    logger.debug('🚀 Inicializando home page...');
     loadCategoriesWithContent(false);
   }, []); // Dependências vazias para executar apenas uma vez
 
@@ -257,7 +258,7 @@ export default function HomePage() {
       clearTimeout(focusTimeout);
       focusTimeout = setTimeout(() => {
         if (mountedRef.current && !loadingRef.current) {
-          console.log('👁️ Página ganhou foco, recarregando categorias...');
+          logger.debug('👁️ Página ganhou foco, recarregando categorias...');
           // Não limpar conteúdo existente para evitar "pisca"
           loadCategoriesWithContent(true);
         }
@@ -273,7 +274,7 @@ export default function HomePage() {
   }, [loadCategoriesWithContent]);
 
   const handleRefreshCategories = async () => {
-    console.log('🔄 Refresh manual das categorias...');
+    logger.debug('🔄 Refresh manual das categorias...');
     await loadCategoriesWithContent(true);
   };
 

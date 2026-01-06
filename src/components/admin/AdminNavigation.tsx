@@ -141,6 +141,12 @@ const adminRoutes = [
     color: 'text-emerald-500'
   },
   {
+    label: 'Delete User Teste',
+    icon: TestTube,
+    href: '/admin/delete-user-test',
+    color: 'text-rose-500'
+  },
+  {
     label: 'WhatsApp',
     icon: MessageCircle,
     href: '/admin/whatsapp',

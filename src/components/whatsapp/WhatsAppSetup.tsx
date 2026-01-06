@@ -96,7 +96,7 @@ function validatePhoneNumber(countryCode: string, phoneNumber: string): boolean 
 }
 
 export default function WhatsAppSetup({ variant = "standalone", redirectIfNotLoggedIn = true, onSavedPhone }: WhatsAppSetupProps) {
-  const { user, loading } = useAuth();
+  const { user, loading, session } = useAuth();
   const router = useRouter();
   const { settings } = useAppSettings();
 
@@ -391,7 +391,6 @@ export default function WhatsAppSetup({ variant = "standalone", redirectIfNotLog
 
           if (!chErr && chRows) {
             challengeRows = chRows as any[];
-            // eslint-disable-next-line no-console
             console.log('[WPP_DEBUG] loadChallenges:legacyChallengeRows', {
               count: (challengeRows || []).length,
             });
@@ -410,7 +409,6 @@ export default function WhatsAppSetup({ variant = "standalone", redirectIfNotLog
         }
 
         const ids = (challengeRows || []).map((r: any) => r.playlist_id).filter(Boolean);
-        // eslint-disable-next-line no-console
         console.log('[WPP_DEBUG] loadChallenges:legacyIds', { idsCount: ids.length });
         WHATS_DEBUG('loadChallenges:setChallengePlaylists', {
           source: 'challenge_table_ids',
@@ -446,7 +444,6 @@ export default function WhatsAppSetup({ variant = "standalone", redirectIfNotLog
           return;
         }
         setChallengePlaylists(((pls || []) as any[]).map((p: any) => ({ id: p.id as string, title: (p.title || '') as string })));
-        // eslint-disable-next-line no-console
         console.log('[WPP_DEBUG] loadChallenges:finalChallengePlaylists', {
           count: ((pls || []) as any[]).length,
         });
@@ -471,7 +468,6 @@ export default function WhatsAppSetup({ variant = "standalone", redirectIfNotLog
         WHATS_DEBUG('fetchUserChallenges:start');
         const clean = getFullPhoneNumber();
         let rows: any[] = [];
-        // eslint-disable-next-line no-console
         console.log('[WPP_DEBUG] fetchUserChallenges:start', {
           cleanPhone: clean,
           userId: user?.id ?? null,
@@ -490,7 +486,6 @@ export default function WhatsAppSetup({ variant = "standalone", redirectIfNotLog
             .eq('phone_number', clean);
           if (!error && data) {
             rows = data;
-            // eslint-disable-next-line no-console
             console.log('[WPP_DEBUG] fetchUserChallenges:byPhone', {
               count: (rows || []).length,
               rows,
@@ -508,56 +503,41 @@ export default function WhatsAppSetup({ variant = "standalone", redirectIfNotLog
           // Fallback: se não houver vínculo ainda, tentar reaproveitar a playlist escolhida no onboarding (passo 2)
           // Isso cobre o caso em que o usuário escolheu o desafio no onboarding mas só cadastrou o WhatsApp depois em /whatsapp.
           // Nota: não precisa esperar clean (telefone) porque as fontes de fallback (admin_form_responses e localStorage) não dependem dele
-          if (!attemptedOnboardingLink && user?.id) {
+          if (!attemptedOnboardingLink && user?.id && session?.access_token) {
             WHATS_DEBUG('fetchUserChallenges:noRows_beforeFallback', { attemptedOnboardingLink, hasUser: !!user?.id });
             setAttemptedOnboardingLink(true);
             try {
               let playlistId: string | null = null;
 
-              // 1) Tentar buscar o formulário/resposta do passo 2 do onboarding
-              let step2Form: any = null;
+              // 1) Tentar buscar a resposta do passo 2 via API (service role) para contornar RLS
+              let step2FormId: string | null = null;
               try {
-                const { data: primary, error: primaryErr } = await supabase
-                  .from('admin_forms')
-                  .select('id')
-                  .eq('form_type', 'onboarding')
-                  .eq('onboard_step', 2)
-                  .maybeSingle();
-                if (!primaryErr && primary) {
-                  step2Form = primary;
+                const token = session?.access_token;
+                const headers = token ? { Authorization: `Bearer ${token}` } : undefined;
+                const resp = await fetch("/api/onboarding/step2-response", { headers });
+                const payload = resp.ok ? await resp.json() : null;
+                if (payload?.formId) {
+                  step2FormId = String(payload.formId);
+                }
+                if (typeof payload?.option === "string") {
+                  playlistId = payload.option;
+                  console.log("[WPP_DEBUG] fetchUserChallenges:step2Answers", {
+                    step2FormId,
+                    playlistId,
+                  });
+                  WHATS_DEBUG("fetchUserChallenges:step2Response", {
+                    step2FormId,
+                    playlistId,
+                  });
                 }
               } catch (e) {
-                console.warn('Falha ao buscar formulário do passo 2 (WhatsAppSetup):', e);
+                console.warn("Falha ao buscar resposta do passo 2 (WhatsAppSetup):", e);
               }
-              WHATS_DEBUG('fetchUserChallenges:step2FormLookup', { step2FormId: step2Form?.id });
+              WHATS_DEBUG("fetchUserChallenges:step2FormLookup", { step2FormId });
 
-              if (step2Form?.id) {
-                const { data: resp, error: respErr } = await supabase
-                  .from('admin_form_responses')
-                  .select('answers, created_at')
-                  .eq('user_id', user.id)
-                  .eq('form_id', step2Form.id)
-                  .order('created_at', { ascending: false })
-                  .limit(1)
-                  .maybeSingle();
-
-                if (!respErr && resp?.answers && typeof (resp as any).answers === 'object') {
-                  const ans: any = (resp as any).answers;
-                  if (typeof ans.option === 'string') {
-                    playlistId = ans.option;
-                    // eslint-disable-next-line no-console
-                    console.log('[WPP_DEBUG] fetchUserChallenges:step2Answers', {
-                      step2FormId: step2Form.id,
-                      ans,
-                      playlistId,
-                    });
-                    WHATS_DEBUG('fetchUserChallenges:step2Response', { step2FormId: step2Form.id, ans, playlistId });
-                  }
-                }
-              }
               if (typeof window !== "undefined") {
                 (window as any).__wppAdminFormResponsesRead = {
-                  formId: step2Form?.id ?? null,
+                  formId: step2FormId,
                   option: playlistId,
                 };
               }
@@ -568,7 +548,6 @@ export default function WhatsAppSetup({ variant = "standalone", redirectIfNotLog
                   const stored = window.localStorage.getItem("ag_onb_selected_playlist");
                   if (stored && typeof stored === "string") {
                     playlistId = stored;
-                    // eslint-disable-next-line no-console
                     console.log('[WPP_DEBUG] fetchUserChallenges:localStorage', {
                       stored,
                     });
@@ -607,7 +586,6 @@ export default function WhatsAppSetup({ variant = "standalone", redirectIfNotLog
                 } catch (e) {
                   console.warn('Falha ao garantir playlist do onboarding em challengePlaylists:', e);
                 }
-                // eslint-disable-next-line no-console
                 console.log('[WPP_DEBUG] fetchUserChallenges:usingFallbackPlaylist', {
                   playlistId,
                   challengeTime: defaultTime,
@@ -636,7 +614,6 @@ export default function WhatsAppSetup({ variant = "standalone", redirectIfNotLog
         const t = typeof row.send_time === 'string' && row.send_time.length >= 5 ? String(row.send_time).slice(0, 5) : '';
         // Se não houver horário salvo, usar padrão 08:00
         setChallengeTime(t || "08:00");
-        // eslint-disable-next-line no-console
         console.log('[WPP_DEBUG] fetchUserChallenges:fromRows', {
           chosenRow: row,
           finalTime: t || '08:00',
@@ -649,7 +626,7 @@ export default function WhatsAppSetup({ variant = "standalone", redirectIfNotLog
       }
     };
     fetchUserChallenges();
-  }, [phone, phoneNumber, countryCode, user?.id, attemptedOnboardingLink, dailyPrayer]);
+  }, [phone, phoneNumber, countryCode, user?.id, session?.access_token, attemptedOnboardingLink, dailyPrayer]);
 
   // Auto-save when both challenge and time are set
   useEffect(() => {

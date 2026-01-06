@@ -16,9 +16,6 @@ if (!SUPABASE_URL || !SUPABASE_ANON_KEY || !SUPABASE_SERVICE_ROLE_KEY) {
   );
 }
 
-const projectRef = new URL(SUPABASE_URL).hostname.split(".")[0];
-const storageKey = `sb-${projectRef}-auth-token`;
-
 const admin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
   auth: { autoRefreshToken: false, persistSession: false },
 });
@@ -32,7 +29,8 @@ let step1OptionIndex = 0;
 let step2FormId = "";
 let step2WasActive: boolean | null = null;
 let userId = "";
-let sessionPayload = "";
+let userEmail = "";
+let userPassword = "";
 let whatsappPhone = "";
 
 async function fetchStep1Option(supabase: SupabaseClient) {
@@ -134,6 +132,8 @@ async function createTestUser() {
   return {
     userId: data.user.id,
     session: signInData.session,
+    email,
+    password,
   };
 }
 
@@ -159,7 +159,8 @@ test.beforeAll(async () => {
 
   const testUser = await createTestUser();
   userId = testUser.userId;
-  sessionPayload = JSON.stringify(testUser.session);
+  userEmail = testUser.email;
+  userPassword = testUser.password;
 });
 
 test.afterAll(async () => {
@@ -188,6 +189,9 @@ test("onboarding step 3 persists playlist when step 2 inactive and /whatsapp pre
 }) => {
   page.on("pageerror", (err) => {
     console.log("[e2e] pageerror", err.message);
+    if (err.stack) {
+      console.log("[e2e] pageerror stack", err.stack);
+    }
   });
   page.on("console", (msg) => {
     if (msg.type() === "error") {
@@ -200,7 +204,7 @@ test("onboarding step 3 persists playlist when step 2 inactive and /whatsapp pre
   page.on("response", (resp) => {
     if (resp.status() >= 400) {
       const url = resp.url();
-      if (url.includes("supabase.co") || url.includes("/api/")) {
+      if (url.includes("supabase.co") || url.includes("/api/") || url.includes("/_next/static/")) {
         console.log("[e2e] response", resp.status(), url);
       }
     }
@@ -214,32 +218,37 @@ test("onboarding step 3 persists playlist when step 2 inactive and /whatsapp pre
     });
   });
 
-  await page.addInitScript(
-    ({ key, value }) => {
-      window.localStorage.setItem(key, value);
-    },
-    { key: storageKey, value: sessionPayload }
-  );
+  await page.goto("/login", { waitUntil: "networkidle" });
+  const emailButton = page.getByRole("button", { name: /continuar com e-mail/i });
+  await expect(emailButton).toBeVisible({ timeout: 60000 });
+  await emailButton.click();
+  const emailField = page.getByLabel("E-mail");
+  await expect(emailField).toBeVisible({ timeout: 60000 });
+  await emailField.fill(userEmail);
+  await page.getByLabel("Senha").fill(userPassword);
+  await page.getByRole("button", { name: /^entrar$/i }).click();
+  await page.waitForURL((url) => !url.pathname.startsWith("/login"), { timeout: 60000 });
 
   const onboardingResponse = await page.goto("/onboarding?step=1", {
-    waitUntil: "domcontentloaded",
+    waitUntil: "networkidle",
   });
   if (!onboardingResponse) {
     throw new Error("No response when loading /onboarding?step=1");
   }
-  await page.evaluate(
-    ({ key, value }) => {
-      localStorage.setItem(key, value);
-    },
-    { key: storageKey, value: sessionPayload }
-  );
-  await page.reload();
   console.log("[e2e] onboarding response", onboardingResponse.status(), page.url());
   await expect(page).toHaveURL(/\/onboarding\?step=1/);
   const onboardingContent = await page.content();
   console.log("[e2e] onboarding content flags", {
     hasOnboardingUnavailable: onboardingContent.includes("Onboarding indisponível"),
     hasQuestion: onboardingContent.includes("Por qual motivo"),
+  });
+  const radioCount = await page.locator('[role="radio"]').count();
+  const labelCount = await page.locator(`text=${step1OptionLabel}`).count();
+  const skeletonCount = await page.locator('.animate-pulse').count();
+  console.log("[e2e] onboarding element counts", {
+    radioCount,
+    labelCount,
+    skeletonCount,
   });
 
   const step1Radio = page.getByRole("radio").nth(step1OptionIndex);

@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
+import { logger } from '@/lib/logger';
 import {
   DEFAULT_PAYWALL_PERMISSIONS,
   DEFAULT_PAYWALL_SCREEN_CONFIG,
@@ -189,7 +190,7 @@ export function useAppSettings() {
   const fetchSettings = async () => {
     try {
       setLoading(true);
-      console.log('🔄 useAppSettings: Buscando configurações...');
+      logger.debug('🔄 useAppSettings: Buscando configurações...');
       
       const { data, error } = await supabase
         .from('app_settings')
@@ -200,7 +201,7 @@ export function useAppSettings() {
         throw error;
       }
 
-      console.log('📊 useAppSettings: Dados brutos do banco:', data);
+      logger.debug('📊 useAppSettings: Dados brutos do banco:', data);
 
       // Converter array para objeto com fallbacks
       const settingsObj: AppSettings = { ...DEFAULT_SETTINGS };
@@ -208,11 +209,11 @@ export function useAppSettings() {
       data?.forEach((setting: AppSetting) => {
         if (setting.key in settingsObj) {
           (settingsObj as any)[setting.key] = setting.value;
-          console.log(`✅ useAppSettings: Configuração carregada - ${setting.key}: ${setting.value}`);
+          logger.debug(`✅ useAppSettings: Configuração carregada - ${setting.key}: ${setting.value}`);
         }
       });
 
-      console.log('🎯 useAppSettings: Configurações finais:', settingsObj);
+      logger.debug('🎯 useAppSettings: Configurações finais:', settingsObj);
       setSettings(settingsObj);
     } catch (err) {
       console.error('❌ useAppSettings: Erro ao buscar configurações:', err);
@@ -226,7 +227,7 @@ export function useAppSettings() {
 
   const updateSetting = async (key: keyof AppSettings, value: string) => {
     try {
-      console.log(`🔄 useAppSettings: Atualizando ${key} = ${value}`);
+      logger.debug(`🔄 useAppSettings: Atualizando ${key} = ${value}`);
       
       const { error } = await supabase
         .from('app_settings')
@@ -249,7 +250,7 @@ export function useAppSettings() {
         [key]: value
       }));
 
-      console.log(`✅ useAppSettings: ${key} atualizado com sucesso`);
+      logger.debug(`✅ useAppSettings: ${key} atualizado com sucesso`);
       return { success: true };
     } catch (err) {
       console.error('❌ useAppSettings: Erro ao atualizar configuração:', err);

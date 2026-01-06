@@ -1,0 +1,11 @@
+---
+alwaysApply: true
+---
+
+Você DEVE ler e seguir:
+- AGENTS.md
+- DEV_RULES.md
+- AI_RULES.md
+
+Se houver conflito, o código + DEV_RULES.md/AI_RULES.md prevalecem.
+Mudou fluxo crítico/integração? Atualize AGENTS.md.

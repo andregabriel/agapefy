@@ -25,6 +25,7 @@ const adminRouteGroups: { title: string; routes: AdminRoute[] }[] = [
       adminRoutes.find((r) => r.href === '/admin/usuarios'),
       adminRoutes.find((r) => r.href === '/admin/configuracoes'),
       adminRoutes.find((r) => r.href === '/admin/onboarding'),
+      adminRoutes.find((r) => r.href === '/admin/delete-user-test'),
     ].filter(Boolean) as AdminRoute[],
   },
   {
@@ -85,5 +86,4 @@ export default function AdminHorizontalMenu() {
     </nav>
   );
 }
-
 

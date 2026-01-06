@@ -27,7 +27,6 @@ import { processLinks } from '@/lib/utils';
 import { Play, Pause } from 'lucide-react';
 import { normalizeImageUrl, formatDuration } from '@/app/home/_utils/homeUtils';
 import { usePlayer } from '@/contexts/PlayerContext';
-
 const ONB_DEBUG = (...args: any[]) => {
   console.log('[ONB_DEBUG]', ...args);
 };
@@ -54,7 +53,7 @@ interface AudioPreview {
 }
 
 export default function OnboardingClient() {
-  const { user } = useAuth();
+  const { user, session, loading: authLoading } = useAuth();
   const { settings } = useAppSettings();
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -105,6 +104,20 @@ export default function OnboardingClient() {
   const parentFormSupportPromiseRef = useRef<Promise<boolean> | null>(null);
   const whatsappChallengesSendTimeSupportRef = useRef<boolean | null>(null);
   const whatsappChallengesSendTimeSupportPromiseRef = useRef<Promise<boolean> | null>(null);
+
+  const withTimeout = <T,>(promise: Promise<T>, ms: number, fallback: T): Promise<T> =>
+    new Promise((resolve, reject) => {
+      const timer = window.setTimeout(() => resolve(fallback), ms);
+      promise
+        .then((value) => {
+          clearTimeout(timer);
+          resolve(value);
+        })
+        .catch((err) => {
+          clearTimeout(timer);
+          reject(err);
+        });
+    });
 
   const ensureParentFormSupport = async (): Promise<boolean> => {
     if (parentFormSupportRef.current !== null) return parentFormSupportRef.current;
@@ -164,7 +177,11 @@ export default function OnboardingClient() {
   useEffect(() => {
     let mounted = true;
     async function checkAccess() {
-      if (!user) return; // aguardar autenticação
+      if (authLoading) return; // aguardar autenticação
+      if (!user) {
+        navigateWithFallback('/login');
+        return;
+      }
       
       try {
         // Verificar se é admin
@@ -217,7 +234,7 @@ export default function OnboardingClient() {
     
     void checkAccess();
     return () => { mounted = false; };
-  }, [user, router, isAdminPreview]);
+  }, [user, authLoading, router, isAdminPreview]);
 
   const withAdminPreviewFlag = (url: string): string => {
     if (!isAdminPreview) return url;
@@ -509,6 +526,8 @@ export default function OnboardingClient() {
             .eq('form_type', 'onboarding')
             .eq('onboard_step', 2)
             .eq('parent_form_id', parentFormId)
+            .order('created_at', { ascending: true })
+            .limit(1)
             .maybeSingle();
           if (!primary.error && primary.data) {
             step2Form = primary.data as any;
@@ -516,36 +535,39 @@ export default function OnboardingClient() {
         }
       } catch {}
 
-      if (!step2Form) {
-        try {
-          const fallback = await supabase
-            .from('admin_forms')
-            .select('id,is_active')
-            .eq('form_type', 'onboarding')
-            .eq('onboard_step', 2)
-            .maybeSingle();
-          if (!fallback.error && fallback.data) {
-            step2Form = fallback.data as any;
-          }
+        if (!step2Form) {
+          try {
+            const fallback = await supabase
+              .from('admin_forms')
+              .select('id,is_active')
+              .eq('form_type', 'onboarding')
+              .eq('onboard_step', 2)
+              .order('created_at', { ascending: true })
+              .limit(1)
+              .maybeSingle();
+            if (!fallback.error && fallback.data) {
+              step2Form = fallback.data as any;
+            }
         } catch {}
       }
 
       if (!step2Form?.id) return;
       if (step2Form.is_active) return;
 
+      let existingOption: string | null = null;
       try {
-        const existing = await supabase
-          .from('admin_form_responses')
-          .select('id,answers,created_at')
-          .eq('user_id', user.id)
-          .eq('form_id', step2Form.id)
-          .order('created_at', { ascending: false })
-          .limit(1)
-          .maybeSingle();
-
-        const existingOption = (existing.data as any)?.answers?.option;
-        if (typeof existingOption === 'string' && existingOption) return;
+        const token = session?.access_token;
+        const headers = token ? { Authorization: `Bearer ${token}` } : undefined;
+        const resp = await fetch(`/api/onboarding/step2-response?formId=${encodeURIComponent(step2Form.id)}`, {
+          headers,
+        });
+        const payload = resp.ok ? await resp.json() : null;
+        if (typeof payload?.option === 'string') {
+          existingOption = payload.option;
+        }
       } catch {}
+
+      if (typeof existingOption === 'string' && existingOption) return;
 
       try {
         await saveFormResponse({
@@ -571,6 +593,7 @@ export default function OnboardingClient() {
     selectedChallengePlaylist?.id,
     selectedChallengePlaylist?.title,
     user?.id,
+    session?.access_token,
     isAdminPreview,
     activeFormId,
   ]);
@@ -700,7 +723,11 @@ export default function OnboardingClient() {
     if (destination === 'step') {
       const targetPosition = Number((settings as any).onboarding_other_step_position || '');
       if (Number.isFinite(targetPosition)) {
-        const steps = await getOnboardingStepsOrder(buildOnboardingSettingsSnapshot());
+        const steps = await withTimeout(
+          getOnboardingStepsOrder(buildOnboardingSettingsSnapshot()),
+          8000,
+          []
+        );
         const targetStep = steps.find((s) => {
           if (s.position !== targetPosition || !s.isActive) return false;
           if (s.type === 'static' && s.staticKind === 'preview' && !categoryIdValue) return false;
@@ -1238,17 +1265,18 @@ export default function OnboardingClient() {
         const stepParam = Number(searchParams?.get('step') || desiredStep || 1);
         
         // VERIFICAÇÃO CRÍTICA: Verificar se o passo solicitado está ativo
-        const steps = await getOnboardingStepsOrder(buildOnboardingSettingsSnapshot());
-
-        if (!steps || steps.length === 0) {
-          console.warn('Onboarding indisponível: lista de passos vazia');
-          setCurrentStepMeta(null);
-          setLoading(false);
-          return;
-        }
-        const requestedStep = steps.find(s => s.position === stepParam);
+        const steps = await withTimeout(
+          getOnboardingStepsOrder(buildOnboardingSettingsSnapshot()),
+          8000,
+          null
+        );
+        const hasSteps = Array.isArray(steps) && steps.length > 0;
+        const requestedStep = hasSteps ? steps.find(s => s.position === stepParam) : null;
         if (mounted) {
           setCurrentStepMeta(requestedStep || null);
+        }
+        if (!hasSteps) {
+          console.warn('Onboarding indisponível: lista de passos vazia');
         }
 
         // Regra especial: o passo informativo final de WhatsApp (step=11)
@@ -1262,9 +1290,9 @@ export default function OnboardingClient() {
         }
         
         // Se o passo solicitado não existe ou está inativo, redirecionar para o próximo ativo
-        if ((!requestedStep || !requestedStep.isActive) && steps.length > 0) {
+        if (hasSteps && (!requestedStep || !requestedStep.isActive)) {
           // Encontrar o último passo ativo antes do solicitado, ou usar 0 se não houver
-          const activeStepsBefore = steps
+          const activeStepsBefore = (steps as OnboardingStep[])
             .filter(s => s.isActive && s.position < stepParam)
             .sort((a, b) => b.position - a.position);
           const previousActiveStep = activeStepsBefore[0]?.position ?? 0;
@@ -1280,11 +1308,15 @@ export default function OnboardingClient() {
         
         const categoryIdFromUrl = searchParams?.get('categoryId') || null;
         const rootFormIdFromUrl = searchParams?.get('formId') || null;
-        await fetchPreviousResponses(stepParam, {
-          userId: user?.id ?? null,
-          categoryId: categoryIdFromUrl,
-          rootFormId: rootFormIdFromUrl,
-        });
+        await withTimeout(
+          fetchPreviousResponses(stepParam, {
+            userId: user?.id ?? null,
+            categoryId: categoryIdFromUrl,
+            rootFormId: rootFormIdFromUrl,
+          }),
+          8000,
+          null
+        );
         const staticKind = searchParams?.get('showStatic') || '';
         if (desiredStep === 1) {
           // Primeiro tenta pelo passo configurado = 1

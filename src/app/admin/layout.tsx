@@ -21,7 +21,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
   useEffect(() => {
     const checkUserRole = async () => {
       console.log('🔐 AdminLayout: Verificando acesso admin...');
-      
+
       // Se não há usuário logado, redirecionar para login
       if (!authLoading && !user) {
         console.log('❌ AdminLayout: Usuário não logado, redirecionando para login');
@@ -35,44 +35,13 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
         return;
       }
 
-      try {
-        // Cache de role na sessão para evitar revalidação custosa em foco de aba
-        const cacheKey = `admin:role:${user.id}`;
-        const cachedRaw = typeof window !== 'undefined' ? sessionStorage.getItem(cacheKey) : null;
-        let useOptimisticAdmin = false;
-        if (cachedRaw) {
-          try {
-            const cached = JSON.parse(cachedRaw) as { role: string; ts: number };
-            // TTL curto de 5 minutos para equilíbrio entre UX e frescor
-            const fiveMinutes = 5 * 60 * 1000;
-            const isStale = Date.now() - cached.ts >= fiveMinutes;
-            if (!isStale) {
-              console.log('💾 AdminLayout: Usando role em cache');
-              setUserRole(cached.role);
-              setRoleLoading(false);
-              if (cached.role !== 'admin') {
-                setAccessDenied(true);
-                setTimeout(() => router.push('/'), 2000);
-              }
-              return;
-            } else if (cached.role === 'admin') {
-              // Otimismo: se o cache expirou mas o usuário era admin, renderizar imediatamente e atualizar em background
-              console.log('💡 AdminLayout: Role em cache expirada será usada de forma otimista');
-              setUserRole('admin');
-              setRoleLoading(false);
-              useOptimisticAdmin = true;
-            }
-          } catch (_e) {
-            // ignore cache parse errors
-          }
-        }
+      setRoleLoading(true);
+      setAccessDenied(false);
 
-        if (!useOptimisticAdmin) {
-          setRoleLoading(true);
-        }
+      try {
         // Não expor e-mail do usuário no console; usa apenas informação mínima
         console.log('🔍 AdminLayout: Buscando role do usuário');
-        
+
         const { data: profile, error } = await supabase
           .from('profiles')
           .select('role')
@@ -88,14 +57,6 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
         const role = profile?.role || 'user';
         console.log('✅ AdminLayout: Role encontrado:', role);
         setUserRole(role);
-        // Atualizar cache da role
-        try {
-          if (typeof window !== 'undefined') {
-            sessionStorage.setItem(cacheKey, JSON.stringify({ role, ts: Date.now() }));
-          }
-        } catch (_e) {
-          // ignore
-        }
 
         // Se não é admin, negar acesso
         if (role !== 'admin') {

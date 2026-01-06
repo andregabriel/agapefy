@@ -3,6 +3,7 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabase';
+import { logger } from '@/lib/logger';
 
 interface AuthContextType {
   user: User | null;
@@ -32,7 +33,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    console.log('🔄 AuthContext: Inicializando...');
+    logger.debug('🔄 AuthContext: Inicializando...');
 
     // Fail-safe: se o Supabase travar na obtenção da sessão, liberamos o app após alguns segundos
     const loadingTimeout = window.setTimeout(() => {
@@ -43,7 +44,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     // Obter sessão inicial
     const getInitialSession = async () => {
       try {
-        console.log('🔍 AuthContext: Buscando sessão inicial...');
+        logger.debug('🔍 AuthContext: Buscando sessão inicial...');
         const { data: { session }, error } = await supabase.auth.getSession();
         
         if (error) {
@@ -59,7 +60,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           }
         } else {
           // Evita logar dados pessoais como e-mail no console do navegador
-          console.log('✅ AuthContext: Sessão inicial obtida:', !!session);
+          logger.debug('✅ AuthContext: Sessão inicial obtida:', !!session);
         }
         
         setSession(session);
@@ -69,7 +70,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       } finally {
         clearTimeout(loadingTimeout);
         setLoading(false);
-        console.log('🏁 AuthContext: Loading finalizado');
+        logger.debug('🏁 AuthContext: Loading finalizado');
       }
     };
 
@@ -79,24 +80,24 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         // Não logar e-mail do usuário no console do navegador
-        console.log('🔄 AuthContext: Auth state changed:', event, !!session);
+        logger.debug('🔄 AuthContext: Auth state changed:', event, !!session);
         
         setSession(session);
         setUser(session?.user ?? null);
         setLoading(false);
 
         if (event === 'SIGNED_IN') {
-          console.log('✅ AuthContext: Usuário logado com sucesso!');
+          logger.debug('✅ AuthContext: Usuário logado com sucesso!');
         }
         
         if (event === 'SIGNED_OUT') {
-          console.log('🚪 AuthContext: Usuário deslogado');
+          logger.debug('🚪 AuthContext: Usuário deslogado');
         }
       }
     );
 
     return () => {
-      console.log('🧹 AuthContext: Limpando subscription');
+      logger.debug('🧹 AuthContext: Limpando subscription');
       clearTimeout(loadingTimeout);
       subscription.unsubscribe();
     };
@@ -104,10 +105,10 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   const signOut = async () => {
     try {
-      console.log('🚪 AuthContext: Iniciando logout...');
+      logger.debug('🚪 AuthContext: Iniciando logout...');
       setLoading(true);
       await supabase.auth.signOut();
-      console.log('✅ AuthContext: Logout realizado');
+      logger.debug('✅ AuthContext: Logout realizado');
       window.location.href = '/';
     } catch (error) {
       console.error('❌ AuthContext: Erro ao fazer logout:', error);
@@ -121,8 +122,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     loading,
     signOut,
   };
-
-  console.log('📊 AuthContext: Estado atual - User:', !!user, 'Loading:', loading);
 
   return (
     <AuthContext.Provider value={value}>

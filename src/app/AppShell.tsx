@@ -11,6 +11,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { PaywallModal } from '@/components/modals/PaywallModal';
+import { logger } from '@/lib/logger';
 
 export default function AppShell({ children }: { children: React.ReactNode }) {
   // Colocamos os providers aqui no topo, e movemos a lógica que consome o AuthContext
@@ -61,7 +62,7 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
       }
 
       try {
-        console.info(`${logPrefix} start`, { userId, pathname });
+        logger.debug(`${logPrefix} start`, { userId, pathname });
 
         // Verificar se é admin - admin não deve ser redirecionado para onboarding
         const { data: profile, error: profileError } = await supabase
@@ -82,7 +83,7 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
         
         if (profile?.role === 'admin') {
           // Admin não deve ver onboarding
-          console.info(`${logPrefix} admin detected, skipping onboarding`, { userId });
+          logger.debug(`${logPrefix} admin detected, skipping onboarding`, { userId });
           return;
         }
 
@@ -98,7 +99,7 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
         }
         const json = await res.json();
         if (aborted) return;
-        console.info(`${logPrefix} status response`, {
+        logger.debug(`${logPrefix} status response`, {
           pending: json?.pending,
           nextStep: json?.nextStep,
           steps: json?.steps,

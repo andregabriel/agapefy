@@ -74,8 +74,10 @@ function classifyUserTypeFromSubscriptions(rows: AssinaturaRow[]): {
 
 export async function GET(_req: NextRequest) {
   try {
-    const cookieStore = cookies();
-    const userClient = createRouteHandlerClient({ cookies: () => cookieStore });
+    // Next.js 15+: `cookies()` é uma Dynamic API e pode precisar ser aguardada.
+    // `await` é seguro mesmo quando `cookies()` retorna o valor diretamente.
+    const cookieStore = await cookies();
+    const userClient = createRouteHandlerClient({ cookies: async () => cookieStore });
     const {
       data: { user },
     } = await userClient.auth.getUser();

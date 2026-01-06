@@ -4,6 +4,13 @@ const nextConfig: NextConfig = {
   // Otimizações para Vercel
   output: "standalone",
 
+  // Remover logs no build de produção (evita poluir o console do usuário)
+  compiler: {
+    ...(process.env.NODE_ENV === "production"
+      ? { removeConsole: { exclude: ["error"] } }
+      : {}),
+  },
+
   // Configurações de imagem otimizadas
   images: {
     remotePatterns: [

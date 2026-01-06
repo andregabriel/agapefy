@@ -1,5 +1,6 @@
 import { supabase } from '@/lib/supabase';
 import { logDbError } from '@/lib/utils';
+import { logger } from '@/lib/logger';
 
 export interface Category {
   id: string;
@@ -73,7 +74,7 @@ export interface CategoryHomeOrderItem {
 
 // Buscar todas as categorias ordenadas com categoria fixa primeiro
 export async function getCategories(): Promise<Category[]> {
-  console.log('🔍 Buscando categorias com ordem: fixa primeiro, depois manual...');
+  logger.debug('🔍 Buscando categorias com ordem: fixa primeiro, depois manual...');
   
   // Query principal (usa colunas modernas)
   let { data, error } = await supabase
@@ -97,8 +98,8 @@ export async function getCategories(): Promise<Category[]> {
     data = fallback.data as any[];
   }
 
-  console.log('✅ Categorias encontradas:', data?.length || 0);
-  console.log('📋 Lista de categorias ordenadas:', data?.map((cat: any) => ({ 
+  logger.debug('✅ Categorias encontradas:', data?.length || 0);
+  logger.debug('📋 Lista de categorias ordenadas:', data?.map((cat: any) => ({ 
     id: cat.id, 
     name: cat.name, 
     position: cat.order_position,
@@ -332,7 +333,7 @@ export async function getPublicPlaylists(): Promise<Playlist[]> {
 
 // Buscar áudios por categoria
 export async function getAudiosByCategory(categoryId: string): Promise<Audio[]> {
-  console.log('🎵 Buscando áudios da categoria:', categoryId);
+  logger.debug('🎵 Buscando áudios da categoria:', categoryId);
   
   const { data, error } = await supabase
     .from('audios')
@@ -348,7 +349,7 @@ export async function getAudiosByCategory(categoryId: string): Promise<Audio[]> 
     return [];
   }
 
-  console.log('✅ Áudios encontrados na categoria:', data?.length || 0);
+  logger.debug('✅ Áudios encontrados na categoria:', data?.length || 0);
   return (data as Audio[]) || [];
 }
 
@@ -465,7 +466,7 @@ export async function getPlaylistAudioCount(playlistId: string): Promise<number>
 
 // Buscar playlists públicas por categoria com duração e contagem
 export async function getPlaylistsByCategory(categoryId: string): Promise<Playlist[]> {
-  console.log('📋 Buscando playlists da categoria:', categoryId);
+  logger.debug('📋 Buscando playlists da categoria:', categoryId);
   
   const { data, error } = await supabase
     .from('playlists')
@@ -501,7 +502,7 @@ export async function getPlaylistsByCategory(categoryId: string): Promise<Playli
   );
 
   // O campo is_challenge já vem direto da query
-  console.log('✅ Playlists encontradas na categoria:', playlistsWithData?.length || 0);
+  logger.debug('✅ Playlists encontradas na categoria:', playlistsWithData?.length || 0);
   return playlistsWithData as Playlist[];
 }
 
@@ -619,7 +620,7 @@ export async function getCategoryContent(categoryId: string): Promise<{
   audios: Audio[];
   playlists: Playlist[];
 }> {
-  console.log('🔍 Buscando conteúdo completo da categoria:', categoryId);
+  logger.debug('🔍 Buscando conteúdo completo da categoria:', categoryId);
   
   // Buscar áudios e playlists em paralelo
   const [audios, playlists] = await Promise.all([
@@ -627,7 +628,7 @@ export async function getCategoryContent(categoryId: string): Promise<{
     getPlaylistsByCategory(categoryId)
   ]);
 
-  console.log(`✅ Categoria ${categoryId}: ${audios.length} áudios + ${playlists.length} playlists`);
+  logger.debug(`✅ Categoria ${categoryId}: ${audios.length} áudios + ${playlists.length} playlists`);
   
   return {
     audios,
@@ -789,7 +790,7 @@ export async function searchAll(searchTerm: string): Promise<{
     searchCategories(trimmedTerm)
   ]);
 
-  console.log(`🔍 Busca "${trimmedTerm}": ${audios.length} áudios, ${playlists.length} playlists, ${categories.length} categorias`);
+  logger.debug(`🔍 Busca "${trimmedTerm}": ${audios.length} áudios, ${playlists.length} playlists, ${categories.length} categorias`);
 
   return {
     audios,
@@ -851,7 +852,7 @@ export async function getRandomAudios(limit: number = 6): Promise<Audio[]> {
 
 // Função para forçar recarregamento das categorias (útil para debug)
 export async function refreshCategories(): Promise<Category[]> {
-  console.log('🔄 Forçando recarregamento das categorias...');
+  logger.debug('🔄 Forçando recarregamento das categorias...');
   return await getCategories();
 }
 
