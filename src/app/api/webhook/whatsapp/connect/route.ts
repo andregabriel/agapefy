@@ -1,7 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { requireWebhookSecret } from '@/lib/api-auth';
 
 export async function POST(request: NextRequest) {
   try {
+    const webhookAuth = requireWebhookSecret(request, 'WHATSAPP_WEBHOOK_SECRET');
+    if (webhookAuth) return webhookAuth;
+
     const body = await request.json();
     console.log('🔗 Webhook CONNECT recebido:', JSON.stringify(body, null, 2));
 

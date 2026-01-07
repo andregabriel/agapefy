@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { requireAdmin } from '@/lib/api-auth';
 
 // Very lightweight detector: tries to find up to 3 references like "Livro 3:16" or "Livro 23"
 function detectBiblicalRefs(text: string): string[] {
@@ -23,6 +24,9 @@ function detectBiblicalRefs(text: string): string[] {
 
 export async function POST(request: NextRequest) {
   try {
+    const auth = await requireAdmin(request);
+    if (!auth.ok) return auth.response;
+
     const { text } = await request.json();
     if (!text || typeof text !== 'string') {
       return NextResponse.json({ error: 'Texto é obrigatório' }, { status: 400 });
@@ -35,5 +39,4 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: msg }, { status: 500 });
   }
 }
-
 

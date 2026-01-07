@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useMemo } from 'react';
 import { supabase } from '@/lib/supabase';
+import { authFetch } from '@/lib/auth-fetch';
 import { useAppSettings } from '@/hooks/useAppSettings';
 import { toast } from 'sonner';
 import StepCard from './StepCard';
@@ -261,11 +262,10 @@ export default function OnboardingTimeline() {
         return;
       }
 
-      const response = await fetch('/api/onboarding/reset', {
+      const response = await authFetch('/api/onboarding/reset', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'x-user-id': session.user.id,
         },
       });
 

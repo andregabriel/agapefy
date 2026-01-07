@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAdminSupabase } from '@/lib/supabase-admin';
+import { requireAdmin } from '@/lib/api-auth';
 
 type FieldKey = 'title' | 'subtitle' | 'description' | 'preparation' | 'text' | 'final_message' | 'image_prompt';
 
@@ -46,6 +47,9 @@ function sanitizeByField(field: FieldKey, text: string): string {
 
 export async function POST(request: NextRequest) {
   try {
+    const auth = await requireAdmin(request);
+    if (!auth.ok) return auth.response;
+
     const { field, context } = await request.json();
 
     if (!field || !['title','subtitle','description','preparation','text','final_message','image_prompt'].includes(field)) {
@@ -151,5 +155,4 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: msg }, { status: 500 });
   }
 }
-
 

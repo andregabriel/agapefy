@@ -7,6 +7,7 @@ import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/contexts/AuthContext";
 import { useAppSettings } from "@/hooks/useAppSettings";
 import { toast } from "sonner";
+import { authFetch } from "@/lib/auth-fetch";
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -965,7 +966,7 @@ export default function WhatsAppSetup({ variant = "standalone", redirectIfNotLog
       prayer: "[Oração] Monte uma oração personalizada para mim sobre esperança.",
     } as const;
     try {
-      const res = await fetch("/api/whatsapp/test-message", {
+      const res = await authFetch("/api/whatsapp/test-message", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ phone: clean, message: preset[kind] }),

@@ -10,8 +10,8 @@ export default defineConfig({
     alias: {
       '@': path.resolve(__dirname, './src'),
     },
+    include: ['src/**/*.{test,spec}.{ts,tsx}', 'src/**/__tests__/**/*.{test,spec}.{ts,tsx}'],
+    exclude: ['node_modules/**', 'dist/**', 'build/**', 'tests/**', '**/*.jest.test.ts', '**/*.jest.test.tsx'],
   },
 });
-
-
 

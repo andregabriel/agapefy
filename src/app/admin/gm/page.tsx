@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Loader2, Wand2, Pause, Play, XCircle, CheckCircle, AlertCircle, ListChecks } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/lib/supabase';
+import { authFetch } from '@/lib/auth-fetch';
 import { getCategories, type Category, ensurePlaylistByTitleInsensitive, addAudioToPlaylist } from '@/lib/supabase-queries';
 import AIGenerator from '@/components/admin/AIGenerator';
 import type { AIGeneratorHandle, AIGeneratorProps } from '@/types/ai';
@@ -370,7 +371,7 @@ export default function GmPage() {
             // Identificar usuário autenticado para created_by do servidor
             const { data: auth } = await supabase.auth.getUser();
             const currentUserId = auth?.user?.id || null;
-            const resp = await fetch('/api/generate-and-save', {
+            const resp = await authFetch('/api/generate-and-save', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({
@@ -774,5 +775,4 @@ export default function GmPage() {
     </div>
   );
 }
-
 

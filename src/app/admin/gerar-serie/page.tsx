@@ -8,6 +8,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Trash2, Plus, AlertCircle, CheckCircle, Play, Pause, Clock, Image, CheckSquare, Volume2, AlertTriangle, ThumbsUp, Edit, X } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
+import { authFetch } from '@/lib/auth-fetch';
 
 type EstadoItem = 'AGUARDANDO' | 'BUSCANDO_TEXTO' | 'GERANDO_IMAGEM' | 'GERANDO_AUDIO' | 'PRONTO_REVISAO' | 'ERRO_REFERENCIA' | 'ERRO_PROCESSAMENTO';
 
@@ -154,7 +155,7 @@ export default function GerarSeriePage() {
     try {
       console.log('Gerando texto com IA para:', titulo);
       
-      const response = await fetch('/api/generate-prayer', {
+      const response = await authFetch('/api/generate-prayer', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -178,7 +179,7 @@ export default function GerarSeriePage() {
     try {
       console.log('Gerando imagem para:', prompt.substring(0, 50) + '...');
       
-      const response = await fetch('/api/generate-image', {
+      const response = await authFetch('/api/generate-image', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ prompt })
@@ -200,7 +201,7 @@ export default function GerarSeriePage() {
     try {
       console.log('Gerando áudio para texto de', texto.length, 'caracteres');
       
-      const response = await fetch('/api/generate-audio', {
+      const response = await authFetch('/api/generate-audio', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 

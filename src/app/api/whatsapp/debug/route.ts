@@ -1,8 +1,12 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
+import { requireAdmin } from '@/lib/api-auth';
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
+    const auth = await requireAdmin(request);
+    if (!auth.ok) return auth.response;
+
     // Buscar últimas conversas
     const { data: conversations, error: convError } = await supabase
       .from('whatsapp_conversations')

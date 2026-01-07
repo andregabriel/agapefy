@@ -1,8 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
+import { requireAdmin } from '@/lib/api-auth';
 
 export async function POST(request: NextRequest) {
   try {
+    const auth = await requireAdmin(request);
+    if (!auth.ok) return auth.response;
+
     const { phone_number, is_active } = await request.json();
 
     if (!phone_number || typeof is_active !== 'boolean') {
@@ -55,4 +59,3 @@ export async function POST(request: NextRequest) {
     );
   }
 }
-

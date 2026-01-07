@@ -1,9 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAdminSupabase } from '@/lib/supabase-admin';
+import { requireAdmin } from '@/lib/api-auth';
 
 // Esta rota executa o SQL diretamente para deletar de auth.users
 export async function POST(request: NextRequest) {
   try {
+    const auth = await requireAdmin(request);
+    if (!auth.ok) return auth.response;
+
     const { userId } = await request.json();
     
     if (!userId) {
@@ -49,4 +53,3 @@ export async function POST(request: NextRequest) {
     );
   }
 }
-

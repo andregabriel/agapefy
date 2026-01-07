@@ -1,8 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { requireAdmin } from '@/lib/api-auth';
 
 export async function POST(request: NextRequest) {
   try {
+    const auth = await requireAdmin(request);
+    if (!auth.ok) return auth.response;
+
     console.log('🔄 API migrate-audios: Iniciando migração de áudios base64 para Storage...');
 
     // Inicializar cliente Supabase com as credenciais do servidor
@@ -176,4 +180,3 @@ export async function POST(request: NextRequest) {
     );
   }
 }
-

@@ -3,6 +3,7 @@ import { getAdminSupabase } from '@/lib/supabase-admin';
 import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
 import { cookies } from 'next/headers';
 import { ELEVENLABS_VOICES } from '@/constants/elevenlabsVoices';
+import { requireAdmin } from '@/lib/api-auth';
 
 type ReqBody = {
   title?: string;
@@ -27,6 +28,13 @@ const FIELD_TO_SETTING_KEY: Record<FieldKey, string> = {
   final_message: 'gmanual_final_message_prompt',
   image_prompt: 'gmanual_image_prompt_prompt',
 };
+
+function getForwardAuthHeaders(req: NextRequest): Record<string, string> {
+  const adminKey = process.env.ADMIN_API_KEY || '';
+  if (adminKey) return { 'x-api-key': adminKey };
+  const auth = req.headers.get('authorization') || req.headers.get('Authorization');
+  return auth ? { Authorization: auth } : {};
+}
 
 function applyPlaceholders(template: string, context: Record<string, string | undefined>): string {
   return template.replace(/\{(\w+)\}/g, (_, key) => {
@@ -69,10 +77,16 @@ async function generateField(field: FieldKey, context: Record<string, string>, c
   return { value: '' };
 }
 
-async function generateAudio(origin: string, text: string, voice_id?: string): Promise<{ url: string | null; voiceIdUsed: string | null; durationSeconds: number | null }> {
+async function generateAudio(
+  origin: string,
+  text: string,
+  voice_id: string | undefined,
+  headers: Record<string, string>
+): Promise<{ url: string | null; voiceIdUsed: string | null; durationSeconds: number | null }> {
   try {
     const resp = await fetch(`${origin}/api/generate-audio`, {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...headers },
       body: JSON.stringify({ text, voice_id })
     });
     const data = await resp.json().catch(() => ({}));
@@ -87,11 +101,12 @@ async function generateAudio(origin: string, text: string, voice_id?: string): P
   return { url: null, voiceIdUsed: null, durationSeconds: null };
 }
 
-async function generateImage(origin: string, prompt: string): Promise<string | null> {
+async function generateImage(origin: string, prompt: string, headers: Record<string, string>): Promise<string | null> {
   try {
     const attempt = async () => {
       const resp = await fetch(`${origin}/api/generate-image`, {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...headers },
         body: JSON.stringify({ prompt })
       });
       let data: any = {};
@@ -133,6 +148,9 @@ async function ensurePlaylist(admin: any, title: string, categoryId?: string | n
 
 export async function POST(req: NextRequest) {
   try {
+    const auth = await requireAdmin(req);
+    if (!auth.ok) return auth.response;
+
     const origin = req.nextUrl.origin;
     const body = await req.json() as ReqBody;
     const title = (body.title || '').trim();
@@ -191,7 +209,8 @@ export async function POST(req: NextRequest) {
     // 3) áudio
     const audioText = [prep, text, finalMsg].filter(Boolean).join('\n\n');
     const chosenVoiceId = (voiceId || defaultVoiceId || undefined) as string | undefined;
-    const audioGen = await generateAudio(origin, audioText, chosenVoiceId);
+    const forwardHeaders = getForwardAuthHeaders(req);
+    const audioGen = await generateAudio(origin, audioText, chosenVoiceId, forwardHeaders);
     const audioUrl = audioGen.url;
     const usedVoiceId = (voiceId || defaultVoiceId || audioGen.voiceIdUsed || null) as string | null;
     const usedVoiceName = usedVoiceId ? (ELEVENLABS_VOICES.find(v => v.id === usedVoiceId)?.name || null) : null;
@@ -215,7 +234,7 @@ export async function POST(req: NextRequest) {
         base_biblica: base,
       };
       const compiledPrompt = templateRaw.replace(/\{([a-zA-Z_]+)\}/g, (_, k) => templateCtx[k] || '');
-      const tmpUrl = await generateImage(origin, compiledPrompt);
+      const tmpUrl = await generateImage(origin, compiledPrompt, forwardHeaders);
       if (tmpUrl) {
         // Copiar para Storage para padronizar com /admin/go
         try {
@@ -326,4 +345,3 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: false, error: e?.message || 'Erro desconhecido' }, { status: 500 });
   }
 }
-

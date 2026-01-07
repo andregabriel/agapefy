@@ -1,8 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { requireAdmin } from '@/lib/api-auth';
 
 export async function POST(request: NextRequest) {
   try {
+    const auth = await requireAdmin(request);
+    if (!auth.ok) return auth.response;
+
     console.log('📤 API upload-playlist-image: Iniciando processamento...');
     
     const formData = await request.formData();
@@ -130,7 +134,6 @@ export async function POST(request: NextRequest) {
     );
   }
 }
-
 
 
 

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { getAdminSupabase } from '@/lib/supabase-admin';
+import { requireAdmin } from '@/lib/api-auth';
 
 // Usar o mesmo padrão das categorias - cliente normal do Supabase
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || "https://vvgqqlrujmyxzzygsizc.supabase.co";
@@ -8,6 +9,9 @@ const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "eyJhbGci
 
 export async function POST(request: NextRequest) {
   try {
+    const auth = await requireAdmin(request);
+    if (!auth.ok) return auth.response;
+
     const { email } = await request.json();
     
     if (!email) {
@@ -221,4 +225,3 @@ export async function POST(request: NextRequest) {
     );
   }
 }
-

@@ -14,6 +14,7 @@ import { Switch } from '@/components/ui/switch';
 import { toast } from 'sonner';
 import { supabase } from '@/lib/supabase';
 import { useAppSettings } from '@/hooks/useAppSettings';
+import { authFetch } from '@/lib/auth-fetch';
 import {
   MessageCircle,
   Users,
@@ -298,7 +299,7 @@ export default function WhatsAppAdminPage() {
   const toggleUserStatus = async (phoneNumber: string, currentStatus: boolean) => {
     try {
       setLoading(true);
-      const response = await fetch('/api/whatsapp/users/toggle-status', {
+      const response = await authFetch('/api/whatsapp/users/toggle-status', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -344,7 +345,7 @@ export default function WhatsAppAdminPage() {
 
     try {
       setSavingPhone(true);
-      const response = await fetch('/api/whatsapp/users/update-phone', {
+      const response = await authFetch('/api/whatsapp/users/update-phone', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -543,7 +544,7 @@ export default function WhatsAppAdminPage() {
 
     try {
       setLoading(true);
-      const response = await fetch('/api/whatsapp/test-assistant-selection', {
+      const response = await authFetch('/api/whatsapp/test-assistant-selection', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ message: testAssistantMessage }),

@@ -1,5 +1,7 @@
+import { authFetch } from '@/lib/auth-fetch';
+
 export const requestGenerateAudio = async (payload: { text: string; voice_id: string }): Promise<{ ok: boolean; data?: any; error?: string; rawText?: string; status?: number; statusText?: string; headers?: Record<string,string> }> => {
-  const response = await fetch('/api/generate-audio', {
+  const response = await authFetch('/api/generate-audio', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -22,5 +24,4 @@ export const requestGenerateAudio = async (payload: { text: string; voice_id: st
 
   return { ok: true, data, rawText: responseText.substring(0, 200), status: response.status, statusText: response.statusText, headers: Object.fromEntries(response.headers.entries()) };
 };
-
 

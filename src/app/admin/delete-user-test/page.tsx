@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
+import { authFetch } from '@/lib/auth-fetch';
 
 export default function DeleteUserTestPage() {
   const { user } = useAuth();
@@ -23,7 +24,7 @@ export default function DeleteUserTestPage() {
     setError(null);
 
     try {
-      const response = await fetch('/api/admin/delete-user', {
+      const response = await authFetch('/api/admin/delete-user', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -111,4 +112,3 @@ export default function DeleteUserTestPage() {
     </div>
   );
 }
-

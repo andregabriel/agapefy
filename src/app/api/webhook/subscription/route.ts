@@ -27,6 +27,11 @@ export async function POST(request: NextRequest) {
       }
       
       console.log('✅ Token validado com sucesso');
+    } else if (process.env.NODE_ENV === 'production') {
+      return NextResponse.json(
+        { error: 'Unauthorized', message: 'DMG_API_TOKEN não configurado' },
+        { status: 401 }
+      );
     }
 
     // Validar se é um webhook de assinatura
@@ -195,4 +200,3 @@ export async function GET() {
     timestamp: new Date().toISOString()
   });
 }
-

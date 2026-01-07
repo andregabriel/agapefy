@@ -10,6 +10,7 @@ import { MiniPlayer } from '@/components/player/MiniPlayer';
 import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
+import { authFetch } from '@/lib/auth-fetch';
 import { PaywallModal } from '@/components/modals/PaywallModal';
 import { logger } from '@/lib/logger';
 
@@ -90,9 +91,7 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
         const redirectKey = `onboardingRedirected_${userId}`;
         const alreadyRedirected =
           typeof window !== 'undefined' && sessionStorage.getItem(redirectKey) === '1';
-        const res = await fetch('/api/onboarding/status', {
-          headers: { 'x-user-id': userId },
-        });
+        const res = await authFetch('/api/onboarding/status');
         if (!res.ok) {
           console.error(`${logPrefix} status fetch failed`, { status: res.status });
           return;

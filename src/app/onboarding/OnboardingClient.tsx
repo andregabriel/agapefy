@@ -10,6 +10,7 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Checkbox } from '@/components/ui/checkbox';
 import { toast } from 'sonner';
 import { supabase } from '@/lib/supabase';
+import { authFetch } from '@/lib/auth-fetch';
 import { saveFormResponse } from '@/lib/services/forms';
 import { useAuth } from '@/contexts/AuthContext';
 import { ArrowRight } from 'lucide-react';
@@ -208,9 +209,7 @@ export default function OnboardingClient() {
         }
 
         // Verificar se já completou o onboarding
-        const res = await fetch('/api/onboarding/status', {
-          headers: { 'x-user-id': user.id },
-        });
+        const res = await authFetch('/api/onboarding/status');
         
         if (!mounted) return;
         

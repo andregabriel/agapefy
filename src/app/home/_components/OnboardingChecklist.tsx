@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { CheckCircle, Circle, MessageSquareText } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useRoutinePlaylist } from '@/hooks/useRoutinePlaylist';
+import { authFetch } from '@/lib/auth-fetch';
 
 // Feature flag: checklist escondida na home (pode ser reativada futuramente)
 const ONBOARDING_CHECKLIST_ENABLED = false;
@@ -47,7 +48,7 @@ export default function OnboardingChecklist() {
           return;
         }
 
-        const res = await fetch('/api/onboarding/checklist', { headers: { 'x-user-id': user.id } });
+        const res = await authFetch('/api/onboarding/checklist');
         if (!res.ok) {
           if (!aborted) setItems([]);
           return;
@@ -132,4 +133,3 @@ export default function OnboardingChecklist() {
     </Card>
   );
 }
-

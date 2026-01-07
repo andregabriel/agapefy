@@ -1,8 +1,10 @@
+import { authFetch } from '@/lib/auth-fetch';
+
 export const generateField = async (
   field: 'title'|'subtitle'|'description'|'preparation'|'text'|'final_message'|'image_prompt',
   context: Record<string, any>
 ): Promise<{ ok: boolean; content?: string; error?: string }> => {
-  const res = await fetch('/api/gmanual/generate-field', {
+  const res = await authFetch('/api/gmanual/generate-field', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ field, context })
@@ -13,5 +15,4 @@ export const generateField = async (
   }
   return { ok: true, content: data?.content || '' };
 };
-
 

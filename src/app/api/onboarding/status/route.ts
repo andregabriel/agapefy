@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAdminSupabase } from '@/lib/supabase-admin';
+import { requireUser } from '@/lib/api-auth';
 
 type OnboardingStep = {
   id: string;
@@ -218,10 +219,9 @@ async function getStepsOrderAdmin(): Promise<OnboardingStep[]> {
 
 export async function GET(request: NextRequest) {
   try {
-    const userId = request.headers.get('x-user-id') || null;
-    if (!userId) {
-      return NextResponse.json({ pending: false, steps: [] });
-    }
+    const auth = await requireUser(request);
+    if (!auth.ok) return auth.response;
+    const userId = auth.userId;
 
     console.info(`${logPrefix} start`, { userId });
 

@@ -5,7 +5,11 @@ import WhatsAppSetup from '../../whatsapp/WhatsAppSetup';
 
 // Mocks necessários
 jest.mock('@/contexts/AuthContext', () => ({
-  useAuth: () => ({ user: { id: 'user-1', email: 'test@example.com' }, loading: false }),
+  useAuth: () => ({
+    user: { id: 'user-1', email: 'test@example.com' },
+    loading: false,
+    session: { access_token: 'test-token' },
+  }),
 }));
 
 jest.mock('@/hooks/useAppSettings', () => ({
@@ -82,9 +86,13 @@ jest.mock('@/components/ui/command', () => {
   return { Command, CommandInput, CommandGroup, CommandItem, CommandEmpty };
 });
 
-describe('WhatsAppSetup – fallback de onboarding não preenche combobox (bug atual)', () => {
+describe('WhatsAppSetup – prefill do onboarding no combobox', () => {
   beforeEach(() => {
     jest.resetAllMocks();
+    (global as any).fetch = jest.fn(async () => ({
+      ok: false,
+      json: async () => null,
+    }));
 
     // Mock localStorage para retornar a playlist escolhida no onboarding
     Object.defineProperty(global, 'localStorage', {
@@ -104,6 +112,9 @@ describe('WhatsAppSetup – fallback de onboarding não preenche combobox (bug a
         return {
           select: () => ({
             eq: async () => ({ data: [], error: null }),
+            limit: () => ({
+              maybeSingle: async () => ({ data: null, error: null }),
+            }),
           }),
         } as any;
       }
@@ -137,16 +148,51 @@ describe('WhatsAppSetup – fallback de onboarding não preenche combobox (bug a
         } as any;
       }
 
-      // playlists -> retorna vazio (simulando bug: lista não inclui a playlist do onboarding)
-      if (table === 'playlists') {
+      // whatsapp_users usado em fetchExisting
+      if (table === 'whatsapp_users') {
         return {
           select: () => {
             const chain: any = {};
             chain.eq = () => chain;
+            chain.maybeSingle = async () => ({ data: null, error: null });
+            return chain;
+          },
+        } as any;
+      }
+
+      // challenge legacy
+      if (table === 'challenge') {
+        return {
+          select: () => ({
+            order: async () => ({
+              data: [{ playlist_id: 'playlist-onboarding' }],
+              error: null,
+            }),
+          }),
+        } as any;
+      }
+
+      // playlists -> garante fallback por ID para a playlist do onboarding
+      if (table === 'playlists') {
+        return {
+          select: (fields?: string) => {
+            const chain: any = {};
+            chain.eq = () => chain;
             chain.order = () => chain;
             chain.limit = async () => ({ data: [], error: null });
-            chain.in = async () => ({ data: [], error: null });
-            chain.maybeSingle = async () => ({ data: null, error: null });
+            chain.in = async () => ({
+              data: [
+                { id: 'playlist-onboarding', title: 'Desafio 40 dias para Recuperar o Casamento' },
+              ],
+              error: null,
+            });
+            chain.ilike = () => chain;
+            chain.maybeSingle = async () => ({
+              data: fields?.includes('id,title')
+                ? { id: 'playlist-onboarding', title: 'Desafio 40 dias para Recuperar o Casamento' }
+                : null,
+              error: null,
+            });
             return chain;
           },
         } as any;
@@ -156,11 +202,10 @@ describe('WhatsAppSetup – fallback de onboarding não preenche combobox (bug a
     });
   });
 
-  it('deveria renderizar a playlist do onboarding já selecionada no combobox, mas falha (reprodução do bug)', async () => {
+  it('deveria renderizar a playlist do onboarding já selecionada no combobox', async () => {
     render(<WhatsAppSetup variant="standalone" redirectIfNotLoggedIn={false} />);
 
     // Esperamos que o título da playlist esteja presente.
-    // BUG esperado: com playlists vazias, o título não aparece.
     await waitFor(
       () => {
         expect(
@@ -171,7 +216,6 @@ describe('WhatsAppSetup – fallback de onboarding não preenche combobox (bug a
     );
   });
 });
-
 
 
 

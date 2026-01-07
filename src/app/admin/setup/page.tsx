@@ -10,6 +10,7 @@ import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from 'sonner';
+import { authFetch } from '@/lib/auth-fetch';
 import { 
   Activity,
   AlertCircle,
@@ -164,7 +165,7 @@ export default function SetupPage() {
     updateStepStatus('openai', 'loading');
     
     try {
-      const response = await fetch('/api/test/openai-debug');
+      const response = await authFetch('/api/test/openai-debug');
       const data = await response.json();
       
       if (data.success) {
@@ -179,7 +180,7 @@ export default function SetupPage() {
 
   const checkWebhookStatus = async () => {
     try {
-      const response = await fetch('/api/whatsapp/setup-webhook');
+      const response = await authFetch('/api/whatsapp/setup-webhook');
       if (response.ok) {
         const data = await response.json();
         setWebhookStatus(data.data);
@@ -197,7 +198,7 @@ export default function SetupPage() {
 
     setWebhookLoading(true);
     try {
-      const response = await fetch('/api/whatsapp/setup-webhook', {
+      const response = await authFetch('/api/whatsapp/setup-webhook', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ webhookUrl })
@@ -221,7 +222,7 @@ export default function SetupPage() {
   const testWebhook = async () => {
     setWebhookLoading(true);
     try {
-      const response = await fetch('/api/whatsapp/webhook', {
+      const response = await authFetch('/api/whatsapp/webhook', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -249,7 +250,7 @@ export default function SetupPage() {
     updateStepStatus('test-ia', 'loading');
     
     try {
-      const response = await fetch('/api/test/openai-debug', {
+      const response = await authFetch('/api/test/openai-debug', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ text: 'Olá' })
@@ -274,7 +275,7 @@ export default function SetupPage() {
     updateStepStatus('test-whatsapp', 'loading');
     
     try {
-      const response = await fetch('/api/whatsapp/test-message', {
+      const response = await authFetch('/api/whatsapp/test-message', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
@@ -306,7 +307,7 @@ export default function SetupPage() {
 
     setSendingTestMessage(true);
     try {
-      const response = await fetch('/api/whatsapp/test-message', {
+      const response = await authFetch('/api/whatsapp/test-message', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -335,7 +336,7 @@ export default function SetupPage() {
     
     // Simular mensagem via webhook
     try {
-      const response = await fetch('/api/webhook/whatsapp/receive', {
+      const response = await authFetch('/api/webhook/whatsapp/receive', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -775,7 +776,7 @@ function WebhookTestTab() {
     setLoading(true);
     
     try {
-      const response = await fetch('/api/webhook/whatsapp/test', {
+      const response = await authFetch('/api/webhook/whatsapp/test', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -1053,7 +1054,7 @@ function SystemTestsTab() {
   const runDiagnostic = async () => {
     setLoadingDiagnostic(true);
     try {
-      const response = await fetch('/api/test/openai-debug');
+      const response = await authFetch('/api/test/openai-debug');
       const data = await response.json();
       setDiagnosticResult(data);
     } catch (error) {
@@ -1070,7 +1071,7 @@ function SystemTestsTab() {
   const loadDebugData = async () => {
     setLoadingDebug(true);
     try {
-      const response = await fetch('/api/whatsapp/debug');
+      const response = await authFetch('/api/whatsapp/debug');
       const data = await response.json();
       setDebugData(data);
     } catch (error) {
@@ -1090,7 +1091,7 @@ function SystemTestsTab() {
     setWhatsappResult(null);
 
     try {
-      const response = await fetch('/api/whatsapp/test-message', {
+      const response = await authFetch('/api/whatsapp/test-message', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
@@ -1145,7 +1146,7 @@ function SystemTestsTab() {
     setIaResult(null);
 
     try {
-      const response = await fetch('/api/test/openai-debug', {
+      const response = await authFetch('/api/test/openai-debug', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
@@ -1191,7 +1192,7 @@ function SystemTestsTab() {
 
     try {
       // Simular mensagem completa via webhook
-      const response = await fetch('/api/whatsapp/webhook', {
+      const response = await authFetch('/api/whatsapp/webhook', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

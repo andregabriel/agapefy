@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAdminSupabase } from '@/lib/supabase-admin';
+import { requireUser } from '@/lib/api-auth';
 
 export async function POST(request: NextRequest) {
   try {
-    const userId = request.headers.get('x-user-id') || null;
-    if (!userId) {
-      return NextResponse.json({ error: 'user_id_required' }, { status: 401 });
-    }
+    const auth = await requireUser(request);
+    if (!auth.ok) return auth.response;
+    const userId = auth.userId;
 
     const supabase = getAdminSupabase();
 
@@ -45,4 +45,3 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'failed_to_reset' }, { status: 500 });
   }
 }
-

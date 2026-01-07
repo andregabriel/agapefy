@@ -1,10 +1,14 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
 import { upsertCategoryBannerLink } from '@/lib/supabase-queries';
 import { isRecentesCategoryName } from '@/lib/utils';
+import { requireAdmin } from '@/lib/api-auth';
 
-export async function POST() {
+export async function POST(request: NextRequest) {
   try {
+    const auth = await requireAdmin(request);
+    if (!auth.ok) return auth.response;
+
     // Load current categories to find "Recentes" and compute desired position
     const { data: allCats, error: catsError } = await supabase
       .from('categories')
@@ -61,5 +65,4 @@ export async function POST() {
     return NextResponse.json({ ok: false, error: err?.message || 'Erro desconhecido' }, { status: 500 });
   }
 }
-
 

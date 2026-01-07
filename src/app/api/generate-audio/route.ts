@@ -1,9 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { parseBuffer } from 'music-metadata';
+import { requireAdmin } from '@/lib/api-auth';
 
 export async function POST(request: NextRequest) {
   try {
+    const auth = await requireAdmin(request);
+    if (!auth.ok) return auth.response;
+
     console.log('🎵 API generate-audio: Iniciando processamento...');
     
     const { text, voice_id = 'pNInz6obpgDQGcFmaJgB', voice_settings } = await request.json();

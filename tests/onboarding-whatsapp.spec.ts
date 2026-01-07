@@ -16,6 +16,11 @@ if (!SUPABASE_URL || !SUPABASE_ANON_KEY || !SUPABASE_SERVICE_ROLE_KEY) {
   );
 }
 
+const SUPABASE_PUBLIC_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || SUPABASE_URL;
+const projectRef = new URL(SUPABASE_PUBLIC_URL).hostname.split(".")[0];
+const storageKey = `sb-${projectRef}-auth-token`;
+const e2eBaseUrl = process.env.E2E_BASE_URL || "http://127.0.0.1:3100";
+
 const admin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
   auth: { autoRefreshToken: false, persistSession: false },
 });
@@ -29,8 +34,7 @@ let step1OptionIndex = 0;
 let step2FormId = "";
 let step2WasActive: boolean | null = null;
 let userId = "";
-let userEmail = "";
-let userPassword = "";
+let sessionCookieChunks: Array<{ name: string; value: string }> = [];
 let whatsappPhone = "";
 
 async function fetchStep1Option(supabase: SupabaseClient) {
@@ -159,8 +163,19 @@ test.beforeAll(async () => {
 
   const testUser = await createTestUser();
   userId = testUser.userId;
-  userEmail = testUser.email;
-  userPassword = testUser.password;
+  const rawSessionCookie = JSON.stringify([
+    testUser.session.access_token,
+    testUser.session.refresh_token,
+    testUser.session.provider_token,
+    testUser.session.provider_refresh_token,
+    testUser.session.user?.factors ?? null,
+  ]);
+  const chunkSize = 3180;
+  const chunks = rawSessionCookie.match(new RegExp(`.{1,${chunkSize}}`, "g")) || [];
+  sessionCookieChunks = chunks.map((chunk, index) => ({
+    name: chunks.length === 1 ? storageKey : `${storageKey}.${index}`,
+    value: encodeURIComponent(chunk),
+  }));
 });
 
 test.afterAll(async () => {
@@ -218,16 +233,13 @@ test("onboarding step 3 persists playlist when step 2 inactive and /whatsapp pre
     });
   });
 
-  await page.goto("/login", { waitUntil: "networkidle" });
-  const emailButton = page.getByRole("button", { name: /continuar com e-mail/i });
-  await expect(emailButton).toBeVisible({ timeout: 60000 });
-  await emailButton.click();
-  const emailField = page.getByLabel("E-mail");
-  await expect(emailField).toBeVisible({ timeout: 60000 });
-  await emailField.fill(userEmail);
-  await page.getByLabel("Senha").fill(userPassword);
-  await page.getByRole("button", { name: /^entrar$/i }).click();
-  await page.waitForURL((url) => !url.pathname.startsWith("/login"), { timeout: 60000 });
+  await page.context().addCookies(
+    sessionCookieChunks.map((chunk) => ({
+      name: chunk.name,
+      value: chunk.value,
+      url: e2eBaseUrl,
+    }))
+  );
 
   const onboardingResponse = await page.goto("/onboarding?step=1", {
     waitUntil: "networkidle",

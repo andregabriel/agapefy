@@ -1,12 +1,20 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
+import { requireAdmin } from '@/lib/api-auth';
 
-const ZAPI_INSTANCE_NAME = (process.env.ZAPI_INSTANCE_NAME as string) || "3E60EE9AC55FD0C647E46EB3E4757B57";
-const ZAPI_TOKEN = (process.env.ZAPI_TOKEN as string) || "9F677316F38A3D2FA08EEB09";
-const ZAPI_CLIENT_TOKEN = (process.env.ZAPI_CLIENT_TOKEN as string) || "F3adb78efb3ba40888e8c090e6b90aea4S";
+const ZAPI_INSTANCE_NAME = process.env.ZAPI_INSTANCE_NAME as string;
+const ZAPI_TOKEN = process.env.ZAPI_TOKEN as string;
+const ZAPI_CLIENT_TOKEN = process.env.ZAPI_CLIENT_TOKEN as string;
 const ZAPI_BASE_URL = `https://api.z-api.io/instances/${ZAPI_INSTANCE_NAME}/token/${ZAPI_TOKEN}`;
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
+    const auth = await requireAdmin(request);
+    if (!auth.ok) return auth.response;
+
+    if (!ZAPI_INSTANCE_NAME || !ZAPI_TOKEN || !ZAPI_CLIENT_TOKEN) {
+      return NextResponse.json({ error: 'Z-API credentials not configured' }, { status: 500 });
+    }
+
     // Verificar status da instância
     const statusResponse = await fetch(`${ZAPI_BASE_URL}/status`, {
       headers: {

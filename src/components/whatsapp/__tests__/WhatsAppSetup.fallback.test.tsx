@@ -6,7 +6,11 @@ import WhatsAppSetup from '../../whatsapp/WhatsAppSetup';
 
 // Mock hooks e dependências usadas por WhatsAppSetup
 vi.mock('@/contexts/AuthContext', () => ({
-  useAuth: () => ({ user: { id: 'user-1', email: 'test@example.com' }, loading: false }),
+  useAuth: () => ({
+    user: { id: 'user-1', email: 'test@example.com' },
+    loading: false,
+    session: { access_token: 'test-token' },
+  }),
 }));
 
 vi.mock('@/hooks/useAppSettings', () => ({
@@ -135,6 +139,15 @@ describe('WhatsAppSetup fallback from onboarding', () => {
         } as any;
       }
 
+      // Tabela challenge (legacy)
+      if (table === 'challenge') {
+        return {
+          select: () => ({
+            order: async () => ({ data: [], error: null }),
+          }),
+        } as any;
+      }
+
       // Tabela playlists: usada pelo fallback para garantir presença no combobox
       if (table === 'playlists') {
         return {
@@ -149,6 +162,9 @@ describe('WhatsAppSetup fallback from onboarding', () => {
                 });
                 return chain;
               };
+              chain.ilike = () => chain;
+              chain.order = () => chain;
+              chain.limit = async () => ({ data: [], error: null });
               return chain;
             }
 
@@ -156,6 +172,7 @@ describe('WhatsAppSetup fallback from onboarding', () => {
             const chain: any = {};
             chain.eq = () => chain;
             chain.order = () => chain;
+            chain.ilike = () => chain;
             chain.limit = async () => ({ data: [], error: null });
             chain.in = async () => ({ data: [], error: null });
             return chain;
@@ -180,4 +197,3 @@ describe('WhatsAppSetup fallback from onboarding', () => {
     }, { timeout: 2000 });
   });
 });
-

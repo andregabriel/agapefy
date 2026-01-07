@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
 import { X, Upload, Image, Layout, Smartphone, Grid3X3, MoreHorizontal } from 'lucide-react';
 import { toast } from 'sonner';
+import { authFetch } from '@/lib/auth-fetch';
 
 interface CategoryModalProps {
   category: any;
@@ -143,7 +144,7 @@ export default function CategoryModal({ category, isOpen, onClose, onSave }: Cat
       const uploadFormData = new FormData();
       uploadFormData.append('file', file);
 
-      const response = await fetch('/api/upload-category-image', {
+      const response = await authFetch('/api/upload-category-image', {
         method: 'POST',
         body: uploadFormData,
       });

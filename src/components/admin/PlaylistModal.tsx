@@ -4,6 +4,7 @@ import { useState, useEffect, useRef, useMemo } from 'react';
 import { supabase } from '@/lib/supabase';
 import { translateErrorMessage } from '@/lib/utils';
 import { X, Upload, Image, Plus, Trash2, GripVertical, Search, ChevronUp, ChevronDown } from 'lucide-react';
+import { authFetch } from '@/lib/auth-fetch';
 
 interface PlaylistFormData {
   title: string;
@@ -270,7 +271,7 @@ export default function PlaylistModal({ playlist, isOpen, onClose, onSave }: Pla
       const uploadFormData = new FormData();
       uploadFormData.append('file', file);
 
-      const response = await fetch('/api/upload-playlist-image', {
+      const response = await authFetch('/api/upload-playlist-image', {
         method: 'POST',
         body: uploadFormData,
       });

@@ -11,6 +11,7 @@ import { Settings, Save, BarChart3, Quote } from 'lucide-react';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { useAppSettings } from '@/hooks/useAppSettings';
 import { toast } from 'sonner';
+import { authFetch } from '@/lib/auth-fetch';
 import AdminHamburgerMenu from '@/components/admin/AdminHamburgerMenu';
 
 export default function ConfiguracoesPage() {
@@ -263,7 +264,7 @@ export default function ConfiguracoesPage() {
                                 }
                                 await Promise.all(pending);
 
-                                const res = await fetch('/api/daily-quote?force=true', { method: 'POST' });
+                                const res = await authFetch('/api/daily-quote?force=true', { method: 'POST' });
                                 const data = await res.json();
                                 if (res.ok) {
                                   setLocalSettings(prev => ({

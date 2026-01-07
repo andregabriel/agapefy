@@ -41,7 +41,9 @@ export async function GET(req: NextRequest) {
 
     if (nowSpTime >= `${hStr.padStart(2, '0')}:${mStr.padStart(2, '0')}` && !hasRunToday) {
       const targetUrl = new URL('/api/daily-quote', req.nextUrl);
-      const res = await fetch(targetUrl.toString(), { method: 'POST' });
+      const cronSecret = process.env.CRON_SECRET || '';
+      const headers = cronSecret ? { Authorization: `Bearer ${cronSecret}` } : undefined;
+      const res = await fetch(targetUrl.toString(), { method: 'POST', headers });
       const data = await res.json().catch(() => ({}));
       return NextResponse.json({ ok: res.ok, status: res.status, cron: true, triggered: true, tz: TZ, scheduledFor: time, todaySp, ...data }, { status: res.ok ? 200 : res.status });
     }
@@ -51,5 +53,4 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ ok: false, error: e?.message || 'cron error' }, { status: 500 });
   }
 }
-
 

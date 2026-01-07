@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { getAdminSupabase } from '@/lib/supabase-admin';
+import { requireAdmin, requireUser } from '@/lib/api-auth';
 
 const ZAPI_INSTANCE_NAME = process.env.ZAPI_INSTANCE_NAME as string;
 const ZAPI_TOKEN = process.env.ZAPI_TOKEN as string;
@@ -7,7 +9,41 @@ const ZAPI_BASE_URL = `https://api.z-api.io/instances/${ZAPI_INSTANCE_NAME}/toke
 
 export async function POST(request: NextRequest) {
   try {
-    const { phone, message } = await request.json();
+    const body = await request.json();
+    const { phone, message } = body;
+
+    const adminAuth = await requireAdmin(request);
+    if (!adminAuth.ok) {
+      const userAuth = await requireUser(request);
+      if (!userAuth.ok) return userAuth.response;
+      const phoneRaw = phone || '';
+      const cleanPhone = String(phoneRaw).replace(/\D/g, '');
+      if (!cleanPhone) {
+        return NextResponse.json({ error: 'Telefone inválido' }, { status: 400 });
+      }
+
+      const admin = getAdminSupabase();
+      const [{ data: waRow }, { data: profile }] = await Promise.all([
+        admin
+          .from('whatsapp_users')
+          .select('user_id')
+          .eq('phone_number', cleanPhone)
+          .maybeSingle(),
+        admin.from('profiles').select('whatsapp').eq('id', userAuth.userId).maybeSingle(),
+      ]);
+
+      const profilePhone = typeof profile?.whatsapp === 'string'
+        ? profile.whatsapp.replace(/\D/g, '')
+        : '';
+      const ownerMatch = waRow?.user_id === userAuth.userId || (profilePhone && profilePhone === cleanPhone);
+      if (!ownerMatch) {
+        return NextResponse.json({ error: 'forbidden' }, { status: 403 });
+      }
+    }
+
+    if (!ZAPI_INSTANCE_NAME || !ZAPI_TOKEN || !ZAPI_CLIENT_TOKEN) {
+      return NextResponse.json({ error: 'Z-API credentials not configured' }, { status: 500 });
+    }
 
     if (!phone || !message) {
       return NextResponse.json(

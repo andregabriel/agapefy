@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
 import { getBookName } from '@/lib/search';
 import { getAdminSupabase } from '@/lib/supabase-admin';
+import { requireAdmin } from '@/lib/api-auth';
 
 type HistoryItem = { verse_id: string; date: string };
 
@@ -70,6 +71,14 @@ async function setSetting(key: string, value: string) {
 }
 
 export async function POST(req: NextRequest) {
+  const cronHeader = req.headers.get('authorization') || req.headers.get('Authorization') || '';
+  const cronExpected = process.env.CRON_SECRET ? `Bearer ${process.env.CRON_SECRET}` : '';
+  const isCronAllowed = cronExpected && cronHeader === cronExpected;
+  if (!isCronAllowed) {
+    const auth = await requireAdmin(req);
+    if (!auth.ok) return auth.response;
+  }
+
   const force = req.nextUrl.searchParams.get('force') === 'true';
 
   try {
@@ -222,5 +231,4 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: e?.message ?? 'Erro interno' }, { status: 500 });
   }
 }
-
 

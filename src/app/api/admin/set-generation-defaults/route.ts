@@ -1,9 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAdminSupabase } from '@/lib/supabase-admin';
 import { ELEVENLABS_VOICES } from '@/constants/elevenlabsVoices';
+import { requireAdmin } from '@/lib/api-auth';
 
 export async function POST(req: NextRequest) {
   try {
+    const auth = await requireAdmin(req);
+    if (!auth.ok) return auth.response;
+
     const body = await req.json().catch(() => ({}));
     const desiredEngine = (body?.ai_engine as string)?.trim() || 'gpt-5';
 
@@ -29,7 +33,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: false, error: e?.message || 'Erro desconhecido' }, { status: 500 });
   }
 }
-
 
 
 

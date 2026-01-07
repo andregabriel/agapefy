@@ -9,6 +9,7 @@ import { Loader2, Wand2, Volume2, Plus, Trash2, Play, Pause, CheckCircle, XCircl
 import { toast } from 'sonner';
 import { supabase } from '@/lib/supabase';
 import { getCategories } from '@/lib/supabase-queries';
+import { authFetch } from '@/lib/auth-fetch';
 
 interface Category {
   id: string;
@@ -166,7 +167,7 @@ export default function BatchGenerator() {
       updateStepStatus(index, 'Conteúdo', 'generating');
       const prayerPrompt = `Crie uma oração relacionada ao tema "${categoryName}". A oração deve ser única e específica para este contexto.`;
       
-      const prayerResponse = await fetch('/api/generate-prayer', {
+      const prayerResponse = await authFetch('/api/generate-prayer', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ prompt: prayerPrompt }),
@@ -182,7 +183,7 @@ export default function BatchGenerator() {
 
       // 2. Gerar áudio com ElevenLabs
       updateStepStatus(index, 'Áudio', 'generating');
-      const audioResponse = await fetch('/api/generate-audio', {
+      const audioResponse = await authFetch('/api/generate-audio', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
@@ -203,7 +204,7 @@ export default function BatchGenerator() {
       updateStepStatus(index, 'Imagem', 'generating');
       const imagePrompt = `Uma imagem religiosa serena e contemplativa relacionada ao tema "${categoryName}" e à oração "${prayerData.title}". Estilo artístico, cores suaves, atmosfera espiritual.`;
       
-      const imageResponse = await fetch('/api/generate-image', {
+      const imageResponse = await authFetch('/api/generate-image', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ prompt: imagePrompt }),
@@ -223,7 +224,7 @@ export default function BatchGenerator() {
       let coverPublicUrl: string | null = null;
       if (imageUrl) {
         try {
-          const resp = await fetch('/api/image-proxy', {
+          const resp = await authFetch('/api/image-proxy', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ url: imageUrl })

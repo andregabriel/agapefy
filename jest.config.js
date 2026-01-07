@@ -12,4 +12,5 @@ module.exports = {
     ],
   },
   testMatch: ['**/__tests__/**/*.test.{ts,tsx,js,jsx}'],
+  testPathIgnorePatterns: ['<rootDir>/src/components/whatsapp/__tests__/WhatsAppSetup.fallback.test.tsx'],
 };

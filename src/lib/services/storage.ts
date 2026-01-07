@@ -1,4 +1,5 @@
 import { supabase } from '@/lib/supabase';
+import { authFetch } from '@/lib/auth-fetch';
 
 // Detecta se a URL já é uma URL pública do Supabase Storage
 export const isSupabasePublicUrl = (url: string): boolean => {
@@ -16,7 +17,7 @@ export const uploadImageToSupabaseFromUrl = async (temporaryUrl: string): Promis
     return temporaryUrl;
   }
 
-  const response = await fetch('/api/image-proxy', {
+  const response = await authFetch('/api/image-proxy', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ url: temporaryUrl })
@@ -61,5 +62,4 @@ export const uploadImageToSupabaseFromUrl = async (temporaryUrl: string): Promis
 
   return publicData.publicUrl;
 };
-
 

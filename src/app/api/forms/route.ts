@@ -1,8 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAdminSupabase } from '@/lib/supabase-admin';
+import { requireAdmin } from '@/lib/api-auth';
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
+    const auth = await requireAdmin(request);
+    if (!auth.ok) return auth.response;
+
     const supabase = getAdminSupabase();
     const { data, error } = await supabase
       .from('admin_forms')
@@ -20,6 +24,9 @@ export async function GET() {
 
 export async function POST(request: NextRequest) {
   try {
+    const auth = await requireAdmin(request);
+    if (!auth.ok) return auth.response;
+
     const body = await request.json().catch(() => ({}));
     const name: string = (body?.name ?? 'Novo formulário').toString();
     const description: string | null = body?.description ?? 'Edite os campos depois';
@@ -40,5 +47,4 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'failed_to_create' }, { status: 500 });
   }
 }
-
 

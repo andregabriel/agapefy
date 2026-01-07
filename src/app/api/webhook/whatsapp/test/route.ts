@@ -1,7 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { requireAdmin } from '@/lib/api-auth';
 
 export async function POST(request: NextRequest) {
   try {
+    const auth = await requireAdmin(request);
+    if (!auth.ok) return auth.response;
+
     const { type, phone, message } = await request.json();
 
     console.log(`🧪 Testando webhook: ${type}`);
@@ -47,9 +51,13 @@ export async function POST(request: NextRequest) {
     // Fazer requisição para o webhook correspondente
     const webhookUrl = `${request.nextUrl.origin}/api/webhook/whatsapp/${type}`;
     
+    const secret = process.env.WHATSAPP_WEBHOOK_SECRET || '';
     const response = await fetch(webhookUrl, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        ...(secret ? { 'x-webhook-secret': secret } : {}),
+      },
       body: JSON.stringify(webhookData)
     });
 
@@ -73,7 +81,10 @@ export async function POST(request: NextRequest) {
   }
 }
 
-export async function GET() {
+export async function GET(request: NextRequest) {
+  const auth = await requireAdmin(request);
+  if (!auth.ok) return auth.response;
+
   return NextResponse.json({
     message: 'API de teste de webhooks WhatsApp',
     available_tests: [

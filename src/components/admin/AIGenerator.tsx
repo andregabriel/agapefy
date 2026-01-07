@@ -25,6 +25,7 @@ import { uploadImageToSupabaseFromUrl } from '@/lib/services/storage';
 import { generateField as gmanualGenerateField } from '@/lib/services/gmanual';
 import { requestGenerateAudio } from '@/lib/services/aiAudio';
 import { requestGenerateImage } from '@/lib/services/aiImage';
+import { authFetch } from '@/lib/auth-fetch';
 import { useDebugLogs } from '@/hooks/useDebugLogs';
 import { useLocalDraft } from '@/hooks/useLocalDraft';
 import { useAppPrompts } from '@/hooks/useAppPrompts';
@@ -1102,7 +1103,7 @@ const AIGenerator = forwardRef<AIGeneratorHandle, AIGeneratorProps>(function AIG
     try {
       addDebugLog('request', 'prayer', requestData);
       
-      const response = await fetch('/api/generate-prayer', {
+      const response = await authFetch('/api/generate-prayer', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -1201,7 +1202,7 @@ const AIGenerator = forwardRef<AIGeneratorHandle, AIGeneratorProps>(function AIG
         const rawText = [preparationRaw, prayerRaw, finalMsgRaw].filter(Boolean).join('\n\n');
         const promptWithContext = autoPausesPrompt.replace(/{texto}/g, rawText);
 
-        const response = await fetch('/api/ai/apply-pauses', {
+        const response = await authFetch('/api/ai/apply-pauses', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -1499,7 +1500,7 @@ const AIGenerator = forwardRef<AIGeneratorHandle, AIGeneratorProps>(function AIG
     // Depois: chamada leve à API para manter a lógica centralizada e futura melhora
     (async () => {
       try {
-        const resp = await fetch('/api/detect-biblical-base', {
+        const resp = await authFetch('/api/detect-biblical-base', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ text })

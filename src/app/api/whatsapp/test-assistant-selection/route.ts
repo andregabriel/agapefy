@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
+import { requireAdmin } from '@/lib/api-auth';
 
 // Interfaces (mesmas da API principal)
 interface Assistant {
@@ -316,6 +317,9 @@ async function selectAssistantByMessage(
 
 export async function POST(request: NextRequest) {
   try {
+    const auth = await requireAdmin(request);
+    if (!auth.ok) return auth.response;
+
     const { message } = await request.json();
 
     if (!message || typeof message !== 'string') {
@@ -359,7 +363,6 @@ export async function POST(request: NextRequest) {
     );
   }
 }
-
 
 
 
