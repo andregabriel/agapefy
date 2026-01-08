@@ -1,0 +1,100 @@
+# Routes Index
+
+Objetivo: mapa rapido das rotas do App Router. Derivado da estrutura de `src/app`.
+- Segmentos dinamicos em `[]`
+- Rotas de API em `src/app/api/*/route.ts`
+
+## Pages (`src/app/*/page.tsx`)
+- `/`
+- `/admin`
+- `/admin/analytics`
+- `/admin/audios`
+- `/admin/categorias`
+- `/admin/community-analytics`
+- `/admin/configuracoes`
+- `/admin/delete-user-test`
+- `/admin/documentos-legais`
+- `/admin/feedback`
+- `/admin/gerar-lote`
+- `/admin/gerar-serie`
+- `/admin/gm`
+- `/admin/go`
+- `/admin/nps`
+- `/admin/onboarding`
+- `/admin/paywall`
+- `/admin/permissoes`
+- `/admin/playlists`
+- `/admin/setup`
+- `/admin/usuarios`
+- `/admin/whatsapp`
+- `/amigos`
+- `/biblia`
+- `/biblicus`
+- `/busca`
+- `/categoria/[id]`
+- `/descobrir`
+- `/eu`
+- `/eu/config`
+- `/forms/[id]`
+- `/home`
+- `/login`
+- `/onboarding`
+- `/player`
+- `/player/[playlistId]`
+- `/player/audio/[audioId]`
+- `/politica-de-privacidade`
+- `/termos-de-uso`
+- `/whatsapp`
+
+## API routes (`src/app/api/*/route.ts`)
+- `/api/admin/delete-user`
+- `/api/admin/delete-user-final`
+- `/api/admin/set-generation-defaults`
+- `/api/ai/apply-pauses`
+- `/api/biblicus/chat`
+- `/api/create-biblicus-banner`
+- `/api/cron`
+- `/api/cron-challenge`
+- `/api/cron-prayers`
+- `/api/cron-send-verse`
+- `/api/daily-quote`
+- `/api/detect-biblical-base`
+- `/api/forms`
+- `/api/free-plays/check`
+- `/api/generate-and-save`
+- `/api/generate-audio`
+- `/api/generate-image`
+- `/api/generate-prayer`
+- `/api/gmanual/generate-field`
+- `/api/image-proxy`
+- `/api/migrate-audios-to-storage`
+- `/api/onboarding/checklist`
+- `/api/onboarding/reset`
+- `/api/onboarding/status`
+- `/api/onboarding/step2-response`
+- `/api/profile/update`
+- `/api/setup-audio-bucket`
+- `/api/subscription/cancel`
+- `/api/subscription/status`
+- `/api/test/openai`
+- `/api/test/openai-debug`
+- `/api/upload-audio-to-storage`
+- `/api/upload-category-image`
+- `/api/upload-playlist-image`
+- `/api/webhook/subscription`
+- `/api/webhook/whatsapp/connect`
+- `/api/webhook/whatsapp/delivery`
+- `/api/webhook/whatsapp/disconnect`
+- `/api/webhook/whatsapp/receive`
+- `/api/webhook/whatsapp/status`
+- `/api/webhook/whatsapp/test`
+- `/api/whatsapp/challenge/reset`
+- `/api/whatsapp/debug`
+- `/api/whatsapp/logs`
+- `/api/whatsapp/setup-webhook`
+- `/api/whatsapp/status`
+- `/api/whatsapp/test-assistant-selection`
+- `/api/whatsapp/test-message`
+- `/api/whatsapp/users/toggle-status`
+- `/api/whatsapp/users/update-phone`
+- `/api/whatsapp/webhook`

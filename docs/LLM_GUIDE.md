@@ -7,10 +7,12 @@ Objetivo: contexto rapido para LLMs e devs. Se houver conflito, `DEV_RULES.md` e
 2. `DEV_RULES.md`
 3. `AI_RULES.md`
 4. `docs/ARCHITECTURE.md`
-5. `docs/features.md`
-6. `WHATSAPP_SETUP.md` (se tocar WhatsApp)
-7. `Funcionalidades desativadas.md` (flags)
-8. `IMPLEMENTATION_SUMMARY.md` e `MIGRATION_INSTRUCTIONS.md` (mudancas recentes)
+5. `docs/DB_SCHEMA_QUICK_MAP.md`
+6. `docs/ROUTES_INDEX.md`
+7. `docs/features.md`
+8. `WHATSAPP_SETUP.md` (se tocar WhatsApp)
+9. `Funcionalidades desativadas.md` (flags)
+10. `IMPLEMENTATION_SUMMARY.md` e `MIGRATION_INSTRUCTIONS.md` (mudancas recentes)
 
 ## Fluxos sensiveis (nao alterar sem aprovacao)
 - Onboarding: `src/app/AppShell.tsx`, `src/app/onboarding`, `src/app/api/onboarding/*`

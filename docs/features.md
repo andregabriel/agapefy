@@ -185,6 +185,7 @@ Este documento lista todas as funcionalidades implementadas no aplicativo, organ
 - OpenAI (GPT-4 para texto, DALL-E 3 para imagens)
 - ElevenLabs (Text-to-Speech)
 - Vercel (Deploy e hosting)
+- Detalhes, tags e webhooks: `docs/integrations.md`
 
 ---
 

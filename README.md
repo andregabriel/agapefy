@@ -8,11 +8,14 @@ Aplicativo de oracoes guiadas e crescimento espiritual, com Next.js (App Router)
 - `AI_RULES.md` (stack e padroes)
 - `docs/LLM_GUIDE.md` (fluxo seguro para LLMs)
 - `docs/ARCHITECTURE.md` (mapa do sistema)
+- `docs/DB_SCHEMA_QUICK_MAP.md` (tabelas e relacoes)
+- `docs/ROUTES_INDEX.md` (mapa de rotas)
 - `docs/features.md` (features mapeadas)
+- `docs/integrations.md` (integracoes externas)
 - `WHATSAPP_SETUP.md` (setup e fluxos WhatsApp)
 - `WEBHOOK_ASSINATURAS.md` (assinaturas)
 - `Funcionalidades desativadas.md` (flags e features off)
-- `docs/post-mvp/PENDENCIAS.md` (backlog pos-MVP)
+- `docs/pendencias-pos-mvp.md` (backlog pos-MVP)
 
 ## Stack
 - Next.js (App Router), React, TypeScript
