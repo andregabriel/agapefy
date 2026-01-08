@@ -271,10 +271,10 @@ export async function POST(req: NextRequest) {
     // 5) salvar
   const cookieStore = cookies();
     const userClient = createRouteHandlerClient({ cookies: () => cookieStore });
-    const { data: auth } = await userClient.auth.getUser();
+    const { data: authData } = await userClient.auth.getUser();
   const createdBy = (body.created_by && typeof body.created_by === 'string' && body.created_by.trim())
     ? body.created_by.trim()
-    : (auth?.user?.id || null);
+    : (authData?.user?.id || null);
     const insertRes = await admin.from('audios').insert({
       title: title || genTitle || '',
       subtitle: subtitle || null,
