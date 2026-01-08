@@ -50,11 +50,15 @@ Se houver conflito entre este arquivo e o codigo, DEV_RULES.md ou AI_RULES.md, e
 ## Docs importantes (fonte de verdade por tema)
 - Regras de dev: `DEV_RULES.md`
 - Padroes de stack: `AI_RULES.md`
+- Guia para LLMs: `docs/LLM_GUIDE.md`
+- Arquitetura: `docs/ARCHITECTURE.md`
 - Features mapeadas: `docs/features.md`
 - WhatsApp setup: `WHATSAPP_SETUP.md`
 - Cron do desafio WhatsApp (checklist): `docs/WHATSAPP_CHALLENGE_CRON_CHECKLIST.md`
 - Teste de assistentes: `GUIA_TESTE_ASSISTENTES.md`
+- Assinaturas (webhook): `WEBHOOK_ASSINATURAS.md`
 - Migracoes/implementacoes recentes: `IMPLEMENTATION_SUMMARY.md` e `MIGRATION_INSTRUCTIONS.md`
+- Features desativadas/flags: `Funcionalidades desativadas.md`
 
 ## Checklist de mudanca (resumo)
 - Identificar fluxo impactado e arquivos envolvidos.
