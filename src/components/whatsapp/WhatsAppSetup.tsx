@@ -1223,7 +1223,7 @@ export default function WhatsAppSetup({ variant = "standalone", redirectIfNotLog
                 <p className="text-sm text-muted-foreground">Nenhum desafio disponível no momento.</p>
               ) : (
                 <>
-                  <div className="grid grid-cols-1 sm:grid-cols-[1fr_auto] gap-3 items-center">
+                  <div className="grid grid-cols-1 sm:grid-cols-[1fr_auto] gap-3 items-start">
                     <div className="max-w-2xl">
                       {isMobile ? (
                         <Drawer open={drawerOpen} onOpenChange={setDrawerOpen}>
@@ -1340,6 +1340,29 @@ export default function WhatsAppSetup({ variant = "standalone", redirectIfNotLog
                     </div>
                   </div>
 
+                  {(() => {
+                    const helperText = (() => {
+                      const hasActive = !!activeChallengeId;
+                      const isSameAsActive = hasActive && selectedChallengeId === activeChallengeId;
+                      const pickedDifferent = hasActive && selectedChallengeId !== activeChallengeId;
+
+                      if (!hasActive) return 'Escolha um desafio e clique em “Começar desafio”.';
+                      if (pickedDifferent) {
+                        const next = selectedChallengeTitle ? `“${selectedChallengeTitle}”` : 'este novo desafio';
+                        return `Para começar este novo desafio ${next}, clique em “Começar novo desafio”.`;
+                      }
+                      if (!dailyPrayer && isSameAsActive) return 'Seu desafio está pausado. Clique em “Continuar desafio”.';
+                      return '';
+                    })();
+
+                    if (!helperText) return null;
+                    return (
+                      <p className="text-xs text-muted-foreground">
+                        {helperText}
+                      </p>
+                    );
+                  })()}
+
                   <div className="pt-2">
                     <Button
                       type="button"
@@ -1357,23 +1380,54 @@ export default function WhatsAppSetup({ variant = "standalone", redirectIfNotLog
                           return;
                         }
 
-                        // Se já está ativo e não mudou o desafio, então o botão vira "Pausar desafio".
-                        if (dailyPrayer && selectedChallengeId && activeChallengeId && selectedChallengeId === activeChallengeId) {
-                          await updatePreference('receives_daily_prayer', false);
+                        const hasActive = !!activeChallengeId;
+                        const isSameAsActive = hasActive && selectedChallengeId === activeChallengeId;
+                        const pickedDifferent = hasActive && selectedChallengeId !== activeChallengeId;
+
+                        // Ativo + mesmo desafio => Pausar
+                        if (dailyPrayer && isSameAsActive) {
+                          await updatePreference("receives_daily_prayer", false);
                           return;
                         }
 
-                        // Começar ou trocar para novo desafio
+                        // Selecionou outro desafio (ativo ou pausado) => Começar novo desafio
+                        if (pickedDifferent) {
+                          // Resetar progresso do NOVO desafio para começar do Dia 1
+                          // (a cron usa whatsapp_challenge_log como cursor 1..N por usuário/playlist)
+                          try {
+                            const clean = getFullPhoneNumber();
+                            if (clean && selectedChallengeId) {
+                              await authFetch("/api/whatsapp/challenge/reset", {
+                                method: "POST",
+                                headers: { "Content-Type": "application/json" },
+                                body: JSON.stringify({ phone: clean, playlist_id: selectedChallengeId }),
+                              });
+                            }
+                          } catch (e) {
+                            console.warn("Falha ao resetar progresso do desafio (whatsapp_challenge_log):", e);
+                          }
+                          await saveChallengeSelection();
+                          setActiveChallengeId(selectedChallengeId);
+                          await updatePreference("receives_daily_prayer", true);
+                          return;
+                        }
+
+                        // Pausado + mesmo (ou ainda não tinha um ativo) => Continuar/Começar
                         await saveChallengeSelection();
                         setActiveChallengeId(selectedChallengeId);
-                        if (!dailyPrayer) await updatePreference('receives_daily_prayer', true);
+                        await updatePreference("receives_daily_prayer", true);
                       }}
                     >
-                      {!dailyPrayer
-                        ? "Começar desafio"
-                        : (selectedChallengeId && activeChallengeId && selectedChallengeId !== activeChallengeId)
-                          ? "Trocar para novo desafio"
-                          : "Pausar desafio"}
+                      {(() => {
+                        const hasActive = !!activeChallengeId;
+                        const isSameAsActive = hasActive && selectedChallengeId === activeChallengeId;
+                        const pickedDifferent = hasActive && selectedChallengeId !== activeChallengeId;
+
+                        if (dailyPrayer && isSameAsActive) return "Pausar desafio";
+                        if (pickedDifferent) return "Começar novo desafio";
+                        if (!dailyPrayer && isSameAsActive) return "Continuar desafio";
+                        return "Começar desafio";
+                      })()}
                     </Button>
                   </div>
                 </>

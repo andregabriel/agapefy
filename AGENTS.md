@@ -52,6 +52,7 @@ Se houver conflito entre este arquivo e o codigo, DEV_RULES.md ou AI_RULES.md, e
 - Padroes de stack: `AI_RULES.md`
 - Features mapeadas: `features.md`
 - WhatsApp setup: `WHATSAPP_SETUP.md`
+- Cron do desafio WhatsApp (checklist): `docs/WHATSAPP_CHALLENGE_CRON_CHECKLIST.md`
 - Teste de assistentes: `GUIA_TESTE_ASSISTENTES.md`
 - Migracoes/implementacoes recentes: `IMPLEMENTATION_SUMMARY.md` e `MIGRATION_INSTRUCTIONS.md`
 
