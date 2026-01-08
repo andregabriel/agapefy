@@ -16,12 +16,13 @@ import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Switch } from "@/components/ui/switch";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem } from "@/components/ui/command";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from "@/components/ui/drawer";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogClose, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useIsMobile } from "@/hooks/use-mobile";
 
-import { CheckCircle, AlertCircle, Sunrise, Utensils, Sunset, Moon, MessageCircle } from "lucide-react";
+import { CheckCircle, AlertCircle, Sunrise, Utensils, Sunset, Moon, MessageCircle, X } from "lucide-react";
 import { TimePicker } from "@/components/ui/time-picker";
 
 const WHATS_DEBUG = (...args: any[]) => {
@@ -107,6 +108,7 @@ export default function WhatsAppSetup({ variant = "standalone", redirectIfNotLog
   const [phoneNumber, setPhoneNumber] = useState(""); // Número formatado (DDD XXXXX-XXXX)
   const [saving, setSaving] = useState(false);
   const [isEditingPhone, setIsEditingPhone] = useState(false);
+  const [firstMessageModalOpen, setFirstMessageModalOpen] = useState(false);
 
   // Função helper para obter o número completo limpo (apenas dígitos)
   const getFullPhoneNumber = (): string => {
@@ -136,6 +138,7 @@ export default function WhatsAppSetup({ variant = "standalone", redirectIfNotLog
   const [challengePlaylists, setChallengePlaylists] = useState<Array<{ id: string; title: string }>>([]);
   const [selectedChallengeId, setSelectedChallengeId] = useState<string | null>(null);
   const [challengeTime, setChallengeTime] = useState<string>("");
+  const [activeChallengeId, setActiveChallengeId] = useState<string | null>(null);
   const [challengeOpen, setChallengeOpen] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [attemptedOnboardingLink, setAttemptedOnboardingLink] = useState(false);
@@ -563,6 +566,7 @@ export default function WhatsAppSetup({ variant = "standalone", redirectIfNotLog
               if (playlistId) {
                 // Reconectar a jornada usando a playlist escolhida no onboarding
                 setSelectedChallengeId(playlistId);
+                setActiveChallengeId(playlistId);
                 const defaultTime = challengeTime && challengeTime.length >= 4 ? challengeTime : "08:00";
                 setChallengeTime(defaultTime);
                 // Se a playlist escolhida ainda não está em challengePlaylists, buscar e adicioná-la
@@ -596,7 +600,29 @@ export default function WhatsAppSetup({ variant = "standalone", redirectIfNotLog
                 // Garantir que a flag de desafio diário esteja ligada para que a cron possa enviar após a primeira mensagem.
                 if (!dailyPrayer) {
                   setTimeout(() => {
-                    updatePreference('receives_daily_prayer', true);
+                    // Evitar race condition: o telefone pode aparecer na UI pouco depois, mas ainda não estar no state
+                    // quando esse fallback dispara. Aguardar por um curto período antes de tentar persistir.
+                    const tryEnable = () =>
+                      updatePreference('receives_daily_prayer', true, { silentIfMissingPhone: true });
+
+                    if (getFullPhoneNumber()) {
+                      void tryEnable();
+                      return;
+                    }
+
+                    let tries = 0;
+                    const maxTries = 10; // ~2s total (10 * 200ms)
+                    const interval = setInterval(() => {
+                      tries += 1;
+                      if (getFullPhoneNumber()) {
+                        clearInterval(interval);
+                        void tryEnable();
+                        return;
+                      }
+                      if (tries >= maxTries) {
+                        clearInterval(interval);
+                      }
+                    }, 200);
                   }, 100);
                 }
               }
@@ -612,6 +638,7 @@ export default function WhatsAppSetup({ variant = "standalone", redirectIfNotLog
         rows.sort((a, b) => new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime());
         const row = rows[0];
         setSelectedChallengeId(row.playlist_id as string);
+        setActiveChallengeId(row.playlist_id as string);
         const t = typeof row.send_time === 'string' && row.send_time.length >= 5 ? String(row.send_time).slice(0, 5) : '';
         // Se não houver horário salvo, usar padrão 08:00
         setChallengeTime(t || "08:00");
@@ -629,11 +656,20 @@ export default function WhatsAppSetup({ variant = "standalone", redirectIfNotLog
     fetchUserChallenges();
   }, [phone, phoneNumber, countryCode, user?.id, session?.access_token, attemptedOnboardingLink, dailyPrayer]);
 
-  // Auto-save when both challenge and time are set
+  // Auto-save when both challenge and time are set.
+  // Importante: se já estiver ativo, NÃO auto-salvar troca de desafio sem confirmação no botão "Trocar para novo desafio".
   useEffect(() => {
     // Só salvar se tiver número salvo ou user_id
     const clean = getFullPhoneNumber();
-    if (selectedChallengeId && challengeTime && challengeTime.length >= 4 && (clean || user?.id)) {
+    const allowAutoSave =
+      !dailyPrayer || !activeChallengeId || selectedChallengeId === activeChallengeId;
+    if (
+      allowAutoSave &&
+      selectedChallengeId &&
+      challengeTime &&
+      challengeTime.length >= 4 &&
+      (clean || user?.id)
+    ) {
       WHATS_DEBUG('autosave:start', { selectedChallengeId, challengeTime, clean, userId: user?.id });
       const timer = setTimeout(() => {
         saveChallengeSelection();
@@ -641,7 +677,7 @@ export default function WhatsAppSetup({ variant = "standalone", redirectIfNotLog
       return () => clearTimeout(timer);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedChallengeId, challengeTime, phone, user?.id]);
+  }, [selectedChallengeId, challengeTime, phone, user?.id, dailyPrayer, activeChallengeId]);
 
   async function save() {
     // Construir número completo a partir dos campos separados
@@ -801,10 +837,18 @@ export default function WhatsAppSetup({ variant = "standalone", redirectIfNotLog
     }
   }
 
-  async function updatePreference(field: "is_active" | "receives_daily_verse" | "receives_daily_prayer" | "receives_daily_routine", value: boolean) {
+  async function updatePreference(
+    field: "is_active" | "receives_daily_verse" | "receives_daily_prayer" | "receives_daily_routine",
+    value: boolean,
+    opts?: { silentIfMissingPhone?: boolean }
+  ) {
     const clean = getFullPhoneNumber();
     if (!clean) {
-      toast.error("Cadastre um número válido primeiro");
+      // Em automações internas (ex: fallback do onboarding), o telefone pode ainda estar carregando.
+      // Nesses casos, evitamos exibir um toast "falso" e apenas abortamos silenciosamente.
+      if (!opts?.silentIfMissingPhone) {
+        toast.error("Cadastre um número válido primeiro");
+      }
       return;
     }
     try {
@@ -997,9 +1041,10 @@ export default function WhatsAppSetup({ variant = "standalone", redirectIfNotLog
         case 'onboarding_step4_section_title':
           return 'Receba suas orações no Whatsapp';
         case 'onboarding_step4_instruction':
-          return `Informe seu número com DDD. Exemplo: ${formattedExample}`;
+          // Mantemos vazio no standalone para reduzir poluição visual (o placeholder do input já orienta).
+          return '';
         case 'onboarding_step4_label':
-          return 'Digite seu número de whatsapp abaixo';
+          return 'Informe seu WhatsApp abaixo';
         case 'onboarding_step4_privacy_text':
           return 'Escolha o que quer receber:';
         default:
@@ -1015,7 +1060,7 @@ export default function WhatsAppSetup({ variant = "standalone", redirectIfNotLog
           case 'onboarding_step4_section_title':
             return 'Receba suas orações no Whatsapp';
           case 'onboarding_step4_label':
-            return 'Digite seu número de whatsapp abaixo';
+            return 'Informe seu WhatsApp abaixo';
           case 'onboarding_step4_privacy_text':
             return 'Escolha o que quer receber:';
           default:
@@ -1029,10 +1074,44 @@ export default function WhatsAppSetup({ variant = "standalone", redirectIfNotLog
 
   const sectionTitle = getSettingValue('onboarding_step4_section_title', true) || 'Receba suas orações no Whatsapp';
   const instruction = getSettingValue('onboarding_step4_instruction', false);
-  const labelText = getSettingValue('onboarding_step4_label', true) || 'Digite seu número de whatsapp abaixo';
+  const labelText = getSettingValue('onboarding_step4_label', true) || 'Informe seu WhatsApp abaixo';
   const privacyText = getSettingValue('onboarding_step4_privacy_text', true) || 'Escolha o que quer receber:';
 
+  // Só mostrar o "Escolha o que quer receber" quando houver 2+ opções visíveis.
+  // Hoje, com os feature flags, pode existir apenas 1 (ex.: só o desafio diário).
+  const receivableSectionsCount =
+    1 +
+    (WHATSAPP_FEATURES.bibleResponses ? 1 : 0) +
+    (WHATSAPP_FEATURES.dailyVerse ? 1 : 0) +
+    (WHATSAPP_FEATURES.dailyRoutine ? 1 : 0);
+  const shouldShowReceivableHeader = variant !== "embedded" && !!privacyText && receivableSectionsCount > 1;
+
   const whatsappFirstMessageUrl = "https://api.whatsapp.com/send?phone=5531996302706&text=Ol%C3%A1%2C%20gostaria%20de%20come%C3%A7ar%20a%20receber%20minhas%20ora%C3%A7%C3%B5es%20do%20Agapefy.";
+
+  const FirstMessageCtaInner = (
+    <div className="flex flex-col items-center text-center space-y-5">
+      <div className="rounded-full bg-amber-500/10 dark:bg-amber-500/20 p-4">
+        <MessageCircle className="h-6 w-6 text-amber-600 dark:text-amber-400" />
+      </div>
+      <div className="space-y-1.5">
+        <h3 className="text-lg font-semibold text-amber-900 dark:text-amber-100">
+          Ative o recebimento de orações em seu whatsapp
+        </h3>
+        <p className="text-sm text-amber-700/70 dark:text-amber-300/70 px-2">
+          Envie uma primeira mensagem pra Agapefy
+        </p>
+      </div>
+      <Button
+        asChild
+        className="bg-amber-600 hover:bg-amber-700 text-white shadow-md hover:shadow-lg transition-all"
+      >
+        <a href={whatsappFirstMessageUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 px-6">
+          <MessageCircle className="h-4 w-4" />
+          Enviar mensagem
+        </a>
+      </Button>
+    </div>
+  );
 
   const Content = (
     <>
@@ -1040,28 +1119,7 @@ export default function WhatsAppSetup({ variant = "standalone", redirectIfNotLog
       {variant === "standalone" && !loadingFirstMessage && hasSentFirstMessage === false && phone && phoneNumber && (
         <Card className="mb-6 border border-amber-200/50 dark:border-amber-800/30 bg-gradient-to-br from-amber-50/50 to-orange-50/30 dark:from-amber-950/20 dark:to-orange-950/10">
           <CardContent className="pt-6 pb-6 px-5">
-            <div className="flex flex-col items-center text-center space-y-5">
-              <div className="rounded-full bg-amber-500/10 dark:bg-amber-500/20 p-4">
-                <MessageCircle className="h-6 w-6 text-amber-600 dark:text-amber-400" />
-              </div>
-              <div className="space-y-1.5">
-                <h3 className="text-lg font-semibold text-amber-900 dark:text-amber-100">
-                  Ative o recebimento de orações em seu whatsapp
-                </h3>
-                <p className="text-sm text-amber-700/70 dark:text-amber-300/70 px-2">
-                  Envie uma primeira mensagem pra Agapefy
-                </p>
-              </div>
-              <Button
-                asChild
-                className="bg-amber-600 hover:bg-amber-700 text-white shadow-md hover:shadow-lg transition-all"
-              >
-                <a href={whatsappFirstMessageUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 px-6">
-                  <MessageCircle className="h-4 w-4" />
-                  Enviar mensagem
-                </a>
-              </Button>
-            </div>
+            {FirstMessageCtaInner}
           </CardContent>
         </Card>
       )}
@@ -1088,8 +1146,8 @@ export default function WhatsAppSetup({ variant = "standalone", redirectIfNotLog
             <>
               {labelText && <Label htmlFor="wpp-number">{labelText}</Label>}
               
-              {/* País - linha separada */}
-              <div>
+              {/* País + código + número - mesma linha (mais clean) */}
+              <div className="flex flex-col sm:flex-row gap-2">
                 <Select value={country} onValueChange={(value) => {
                   setCountry(value);
                   // Por enquanto, apenas Brasil é suportado
@@ -1097,27 +1155,24 @@ export default function WhatsAppSetup({ variant = "standalone", redirectIfNotLog
                     setCountryCode("55");
                   }
                 }}>
-                  <SelectTrigger className="w-full">
-                    <SelectValue placeholder="País" />
+                  <SelectTrigger className="w-full sm:w-[140px]">
+                    <SelectValue placeholder="Brasil" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="BR">Brasil</SelectItem>
                   </SelectContent>
                 </Select>
-              </div>
 
-              {/* Código do país e número - mesma linha */}
-              <div className="flex gap-2">
                 <Input
                   id="wpp-country-code"
                   value={`+${countryCode}`}
                   readOnly
-                  className="w-[100px] flex-shrink-0"
+                  className="w-full sm:w-[90px] flex-shrink-0"
                   placeholder="+55"
                 />
                 <Input
                   id="wpp-number"
-                  placeholder=""
+                  placeholder="Informe seu número com DDD. Exemplo: 11 99999-9999"
                   value={phoneNumber}
                   onChange={(e) => {
                     // Remove caracteres não numéricos antes de formatar
@@ -1138,7 +1193,7 @@ export default function WhatsAppSetup({ variant = "standalone", redirectIfNotLog
             </>
           )}
 
-          {variant !== "embedded" && privacyText && (
+          {shouldShowReceivableHeader && (
             <p className="text-sm font-medium text-foreground">{privacyText}</p>
           )}
         </div>
@@ -1158,40 +1213,88 @@ export default function WhatsAppSetup({ variant = "standalone", redirectIfNotLog
             )}
 
             <div className="p-4 rounded-md bg-muted/40 space-y-4">
-              <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                <p className="text-sm font-semibold text-foreground">
-                  Uma oração por dia do seu Desafio de orações:
-                </p>
-                <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                  <span>{dailyPrayer ? 'Ativo' : 'Pausado'}</span>
-                  <Switch checked={dailyPrayer} onCheckedChange={(v) => updatePreference('receives_daily_prayer', v)} />
-                </div>
+              <div className="space-y-1">
+                <div className="text-base font-semibold text-foreground">Ore por seu Propósito</div>
+                <p className="text-sm text-muted-foreground">Escolha um desafio abaixo.</p>
               </div>
 
-              {/* Card de desafio sempre visível, independente do toggle */}
+              {/* Configuração do desafio (visível mesmo quando pausado, para facilitar retomar) */}
               {challengePlaylists.length === 0 ? (
                 <p className="text-sm text-muted-foreground">Nenhum desafio disponível no momento.</p>
               ) : (
                 <>
-                  <div className="max-w-2xl">
-                    {isMobile ? (
-                      <Drawer open={drawerOpen} onOpenChange={setDrawerOpen}>
-                        <Button
-                          variant="outline"
-                          role="combobox"
-                          aria-expanded={drawerOpen}
-                          aria-label="Selecione seu desafio de orações"
-                          data-selected-challenge-id={selectedChallengeId || ''}
-                          className="w-full justify-between"
-                          onClick={() => setDrawerOpen(true)}
-                        >
-                          {selectedChallengeTitle || "Selecione ou pesquise um desafio..."}
-                        </Button>
-                        <DrawerContent className="h-[85vh]">
-                          <DrawerHeader className="pb-2">
-                            <DrawerTitle>Selecionar desafio</DrawerTitle>
-                          </DrawerHeader>
-                          <div className="p-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-[1fr_auto] gap-3 items-center">
+                    <div className="max-w-2xl">
+                      {isMobile ? (
+                        <Drawer open={drawerOpen} onOpenChange={setDrawerOpen}>
+                          <Button
+                            variant="outline"
+                            role="combobox"
+                            aria-expanded={drawerOpen}
+                            aria-label="Selecione um desafio"
+                            data-selected-challenge-id={selectedChallengeId || ''}
+                            className="w-full justify-between"
+                            onClick={() => setDrawerOpen(true)}
+                          >
+                            {selectedChallengeTitle || "Selecione um desafio..."}
+                          </Button>
+                          <DrawerContent className="h-[85vh]">
+                            <DrawerHeader className="pb-2">
+                              <DrawerTitle>Selecionar desafio</DrawerTitle>
+                            </DrawerHeader>
+                            <div className="p-4">
+                              <Command
+                                onValueChange={(val) => {
+                                  WHATS_DEBUG('combobox:onValueChange', { val });
+                                }}
+                              >
+                                <CommandInput placeholder="Digite para filtrar..." />
+                                <CommandEmpty>Nenhum desafio encontrado.</CommandEmpty>
+                                <CommandList className="max-h-[60vh] touch-pan-y overscroll-contain">
+                                  <CommandGroup>
+                                    {challengePlaylists.map((p) => (
+                                      <CommandItem
+                                        key={p.id}
+                                        onSelect={async () => {
+                                          setSelectedChallengeId(p.id);
+                                          setDrawerOpen(false);
+                                          // Se não houver horário definido, definir padrão como 08:00
+                                          if (!challengeTime || challengeTime.length < 4) {
+                                            setChallengeTime("08:00");
+                                          }
+                                        }}
+                                      >
+                                        {p.title}
+                                      </CommandItem>
+                                    ))}
+                                  </CommandGroup>
+                                </CommandList>
+                              </Command>
+                            </div>
+                          </DrawerContent>
+                        </Drawer>
+                      ) : (
+                        <Popover open={challengeOpen} onOpenChange={setChallengeOpen}>
+                          <PopoverTrigger asChild>
+                            <Button
+                              variant="outline"
+                              role="combobox"
+                              aria-expanded={challengeOpen}
+                              aria-label="Selecione um desafio"
+                              data-selected-challenge-id={selectedChallengeId || ''}
+                              className="w-full justify-between"
+                            >
+                              {selectedChallengeTitle || "Selecione um desafio..."}
+                            </Button>
+                          </PopoverTrigger>
+                          <PopoverContent
+                            side="bottom"
+                            align="start"
+                            sideOffset={6}
+                            avoidCollisions={false}
+                            collisionPadding={8}
+                            className="w-[--radix-popover-trigger-width] p-0 shadow-lg max-h-80 overflow-hidden"
+                          >
                             <Command
                               onValueChange={(val) => {
                                 WHATS_DEBUG('combobox:onValueChange', { val });
@@ -1199,137 +1302,79 @@ export default function WhatsAppSetup({ variant = "standalone", redirectIfNotLog
                             >
                               <CommandInput placeholder="Digite para filtrar..." />
                               <CommandEmpty>Nenhum desafio encontrado.</CommandEmpty>
-                              <CommandGroup>
-                                {challengePlaylists.map((p) => (
-                                <CommandItem
-                                  key={p.id}
-                                  onSelect={async () => {
-                                    setSelectedChallengeId(p.id);
-                                    setDrawerOpen(false);
-                                    // Se não houver horário definido, definir padrão como 08:00
-                                    if (!challengeTime || challengeTime.length < 4) {
-                                      setChallengeTime("08:00");
-                                    }
-                                    // Se o toggle estiver desligado, ligar automaticamente
-                                    // Aguardar um pouco para garantir que o estado foi atualizado
-                                    if (!dailyPrayer) {
-                                      setTimeout(() => {
-                                        updatePreference('receives_daily_prayer', true);
-                                      }, 100);
-                                    }
-                                  }}
-                                >
-                                  {p.title}
-                                </CommandItem>
-                                ))}
-                              </CommandGroup>
+                              <CommandList className="max-h-72 touch-pan-y overscroll-contain">
+                                <CommandGroup>
+                                  {challengePlaylists.map((p) => (
+                                    <CommandItem
+                                      key={p.id}
+                                      onSelect={async () => {
+                                        setSelectedChallengeId(p.id);
+                                        setChallengeOpen(false);
+                                        // Se não houver horário definido, definir padrão como 08:00
+                                        if (!challengeTime || challengeTime.length < 4) {
+                                          setChallengeTime("08:00");
+                                        }
+                                      }}
+                                    >
+                                      {p.title}
+                                    </CommandItem>
+                                  ))}
+                                </CommandGroup>
+                              </CommandList>
                             </Command>
-                          </div>
-                        </DrawerContent>
-                      </Drawer>
-                    ) : (
-                      <Popover open={challengeOpen} onOpenChange={setChallengeOpen}>
-                        <PopoverTrigger asChild>
-                          <Button
-                            variant="outline"
-                            role="combobox"
-                            aria-expanded={challengeOpen}
-                            aria-label="Selecione seu desafio de orações"
-                            data-selected-challenge-id={selectedChallengeId || ''}
-                            className="w-full justify-between"
-                          >
-                            {selectedChallengeTitle || "Selecione ou pesquise um desafio..."}
-                          </Button>
-                        </PopoverTrigger>
-                        <PopoverContent
-                          side="bottom"
-                          align="start"
-                          sideOffset={6}
-                          avoidCollisions={false}
-                          collisionPadding={8}
-                          className="w-[--radix-popover-trigger-width] p-0 shadow-lg max-h-80 overflow-hidden"
-                        >
-                          <Command
-                            onValueChange={(val) => {
-                              WHATS_DEBUG('combobox:onValueChange', { val });
-                            }}
-                          >
-                            <CommandInput placeholder="Digite para filtrar..." />
-                            <CommandEmpty>Nenhum desafio encontrado.</CommandEmpty>
-                            <CommandGroup>
-                              {challengePlaylists.map((p) => (
-                                <CommandItem
-                                  key={p.id}
-                                  onSelect={async () => {
-                                    setSelectedChallengeId(p.id);
-                                    setChallengeOpen(false);
-                                    // Se não houver horário definido, definir padrão como 08:00
-                                    if (!challengeTime || challengeTime.length < 4) {
-                                      setChallengeTime("08:00");
-                                    }
-                                    // Se o toggle estiver desligado, ligar automaticamente
-                                    // Aguardar um pouco para garantir que o estado foi atualizado
-                                    if (!dailyPrayer) {
-                                      setTimeout(() => {
-                                        updatePreference('receives_daily_prayer', true);
-                                      }, 100);
-                                    }
-                                  }}
-                                >
-                                  {p.title}
-                                </CommandItem>
-                              ))}
-                            </CommandGroup>
-                          </Command>
-                        </PopoverContent>
-                      </Popover>
-                    )}
-                  </div>
-
-                  <div className="flex items-center justify-between gap-3 p-3 rounded-md border bg-background">
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm font-medium text-foreground">Quero receber no horário</span>
+                          </PopoverContent>
+                        </Popover>
+                      )}
                     </div>
-                    <div className="flex items-center gap-2">
-                    <TimePicker
-                      value={challengeTime}
-                      onChange={(value) => {
-                        setChallengeTime(value);
-                      }}
-                      disabled={!selectedChallengeId}
-                    />
+
+                    <div className="sm:justify-self-end">
+                      <span className="sr-only">Horário</span>
+                      <TimePicker
+                        value={challengeTime}
+                        onChange={(value) => {
+                          setChallengeTime(value);
+                        }}
+                        disabled={!selectedChallengeId}
+                        className="w-[120px]"
+                      />
                     </div>
                   </div>
 
-                  <div className="flex flex-col sm:flex-row gap-3 pt-2">
+                  <div className="pt-2">
                     <Button
                       type="button"
-                      variant="default"
-                      className="sm:w-auto"
+                      variant={
+                        dailyPrayer && selectedChallengeId && activeChallengeId && selectedChallengeId === activeChallengeId
+                          ? "outline"
+                          : "default"
+                      }
+                      className="w-full"
                       disabled={!selectedChallengeId || !challengeTime || challengeTime.length < 4}
                       onClick={async () => {
-                        // Garantir que seleção + horário estejam persistidos
-                        await saveChallengeSelection();
-                        // Ativar flag de desafio diário
-                        if (!dailyPrayer) {
-                          await updatePreference('receives_daily_prayer', true);
+                        // Se ainda não enviou a primeira mensagem, pedir ativação do WhatsApp antes de iniciar.
+                        if (variant === "standalone" && hasSentFirstMessage === false) {
+                          setFirstMessageModalOpen(true);
+                          return;
                         }
+
+                        // Se já está ativo e não mudou o desafio, então o botão vira "Pausar desafio".
+                        if (dailyPrayer && selectedChallengeId && activeChallengeId && selectedChallengeId === activeChallengeId) {
+                          await updatePreference('receives_daily_prayer', false);
+                          return;
+                        }
+
+                        // Começar ou trocar para novo desafio
+                        await saveChallengeSelection();
+                        setActiveChallengeId(selectedChallengeId);
+                        if (!dailyPrayer) await updatePreference('receives_daily_prayer', true);
                       }}
                     >
-                      Iniciar novo desafio
+                      {!dailyPrayer
+                        ? "Começar desafio"
+                        : (selectedChallengeId && activeChallengeId && selectedChallengeId !== activeChallengeId)
+                          ? "Trocar para novo desafio"
+                          : "Pausar desafio"}
                     </Button>
-                    {selectedChallengeId && dailyPrayer && (
-                      <Button
-                        type="button"
-                        variant="outline"
-                        className="sm:w-auto"
-                        onClick={async () => {
-                          await updatePreference('receives_daily_prayer', false);
-                        }}
-                      >
-                        Pausar desafio
-                      </Button>
-                    )}
                   </div>
                 </>
               )}
@@ -1475,6 +1520,20 @@ export default function WhatsAppSetup({ variant = "standalone", redirectIfNotLog
         )}
       </CardContent>
     </Card>
+
+      {/* Modal reutilizando o conteúdo do card do topo (ativação via primeira mensagem) */}
+      <Dialog open={firstMessageModalOpen} onOpenChange={setFirstMessageModalOpen}>
+        <DialogContent className="sm:max-w-[520px] [&>button.absolute.right-4.top-4]:hidden">
+          <DialogClose className="absolute right-3 top-3 rounded-md p-2 text-foreground/80 hover:text-foreground hover:bg-muted focus:outline-none focus:ring-2 focus:ring-ring">
+            <X className="h-4 w-4" />
+            <span className="sr-only">Fechar</span>
+          </DialogClose>
+          <DialogHeader>
+            <DialogTitle>Ative no WhatsApp para começar</DialogTitle>
+          </DialogHeader>
+          <div className="pt-2">{FirstMessageCtaInner}</div>
+        </DialogContent>
+      </Dialog>
     </>
   );
 

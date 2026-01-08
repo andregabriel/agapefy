@@ -16,19 +16,46 @@ export default function PermissoesPage() {
   const { settings, loading, updateSetting } = useAppSettings();
   const [saving, setSaving] = useState(false);
   const [permissions, setPermissions] = useState<PaywallPermissions>(
-    parsePaywallPermissions(settings.paywall_permissions),
+    (() => {
+      const parsed = parsePaywallPermissions(settings.paywall_permissions);
+      // Anônimos (não logados) nunca podem reproduzir: sempre exige login.
+      return {
+        ...parsed,
+        anonymous: {
+          ...parsed.anonymous,
+          limit_enabled: true,
+          max_free_audios_per_day: 0,
+        },
+      };
+    })(),
   );
 
   useEffect(() => {
-    setPermissions(parsePaywallPermissions(settings.paywall_permissions));
+    const parsed = parsePaywallPermissions(settings.paywall_permissions);
+    setPermissions({
+      ...parsed,
+      anonymous: {
+        ...parsed.anonymous,
+        limit_enabled: true,
+        max_free_audios_per_day: 0,
+      },
+    });
   }, [settings.paywall_permissions]);
 
   const handleSave = async () => {
     try {
       setSaving(true);
+      // Força regra de negócio: usuário não logado sempre exige login (nunca reproduz).
+      const normalizedPermissions: PaywallPermissions = {
+        ...(permissions ?? DEFAULT_PAYWALL_PERMISSIONS),
+        anonymous: {
+          limit_enabled: true,
+          max_free_audios_per_day: 0,
+        },
+      };
       const resPerm = await updateSetting(
         'paywall_permissions',
-        JSON.stringify(permissions ?? DEFAULT_PAYWALL_PERMISSIONS),
+        JSON.stringify(normalizedPermissions),
       );
 
       if (!resPerm.success) {
@@ -100,45 +127,25 @@ export default function PermissoesPage() {
                 <div>
                   <h3 className="text-base font-semibold text-gray-900">Usuário não logado</h3>
                   <p className="text-sm text-gray-600">
-                    Visitantes que acessam o app sem estar autenticados.
+                    Visitantes que acessam o app sem estar autenticados. Este tipo de usuário sempre é direcionado
+                    para o login ao tentar dar play (benchmark Spotify).
                   </p>
                 </div>
                 <div className="flex items-center gap-3">
-                  <Label className="text-sm text-gray-700">
-                    Limitar áudios grátis por dia
-                  </Label>
-                  <Switch
-                    checked={permissions.anonymous.limit_enabled}
-                    onCheckedChange={(checked) =>
-                      setPermissions((prev) => ({
-                        ...prev,
-                        anonymous: {
-                          ...prev.anonymous,
-                          limit_enabled: checked,
-                        },
-                      }))
-                    }
-                  />
+                  <Label className="text-sm text-gray-700">Acesso</Label>
+                  <span className="text-sm font-medium text-gray-900">Sempre exige login</span>
                 </div>
               </div>
               <div className="max-w-xs">
                 <Label htmlFor="anonymous-free-audios" className="text-sm">
-                  Áudios de graça por dia
+                  Áudios de graça por dia (fixo)
                 </Label>
                 <Input
                   id="anonymous-free-audios"
                   type="number"
                   min={0}
-                  value={permissions.anonymous.max_free_audios_per_day}
-                  onChange={(e) =>
-                    setPermissions((prev) => ({
-                      ...prev,
-                      anonymous: {
-                        ...prev.anonymous,
-                        max_free_audios_per_day: Number(e.target.value) || 0,
-                      },
-                    }))
-                  }
+                  value={0}
+                  disabled
                   className="mt-1"
                 />
               </div>
@@ -261,7 +268,8 @@ export default function PermissoesPage() {
                 </div>
               </div>
               <p className="text-xs text-gray-500">
-                Quando o trial terminar, o usuário automaticamente passa a ser tratado como
+                Após o término do trial: se houver cobrança/renovação e a assinatura estiver ativa, o usuário passa
+                a ser tratado como &quot;assinatura ativa&quot;. Se cancelar/expirar, passa a ser tratado como
                 &quot;sem assinatura ativa&quot;.
               </p>
             </div>

@@ -61,13 +61,31 @@ function buildFreePlayStorageKey(userKey: string) {
   return `agapefy_free_plays_v1_${userKey || 'anon'}`;
 }
 
+// Wrapper para navegação (facilita testes em JSDOM onde window.location é read-only)
+export const __navigation = {
+  assign(url: string) {
+    if (typeof window === 'undefined') return;
+    try {
+      window.location.assign(url);
+    } catch {
+      // Fallback ultra simples
+      window.location.href = url;
+    }
+  },
+};
+
 // Função legada para fallback local (apenas quando API falhar)
-function checkAndIncrementFreePlayLocal(
+export function checkAndIncrementFreePlayLocal(
   userKey: string,
   maxFreePerDay: number,
 ): { allowed: boolean; count: number; max: number } {
-  if (typeof window === 'undefined' || maxFreePerDay <= 0) {
+  if (typeof window === 'undefined') {
     return { allowed: true, count: 0, max: maxFreePerDay };
+  }
+
+  // maxFreePerDay <= 0 significa "zero plays grátis" (bloqueado), não "ilimitado".
+  if (maxFreePerDay <= 0) {
+    return { allowed: false, count: 0, max: maxFreePerDay };
   }
 
   try {
@@ -210,6 +228,15 @@ export const PlayerProvider = ({ children }: { children: React.ReactNode }) => {
   const { settings } = useAppSettings();
   const { userType, hasActiveSubscription, hasActiveTrial } = useSubscriptionStatus();
   const { logActivity } = useUserActivity();
+  const redirectToLogin = useCallback(() => {
+    if (typeof window === 'undefined') return;
+    const next =
+      (window.location?.pathname || '/') +
+      (window.location?.search || '') +
+      (window.location?.hash || '');
+    // Mantemos ?next para possível uso futuro; hoje o login já redireciona para home/admin.
+    __navigation.assign(`/login?next=${encodeURIComponent(next)}`);
+  }, []);
   
   // Refs para controle de atividade
   const activityStartTimeRef = useRef<number | null>(null);
@@ -335,55 +362,9 @@ export const PlayerProvider = ({ children }: { children: React.ReactNode }) => {
       // se acesso total estiver desligado, cai para regra de no_subscription
     }
 
-    // Usuário não logado – usar backend (IP + UA) para compartilhar limite entre abas/anônimas
+    // Usuário não logado: NUNCA pode reproduzir (benchmark Spotify: sempre exige login)
     if (effectiveUserType === 'anonymous') {
-      if (!permissions.anonymous.limit_enabled) return true;
-
-      try {
-        console.log(
-          '🎧 Verificando limite de áudio gratuito (anônimo) via /api/free-plays/check',
-          {
-            maxPerDay: permissions.anonymous.max_free_audios_per_day,
-          },
-        );
-
-        const res = await fetch('/api/free-plays/check', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            maxPerDay: permissions.anonymous.max_free_audios_per_day,
-            context: 'anonymous',
-          }),
-        });
-
-        if (res.ok) {
-          const data = (await res.json()) as { allowed?: boolean; max?: number; count?: number };
-          console.log('🎧 Resposta de /api/free-plays/check (anônimo):', data);
-
-          if (data.allowed === false) {
-            openPaywall(effectiveUserType, 'limit_reached');
-            return false;
-          }
-          return true;
-        } else {
-          console.warn(
-            '⚠️ /api/free-plays/check retornou status não-OK para anônimo:',
-            res.status,
-          );
-        }
-      } catch (e) {
-        console.error('free-plays/check (anonymous) falhou, usando fallback local', e);
-      }
-
-      // Fallback local em caso de falha de rede/backend
-      const localResult = checkAndIncrementFreePlayLocal(
-        'anon',
-        permissions.anonymous.max_free_audios_per_day,
-      );
-      if (!localResult.allowed) {
-        openPaywall(effectiveUserType, 'limit_reached');
-      }
-      return localResult.allowed;
+      return false;
     }
 
     // Usuário logado sem assinatura ativa OU assinante/trial com acesso total desligado
@@ -595,6 +576,11 @@ export const PlayerProvider = ({ children }: { children: React.ReactNode }) => {
 
   const playAudio = (audio: Audio) => {
     void (async () => {
+      // Benchmark Spotify: anônimo sempre vai para login ao tentar tocar
+      if (!user) {
+        redirectToLogin();
+        return;
+      }
       // Verificar permissões antes de iniciar um novo áudio
       if (!(await canCurrentUserPlayAnotherAudioAsync())) {
         console.log('🎵 Reprodução bloqueada pelo limite de áudios gratuitos');
@@ -615,6 +601,11 @@ export const PlayerProvider = ({ children }: { children: React.ReactNode }) => {
 
   const playQueue = (queue: Audio[], startIndex = 0) => {
     void (async () => {
+      // Benchmark Spotify: anônimo sempre vai para login ao tentar tocar
+      if (!user) {
+        redirectToLogin();
+        return;
+      }
       // Verificar permissões apenas ao iniciar uma nova fila
       if (!(await canCurrentUserPlayAnotherAudioAsync())) {
         console.log('🎵 Reprodução de playlist bloqueada pelo limite de áudios gratuitos');
@@ -638,9 +629,13 @@ export const PlayerProvider = ({ children }: { children: React.ReactNode }) => {
   };
 
   const play = useCallback(() => {
+    if (!user) {
+      redirectToLogin();
+      return;
+    }
     console.log('🎵 Comando: Play');
     dispatch({ type: 'PLAY' });
-  }, []);
+  }, [redirectToLogin, user]);
 
   const pause = useCallback(() => {
     console.log('🎵 Comando: Pause');

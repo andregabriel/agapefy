@@ -16,8 +16,10 @@ export async function POST(req: NextRequest) {
 
     if (maxPerDay <= 0) {
       return NextResponse.json({
-        allowed: true,
-        reason: 'no_limit_configured',
+        allowed: false,
+        count: 0,
+        max: maxPerDay,
+        reason: 'limit_zero',
       });
     }
 

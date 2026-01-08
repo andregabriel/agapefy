@@ -23,7 +23,8 @@ export interface PaywallPermissions {
 export const DEFAULT_PAYWALL_PERMISSIONS: PaywallPermissions = {
   anonymous: {
     limit_enabled: true,
-    max_free_audios_per_day: 1,
+    // Anônimos (não logados) nunca podem dar play: sempre exige login.
+    max_free_audios_per_day: 0,
   },
   no_subscription: {
     limit_enabled: true,
