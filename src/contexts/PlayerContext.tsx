@@ -312,8 +312,7 @@ export const PlayerProvider = ({ children }: { children: React.ReactNode }) => {
     // Usuário não logado
     if (effectiveUserType === 'anonymous') {
       // A verificação real para anonymous é feita na função assíncrona
-      if (!permissions.anonymous.limit_enabled) return true;
-      return true;
+      return false;
     }
 
     // Usuário logado sem assinatura ativa OU assinante/trial com acesso total desligado
@@ -542,6 +541,18 @@ export const PlayerProvider = ({ children }: { children: React.ReactNode }) => {
   // Controlar play/pause
   useEffect(() => {
     if (!audioRef.current) return;
+
+    // Defesa em profundidade: mesmo que algum estado antigo/configuração indevida defina currentAudio/isPlaying,
+    // usuários não autenticados (anonymous/guest) NUNCA devem reproduzir.
+    if (!user) {
+      if (!audioRef.current.paused) {
+        audioRef.current.pause();
+      }
+      if (state.isPlaying) {
+        dispatch({ type: 'PAUSE' });
+      }
+      return;
+    }
     
     // Sempre pausar primeiro se não está tocando ou está carregando
     if (!state.isPlaying || state.isLoading) {
@@ -565,7 +576,7 @@ export const PlayerProvider = ({ children }: { children: React.ReactNode }) => {
         dispatch({ type: 'PAUSE' });
       });
     }
-  }, [state.isPlaying, state.isLoading, state.currentAudio]);
+  }, [user, state.isPlaying, state.isLoading, state.currentAudio]);
 
   // Controlar volume
   useEffect(() => {

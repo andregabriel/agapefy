@@ -3,6 +3,7 @@
 Objetivo: mapa rapido das rotas do App Router. Derivado da estrutura de `src/app`.
 - Segmentos dinamicos em `[]`
 - Rotas de API em `src/app/api/*/route.ts`
+- Gerado por `node scripts/generate-routes-index.mjs`
 
 ## Pages (`src/app/*/page.tsx`)
 - `/`

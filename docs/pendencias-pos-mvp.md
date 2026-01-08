@@ -21,3 +21,5 @@ Objetivo: registrar melhorias que nao bloqueiam o MVP.
 - TODO [P2] Ativar leaked password protection no Supabase Auth.
 - TODO [P2] Reduzir OTP expiry para menos de 1 hora no Supabase Auth.
 - TODO [P1] Atualizar Postgres para versao com patches de seguranca.
+- TODO [P2] Refatorar `docs/DB_SCHEMA_QUICK_MAP.md` com colunas-chave e FKs reais a partir do schema do Supabase.
+- TODO [P3] Adicionar script no `package.json` para gerar `docs/ROUTES_INDEX.md` via `node scripts/generate-routes-index.mjs`.
