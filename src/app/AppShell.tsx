@@ -14,6 +14,7 @@ import { authFetch } from '@/lib/auth-fetch';
 import { PaywallModal } from '@/components/modals/PaywallModal';
 import { logger } from '@/lib/logger';
 import { TrackingScripts } from '@/components/TrackingScripts';
+import { ServiceWorkerRegister } from '@/components/pwa/ServiceWorkerRegister';
 
 export default function AppShell({ children }: { children: React.ReactNode }) {
   // Colocamos os providers aqui no topo, e movemos a lógica que consome o AuthContext
@@ -205,6 +206,7 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
   return (
     <>
       <TrackingScripts />
+      <ServiceWorkerRegister />
       <div className={hideHeader ? 'hidden' : ''}>
         <Header />
       </div>

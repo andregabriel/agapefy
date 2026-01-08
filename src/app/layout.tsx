@@ -5,7 +5,22 @@ import AppShell from './AppShell';
 
 const inter = Inter({ subsets: ['latin'] });
 
-export const metadata: Metadata = {};
+export const metadata: Metadata = {
+  manifest: '/manifest.json',
+  themeColor: '#16a34a',
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: 'black-translucent',
+    title: 'Ágape',
+  },
+  icons: {
+    icon: [
+      { url: '/icon-192x192.png', sizes: '192x192', type: 'image/png' },
+      { url: '/icon-512x512.png', sizes: '512x512', type: 'image/png' },
+    ],
+    apple: [{ url: '/icon-192x192.png', sizes: '192x192', type: 'image/png' }],
+  },
+};
 
 export default function RootLayout({
   children,

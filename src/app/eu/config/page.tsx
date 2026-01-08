@@ -7,6 +7,7 @@ import { NotificationSettings } from '@/components/NotificationSettings';
 import { ProfileEditCard } from './_components/ProfileEditCard';
 import { SubscriptionCard } from './_components/SubscriptionCard';
 import { PresentModal } from '@/components/modals/PresentModal';
+import { InstallAppCard } from '@/components/pwa/InstallAppCard';
 import { 
   ArrowLeft, 
   LogOut, 
@@ -140,6 +141,9 @@ export default function ConfigPage() {
               </CardContent>
             )}
           </Card>
+
+          {/* Instalar app */}
+          <InstallAppCard />
 
           {/* 3. Notificações */}
           <Card className="bg-gray-900 border-gray-800">
