@@ -50,7 +50,7 @@ Se houver conflito entre este arquivo e o codigo, DEV_RULES.md ou AI_RULES.md, e
 ## Docs importantes (fonte de verdade por tema)
 - Regras de dev: `DEV_RULES.md`
 - Padroes de stack: `AI_RULES.md`
-- Features mapeadas: `features.md`
+- Features mapeadas: `docs/features.md`
 - WhatsApp setup: `WHATSAPP_SETUP.md`
 - Cron do desafio WhatsApp (checklist): `docs/WHATSAPP_CHALLENGE_CRON_CHECKLIST.md`
 - Teste de assistentes: `GUIA_TESTE_ASSISTENTES.md`
