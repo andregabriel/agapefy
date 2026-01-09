@@ -105,6 +105,23 @@ describe('cron-challenge inlineSend', () => {
         } as any;
       }
 
+      if (table === 'playlists') {
+        return {
+          select: () => ({
+            in: () =>
+              Promise.resolve({
+                data: [
+                  {
+                    id: 'playlist-1',
+                    title: 'Desafio de 30 dias para Superar Dificuldades Financeiras',
+                  },
+                ],
+                error: null,
+              }),
+          }),
+        } as any;
+      }
+
       if (table === 'whatsapp_challenge_log') {
         const finalEqChain = {
           eq: () => ({

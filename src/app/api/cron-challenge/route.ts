@@ -116,6 +116,17 @@ export async function inlineSend(test: boolean, limit?: number) {
 
   // Pré-carregar áudios das playlists envolvidas
   const uniquePlaylistIds = Array.from(new Set(candidates.map(c => c.playlist_id)));
+
+  // Pré-carregar títulos das playlists para compor a mensagem (nome completo do desafio)
+  const { data: playlistsMeta } = await adminSupabase
+    .from('playlists')
+    .select('id,title')
+    .in('id', uniquePlaylistIds);
+  const playlistTitleById: Record<string, string> = {};
+  for (const p of (playlistsMeta as any[]) || []) {
+    if (p?.id) playlistTitleById[String(p.id)] = String(p.title || '').trim();
+  }
+
   const { data: playlistAudios, error: paError } = await adminSupabase
     .from('playlist_audios')
     .select(`
@@ -194,12 +205,15 @@ export async function inlineSend(test: boolean, limit?: number) {
     const track = trackList[nextIndex - 1];
     const audioId = track.audio_id;
     const title = track.title || 'Oração';
+    const playlistTitle = playlistTitleById[playlistId] || 'Desafio de oração';
 
     // Montar mensagem com link para o áudio específico da jornada
     const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://agapefy.com';
     const audioUrl = `${baseUrl.replace(/\/$/, '')}/player/audio/${audioId}`;
 
-    const message = `🙏 Desafio de oração - Dia ${nextIndex} de ${trackList.length}
+    const message = `🙏 Desafio de oração
+*${playlistTitle}*
+Dia ${nextIndex} de ${trackList.length}
 
 *${title}*
 

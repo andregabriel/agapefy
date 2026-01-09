@@ -9,7 +9,15 @@ const ZAPI_BASE_URL = `https://api.z-api.io/instances/${ZAPI_INSTANCE_NAME}/toke
 
 export async function POST(request: NextRequest) {
   try {
-    const webhookAuth = requireWebhookSecret(request, 'WHATSAPP_WEBHOOK_SECRET');
+    // Z-API costuma enviar o token também como header `Client-Token`/`client-token`.
+    // Permitimos esse header como assinatura para evitar "silêncio" quando o payload chega ok
+    // mas o header não está no conjunto padrão.
+    const webhookAuth = requireWebhookSecret(request, 'WHATSAPP_WEBHOOK_SECRET', [
+      'x-webhook-secret',
+      'x-webhook-token',
+      'x-whatsapp-signature',
+      'client-token',
+    ]);
     if (webhookAuth) {
       const adminAuth = await requireAdmin(request);
       if (!adminAuth.ok) return webhookAuth;
@@ -82,12 +90,25 @@ export async function POST(request: NextRequest) {
                           body.message?.imageMessage?.caption ||
                           body.message?.videoMessage?.caption ||
                           body.message?.documentMessage?.caption ||
+                          body.message?.buttonsResponseMessage?.selectedDisplayText ||
+                          body.message?.buttonsResponseMessage?.selectedButtonId ||
+                          body.message?.listResponseMessage?.title ||
+                          body.message?.listResponseMessage?.description ||
+                          body.message?.templateButtonReplyMessage?.selectedDisplayText ||
+                          body.message?.templateButtonReplyMessage?.selectedId ||
                           body.text?.message ||
                           body.text ||
                           body.data?.message ||
+                          body.data?.message?.conversation ||
+                          body.data?.message?.text ||
+                          body.data?.message?.extendedTextMessage?.text ||
                           body.data?.text ||
+                          body.data?.body ||
+                          body.body ||
                           (typeof body.message === 'string' ? body.message : '') ||
                           (typeof body.text === 'string' ? body.text : '') ||
+                          (typeof body.data?.message === 'string' ? body.data.message : '') ||
+                          (typeof body.data?.text === 'string' ? body.data.text : '') ||
                           ''
                         ) as string;
     
