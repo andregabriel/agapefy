@@ -17,6 +17,20 @@ function isIosDevice(): boolean {
   return /iphone|ipad|ipod/.test(ua);
 }
 
+function isSafariOnIos(): boolean {
+  if (typeof window === "undefined") return false;
+  const ua = window.navigator.userAgent.toLowerCase();
+  const isIos = /iphone|ipad|ipod/.test(ua);
+  if (!isIos) return false;
+  // iOS browsers include their own tokens:
+  // - Chrome: crios
+  // - Firefox: fxios
+  // - Edge: edgios
+  const isOtherBrowser = /crios|fxios|edgios/.test(ua);
+  const isSafari = /safari/.test(ua);
+  return isSafari && !isOtherBrowser;
+}
+
 function isInStandaloneMode(): boolean {
   if (typeof window === "undefined") return false;
   const nav = window.navigator as any;
@@ -29,6 +43,7 @@ export function InstallAppCard() {
   const [iosHelpOpen, setIosHelpOpen] = useState(false);
 
   const isIos = useMemo(() => isIosDevice(), []);
+  const isIosSafari = useMemo(() => isSafariOnIos(), []);
 
   useEffect(() => {
     setInstalled(isInStandaloneMode());
@@ -109,7 +124,15 @@ export function InstallAppCard() {
                   </DialogHeader>
                   <div className="space-y-2 text-sm text-gray-300">
                     <p>
-                      1) Abra este site no <span className="text-white font-medium">Safari</span>.
+                      1) {isIosSafari ? (
+                        <>
+                          Você já está no <span className="text-white font-medium">Safari</span>.
+                        </>
+                      ) : (
+                        <>
+                          Abra este site no <span className="text-white font-medium">Safari</span> (no iPhone, o Chrome não instala o app).
+                        </>
+                      )}
                     </p>
                     <p>
                       2) Toque em <span className="text-white font-medium">Compartilhar</span>.
