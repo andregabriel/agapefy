@@ -1,11 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabase';
+import { getAdminSupabase } from '@/lib/supabase-admin';
 import { requireAdmin } from '@/lib/api-auth';
 
 export async function POST(request: NextRequest) {
   try {
     const auth = await requireAdmin(request);
     if (!auth.ok) return auth.response;
+    const admin = getAdminSupabase();
 
     const { phone_number, is_active } = await request.json();
 
@@ -23,7 +24,7 @@ export async function POST(request: NextRequest) {
     console.log(`Atualizando status do usuário ${maskedPhone} para ${is_active ? 'ativo' : 'inativo'}`);
 
     // Atualizar status do usuário
-    const { data, error } = await supabase
+    const { data, error } = await admin
       .from('whatsapp_users')
       .update({ 
         is_active,

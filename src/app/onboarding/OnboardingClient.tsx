@@ -871,6 +871,7 @@ export default function OnboardingClient() {
                     .upsert(
                       {
                         phone_number: cleanPhone,
+                        user_id: user?.id ?? undefined,
                         receives_daily_prayer: true,
                         is_active: true,
                         updated_at: new Date().toISOString(),
@@ -980,7 +981,7 @@ export default function OnboardingClient() {
         .upsert(
           {
             phone_number: phone,
-            user_id: user?.id || null,
+            user_id: user?.id ?? undefined,
             receives_daily_verse: nextValue,
             updated_at: new Date().toISOString(),
           } as any,
@@ -1641,6 +1642,10 @@ export default function OnboardingClient() {
       toast.error('Formulário não encontrado');
       return;
     }
+    if (!user?.id) {
+      toast.error('Você precisa estar logado');
+      return;
+    }
     
     // Usar o parâmetro passado ou o estado atual
     const optionToSubmit = selectedOption !== undefined ? selectedOption : selected;
@@ -1662,7 +1667,7 @@ export default function OnboardingClient() {
           option: optionToSubmit || null,
           other_option: hasOtherOption ? otherOptionText.trim() : null
         }, 
-        userId: user?.id ?? null 
+        userId: user.id
       });
 
       // Se preencheu o campo "Outros", salvar como sugestão
@@ -1875,9 +1880,13 @@ export default function OnboardingClient() {
 
   async function skip() {
     if (!form) return;
+    if (!user?.id) {
+      toast.error('Você precisa estar logado');
+      return;
+    }
     try {
       setSubmitting(true);
-      await saveFormResponse({ formId: form.id, answers: { skipped: true }, userId: user?.id ?? null });
+      await saveFormResponse({ formId: form.id, answers: { skipped: true }, userId: user.id });
       toast.success('Passo adiado');
       const currentStep = form.onboard_step || desiredStep;
       const nextUrl = await getNextStepUrl(currentStep, { categoryId: currentCategoryId || undefined });
@@ -1893,21 +1902,25 @@ export default function OnboardingClient() {
 
   async function submitAndGoNext(recordedAnswers: Record<string, any>) {
     if (!form) return;
+    if (!user?.id) {
+      toast.error('Você precisa estar logado');
+      return;
+    }
     try {
       // eslint-disable-next-line no-console
       ONB_DEBUG('submitAndGoNext:start', {
         step: form.onboard_step || desiredStep,
         formId: form.id,
-        userId: user?.id ?? null,
+        userId: user.id,
         recordedAnswers,
       });
       setSubmitting(true);
-      await saveFormResponse({ formId: form.id, answers: recordedAnswers, userId: user?.id ?? null });
+      await saveFormResponse({ formId: form.id, answers: recordedAnswers, userId: user.id });
       // eslint-disable-next-line no-console
       ONB_DEBUG('submitAndGoNext:afterSave', {
         step: form.onboard_step || desiredStep,
         formId: form.id,
-        userId: user?.id ?? null,
+        userId: user.id,
       });
       toast.success('Resposta enviada');
     } catch (e) {
@@ -2230,7 +2243,7 @@ export default function OnboardingClient() {
                       }
                       const { error } = await supabase
                         .from('whatsapp_users')
-                        .upsert({ phone_number: phone, user_id: user?.id || null, receives_daily_verse: dailyVerseEnabled, updated_at: new Date().toISOString() } as any, { onConflict: 'phone_number' });
+                        .upsert({ phone_number: phone, user_id: user?.id ?? undefined, receives_daily_verse: dailyVerseEnabled, updated_at: new Date().toISOString() } as any, { onConflict: 'phone_number' });
                       if (error) throw error;
                     }
                   } catch (e) {

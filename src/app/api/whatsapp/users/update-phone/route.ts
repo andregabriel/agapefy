@@ -1,11 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabase';
+import { getAdminSupabase } from '@/lib/supabase-admin';
 import { requireAdmin } from '@/lib/api-auth';
 
 export async function POST(request: NextRequest) {
   try {
     const auth = await requireAdmin(request);
     if (!auth.ok) return auth.response;
+    const admin = getAdminSupabase();
 
     const { user_id, phone_number } = await request.json();
 
@@ -31,7 +32,7 @@ export async function POST(request: NextRequest) {
     console.log(`Atualizando número do usuário ${user_id} para ${maskedPhone}`);
 
     // Verificar se o número já está em uso por outro usuário
-    const { data: existingUser } = await supabase
+    const { data: existingUser } = await admin
       .from('whatsapp_users')
       .select('id')
       .eq('phone_number', cleanPhone)
@@ -46,7 +47,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Atualizar número do telefone
-    const { data, error } = await supabase
+    const { data, error } = await admin
       .from('whatsapp_users')
       .update({ 
         phone_number: cleanPhone,

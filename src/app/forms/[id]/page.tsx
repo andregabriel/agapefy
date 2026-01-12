@@ -1,23 +1,34 @@
 "use client";
 
 import { useEffect, useMemo, useState } from 'react';
-import { useParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
 import { supabase } from '@/lib/supabase';
 import { saveFormResponse } from '@/lib/services/forms';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface FormOption { label: string; category_id: string }
 interface AdminForm { id: string; name: string; description?: string; schema: FormOption[]; onboard_step?: number | null }
 
 export default function PublicFormPage() {
   const params = useParams();
+  const router = useRouter();
+  const { user, loading } = useAuth();
   const formId = useMemo(() => (params?.id as string) || '', [params]);
   const [form, setForm] = useState<AdminForm | null>(null);
   const [selected, setSelected] = useState<string>('');
   const [submitting, setSubmitting] = useState(false);
+
+  useEffect(() => {
+    if (loading) return;
+    if (!user) {
+      const nextUrl = formId ? `/forms/${formId}` : '/forms';
+      router.replace(`/login?next=${encodeURIComponent(nextUrl)}`);
+    }
+  }, [loading, user, router, formId]);
 
   useEffect(() => {
     let mounted = true;
@@ -29,18 +40,22 @@ export default function PublicFormPage() {
         .maybeSingle();
       if (mounted) setForm((data as AdminForm) || null);
     }
-    if (formId) void load();
+    if (formId && user) void load();
     return () => { mounted = false; };
-  }, [formId]);
+  }, [formId, user]);
 
   async function submit() {
+    if (!user) {
+      toast.error('Você precisa estar logado');
+      return;
+    }
     if (!form || !selected) {
       toast.error('Selecione uma opção');
       return;
     }
     try {
       setSubmitting(true);
-      await saveFormResponse({ formId: form.id, answers: { option: selected } });
+      await saveFormResponse({ formId: form.id, answers: { option: selected }, userId: user.id });
       toast.success('Resposta enviada');
     } catch (e) {
       console.error(e);
@@ -50,7 +65,7 @@ export default function PublicFormPage() {
     }
   }
 
-  if (!form) return null;
+  if (loading || !user || !form) return null;
 
   return (
     <div className="max-w-2xl mx-auto p-4">
@@ -90,5 +105,4 @@ export default function PublicFormPage() {
     </div>
   );
 }
-
 

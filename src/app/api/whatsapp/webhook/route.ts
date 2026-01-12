@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabase';
+import { getAdminSupabase } from '@/lib/supabase-admin';
 import { requireAdmin, requireWebhookSecret } from '@/lib/api-auth';
 
 const ZAPI_INSTANCE_NAME = process.env.ZAPI_INSTANCE_NAME as string;
@@ -9,6 +9,7 @@ const ZAPI_BASE_URL = `https://api.z-api.io/instances/${ZAPI_INSTANCE_NAME}/toke
 
 export async function POST(request: NextRequest) {
   try {
+    const admin = getAdminSupabase();
     // Z-API costuma enviar o token também como header `Client-Token`/`client-token`.
     // Permitimos esse header como assinatura para evitar "silêncio" quando o payload chega ok
     // mas o header não está no conjunto padrão.
@@ -152,7 +153,7 @@ export async function POST(request: NextRequest) {
       const duplicateWindowMs = 30 * 1000; // 30 segundos
       const since = new Date(Date.now() - duplicateWindowMs).toISOString();
 
-      const { data: existingConversations, error: dupError } = await supabase
+      const { data: existingConversations, error: dupError } = await admin
         .from('whatsapp_conversations')
         .select('id, created_at')
         .eq('user_phone', userPhone)
@@ -179,7 +180,7 @@ export async function POST(request: NextRequest) {
 
     // Verificar se usuário já existe antes de fazer upsert
     console.log('👤 Verificando/registrando usuário...');
-    const { data: existingUser } = await supabase
+    const { data: existingUser } = await admin
       .from('whatsapp_users')
       .select('is_active, has_sent_first_message')
       .eq('phone_number', userPhone)
@@ -200,7 +201,7 @@ export async function POST(request: NextRequest) {
     const hasSentFirstMessage = existingUser?.has_sent_first_message ?? false;
 
     // Atualizar ou criar usuário
-    await supabase.from('whatsapp_users').upsert({
+    await admin.from('whatsapp_users').upsert({
       phone_number: userPhone,
       name: userName,
       is_active: existingUser?.is_active ?? true, // Manter status existente ou criar como ativo
@@ -209,7 +210,7 @@ export async function POST(request: NextRequest) {
     }, { onConflict: 'phone_number' });
 
     // Carregar configurações úteis (boas-vindas, menu e regras de assistentes)
-    const settingsRows = await supabase
+    const settingsRows = await admin
       .from('app_settings')
       .select('key,value')
       .in('key', [
@@ -248,7 +249,7 @@ export async function POST(request: NextRequest) {
       conversationData.thread_id = responseThreadId;
     }
     
-    await supabase.from('whatsapp_conversations').insert(conversationData);
+    await admin.from('whatsapp_conversations').insert(conversationData);
 
     // Enviar resposta via Z-API
     console.log('📤 Enviando resposta via Z-API...');
@@ -264,7 +265,7 @@ export async function POST(request: NextRequest) {
     // IMPORTANTE: Isso deve acontecer SEMPRE, independente de enviar boas-vindas ou não
     // Pois não podemos enviar mensagens para usuários que não enviaram a primeira mensagem
     if (isFirstMessage) {
-      await supabase
+      await admin
         .from('whatsapp_users')
         .update({ has_sent_first_message: true, updated_at: new Date().toISOString() })
         .eq('phone_number', userPhone);
@@ -293,7 +294,7 @@ export async function POST(request: NextRequest) {
     const menuReminderEnabled = (settingsMap['whatsapp_menu_reminder_enabled'] ?? 'false') === 'true';
     const menuReminderText = settingsMap['whatsapp_menu_message'] || '';
     if (menuReminderEnabled && menuReminderText) {
-      const { count: convCount } = await supabase
+      const { count: convCount } = await admin
         .from('whatsapp_conversations')
         .select('*', { count: 'exact', head: true })
         .eq('user_phone', userPhone);
@@ -332,6 +333,7 @@ export async function POST(request: NextRequest) {
 
 async function generateIntelligentResponse(request: NextRequest, message: string, userName: string, userPhone: string, settingsMap?: Record<string,string>): Promise<string | { response: string; threadId?: string }> {
   try {
+    const admin = getAdminSupabase();
     console.log('🧠 Iniciando geração de resposta IA...');
     
     // Verificar chave OpenAI
@@ -346,7 +348,7 @@ async function generateIntelligentResponse(request: NextRequest, message: string
     console.log(`🎯 Intenção detectada: ${intention}`);
     
     // Buscar histórico de conversas
-    const { data: conversationHistory } = await supabase
+    const { data: conversationHistory } = await admin
       .from('whatsapp_conversations')
       .select('message_content, response_content')
       .eq('user_phone', userPhone)
@@ -1022,6 +1024,7 @@ async function selectAssistantByMessage(message: string, settingsMap?: Record<st
 
 async function callOpenAIAssistant(assistantId: string, message: string, userPhone: string): Promise<{ reply: string; threadId: string } | null> {
   try {
+    const admin = getAdminSupabase();
     const openaiApiKey = process.env.OPENAI_API_KEY;
     if (!openaiApiKey) {
       console.error('❌ Chave OpenAI não configurada');
@@ -1031,7 +1034,7 @@ async function callOpenAIAssistant(assistantId: string, message: string, userPho
     // Buscar thread existente do usuário ou criar nova
     let threadId: string | undefined = undefined;
     try {
-      const { data: threadData } = await supabase
+      const { data: threadData } = await admin
         .from('whatsapp_conversations')
         .select('thread_id')
         .eq('user_phone', userPhone)
@@ -1121,7 +1124,8 @@ async function callOpenAIAssistant(assistantId: string, message: string, userPho
 
 async function getDailyVerse(): Promise<string> {
   try {
-    const { data: verses } = await supabase
+    const admin = getAdminSupabase();
+    const { data: verses } = await admin
       .from('verses')
       .select('*')
       .limit(1);

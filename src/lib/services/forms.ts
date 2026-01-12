@@ -88,15 +88,17 @@ function sanitizeForJSON(obj: any, visited = new WeakSet()): any {
 
 export async function saveFormResponse(params: { formId: string; answers: Record<string, any>; userId?: string | null }) {
   const { formId, answers, userId } = params;
+  if (!userId) {
+    throw new Error('missing_user_id');
+  }
   
   // Sanitizar os dados antes de enviar para evitar erros de estrutura circular
   const sanitizedAnswers = sanitizeForJSON(answers);
   
   const { error } = await supabase
     .from('admin_form_responses')
-    .insert({ form_id: formId, answers: sanitizedAnswers, user_id: userId ?? undefined });
+    .insert({ form_id: formId, answers: sanitizedAnswers, user_id: userId });
   if (error) throw error;
   return { success: true };
 }
-
 

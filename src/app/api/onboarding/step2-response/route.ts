@@ -17,7 +17,7 @@ export async function GET(request: NextRequest) {
   try {
     const token = readBearerToken(request);
     if (!token || !SUPABASE_URL || !SUPABASE_ANON_KEY) {
-      return NextResponse.json({ formId: null, option: null }, { status: 200 });
+      return NextResponse.json({ formId: null, option: null, playlistTitle: null }, { status: 200 });
     }
 
     const userClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
@@ -29,7 +29,7 @@ export async function GET(request: NextRequest) {
     } = await userClient.auth.getUser(token);
 
     if (userError || !user) {
-      return NextResponse.json({ formId: null, option: null }, { status: 200 });
+      return NextResponse.json({ formId: null, option: null, playlistTitle: null }, { status: 200 });
     }
 
     const admin = getAdminSupabase();
@@ -46,12 +46,13 @@ export async function GET(request: NextRequest) {
         .limit(1)
         .maybeSingle();
       if (formError) {
-        return NextResponse.json({ formId: null, option: null }, { status: 200 });
+        return NextResponse.json({ formId: null, option: null, playlistTitle: null }, { status: 200 });
       }
       formId = form?.id ?? null;
     }
 
     let option: string | null = null;
+    let playlistTitle: string | null = null;
     if (formId) {
       const { data: resp, error: respError } = await admin
         .from("admin_form_responses")
@@ -67,11 +68,27 @@ export async function GET(request: NextRequest) {
         if (typeof ans.option === "string") {
           option = ans.option;
         }
+        if (typeof ans.playlist_title === "string") {
+          playlistTitle = ans.playlist_title;
+        } else if (typeof ans.playlistTitle === "string") {
+          playlistTitle = ans.playlistTitle;
+        }
       }
     }
 
-    return NextResponse.json({ formId, option }, { status: 200 });
+    if (option && !playlistTitle) {
+      const { data: playlistRow, error: playlistError } = await admin
+        .from("playlists")
+        .select("title")
+        .eq("id", option)
+        .maybeSingle();
+      if (!playlistError && playlistRow?.title) {
+        playlistTitle = String(playlistRow.title);
+      }
+    }
+
+    return NextResponse.json({ formId, option, playlistTitle }, { status: 200 });
   } catch (error) {
-    return NextResponse.json({ formId: null, option: null }, { status: 200 });
+    return NextResponse.json({ formId: null, option: null, playlistTitle: null }, { status: 200 });
   }
 }

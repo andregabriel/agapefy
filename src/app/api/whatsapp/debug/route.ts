@@ -1,14 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabase';
+import { getAdminSupabase } from '@/lib/supabase-admin';
 import { requireAdmin } from '@/lib/api-auth';
 
 export async function GET(request: NextRequest) {
   try {
     const auth = await requireAdmin(request);
     if (!auth.ok) return auth.response;
+    const admin = getAdminSupabase();
 
     // Buscar últimas conversas
-    const { data: conversations, error: convError } = await supabase
+    const { data: conversations, error: convError } = await admin
       .from('whatsapp_conversations')
       .select('*')
       .order('created_at', { ascending: false })
@@ -17,7 +18,7 @@ export async function GET(request: NextRequest) {
     if (convError) throw convError;
 
     // Buscar usuários
-    const { data: users, error: usersError } = await supabase
+    const { data: users, error: usersError } = await admin
       .from('whatsapp_users')
       .select('*')
       .order('updated_at', { ascending: false })

@@ -429,8 +429,19 @@ export default function WhatsAppSetup({ variant = "standalone", redirectIfNotLog
             .eq('is_public', true)
             .order('created_at', { ascending: false })
             .limit(50);
-          if (fbErr) { setChallengePlaylists([]); return; }
-          setChallengePlaylists(((pls || []) as any[]).map((p: any) => ({ id: p.id as string, title: (p.title || '') as string })));
+          if (fbErr) {
+            setChallengePlaylists((prev) => (prev.length ? prev : []));
+            return;
+          }
+          const mapped = ((pls || []) as any[]).map((p: any) => ({
+            id: p.id as string,
+            title: (p.title || '') as string,
+          }));
+          if (!mapped.length) {
+            setChallengePlaylists((prev) => (prev.length ? prev : []));
+            return;
+          }
+          setChallengePlaylists(mapped);
           WHATS_DEBUG('loadChallenges:setChallengePlaylists', {
             source: 'title_fallback',
             ids: (pls || []).map((p: any) => p.id),
@@ -444,10 +455,18 @@ export default function WhatsAppSetup({ variant = "standalone", redirectIfNotLog
           .select('id,title')
           .in('id', ids);
         if (pErr) {
-          setChallengePlaylists([]);
+          setChallengePlaylists((prev) => (prev.length ? prev : []));
           return;
         }
-        setChallengePlaylists(((pls || []) as any[]).map((p: any) => ({ id: p.id as string, title: (p.title || '') as string })));
+        const mapped = ((pls || []) as any[]).map((p: any) => ({
+          id: p.id as string,
+          title: (p.title || '') as string,
+        }));
+        if (!mapped.length) {
+          setChallengePlaylists((prev) => (prev.length ? prev : []));
+          return;
+        }
+        setChallengePlaylists(mapped);
         console.log('[WPP_DEBUG] loadChallenges:finalChallengePlaylists', {
           count: ((pls || []) as any[]).length,
         });
@@ -457,7 +476,7 @@ export default function WhatsAppSetup({ variant = "standalone", redirectIfNotLog
           count: (pls || []).length,
         });
       } catch (error) {
-        setChallengePlaylists([]);
+        setChallengePlaylists((prev) => (prev.length ? prev : []));
         WHATS_DEBUG('loadChallenges:error', error);
       }
       WHATS_DEBUG('loadChallenges:done');
@@ -512,6 +531,7 @@ export default function WhatsAppSetup({ variant = "standalone", redirectIfNotLog
             setAttemptedOnboardingLink(true);
             try {
               let playlistId: string | null = null;
+              let playlistTitle: string | null = null;
 
               // 1) Tentar buscar a resposta do passo 2 via API (service role) para contornar RLS
               let step2FormId: string | null = null;
@@ -533,6 +553,9 @@ export default function WhatsAppSetup({ variant = "standalone", redirectIfNotLog
                     step2FormId,
                     playlistId,
                   });
+                }
+                if (typeof payload?.playlistTitle === "string") {
+                  playlistTitle = payload.playlistTitle;
                 }
               } catch (e) {
                 console.warn("Falha ao buscar resposta do passo 2 (WhatsAppSetup):", e);
@@ -571,22 +594,36 @@ export default function WhatsAppSetup({ variant = "standalone", redirectIfNotLog
                 setChallengeTime(defaultTime);
                 // Se a playlist escolhida ainda não está em challengePlaylists, buscar e adicioná-la
                 try {
-                  const { data: pl, error: plErr } = await supabase
-                    .from('playlists')
-                    .select('id,title')
-                    .eq('id', playlistId)
-                    .maybeSingle();
-                  if (!plErr && pl) {
+                  const resolvedTitle = playlistTitle?.trim();
+                  if (resolvedTitle) {
                     setChallengePlaylists(prev => {
-                      if (prev.some(p => p.id === pl.id)) return prev;
+                      if (prev.some(p => p.id === playlistId)) return prev;
                       return [
                         ...prev,
                         {
-                          id: pl.id as string,
-                          title: (pl.title || '') as string,
+                          id: playlistId,
+                          title: resolvedTitle,
                         },
                       ];
                     });
+                  } else {
+                    const { data: pl, error: plErr } = await supabase
+                      .from('playlists')
+                      .select('id,title')
+                      .eq('id', playlistId)
+                      .maybeSingle();
+                    if (!plErr && pl) {
+                      setChallengePlaylists(prev => {
+                        if (prev.some(p => p.id === pl.id)) return prev;
+                        return [
+                          ...prev,
+                          {
+                            id: pl.id as string,
+                            title: (pl.title || '') as string,
+                          },
+                        ];
+                      });
+                    }
                   }
                 } catch (e) {
                   console.warn('Falha ao garantir playlist do onboarding em challengePlaylists:', e);
@@ -1231,7 +1268,7 @@ export default function WhatsAppSetup({ variant = "standalone", redirectIfNotLog
                             variant="outline"
                             role="combobox"
                             aria-expanded={drawerOpen}
-                            aria-label="Selecione um desafio"
+                            aria-label="Selecione seu desafio de orações"
                             data-selected-challenge-id={selectedChallengeId || ''}
                             className="w-full justify-between"
                             onClick={() => setDrawerOpen(true)}
@@ -1277,14 +1314,14 @@ export default function WhatsAppSetup({ variant = "standalone", redirectIfNotLog
                         <Popover open={challengeOpen} onOpenChange={setChallengeOpen}>
                           <PopoverTrigger asChild>
                             <Button
-                              variant="outline"
-                              role="combobox"
-                              aria-expanded={challengeOpen}
-                              aria-label="Selecione um desafio"
-                              data-selected-challenge-id={selectedChallengeId || ''}
-                              className="w-full justify-between"
-                            >
-                              {selectedChallengeTitle || "Selecione um desafio..."}
+                            variant="outline"
+                            role="combobox"
+                            aria-expanded={challengeOpen}
+                            aria-label="Selecione seu desafio de orações"
+                            data-selected-challenge-id={selectedChallengeId || ''}
+                            className="w-full justify-between"
+                          >
+                            {selectedChallengeTitle || "Selecione um desafio..."}
                             </Button>
                           </PopoverTrigger>
                           <PopoverContent
