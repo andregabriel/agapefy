@@ -143,7 +143,14 @@ export function requireWebhookSecret(
     return null;
   }
 
-  const token = getHeaderToken(req, headerNames) || getBearerToken(req);
+  // Some providers do not support custom headers for webhook callbacks.
+  // Accept `?token=` in the URL as a fallback (keeps webhook protected without opening it publicly).
+  let queryToken = '';
+  try {
+    queryToken = new URL(req.url).searchParams.get('token') || '';
+  } catch {}
+
+  const token = queryToken || getHeaderToken(req, headerNames) || getBearerToken(req);
   if (!token || token !== secret) {
     return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
   }
