@@ -105,7 +105,7 @@ export function ContentCard({ item, category, layoutClasses, showDailyVerseBadge
       
       {/* Título, Sub-título e Duração/Contagem */}
       <div className="space-y-1">
-        <h3 className={layoutClasses.titleClass || 'font-bold text-white text-base leading-tight truncate group-hover:underline'}>
+        <h3 className={layoutClasses.titleClass || 'font-bold text-white text-base leading-tight line-clamp-2 group-hover:underline'}>
           {item.title}
         </h3>
         

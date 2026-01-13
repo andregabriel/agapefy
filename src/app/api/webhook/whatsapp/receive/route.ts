@@ -7,6 +7,24 @@ const ZAPI_TOKEN = process.env.ZAPI_TOKEN as string;
 const ZAPI_CLIENT_TOKEN = process.env.ZAPI_CLIENT_TOKEN as string;
 const ZAPI_BASE_URL = `https://api.z-api.io/instances/${ZAPI_INSTANCE_NAME}/token/${ZAPI_TOKEN}`;
 
+export async function GET() {
+  // Lightweight healthcheck to validate routing + env wiring in production.
+  // Does NOT expose secrets, only booleans.
+  return NextResponse.json({
+    ok: true,
+    route: '/api/webhook/whatsapp/receive',
+    env: {
+      hasZapiClientToken: !!process.env.ZAPI_CLIENT_TOKEN,
+      hasWhatsappWebhookSecret: !!process.env.WHATSAPP_WEBHOOK_SECRET,
+      hasServiceRole: !!(process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SB_SERVICE_ROLE_KEY),
+    },
+    vercel: {
+      gitCommitSha: process.env.VERCEL_GIT_COMMIT_SHA || null,
+    },
+    timestamp: new Date().toISOString(),
+  });
+}
+
 export async function POST(request: NextRequest) {
   try {
     const admin = getAdminSupabase();

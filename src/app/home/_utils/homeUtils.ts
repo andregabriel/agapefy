@@ -34,7 +34,7 @@ export function getLayoutClasses(layoutType: string) {
         cardClass: 'flex-shrink-0 w-24 snap-start cursor-pointer group md:w-48',
         thumbnailClass: 'w-24 h-24 rounded-lg overflow-hidden bg-gray-800 shadow-lg flex items-center justify-center relative md:w-48 md:h-48',
         imageMarginClass: 'mb-2 md:mb-4',
-        titleClass: 'font-semibold text-white text-[13px] leading-tight truncate group-hover:underline md:font-bold md:text-base',
+        titleClass: 'font-semibold text-white text-[13px] leading-tight line-clamp-2 group-hover:underline md:font-bold md:text-base',
         subtitleClass: 'text-[11px] text-gray-300 truncate md:text-sm',
         metaClass: 'text-[11px] text-gray-400 md:text-sm'
       };

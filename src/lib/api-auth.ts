@@ -125,9 +125,16 @@ export async function requireAdmin(req: NextRequest): Promise<AuthResult> {
 export function requireWebhookSecret(
   req: NextRequest,
   envKey: string,
-  headerNames: string[] = ['x-webhook-secret', 'x-webhook-token', 'x-whatsapp-signature']
+  headerNames: string[] = ['x-webhook-secret', 'x-webhook-token', 'x-whatsapp-signature', 'client-token']
 ): NextResponse | null {
-  const secret = process.env[envKey] || '';
+  // Default secret is read from the requested env key.
+  // For WhatsApp webhooks we also accept Z-API's Client-Token as a safe fallback,
+  // so the webhook doesn't hard-fail in production when WHATSAPP_WEBHOOK_SECRET isn't configured.
+  // This still requires the caller to present the correct token in headers.
+  let secret = process.env[envKey] || '';
+  if (!secret && envKey === 'WHATSAPP_WEBHOOK_SECRET') {
+    secret = process.env.ZAPI_CLIENT_TOKEN || '';
+  }
   const isProd = process.env.NODE_ENV === 'production';
   if (!secret) {
     if (isProd) {
