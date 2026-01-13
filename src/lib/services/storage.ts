@@ -43,7 +43,8 @@ export const uploadImageToSupabaseFromUrl = async (temporaryUrl: string): Promis
   const { error: uploadError } = await supabase.storage
     .from(BUCKET)
     .upload(fileName, blob, {
-      cacheControl: '3600',
+      // Arquivo imutável (timestamp+random, upsert:false) -> cache longo é seguro
+      cacheControl: '31536000',
       upsert: false,
       contentType,
     });

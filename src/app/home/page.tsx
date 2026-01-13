@@ -368,6 +368,7 @@ export default function HomePage() {
                       title={category.name}
                       imageUrl={category.image_url}
                       href={bannerLinks[category.id]}
+                      isPriority={index === 0}
                     />
                   ) : (
                     <CategorySection

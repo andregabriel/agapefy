@@ -139,12 +139,15 @@ export function CategorySection({ category, index, dailyAudioId }: CategorySecti
             className={layoutClasses.containerClass}
             style={isScrollable ? { scrollbarWidth: 'none', msOverflowStyle: 'none' } : {}}
           >
-            {allContent.map((item) => (
+            {allContent.map((item, itemIndex) => (
               <ContentCard
                 key={`${item.type}-${item.id}`}
                 item={item}
                 category={category}
                 layoutClasses={layoutClasses}
+                layoutType={layoutType}
+                categoryIndex={index}
+                itemIndex={itemIndex}
                 showDailyVerseBadge={item.type === 'audio' && item.id === dailyAudioId}
               />
             ))}

@@ -14,10 +14,34 @@ interface ContentCardProps {
     subtitleClass?: string;
     metaClass?: string;
   };
+  layoutType?: string;
+  categoryIndex?: number;
+  itemIndex?: number;
   showDailyVerseBadge?: boolean;
 }
 
-export function ContentCard({ item, category, layoutClasses, showDailyVerseBadge }: ContentCardProps) {
+function getTransformForLayout(layoutType: string) {
+  switch (layoutType) {
+    case 'double_height':
+      return { w1: 192, h1: 384, w2: 384, h2: 768 };
+    case 'full':
+      return { w1: 400, h1: 384, w2: 800, h2: 768 };
+    case 'grid_3_rows':
+    case 'spotify':
+    default:
+      return { w1: 192, h1: 192, w2: 384, h2: 384 };
+  }
+}
+
+export function ContentCard({
+  item,
+  category,
+  layoutClasses,
+  layoutType = 'spotify',
+  categoryIndex,
+  itemIndex,
+  showDailyVerseBadge
+}: ContentCardProps) {
   const isPlaylist = item.type === 'playlist';
   
   // Determinar URL da imagem com prioridade correta
@@ -33,6 +57,17 @@ export function ContentCard({ item, category, layoutClasses, showDailyVerseBadge
   const href = isPlaylist 
     ? `/player/${item.id}` 
     : `/player/audio/${item.id}`;
+
+  const isPriority = (categoryIndex ?? -1) === 0 && (itemIndex ?? 999) < 3;
+  const { w1, h1, w2, h2 } = getTransformForLayout(layoutType);
+  const quality = 60;
+
+  const imgSrc = imageUrl
+    ? normalizeImageUrl(imageUrl, { width: w1, height: h1, quality }) || imageUrl
+    : null;
+  const imgSrc2x = imageUrl
+    ? normalizeImageUrl(imageUrl, { width: w2, height: h2, quality }) || imageUrl
+    : null;
 
   const fallbackContent = (
     <div className="w-full h-full bg-gradient-to-br from-purple-600 to-blue-600 flex items-center justify-center">
@@ -60,9 +95,13 @@ export function ContentCard({ item, category, layoutClasses, showDailyVerseBadge
         <div className={layoutClasses.thumbnailClass}>
           {imageUrl ? (
             <img
-              src={imageUrl}
+              src={imgSrc || undefined}
+              srcSet={imgSrc && imgSrc2x ? `${imgSrc} 1x, ${imgSrc2x} 2x` : undefined}
               alt={item.title}
               className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+              loading={isPriority ? 'eager' : 'lazy'}
+              decoding="async"
+              fetchPriority={isPriority ? 'high' : undefined}
               onError={(e) => {
                 const target = e.target as HTMLImageElement;
                 target.style.display = 'none';

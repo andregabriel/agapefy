@@ -1,7 +1,50 @@
-export function normalizeImageUrl(url?: string | null): string | null {
+type NormalizeImageUrlOpts = {
+  width?: number;
+  height?: number;
+  quality?: number;
+};
+
+export function normalizeImageUrl(url?: string | null, opts?: NormalizeImageUrlOpts): string | null {
   if (!url) return null;
-  if (/^(https?:)?\/\//.test(url) || url.startsWith('data:')) return url;
-  return url;
+  if (url.startsWith('data:')) return url;
+
+  // aceita http/https
+  if (!/^(https?:)?\/\//.test(url)) return url;
+
+  try {
+    const u = new URL(url);
+
+    // Se já for um render/image, não mexe (evita dupla transformação).
+    if (u.pathname.includes('/storage/v1/render/image/')) {
+      return url;
+    }
+
+    // Sem opts: apenas normaliza/valida e retorna a URL original.
+    if (!opts || (!opts.width && !opts.height && !opts.quality)) {
+      return url;
+    }
+
+    const marker = '/storage/v1/object/public/';
+    const idx = u.pathname.indexOf(marker);
+    if (idx === -1) return url; // não é supabase storage object/public
+
+    const after = u.pathname.slice(idx + marker.length); // <bucket>/<path>
+    const [bucket, ...rest] = after.split('/');
+    const path = rest.join('/');
+
+    if (!bucket || !path) return url;
+
+    const renderPath = `/storage/v1/render/image/public/${bucket}/${path}`;
+    const out = new URL(u.origin + renderPath);
+
+    if (opts.width) out.searchParams.set('width', String(opts.width));
+    if (opts.height) out.searchParams.set('height', String(opts.height));
+    if (opts.quality) out.searchParams.set('quality', String(opts.quality));
+
+    return out.toString();
+  } catch {
+    return url;
+  }
 }
 
 export function deduplicateById<T extends { id?: string; type?: string; title?: string }>(items: T[]): T[] {

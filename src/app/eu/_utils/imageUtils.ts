@@ -1,19 +1,6 @@
-// Função para normalizar URLs de imagem (copiada da home)
-export const normalizeImageUrl = (url: string | null | undefined): string | null => {
-  if (!url || typeof url !== 'string') return null;
-  
-  // Remove espaços em branco
-  const cleanUrl = url.trim();
-  if (!cleanUrl) return null;
-  
-  // Verifica se é uma URL válida
-  try {
-    new URL(cleanUrl);
-    return cleanUrl;
-  } catch {
-    return null;
-  }
-};
+// Reusa o normalizador da Home (evita duplicidade e mantém o comportamento consistente).
+// Observação: este helper é puro (sem React), então é seguro importar.
+import { normalizeImageUrl } from '@/app/home/_utils/homeUtils';
 
 // Função para obter URL da imagem com prioridade (baseada na home)
 export const getImageUrl = (

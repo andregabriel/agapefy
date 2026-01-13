@@ -80,7 +80,8 @@ export async function POST(request: NextRequest) {
       .from('media')
       .upload(fileName, buffer, {
         contentType: file.type,
-        cacheControl: '3600',
+        // Arquivo imutável (timestamp+random, upsert:false) -> cache longo é seguro
+        cacheControl: '31536000',
         upsert: false
       });
 
