@@ -22,7 +22,7 @@ import {
   HelpCircle
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { toast } from 'sonner';
 import { supabase } from '@/lib/supabase';
@@ -33,6 +33,12 @@ export default function ConfigPage() {
   const [activeSection, setActiveSection] = useState<string | null>(null);
   const [isSigningOut, setIsSigningOut] = useState(false);
   const [showPresentModal, setShowPresentModal] = useState(false);
+
+  useEffect(() => {
+    if (!user && !isSigningOut) {
+      router.push('/login');
+    }
+  }, [user, isSigningOut, router]);
 
   const handleSignOut = async () => {
     try {
@@ -60,7 +66,6 @@ export default function ConfigPage() {
   }
 
   if (!user && !isSigningOut) {
-    router.push('/login');
     return null;
   }
 
