@@ -742,6 +742,22 @@ export default function WhatsAppSetup({ variant = "standalone", redirectIfNotLog
         return;
       }
 
+      // Checagem server-side (service role) para evitar toast genérico de permissão quando o número já pertence a outra conta.
+      try {
+        const resp = await authFetch("/api/whatsapp/users/check-phone", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ phone: fullNumber }),
+        });
+        const payload = resp.ok ? await resp.json() : null;
+        if (payload?.ok && payload?.available === false) {
+          toast.error("Este número já está cadastrado em outra conta. Use outro número ou entre na conta correta.");
+          return;
+        }
+      } catch {
+        // Se a checagem falhar (rede/servidor), seguimos com o upsert normal para não quebrar o fluxo.
+      }
+
       const payload: any = {
         phone_number: fullNumber,
         user_id: user.id, // Sempre salvar user_id quando usuário está logado
@@ -811,7 +827,7 @@ export default function WhatsAppSetup({ variant = "standalone", redirectIfNotLog
       if (e?.code === '23505') { // Unique violation
         toast.error("Este número já está cadastrado");
       } else if (e?.code === '42501') { // Insufficient privilege
-        toast.error("Você não tem permissão para realizar esta ação");
+        toast.error("Este número já está cadastrado em outra conta. Use outro número ou entre na conta correta.");
       } else if (e?.message) {
         toast.error(e.message);
       } else {
