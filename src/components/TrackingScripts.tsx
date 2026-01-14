@@ -19,6 +19,22 @@ export function TrackingScripts() {
 
   if (!trackingEnabled || !Number.isFinite(hotjarId)) return null;
 
+  // Google Analytics (gtag.js) - avoid loading on /admin (same behavior as Hotjar).
+  const gaMeasurementId = 'G-VE8WTVMR0W';
+  const gaSnippet = `(function(){
+  try { if (window.location && window.location.pathname && window.location.pathname.indexOf('/admin') === 0) { return; } } catch (e) {}
+  var id='${gaMeasurementId}';
+  var s=document.createElement('script');
+  s.async=true;
+  s.src='https://www.googletagmanager.com/gtag/js?id='+encodeURIComponent(id);
+  var head=document.getElementsByTagName('head')[0];
+  if (head) { head.appendChild(s); }
+  window.dataLayer=window.dataLayer||[];
+  function gtag(){window.dataLayer.push(arguments);}
+  gtag('js', new Date());
+  gtag('config', id);
+})();`;
+
   // Keep the snippet present in <head> (so Hotjar can detect it), but avoid tracking /admin.
   // Hotjar itself is only initialized when the path is NOT /admin.
   const hotjarSnippet = `(function(){
@@ -27,8 +43,13 @@ export function TrackingScripts() {
 })();`;
 
   return (
-    <Script id="hotjar" strategy="beforeInteractive">
-      {hotjarSnippet}
-    </Script>
+    <>
+      <Script id="google-gtag" strategy="beforeInteractive">
+        {gaSnippet}
+      </Script>
+      <Script id="hotjar" strategy="beforeInteractive">
+        {hotjarSnippet}
+      </Script>
+    </>
   );
 }

@@ -7,6 +7,7 @@ Se houver conflito entre este arquivo e o codigo, DEV_RULES.md ou AI_RULES.md, e
 - App Next.js (App Router) com TypeScript, Tailwind e Shadcn/UI.
 - Backend principal via Supabase (Auth, DB, Storage, Edge Functions).
 - Fluxos sensiveis: onboarding, auth/admin, player de audio e WhatsApp.
+- Tracking/analytics: scripts globais no `<head>` via `src/components/TrackingScripts.tsx` (Hotjar + Google Analytics), evitando `/admin`.
 
 ## Stack e padroes (resumo)
 - UI: componentes em `src/components/ui` (Shadcn) como primeira escolha.
