@@ -219,7 +219,7 @@ Dia ${nextIndex} de ${trackList.length}
 
 Ouça agora: ${audioUrl}
 
-_Agape - Seu companheiro espiritual_ ✨`;
+_Agapefy - Seu companheiro espiritual_ ✨`;
 
     if (!test) {
       // Insert log BEFORE sending to prevent race conditions
