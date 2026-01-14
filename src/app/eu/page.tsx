@@ -40,6 +40,7 @@ export default function EuPage() {
   const { user, loading } = useAuth();
   const router = useRouter();
   const [isGuestMode, setIsGuestMode] = useState(false);
+  const [guestModeReady, setGuestModeReady] = useState(false);
 
   // Verificar se é guest mode
   useEffect(() => {
@@ -48,7 +49,16 @@ export default function EuPage() {
       setIsGuestMode(guestMode);
       console.log('🔍 EuPage: Guest mode detectado:', guestMode);
     }
+    setGuestModeReady(true);
   }, []);
+
+  useEffect(() => {
+    if (loading) return;
+    if (!guestModeReady) return;
+    if (!user && !isGuestMode) {
+      router.replace('/login');
+    }
+  }, [guestModeReady, isGuestMode, loading, router, user]);
 
   const { routinePlaylist, loading: routineLoading, removeAudioFromRoutine } = useRoutinePlaylist();
   const { activities, loading: activitiesLoading, formatRelativeDate, formatTime } = useUserActivity();
