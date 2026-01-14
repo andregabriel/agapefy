@@ -18,6 +18,9 @@ const hasServiceRoleKey = Boolean(process.env.SUPABASE_SERVICE_ROLE_KEY || proce
 let hasWarnedMissingServiceRole = false;
 const logPrefix = '[onboarding-status]';
 
+// Hotfix cirúrgico: step legado que não deve bloquear onboarding nem aparecer como pendente.
+const ONBOARDING_SKIPPED_STEP_POSITIONS = new Set<number>([906]);
+
 const SETTINGS_KEYS = [
   'onboarding_step2_title',
   'onboarding_step2_subtitle',
@@ -274,7 +277,11 @@ export async function GET(request: NextRequest) {
     }
 
     const answeredIds = new Set((responses || []).map(r => r.form_id));
-    const pendingForms = formSteps.filter(f => !answeredIds.has(f.id));
+    const pendingForms = formSteps.filter(
+      (f) =>
+        !answeredIds.has(f.id) &&
+        !ONBOARDING_SKIPPED_STEP_POSITIONS.has(f.position)
+    );
 
     console.info(`${logPrefix} result`, {
       userId,

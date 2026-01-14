@@ -1,5 +1,9 @@
 import { supabase } from '@/lib/supabase';
 
+// Hotfix cirúrgico: steps problemáticos que devem ser ignorados no fluxo
+// (ex.: info-step antigo que ficava "pendente" pra sempre e prendia usuários no gate pós-login)
+export const ONBOARDING_SKIPPED_STEP_POSITIONS = new Set<number>([906]);
+
 export interface OnboardingStep {
   id: string;
   position: number; // Posição real no fluxo (não o stepNumber de exibição)
@@ -238,6 +242,9 @@ export async function getOnboardingStepsOrder(
   // Isso replica exatamente a lógica do admin
   dynamicForms.forEach((form) => {
     if (form.onboard_step) {
+      if (ONBOARDING_SKIPPED_STEP_POSITIONS.has(form.onboard_step)) {
+        return;
+      }
       const isInfoStep =
         form.schema &&
         Array.isArray(form.schema) &&

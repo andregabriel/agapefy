@@ -18,7 +18,7 @@ export function TrackingScripts() {
   const hotjarId = Number(hotjarIdRaw);
 
   if (!trackingEnabled || !Number.isFinite(hotjarId)) return null;
-
+  
   // Google Analytics (gtag.js) - avoid loading on /admin (same behavior as Hotjar).
   const gaMeasurementId = 'G-VE8WTVMR0W';
   const gaSnippet = `(function(){

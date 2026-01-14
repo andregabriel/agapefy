@@ -23,7 +23,7 @@ import { useRoutinePlaylist } from '@/hooks/useRoutinePlaylist';
 import { Switch } from '@/components/ui/switch';
 import { useOnboardingProgress } from '@/hooks/useOnboardingProgress';
 import { ProgressBar } from '@/components/onboarding/ProgressBar';
-import { getNextStepUrl as getNextStepUrlShared, getOnboardingStepsOrder, getStepUrl, type OnboardingStep } from '@/lib/services/onboarding-steps';
+import { getNextStepUrl as getNextStepUrlShared, getOnboardingStepsOrder, getStepUrl, ONBOARDING_SKIPPED_STEP_POSITIONS, type OnboardingStep } from '@/lib/services/onboarding-steps';
 import { processLinks } from '@/lib/utils';
 import { Play, Pause } from 'lucide-react';
 import { normalizeImageUrl, formatDuration } from '@/app/home/_utils/homeUtils';
@@ -234,6 +234,29 @@ export default function OnboardingClient() {
     void checkAccess();
     return () => { mounted = false; };
   }, [user, authLoading, router, isAdminPreview]);
+
+  // Hotfix cirúrgico: se alguém cair direto num step legado (ex.: /onboarding?step=906),
+  // redirecionar automaticamente para o próximo step, sem renderizar a tela.
+  useEffect(() => {
+    if (!desiredStep || !ONBOARDING_SKIPPED_STEP_POSITIONS.has(desiredStep)) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const nextUrl = await getNextStepUrl(desiredStep, { categoryId: currentCategoryId || undefined });
+        if (cancelled) return;
+        if (nextUrl && nextUrl !== `/onboarding?step=${desiredStep}`) {
+          navigateWithFallback(nextUrl);
+        } else {
+          navigateWithFallback('/');
+        }
+      } catch {
+        if (!cancelled) navigateWithFallback('/');
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [desiredStep, currentCategoryId]);
 
   const withAdminPreviewFlag = (url: string): string => {
     if (!isAdminPreview) return url;
