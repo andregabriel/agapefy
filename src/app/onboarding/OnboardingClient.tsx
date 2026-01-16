@@ -14,7 +14,6 @@ import { authFetch } from '@/lib/auth-fetch';
 import { saveFormResponse } from '@/lib/services/forms';
 import { useAuth } from '@/contexts/AuthContext';
 import { ArrowRight } from 'lucide-react';
-import Link from 'next/link';
 import { getPlaylistsByCategoryFast } from '@/lib/supabase-queries';
 import WhatsAppSetup from '@/components/whatsapp/WhatsAppSetup';
 import { useAppSettings } from '@/hooks/useAppSettings';
@@ -25,9 +24,8 @@ import { useOnboardingProgress } from '@/hooks/useOnboardingProgress';
 import { ProgressBar } from '@/components/onboarding/ProgressBar';
 import { getNextStepUrl as getNextStepUrlShared, getOnboardingStepsOrder, getStepUrl, ONBOARDING_SKIPPED_STEP_POSITIONS, type OnboardingStep } from '@/lib/services/onboarding-steps';
 import { processLinks } from '@/lib/utils';
-import { Play, Pause } from 'lucide-react';
+import { Play } from 'lucide-react';
 import { normalizeImageUrl, formatDuration } from '@/app/home/_utils/homeUtils';
-import { usePlayer } from '@/contexts/PlayerContext';
 const ONB_DEBUG = (...args: any[]) => {
   console.log('[ONB_DEBUG]', ...args);
 };
@@ -59,7 +57,6 @@ export default function OnboardingClient() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const { routinePlaylist, loading: routineLoading } = useRoutinePlaylist();
-  const { playQueue, pause, play, state: playerState } = usePlayer();
   const desiredStep = useMemo(() => {
     const stepParam = searchParams?.get('step');
     const parsed = stepParam ? Number(stepParam) : NaN;
@@ -96,6 +93,7 @@ export default function OnboardingClient() {
   const [playlistAudios, setPlaylistAudios] = useState<AudioPreview[]>([]);
   const [showOtherThankYou, setShowOtherThankYou] = useState(false);
   const [otherNextUrl, setOtherNextUrl] = useState<string | null>(null);
+  const [showPreviewNotice, setShowPreviewNotice] = useState(false);
   const playlistCarouselRef = useRef<HTMLDivElement | null>(null);
   const previousStepRef = useRef<number>(desiredStep);
   const pauseRef = useRef<(() => void) | null>(null);
@@ -2364,17 +2362,13 @@ export default function OnboardingClient() {
                           </div>
                         );
 
-                        // Verificar se este áudio está tocando atualmente
-                        const isCurrentAudio = playerState.currentAudio?.id === audio.id;
-                        const isCurrentlyPlaying = isCurrentAudio && playerState.isPlaying;
-                        const isPaused = isCurrentAudio && !playerState.isPlaying;
-                        const isLoading = isCurrentAudio && playerState.isLoading;
-
                         return (
-                          <Link
+                          <button
                             key={audio.id}
-                            href={`/player/audio/${audio.id}`}
-                            className="flex-shrink-0 w-48 snap-start cursor-pointer group"
+                            type="button"
+                            onClick={() => setShowPreviewNotice(true)}
+                            className="flex-shrink-0 w-48 snap-start cursor-pointer group text-left"
+                            aria-label={`Prévia do áudio: ${audio.title}`}
                           >
                             <div className="relative mb-4">
                               <div className="w-48 h-48 rounded-lg overflow-hidden bg-gray-800 shadow-lg">
@@ -2403,65 +2397,6 @@ export default function OnboardingClient() {
                                   fallbackContent
                                 )}
                               </div>
-                              
-                              {/* Play/Pause Button Overlay */}
-                              {audio.audio_url && (
-                                <div className={`absolute bottom-2 right-2 transition-all duration-300 transform ${isCurrentlyPlaying || isPaused || isLoading ? 'opacity-100 translate-y-0' : 'opacity-0 group-hover:opacity-100 translate-y-2 group-hover:translate-y-0'}`}>
-                                  <button
-                                    onClick={(e) => {
-                                      e.preventDefault();
-                                      e.stopPropagation();
-                                      
-                                      // Se está carregando, não fazer nada
-                                      if (isLoading) {
-                                        return;
-                                      }
-                                      
-                                      // Se já está tocando este áudio, pausar
-                                      if (isCurrentlyPlaying) {
-                                        pause();
-                                        return;
-                                      }
-                                      
-                                      // Se está pausado mas é o áudio atual, retomar reprodução
-                                      if (isPaused) {
-                                        play();
-                                        return;
-                                      }
-                                      
-                                      // Tocar apenas este áudio (substitui qualquer queue existente)
-                                      playQueue([{
-                                        id: audio.id,
-                                        title: audio.title,
-                                        subtitle: audio.subtitle || null,
-                                        duration: audio.duration || null,
-                                        audio_url: audio.audio_url!,
-                                        cover_url: audio.cover_url || null,
-                                        category: audio.category ? {
-                                          id: audio.category.id,
-                                          name: audio.category.name,
-                                          description: null,
-                                          image_url: audio.category.image_url,
-                                          created_at: ''
-                                        } : undefined
-                                      }], 0);
-                                    }}
-                                    disabled={isLoading}
-                                    className={`w-12 h-12 rounded-full flex items-center justify-center shadow-lg transition-all duration-200 ${
-                                      isCurrentlyPlaying 
-                                        ? 'bg-orange-500 hover:bg-orange-400' 
-                                        : 'bg-green-500 hover:bg-green-400'
-                                    } hover:scale-105 ${isLoading ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
-                                    title={isCurrentlyPlaying ? 'Pausar' : isPaused ? 'Retomar' : isLoading ? 'Carregando...' : 'Reproduzir preview'}
-                                  >
-                                    {isCurrentlyPlaying ? (
-                                      <Pause size={16} className="text-black fill-current" />
-                                    ) : (
-                                      <Play size={16} className="text-black ml-0.5" fill="currentColor" />
-                                    )}
-                                  </button>
-                                </div>
-                              )}
                             </div>
                             
                             {/* Título, Sub-título e Duração */}
@@ -2478,7 +2413,7 @@ export default function OnboardingClient() {
                                 {formatDuration(audio.duration)}
                               </p>
                             </div>
-                          </Link>
+                          </button>
                         );
                       })}
                     </div>
@@ -2492,6 +2427,16 @@ export default function OnboardingClient() {
             ) : (
               <div className="text-sm text-gray-500">
                 Nenhuma playlist de desafio encontrada nesta categoria.
+              </div>
+            )}
+            {showPreviewNotice && (
+              <div className="rounded-xl border border-amber-200 bg-gradient-to-r from-amber-50 via-white to-amber-50 px-4 py-3 text-amber-900 shadow-sm">
+                <div className="flex items-start gap-3">
+                  <div className="mt-2 h-2 w-2 rounded-full bg-amber-400" aria-hidden="true" />
+                  <p className="text-sm md:text-base font-medium">
+                    Clique em Avançar para continuar. Depois, na tela inicial, sua playlist vai aparecer para você ouvir.
+                  </p>
+                </div>
               </div>
             )}
             <div className="flex justify-end">
