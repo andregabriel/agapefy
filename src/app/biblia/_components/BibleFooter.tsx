@@ -31,7 +31,7 @@ export function BibleFooter({
             size="sm"
             onClick={goToPreviousChapter}
             disabled={!canGoToPrevious()}
-            className="flex items-center gap-2 min-h-[44px] flex-1 max-w-[150px]"
+            className="flex items-center gap-2 min-h-[44px] flex-1 max-w-[150px] text-gray-900"
             aria-label="Ir para capítulo anterior"
           >
             <ChevronLeft size={16} />
@@ -47,7 +47,7 @@ export function BibleFooter({
             size="sm"
             onClick={goToNextChapter}
             disabled={!canGoToNext()}
-            className="flex items-center gap-2 min-h-[44px] flex-1 max-w-[150px]"
+            className="flex items-center gap-2 min-h-[44px] flex-1 max-w-[150px] text-gray-900"
             aria-label="Ir para próximo capítulo"
           >
             Próximo

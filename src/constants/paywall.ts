@@ -90,13 +90,51 @@ export const DEFAULT_PAYWALL_SCREEN_CONFIG: PaywallScreenConfig = {
   ],
 };
 
+function normalizeLimitedAccessConfig(
+  raw: any,
+  fallback: LimitedAccessConfig,
+): LimitedAccessConfig {
+  const limitEnabled =
+    typeof raw?.limit_enabled === 'boolean' ? raw.limit_enabled : fallback.limit_enabled;
+  const rawMax = raw?.max_free_audios_per_day;
+  const parsedMax = rawMax == null ? NaN : Number(rawMax);
+  const maxFreePerDay = Number.isFinite(parsedMax)
+    ? parsedMax
+    : fallback.max_free_audios_per_day;
+
+  return {
+    limit_enabled: limitEnabled,
+    max_free_audios_per_day: maxFreePerDay,
+  };
+}
+
+function normalizeFullAccessConfig(
+  raw: any,
+  fallback: FullAccessConfig,
+): FullAccessConfig {
+  return {
+    full_access_enabled:
+      typeof raw?.full_access_enabled === 'boolean'
+        ? raw.full_access_enabled
+        : fallback.full_access_enabled,
+  };
+}
+
 export function parsePaywallPermissions(raw?: string | null): PaywallPermissions {
   if (!raw) return DEFAULT_PAYWALL_PERMISSIONS;
   try {
     const parsed = JSON.parse(raw);
     return {
-      ...DEFAULT_PAYWALL_PERMISSIONS,
-      ...parsed,
+      anonymous: normalizeLimitedAccessConfig(parsed?.anonymous, DEFAULT_PAYWALL_PERMISSIONS.anonymous),
+      no_subscription: normalizeLimitedAccessConfig(
+        parsed?.no_subscription,
+        DEFAULT_PAYWALL_PERMISSIONS.no_subscription,
+      ),
+      active_subscription: normalizeFullAccessConfig(
+        parsed?.active_subscription,
+        DEFAULT_PAYWALL_PERMISSIONS.active_subscription,
+      ),
+      trial: normalizeFullAccessConfig(parsed?.trial, DEFAULT_PAYWALL_PERMISSIONS.trial),
     };
   } catch {
     return DEFAULT_PAYWALL_PERMISSIONS;
@@ -128,5 +166,4 @@ export function parsePaywallScreenConfig(raw?: string | null): PaywallScreenConf
     return DEFAULT_PAYWALL_SCREEN_CONFIG;
   }
 }
-
 

@@ -32,9 +32,9 @@ export function BibleHeader({
 }: BibleHeaderProps) {
   return (
     <div className={`sticky top-0 z-30 border-b ${headerThemeClasses}`}>
-      <div className="max-w-4xl mx-auto px-4 py-2">
-        {/* Cabeçalho com logo (visível apenas em md+) */}
-        <div className="hidden items-center justify-between mb-2 md:flex">
+      {/* Barra de logo (igual ao header da home), visível apenas em md+ */}
+      <div className="hidden bg-black/95 backdrop-blur-sm border-b border-gray-800 md:block">
+        <div className="max-w-4xl mx-auto px-4 py-3">
           <Link href="/" className="flex items-center">
             <img
               src="https://vvgqqlrujmyxzzygsizc.supabase.co/storage/v1/object/public/media/app-26/images/1758119247895-09choju49.png"
@@ -43,7 +43,9 @@ export function BibleHeader({
             />
           </Link>
         </div>
+      </div>
 
+      <div className="max-w-4xl mx-auto px-4 py-2">
         <div className="flex flex-col gap-2">
           {/* Linha 1: Selects compactos */}
           <div className="flex items-center gap-2">

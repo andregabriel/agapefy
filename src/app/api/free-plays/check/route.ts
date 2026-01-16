@@ -11,7 +11,9 @@ interface CheckRequestBody {
 export async function POST(req: NextRequest) {
   try {
     const body = (await req.json().catch(() => ({}))) as CheckRequestBody;
-    const maxPerDay = typeof body.maxPerDay === 'number' ? body.maxPerDay : 1;
+    const rawMaxPerDay = (body as any).maxPerDay;
+    const parsedMaxPerDay = rawMaxPerDay == null ? NaN : Number(rawMaxPerDay);
+    const maxPerDay = Number.isFinite(parsedMaxPerDay) ? parsedMaxPerDay : 1;
     const context = body.context ?? 'anonymous';
 
     if (maxPerDay <= 0) {
@@ -127,7 +129,6 @@ export async function POST(req: NextRequest) {
     );
   }
 }
-
 
 
 

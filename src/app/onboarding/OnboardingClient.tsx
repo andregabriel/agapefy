@@ -26,6 +26,7 @@ import { getNextStepUrl as getNextStepUrlShared, getOnboardingStepsOrder, getSte
 import { processLinks } from '@/lib/utils';
 import { Play } from 'lucide-react';
 import { normalizeImageUrl, formatDuration } from '@/app/home/_utils/homeUtils';
+import { usePlayer } from '@/contexts/PlayerContext';
 const ONB_DEBUG = (...args: any[]) => {
   console.log('[ONB_DEBUG]', ...args);
 };
@@ -53,6 +54,7 @@ interface AudioPreview {
 
 export default function OnboardingClient() {
   const { user, session, loading: authLoading } = useAuth();
+  const { pause } = usePlayer();
   const { settings } = useAppSettings();
   const searchParams = useSearchParams();
   const router = useRouter();

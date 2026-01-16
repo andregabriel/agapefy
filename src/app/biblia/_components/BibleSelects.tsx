@@ -65,7 +65,7 @@ export function BibleSelects({
         variant="outline"
         size="sm"
         onClick={() => setShowBibleSearchModal(true)}
-        className="h-10 w-10 p-0"
+        className="h-10 w-10 p-0 text-gray-900"
         aria-label="Buscar na Bíblia"
         title="Buscar na Bíblia"
       >

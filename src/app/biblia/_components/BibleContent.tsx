@@ -57,7 +57,7 @@ export function BibleContent({
             size="sm"
             onClick={goToPreviousChapter}
             disabled={!canGoToPrevious()}
-            className="flex items-center gap-2 min-h-[44px]"
+            className="flex items-center gap-2 min-h-[44px] text-gray-900"
           >
             <ChevronLeft size={16} />
             Anterior
@@ -68,7 +68,7 @@ export function BibleContent({
             size="sm"
             onClick={goToNextChapter}
             disabled={!canGoToNext()}
-            className="flex items-center gap-2 min-h-[44px]"
+            className="flex items-center gap-2 min-h-[44px] text-gray-900"
           >
             Próximo
             <ChevronRight size={16} />

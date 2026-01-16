@@ -75,7 +75,7 @@ export default function FontSizeControl({ onScaleChange }: FontSizeControlProps)
         size="sm"
         onClick={decreaseFont}
         disabled={!canDecrease}
-        className="h-10 w-10 p-0"
+        className="h-10 w-10 p-0 text-gray-900"
         aria-label="Diminuir tamanho da fonte"
         title="Diminuir fonte"
       >
@@ -93,7 +93,7 @@ export default function FontSizeControl({ onScaleChange }: FontSizeControlProps)
         size="sm"
         onClick={increaseFont}
         disabled={!canIncrease}
-        className="h-10 w-10 p-0"
+        className="h-10 w-10 p-0 text-gray-900"
         aria-label="Aumentar tamanho da fonte"
         title="Aumentar fonte"
       >

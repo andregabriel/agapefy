@@ -5,7 +5,11 @@ import { useUserActivity } from '@/hooks/useUserActivity';
 import { useAuth } from '@/contexts/AuthContext';
 import { useAppSettings } from '@/hooks/useAppSettings';
 import { useSubscriptionStatus } from '@/hooks/useSubscriptionStatus';
-import { parsePaywallPermissions, type SubscriptionUserType } from '@/constants/paywall';
+import {
+  DEFAULT_PAYWALL_PERMISSIONS,
+  parsePaywallPermissions,
+  type SubscriptionUserType,
+} from '@/constants/paywall';
 
 interface Audio {
   id: string;
@@ -293,6 +297,11 @@ export const PlayerProvider = ({ children }: { children: React.ReactNode }) => {
       userType || (user ? 'no_subscription' : 'anonymous');
 
     const permissions = parsePaywallPermissions(settings.paywall_permissions);
+    const rawMaxFreePerDay = permissions.no_subscription.max_free_audios_per_day;
+    const parsedMaxFreePerDay = rawMaxFreePerDay == null ? NaN : Number(rawMaxFreePerDay);
+    const maxFreePerDay = Number.isFinite(parsedMaxFreePerDay)
+      ? parsedMaxFreePerDay
+      : DEFAULT_PAYWALL_PERMISSIONS.no_subscription.max_free_audios_per_day;
 
     // Assinantes/trial com acesso total
     if (effectiveUserType === 'active_subscription') {
@@ -323,7 +332,7 @@ export const PlayerProvider = ({ children }: { children: React.ReactNode }) => {
       const userKey = user?.id || 'anon';
       const result = checkAndIncrementFreePlayLocal(
         userKey,
-        permissions.no_subscription.max_free_audios_per_day,
+        maxFreePerDay,
       );
       if (!result.allowed) {
         openPaywall(effectiveUserType, 'limit_reached');
@@ -343,6 +352,11 @@ export const PlayerProvider = ({ children }: { children: React.ReactNode }) => {
       userType || (user ? 'no_subscription' : 'anonymous');
 
     const permissions = parsePaywallPermissions(settings.paywall_permissions);
+    const rawMaxFreePerDay = permissions.no_subscription.max_free_audios_per_day;
+    const parsedMaxFreePerDay = rawMaxFreePerDay == null ? NaN : Number(rawMaxFreePerDay);
+    const maxFreePerDay = Number.isFinite(parsedMaxFreePerDay)
+      ? parsedMaxFreePerDay
+      : DEFAULT_PAYWALL_PERMISSIONS.no_subscription.max_free_audios_per_day;
 
     // Assinantes/trial com acesso total
     if (effectiveUserType === 'active_subscription') {
@@ -377,7 +391,7 @@ export const PlayerProvider = ({ children }: { children: React.ReactNode }) => {
         console.log(
           '🎧 Verificando limite de áudio gratuito (logado) via /api/free-plays/check',
           {
-            maxPerDay: permissions.no_subscription.max_free_audios_per_day,
+            maxPerDay: maxFreePerDay,
           },
         );
 
@@ -385,7 +399,7 @@ export const PlayerProvider = ({ children }: { children: React.ReactNode }) => {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            maxPerDay: permissions.no_subscription.max_free_audios_per_day,
+            maxPerDay: maxFreePerDay,
             context: 'no_subscription',
           }),
         });
@@ -413,7 +427,7 @@ export const PlayerProvider = ({ children }: { children: React.ReactNode }) => {
       const userKey = user?.id || 'anon';
       const result = checkAndIncrementFreePlayLocal(
         userKey,
-        permissions.no_subscription.max_free_audios_per_day,
+        maxFreePerDay,
       );
       if (!result.allowed) {
         openPaywall(effectiveUserType, 'limit_reached');
