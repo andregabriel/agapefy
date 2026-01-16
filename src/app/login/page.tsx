@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { Auth } from '@supabase/auth-ui-react';
 import { ThemeSupa } from '@supabase/auth-ui-shared';
 import { supabase } from '@/lib/supabase';
+import { wrapSupabaseClientForAuthUiPtBr } from '@/lib/supabase-auth-ui-ptbr';
 import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
@@ -11,10 +12,14 @@ import { Button } from '@/components/ui/button';
 import { X, Mail } from 'lucide-react';
 import Link from 'next/link';
 
-// Traduções simples para mensagens de erro vindas do Supabase/Auth UI
+// Traduções simples para mensagens de erro vindas do Supabase/Auth UI (case-insensitive)
 const AUTH_ERROR_TRANSLATIONS: Record<string, string> = {
-  'Invalid login credentials': 'E-mail ou senha incorretos.',
+  'invalid login credentials': 'E-mail ou senha incorretos. Confira e tente novamente.',
+  'missing email or phone': 'Informe seu e-mail para continuar.',
 };
+
+// Supabase Auth UI lê `error.message` diretamente; este wrapper garante pt-BR sem depender de DOM/CSS.
+const supabaseForAuthUi = wrapSupabaseClientForAuthUiPtBr(supabase);
 
 export default function LoginPage() {
   const { user, loading } = useAuth();
@@ -245,15 +250,24 @@ export default function LoginPage() {
     if (!container) return;
 
     const translateMessages = () => {
-      const messages = container.querySelectorAll<HTMLElement>('.supabase-auth-ui_ui-message');
-      messages.forEach((el) => {
+      // Não depender de classes internas do Auth UI (elas mudam entre versões/builds).
+      // Percorre o DOM e traduz qualquer texto que contenha a mensagem conhecida.
+      const all = container.querySelectorAll<HTMLElement>('*');
+      all.forEach((el) => {
+        // Evitar inputs/botões/links
+        const tag = el.tagName.toLowerCase();
+        if (tag === 'input' || tag === 'button' || tag === 'a') return;
+
         const original = el.textContent?.trim();
         if (!original) return;
 
-        const translated = AUTH_ERROR_TRANSLATIONS[original];
-        if (translated && el.textContent !== translated) {
-          el.textContent = translated;
+        const normalized = original.toLowerCase();
+        let translated = AUTH_ERROR_TRANSLATIONS[normalized];
+        if (!translated) {
+          const match = Object.entries(AUTH_ERROR_TRANSLATIONS).find(([key]) => normalized.includes(key));
+          translated = match?.[1];
         }
+        if (translated && el.textContent !== translated) el.textContent = translated;
       });
     };
 
@@ -387,7 +401,7 @@ export default function LoginPage() {
               </div>
             )}
             <Auth
-              supabaseClient={supabase}
+              supabaseClient={supabaseForAuthUi}
               providers={[]}
               appearance={{
                 theme: ThemeSupa,
@@ -423,7 +437,7 @@ export default function LoginPage() {
                     password_label: 'Senha',
                     button_label: 'Entrar',
                     loading_button_label: 'Entrando...',
-                    link_text: 'Já tem uma conta? Entre aqui',
+                    link_text: 'Não tem conta? Crie com este e-mail.',
                     password_input_placeholder: 'Sua senha',
                     email_input_placeholder: 'Seu e-mail',
                   },
@@ -454,7 +468,7 @@ export default function LoginPage() {
                 },
                 // TRADUÇÕES DE MENSAGENS DE ERRO
                 lang: {
-                  'Invalid login credentials': 'Credenciais de login inválidas',
+                  'Invalid login credentials': 'E-mail ou senha incorretos. Confira e tente novamente.',
                   'User already registered': 'Usuário já cadastrado',
                   'Password should be at least 6 characters': 'A senha deve ter pelo menos 6 caracteres',
                   'Unable to validate email address: invalid format': 'Não foi possível validar o endereço de e-mail: formato inválido',

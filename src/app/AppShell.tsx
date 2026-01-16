@@ -44,7 +44,7 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
   const isOnboardingPage = pathname?.startsWith('/onboarding');
   const shouldCheckOnboarding = !!userId && !loading && !isOnboardingPage;
   const shouldBlockRender = shouldCheckOnboarding && onboardingGateReadyForUser !== userId;
-  const hideHeader = isLoginPage || isBuscaPage || isBibliaPage || shouldBlockRender; // mostrar Header no onboarding
+  const hideHeader = isLoginPage || isBuscaPage || isBibliaPage || isOnboardingPage || shouldBlockRender;
   const hideBottomNav = isLoginPage || isOnboardingPage || shouldBlockRender;
   const hideMiniPlayer = isLoginPage || isOnboardingPage || shouldBlockRender;
 
