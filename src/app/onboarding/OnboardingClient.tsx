@@ -2290,11 +2290,12 @@ export default function OnboardingClient() {
 
   // Passo 3: Mostrar apenas a playlist selecionada no passo 2 (se não for showStatic=whatsapp)
   if (((desiredStep === 3) || (currentStepMeta?.type === 'static' && currentStepMeta?.staticKind === 'preview')) && showStaticKind !== 'whatsapp') {
+    const isStep3Preview = desiredStep === 3;
     return (
-      <div className="max-w-2xl mx-auto p-4">
+      <div className={isStep3Preview ? "max-w-2xl mx-auto p-3 sm:p-4" : "max-w-2xl mx-auto p-4"}>
         <Card>
           <CardHeader>
-            <div className="space-y-4">
+            <div className={isStep3Preview ? "space-y-3" : "space-y-4"}>
               <div className="w-full">
                 <ProgressBar 
                   percentage={progressPercentage} 
@@ -2304,19 +2305,19 @@ export default function OnboardingClient() {
                 />
               </div>
               <div className="text-center px-2 md:px-6">
-                <CardTitle className="text-2xl md:text-3xl leading-tight line-clamp-3 max-w-4xl mx-auto">
+                <CardTitle className={isStep3Preview ? "text-xl md:text-2xl leading-tight line-clamp-3 max-w-4xl mx-auto" : "text-2xl md:text-3xl leading-tight line-clamp-3 max-w-4xl mx-auto"}>
                   {settings.onboarding_step2_title || 'Parabéns pela coragem e pela abertura de dar as mãos à Jesus neste momento difícil.'}
                 </CardTitle>
-                <p className="mt-3 text-black text-base md:text-lg max-w-3xl mx-auto">
+                <p className={isStep3Preview ? "mt-2 text-black text-sm md:text-base max-w-3xl mx-auto" : "mt-3 text-black text-base md:text-lg max-w-3xl mx-auto"}>
                   {settings.onboarding_step2_subtitle || 'Sua playlist foi criada, em breve você poderá escutar essas orações.'}
                 </p>
               </div>
             </div>
           </CardHeader>
-          <CardContent className="space-y-8">
+          <CardContent className={isStep3Preview ? "space-y-6 pb-24" : "space-y-8"}>
             {selectedChallengePlaylist ? (
-              <div className="space-y-6">
-                <h2 className="text-2xl font-bold text-black">{selectedChallengePlaylist.title}</h2>
+              <div className={isStep3Preview ? "space-y-4" : "space-y-6"}>
+                <h2 className={isStep3Preview ? "text-xl font-bold text-black" : "text-2xl font-bold text-black"}>{selectedChallengePlaylist.title}</h2>
                 
                 {/* Carrossel de áudios da playlist */}
                 {playlistAudios.length > 0 ? (
@@ -2343,7 +2344,7 @@ export default function OnboardingClient() {
 
                     <div 
                       ref={playlistCarouselRef}
-                      className="flex space-x-6 overflow-x-auto pb-2 scroll-smooth snap-x snap-mandatory"
+                      className={isStep3Preview ? "flex space-x-4 overflow-x-auto pb-2 scroll-smooth snap-x snap-mandatory" : "flex space-x-6 overflow-x-auto pb-2 scroll-smooth snap-x snap-mandatory"}
                       style={{ scrollbarWidth: 'none', msOverflowStyle: 'none', WebkitOverflowScrolling: 'touch' }}
                     >
                       {playlistAudios.map((audio: any) => {
@@ -2369,11 +2370,11 @@ export default function OnboardingClient() {
                             key={audio.id}
                             type="button"
                             onClick={() => setShowPreviewNotice(true)}
-                            className="flex-shrink-0 w-48 snap-start cursor-pointer group text-left"
+                            className={isStep3Preview ? "flex-shrink-0 w-40 snap-start cursor-pointer group text-left" : "flex-shrink-0 w-48 snap-start cursor-pointer group text-left"}
                             aria-label={`Prévia do áudio: ${audio.title}`}
                           >
-                            <div className="relative mb-4">
-                              <div className="w-48 h-48 rounded-lg overflow-hidden bg-gray-800 shadow-lg">
+                            <div className={isStep3Preview ? "relative mb-3" : "relative mb-4"}>
+                              <div className={isStep3Preview ? "w-40 h-40 rounded-lg overflow-hidden bg-gray-800 shadow-lg" : "w-48 h-48 rounded-lg overflow-hidden bg-gray-800 shadow-lg"}>
                                 {imageUrl ? (
                                   <img
                                     src={imageUrl}
@@ -2403,15 +2404,15 @@ export default function OnboardingClient() {
                             
                             {/* Título, Sub-título e Duração */}
                             <div className="space-y-1">
-                              <h3 className="font-bold text-black text-base leading-tight truncate group-hover:underline">
+                              <h3 className={isStep3Preview ? "font-bold text-black text-sm leading-tight truncate group-hover:underline" : "font-bold text-black text-base leading-tight truncate group-hover:underline"}>
                                 {audio.title}
                               </h3>
                               {audio.subtitle && (
-                                <p className="text-sm text-gray-500 truncate">
+                                <p className={isStep3Preview ? "text-xs text-gray-500 truncate" : "text-sm text-gray-500 truncate"}>
                                   {audio.subtitle}
                                 </p>
                               )}
-                              <p className="text-sm text-gray-400">
+                              <p className={isStep3Preview ? "text-xs text-gray-400" : "text-sm text-gray-400"}>
                                 {formatDuration(audio.duration)}
                               </p>
                             </div>
@@ -2432,7 +2433,7 @@ export default function OnboardingClient() {
               </div>
             )}
             {showPreviewNotice && (
-              <div className="rounded-xl border border-amber-200 bg-gradient-to-r from-amber-50 via-white to-amber-50 px-4 py-3 text-amber-900 shadow-sm">
+              <div className={isStep3Preview ? "rounded-xl border border-amber-200 bg-gradient-to-r from-amber-50 via-white to-amber-50 px-3 py-2 text-amber-900 shadow-sm" : "rounded-xl border border-amber-200 bg-gradient-to-r from-amber-50 via-white to-amber-50 px-4 py-3 text-amber-900 shadow-sm"}>
                 <div className="flex items-start gap-3">
                   <div className="mt-2 h-2 w-2 rounded-full bg-amber-400" aria-hidden="true" />
                   <p className="text-sm md:text-base font-medium">
@@ -2441,7 +2442,7 @@ export default function OnboardingClient() {
                 </div>
               </div>
             )}
-            <div className="flex justify-end">
+            <div className={isStep3Preview ? "sticky bottom-0 z-10 -mx-6 flex justify-end border-t border-gray-100 bg-card px-6 pb-4 pt-3" : "flex justify-end"}>
               <Button onClick={async () => {
                 const nextUrl = await getNextStepUrl(desiredStep, { categoryId: currentCategoryId || undefined });
                 navigateWithFallback(nextUrl);
