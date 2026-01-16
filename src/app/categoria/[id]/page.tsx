@@ -15,6 +15,7 @@ import { useUserActivity } from '@/hooks/useUserActivity';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import { isRecentesCategoryName } from '@/lib/utils';
+import { normalizeImageUrl } from '@/app/home/_utils/homeUtils';
 
 interface Audio {
   id: string;
@@ -105,6 +106,12 @@ function AudioCard({ audio, category }: { audio: Audio; category: Category }) {
 
   // Usar imagem da categoria como thumbnail
   const thumbnailUrl = audio.category?.image_url || category.image_url;
+  const thumbnail1x = thumbnailUrl
+    ? normalizeImageUrl(thumbnailUrl, { width: 80, height: 80, quality: 60 }) || thumbnailUrl
+    : null;
+  const thumbnail2x = thumbnailUrl
+    ? normalizeImageUrl(thumbnailUrl, { width: 160, height: 160, quality: 60 }) || thumbnailUrl
+    : null;
 
   return (
     <Link 
@@ -116,7 +123,8 @@ function AudioCard({ audio, category }: { audio: Audio; category: Category }) {
         <div className="flex-shrink-0 w-16 h-16 md:w-20 md:h-20 rounded-lg overflow-hidden bg-gray-800">
           {thumbnailUrl ? (
             <img
-              src={thumbnailUrl}
+              src={thumbnail1x || undefined}
+              srcSet={thumbnail1x && thumbnail2x ? `${thumbnail1x} 1x, ${thumbnail2x} 2x` : undefined}
               alt={audio.title}
               className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
               onError={(e) => {
@@ -204,6 +212,12 @@ function PlaylistCard({ playlist, category }: { playlist: Playlist; category: Ca
 
   // Usar cover da playlist ou imagem da categoria como fallback
   const thumbnailUrl = playlist.cover_url || playlist.category?.image_url || category.image_url;
+  const thumbnail1x = thumbnailUrl
+    ? normalizeImageUrl(thumbnailUrl, { width: 80, height: 80, quality: 60 }) || thumbnailUrl
+    : null;
+  const thumbnail2x = thumbnailUrl
+    ? normalizeImageUrl(thumbnailUrl, { width: 160, height: 160, quality: 60 }) || thumbnailUrl
+    : null;
 
   return (
     <Link 
@@ -215,7 +229,8 @@ function PlaylistCard({ playlist, category }: { playlist: Playlist; category: Ca
         <div className="flex-shrink-0 w-16 h-16 md:w-20 md:h-20 rounded-lg overflow-hidden bg-gray-800">
           {thumbnailUrl ? (
             <img
-              src={thumbnailUrl}
+              src={thumbnail1x || undefined}
+              srcSet={thumbnail1x && thumbnail2x ? `${thumbnail1x} 1x, ${thumbnail2x} 2x` : undefined}
               alt={playlist.title}
               className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
               onError={(e) => {

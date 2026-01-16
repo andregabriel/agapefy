@@ -8,6 +8,7 @@ import { useRouter } from 'next/navigation';
 import type { SearchResults, Audio, Playlist, Category } from '@/types/search';
 import type { SearchResult } from '@/lib/search';
 import { getBookName } from '@/lib/search';
+import { normalizeImageUrl } from '@/app/home/_utils/homeUtils';
 
 interface SearchResultsProps {
   results: SearchResults;
@@ -85,6 +86,12 @@ export function SearchResults({
   const AudioCard = ({ audio }: { audio: Audio }) => {
     // Usar thumbnail real do áudio ou da categoria como fallback
     const thumbnailUrl = (audio as any).image_url || audio.category?.image_url;
+    const thumbnail1x = thumbnailUrl
+      ? normalizeImageUrl(thumbnailUrl, { width: 64, height: 64, quality: 60 }) || thumbnailUrl
+      : null;
+    const thumbnail2x = thumbnailUrl
+      ? normalizeImageUrl(thumbnailUrl, { width: 128, height: 128, quality: 60 }) || thumbnailUrl
+      : null;
 
     return (
       <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 hover:shadow-md transition-all duration-200">
@@ -98,7 +105,8 @@ export function SearchResults({
             <div className="w-16 h-16 rounded-2xl overflow-hidden flex-shrink-0 shadow-sm">
               {thumbnailUrl ? (
                 <img
-                  src={thumbnailUrl}
+                  src={thumbnail1x || undefined}
+                  srcSet={thumbnail1x && thumbnail2x ? `${thumbnail1x} 1x, ${thumbnail2x} 2x` : undefined}
                   alt={audio.title}
                   className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
                   onError={(e) => {
@@ -185,94 +193,116 @@ export function SearchResults({
     );
   };
 
-  const PlaylistCard = ({ playlist }: { playlist: Playlist }) => (
-    <Link
-      href={`/playlist/${playlist.id}`}
-      className="block bg-white rounded-2xl p-4 shadow-sm border border-gray-100 hover:shadow-md transition-all duration-200"
-    >
-      <div className="flex items-center gap-4">
-        {/* Imagem/Ícone da playlist */}
-        {playlist.cover_url ? (
-          <img
-            src={playlist.cover_url}
-            alt={playlist.title}
-            className="w-16 h-16 rounded-2xl object-cover flex-shrink-0 shadow-sm"
-          />
-        ) : (
-          <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl flex items-center justify-center flex-shrink-0 shadow-sm">
-            <List className="text-white" size={24} />
-          </div>
-        )}
-        
-        {/* Conteúdo */}
-        <div className="flex-1 min-w-0">
-          <h3 className="font-semibold text-gray-900 text-lg mb-1 truncate hover:text-blue-600 transition-colors">
-            {playlist.title}
-          </h3>
-          {playlist.description && (
-            <p className="text-gray-600 text-sm mb-2 line-clamp-2">
-              {playlist.description}
-            </p>
+  const PlaylistCard = ({ playlist }: { playlist: Playlist }) => {
+    const coverUrl = playlist.cover_url || null;
+    const cover1x = coverUrl
+      ? normalizeImageUrl(coverUrl, { width: 64, height: 64, quality: 60 }) || coverUrl
+      : null;
+    const cover2x = coverUrl
+      ? normalizeImageUrl(coverUrl, { width: 128, height: 128, quality: 60 }) || coverUrl
+      : null;
+
+    return (
+      <Link
+        href={`/playlist/${playlist.id}`}
+        className="block bg-white rounded-2xl p-4 shadow-sm border border-gray-100 hover:shadow-md transition-all duration-200"
+      >
+        <div className="flex items-center gap-4">
+          {/* Imagem/Ícone da playlist */}
+          {coverUrl ? (
+            <img
+              src={cover1x || undefined}
+              srcSet={cover1x && cover2x ? `${cover1x} 1x, ${cover2x} 2x` : undefined}
+              alt={playlist.title}
+              className="w-16 h-16 rounded-2xl object-cover flex-shrink-0 shadow-sm"
+            />
+          ) : (
+            <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl flex items-center justify-center flex-shrink-0 shadow-sm">
+              <List className="text-white" size={24} />
+            </div>
           )}
-          <div className="flex items-center gap-3 text-sm text-gray-500">
-            {playlist.category && (
-              <span className="bg-gray-100 px-2 py-1 rounded-full text-xs font-medium">
-                {playlist.category.name}
-              </span>
+          
+          {/* Conteúdo */}
+          <div className="flex-1 min-w-0">
+            <h3 className="font-semibold text-gray-900 text-lg mb-1 truncate hover:text-blue-600 transition-colors">
+              {playlist.title}
+            </h3>
+            {playlist.description && (
+              <p className="text-gray-600 text-sm mb-2 line-clamp-2">
+                {playlist.description}
+              </p>
             )}
-            {playlist.audio_count && (
-              <span>{playlist.audio_count} áudios</span>
-            )}
-            {playlist.total_duration && (
-              <span className="flex items-center gap-1">
-                <Clock size={12} />
-                {formatDuration(playlist.total_duration)}
-              </span>
-            )}
+            <div className="flex items-center gap-3 text-sm text-gray-500">
+              {playlist.category && (
+                <span className="bg-gray-100 px-2 py-1 rounded-full text-xs font-medium">
+                  {playlist.category.name}
+                </span>
+              )}
+              {playlist.audio_count && (
+                <span>{playlist.audio_count} áudios</span>
+              )}
+              {playlist.total_duration && (
+                <span className="flex items-center gap-1">
+                  <Clock size={12} />
+                  {formatDuration(playlist.total_duration)}
+                </span>
+              )}
+            </div>
           </div>
+
+          <ChevronRight className="text-gray-300" size={20} />
         </div>
+      </Link>
+    );
+  };
 
-        <ChevronRight className="text-gray-300" size={20} />
-      </div>
-    </Link>
-  );
+  const CategoryCard = ({ category }: { category: Category }) => {
+    const imageUrl = category.image_url || null;
+    const image1x = imageUrl
+      ? normalizeImageUrl(imageUrl, { width: 64, height: 64, quality: 60 }) || imageUrl
+      : null;
+    const image2x = imageUrl
+      ? normalizeImageUrl(imageUrl, { width: 128, height: 128, quality: 60 }) || imageUrl
+      : null;
 
-  const CategoryCard = ({ category }: { category: Category }) => (
-    <Link
-      href={`/categoria/${category.id}`}
-      className="block bg-white rounded-2xl p-4 shadow-sm border border-gray-100 hover:shadow-md transition-all duration-200"
-    >
-      <div className="flex items-center gap-4">
-        {/* Imagem/Ícone da categoria */}
-        {category.image_url ? (
-          <img
-            src={category.image_url}
-            alt={category.name}
-            className="w-16 h-16 rounded-2xl object-cover flex-shrink-0 shadow-sm"
-          />
-        ) : (
-          <div className="w-16 h-16 bg-gradient-to-br from-purple-500 to-purple-600 rounded-2xl flex items-center justify-center flex-shrink-0 shadow-sm">
-            <Folder className="text-white" size={24} />
-          </div>
-        )}
-        
-        {/* Conteúdo */}
-        <div className="flex-1 min-w-0">
-          <h3 className="font-semibold text-gray-900 text-lg mb-1 truncate hover:text-purple-600 transition-colors">
-            {category.name}
-          </h3>
-          <p className="text-gray-500 text-sm">Categoria</p>
-          {category.description && (
-            <p className="text-gray-600 text-sm mt-1 line-clamp-2">
-              {category.description}
-            </p>
+    return (
+      <Link
+        href={`/categoria/${category.id}`}
+        className="block bg-white rounded-2xl p-4 shadow-sm border border-gray-100 hover:shadow-md transition-all duration-200"
+      >
+        <div className="flex items-center gap-4">
+          {/* Imagem/Ícone da categoria */}
+          {imageUrl ? (
+            <img
+              src={image1x || undefined}
+              srcSet={image1x && image2x ? `${image1x} 1x, ${image2x} 2x` : undefined}
+              alt={category.name}
+              className="w-16 h-16 rounded-2xl object-cover flex-shrink-0 shadow-sm"
+            />
+          ) : (
+            <div className="w-16 h-16 bg-gradient-to-br from-purple-500 to-purple-600 rounded-2xl flex items-center justify-center flex-shrink-0 shadow-sm">
+              <Folder className="text-white" size={24} />
+            </div>
           )}
-        </div>
+          
+          {/* Conteúdo */}
+          <div className="flex-1 min-w-0">
+            <h3 className="font-semibold text-gray-900 text-lg mb-1 truncate hover:text-purple-600 transition-colors">
+              {category.name}
+            </h3>
+            <p className="text-gray-500 text-sm">Categoria</p>
+            {category.description && (
+              <p className="text-gray-600 text-sm mt-1 line-clamp-2">
+                {category.description}
+              </p>
+            )}
+          </div>
 
-        <ChevronRight className="text-gray-300" size={20} />
-      </div>
-    </Link>
-  );
+          <ChevronRight className="text-gray-300" size={20} />
+        </div>
+      </Link>
+    );
+  };
 
   const VerseCard = ({ verse }: { verse: SearchResult }) => (
     <div

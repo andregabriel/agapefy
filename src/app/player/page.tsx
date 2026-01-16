@@ -6,6 +6,7 @@ import { useEffect, useState } from 'react';
 import { getPlaylistWithAudios } from '@/lib/supabase-queries';
 import { supabase } from '@/lib/supabase';
 import type { Playlist, Audio } from '@/lib/supabase-queries';
+import { normalizeImageUrl } from '@/app/home/_utils/homeUtils';
 
 interface PlaylistWithAudios extends Playlist {
   audios: Audio[];
@@ -91,6 +92,14 @@ export default function PlayerPage() {
     );
   }
 
+  const coverUrl = playlist.cover_url || null;
+  const cover1x = coverUrl
+    ? normalizeImageUrl(coverUrl, { width: 320, height: 320, quality: 70 }) || coverUrl
+    : null;
+  const cover2x = coverUrl
+    ? normalizeImageUrl(coverUrl, { width: 640, height: 640, quality: 70 }) || coverUrl
+    : null;
+
   return (
     <div className="min-h-screen bg-black text-white flex flex-col relative">
       {/* Back Button */}
@@ -107,7 +116,8 @@ export default function PlayerPage() {
             <div className="w-full h-full bg-gray-800 rounded-lg overflow-hidden shadow-2xl">
               {playlist.cover_url ? (
                 <img 
-                  src={playlist.cover_url} 
+                  src={cover1x || undefined}
+                  srcSet={cover1x && cover2x ? `${cover1x} 1x, ${cover2x} 2x` : undefined}
                   alt={playlist.title}
                   className="w-full h-full object-cover"
                 />
@@ -176,38 +186,48 @@ export default function PlayerPage() {
 
         {/* Track List */}
         <div className="space-y-3">
-          {playlist.audios?.map((audio, index) => (
-            <div key={audio.id} className="flex items-center space-x-3 py-2">
-              <div className="w-14 h-14 bg-gray-800 rounded-lg overflow-hidden flex-shrink-0">
-                {audio.cover_url ? (
-                  <img 
-                    src={audio.cover_url} 
-                    alt={audio.title}
-                    className="w-full h-full object-cover"
-                  />
-                ) : (
-                  <div className="w-full h-full bg-gradient-to-br from-purple-600 to-blue-600 flex items-center justify-center">
-                    <span className="text-white text-xs font-medium">
-                      {audio.title.charAt(0)}
-                    </span>
-                  </div>
-                )}
-              </div>
+          {playlist.audios?.map((audio, index) => {
+            const audioCoverUrl = audio.cover_url || null;
+            const thumb1x = audioCoverUrl
+              ? normalizeImageUrl(audioCoverUrl, { width: 56, height: 56, quality: 60 }) || audioCoverUrl
+              : null;
+            const thumb2x = audioCoverUrl
+              ? normalizeImageUrl(audioCoverUrl, { width: 112, height: 112, quality: 60 }) || audioCoverUrl
+              : null;
+            return (
+              <div key={audio.id} className="flex items-center space-x-3 py-2">
+                <div className="w-14 h-14 bg-gray-800 rounded-lg overflow-hidden flex-shrink-0">
+                  {audioCoverUrl ? (
+                    <img 
+                      src={thumb1x || undefined}
+                      srcSet={thumb1x && thumb2x ? `${thumb1x} 1x, ${thumb2x} 2x` : undefined}
+                      alt={audio.title}
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <div className="w-full h-full bg-gradient-to-br from-purple-600 to-blue-600 flex items-center justify-center">
+                      <span className="text-white text-xs font-medium">
+                        {audio.title.charAt(0)}
+                      </span>
+                    </div>
+                  )}
+                </div>
               
-              <div className="flex-1 min-w-0">
-                <h3 className="text-white font-medium truncate text-base">
-                  {audio.title}
-                </h3>
-                <p className="text-gray-400 text-sm truncate">
-                  {audio.subtitle || audio.description || 'Oração'}
-                </p>
-              </div>
+                <div className="flex-1 min-w-0">
+                  <h3 className="text-white font-medium truncate text-base">
+                    {audio.title}
+                  </h3>
+                  <p className="text-gray-400 text-sm truncate">
+                    {audio.subtitle || audio.description || 'Oração'}
+                  </p>
+                </div>
               
-              <Button variant="ghost" size="icon" className="text-gray-400 hover:text-white hover:bg-gray-800 flex-shrink-0">
-                <MoreHorizontal size={20} />
-              </Button>
-            </div>
-          ))}
+                <Button variant="ghost" size="icon" className="text-gray-400 hover:text-white hover:bg-gray-800 flex-shrink-0">
+                  <MoreHorizontal size={20} />
+                </Button>
+              </div>
+            );
+          })}
         </div>
       </div>
 

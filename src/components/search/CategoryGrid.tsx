@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import type { Category } from '@/types/search';
+import { normalizeImageUrl } from '@/app/home/_utils/homeUtils';
 
 interface CategoryGridProps {
   categories: Category[];
@@ -20,7 +21,13 @@ export function CategoryGrid({ categories, variant = 'default' }: CategoryGridPr
           {category.image_url ? (
             <div
               className="absolute inset-0 bg-cover bg-center"
-              style={{ backgroundImage: `url(${category.image_url})` }}
+              style={{
+                backgroundImage: `url(${normalizeImageUrl(category.image_url, {
+                  width: 640,
+                  height: 480,
+                  quality: 60
+                }) || category.image_url})`
+              }}
             />
           ) : (
             <div className={`absolute inset-0 bg-gradient-to-br ${

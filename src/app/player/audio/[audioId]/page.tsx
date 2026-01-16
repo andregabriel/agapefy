@@ -8,6 +8,7 @@ import { useRouter } from 'next/navigation';
 import { usePlayer } from '@/contexts/PlayerContext';
 import { AudioActionButtons } from '@/components/AudioActionButtons';
 import type { Audio } from '@/lib/supabase-queries';
+import { normalizeImageUrl } from '@/app/home/_utils/homeUtils';
 
 interface AudioWithCategory extends Audio {
   category?: {
@@ -133,6 +134,14 @@ export default function AudioPlayerPage({ params }: AudioPlayerPageProps) {
     );
   }
 
+  const coverUrl = audio.cover_url || audio.category?.image_url || null;
+  const cover1x = coverUrl
+    ? normalizeImageUrl(coverUrl, { width: 320, height: 320, quality: 70 }) || coverUrl
+    : null;
+  const cover2x = coverUrl
+    ? normalizeImageUrl(coverUrl, { width: 640, height: 640, quality: 70 }) || coverUrl
+    : null;
+
   return (
     <div className="min-h-screen bg-black text-white flex flex-col relative">
       {/* Back Button */}
@@ -153,9 +162,10 @@ export default function AudioPlayerPage({ params }: AudioPlayerPageProps) {
           <div className="w-[159px] h-[159px] md:w-72 md:h-72 lg:w-80 lg:h-80">
             <div className="w-full h-full bg-gray-800 rounded-lg overflow-hidden shadow-2xl">
               {/** Preferir a capa do próprio áudio; fallback para imagem da categoria */}
-              {audio.cover_url || audio.category?.image_url ? (
+              {coverUrl ? (
                 <img
-                  src={audio.cover_url || (audio.category?.image_url as string)}
+                  src={cover1x || undefined}
+                  srcSet={cover1x && cover2x ? `${cover1x} 1x, ${cover2x} 2x` : undefined}
                   alt={audio.title}
                   className="w-full h-full object-cover"
                 />
