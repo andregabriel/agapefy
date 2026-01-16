@@ -1286,10 +1286,12 @@ export default function WhatsAppSetup({ variant = "standalone", redirectIfNotLog
                             aria-expanded={drawerOpen}
                             aria-label="Selecione seu desafio de orações"
                             data-selected-challenge-id={selectedChallengeId || ''}
-                            className="w-full justify-between"
+                            className="w-full justify-between h-auto py-2 min-w-0 whitespace-normal"
                             onClick={() => setDrawerOpen(true)}
                           >
-                            {selectedChallengeTitle || "Selecione um desafio..."}
+                            <span className="flex-1 min-w-0 text-left line-clamp-2">
+                              {selectedChallengeTitle || "Selecione um desafio..."}
+                            </span>
                           </Button>
                           <DrawerContent className="h-[85vh]">
                             <DrawerHeader className="pb-2">
@@ -1335,9 +1337,11 @@ export default function WhatsAppSetup({ variant = "standalone", redirectIfNotLog
                             aria-expanded={challengeOpen}
                             aria-label="Selecione seu desafio de orações"
                             data-selected-challenge-id={selectedChallengeId || ''}
-                            className="w-full justify-between"
+                            className="w-full justify-between h-auto py-2 min-w-0 whitespace-normal"
                           >
-                            {selectedChallengeTitle || "Selecione um desafio..."}
+                            <span className="flex-1 min-w-0 text-left line-clamp-2">
+                              {selectedChallengeTitle || "Selecione um desafio..."}
+                            </span>
                             </Button>
                           </PopoverTrigger>
                           <PopoverContent

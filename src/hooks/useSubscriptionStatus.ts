@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
+import { useAuth } from '@/contexts/AuthContext';
 import type { SubscriptionUserType } from '@/constants/paywall';
 
 interface SubscriptionStatus {
@@ -16,11 +17,16 @@ const DEFAULT_STATUS: SubscriptionStatus = {
 };
 
 export function useSubscriptionStatus() {
+  const { user, loading: authLoading } = useAuth();
+  const userId = user?.id ?? null;
   const [status, setStatus] = useState<SubscriptionStatus>(DEFAULT_STATUS);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const requestIdRef = useRef(0);
 
   const fetchStatus = useCallback(async () => {
+    const requestId = requestIdRef.current + 1;
+    requestIdRef.current = requestId;
     try {
       setLoading(true);
       setError(null);
@@ -42,6 +48,10 @@ export function useSubscriptionStatus() {
 
       const data = (await res.json()) as SubscriptionStatus;
 
+      if (requestIdRef.current !== requestId) {
+        return;
+      }
+
       setStatus({
         userType: data.userType ?? 'anonymous',
         hasActiveSubscription: !!data.hasActiveSubscription,
@@ -50,16 +60,35 @@ export function useSubscriptionStatus() {
     } catch (e) {
       // eslint-disable-next-line no-console
       console.error('useSubscriptionStatus: erro ao buscar status', e);
+      if (requestIdRef.current !== requestId) {
+        return;
+      }
       setError('Erro ao carregar status de assinatura');
       setStatus(DEFAULT_STATUS);
     } finally {
-      setLoading(false);
+      if (requestIdRef.current === requestId) {
+        setLoading(false);
+      }
     }
   }, []);
 
   useEffect(() => {
+    if (authLoading) {
+      requestIdRef.current += 1;
+      setLoading(true);
+      return;
+    }
+
+    if (!userId) {
+      requestIdRef.current += 1;
+      setStatus(DEFAULT_STATUS);
+      setError(null);
+      setLoading(false);
+      return;
+    }
+
     fetchStatus();
-  }, [fetchStatus]);
+  }, [authLoading, userId, fetchStatus]);
 
   return {
     ...status,
@@ -68,4 +97,3 @@ export function useSubscriptionStatus() {
     refetch: fetchStatus,
   };
 }
-

@@ -191,6 +191,48 @@ describe('PlayerContext permissions', () => {
       expect(paywallHandler).not.toHaveBeenCalled();
     });
   });
-});
 
+  it('active_subscription: when full access disabled, it uses free-plays and can open paywall', async () => {
+    mockUseAuth.mockReturnValue({ user: { id: 'u1' } });
+    mockUseSubscriptionStatus.mockReturnValue({
+      userType: 'active_subscription',
+      hasActiveSubscription: true,
+      hasActiveTrial: false,
+    });
+    mockUseAppSettings.mockReturnValue({
+      settings: {
+        paywall_permissions: JSON.stringify({
+          anonymous: { limit_enabled: true, max_free_audios_per_day: 0 },
+          no_subscription: { limit_enabled: true, max_free_audios_per_day: 1 },
+          active_subscription: { full_access_enabled: false },
+          trial: { full_access_enabled: true },
+        }),
+      },
+      loading: false,
+      updateSetting: vi.fn(),
+    });
+
+    (globalThis.fetch as any).mockResolvedValue({
+      ok: true,
+      json: async () => ({ allowed: false, count: 1, max: 1 }),
+      status: 200,
+    });
+
+    const paywallHandler = vi.fn();
+    window.addEventListener('agapefy:paywall-open', paywallHandler as any);
+
+    const { getByText } = render(
+      <PlayerProvider>
+        <TestHarness />
+      </PlayerProvider>,
+    );
+
+    fireEvent.click(getByText('play'));
+
+    await waitFor(() => {
+      expect(globalThis.fetch).toHaveBeenCalled();
+      expect(paywallHandler).toHaveBeenCalled();
+    });
+  });
+});
 

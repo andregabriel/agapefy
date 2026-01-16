@@ -33,8 +33,8 @@ export function BibleHeader({
   return (
     <div className={`sticky top-0 z-30 border-b ${headerThemeClasses}`}>
       <div className="max-w-4xl mx-auto px-4 py-2">
-        {/* Cabeçalho com logo (somente mobile), igual ao da home */}
-        <div className="flex items-center justify-between mb-2 md:hidden">
+        {/* Cabeçalho com logo (visível apenas em md+) */}
+        <div className="hidden items-center justify-between mb-2 md:flex">
           <Link href="/" className="flex items-center">
             <img
               src="https://vvgqqlrujmyxzzygsizc.supabase.co/storage/v1/object/public/media/app-26/images/1758119247895-09choju49.png"

@@ -226,7 +226,7 @@ export const PlayerProvider = ({ children }: { children: React.ReactNode }) => {
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const { user } = useAuth();
   const { settings } = useAppSettings();
-  const { userType, hasActiveSubscription, hasActiveTrial } = useSubscriptionStatus();
+  const { userType } = useSubscriptionStatus();
   const { logActivity } = useUserActivity();
   const redirectToLogin = useCallback(() => {
     if (typeof window === 'undefined') return;
@@ -296,14 +296,14 @@ export const PlayerProvider = ({ children }: { children: React.ReactNode }) => {
 
     // Assinantes/trial com acesso total
     if (effectiveUserType === 'active_subscription') {
-      if (permissions.active_subscription.full_access_enabled || hasActiveSubscription) {
+      if (permissions.active_subscription.full_access_enabled) {
         return true;
       }
       // se acesso total estiver desligado, cai para regra de no_subscription
     }
 
     if (effectiveUserType === 'trial') {
-      if (permissions.trial.full_access_enabled || hasActiveTrial) {
+      if (permissions.trial.full_access_enabled) {
         return true;
       }
       // se acesso total estiver desligado, cai para regra de no_subscription
@@ -336,8 +336,6 @@ export const PlayerProvider = ({ children }: { children: React.ReactNode }) => {
     userType,
     user,
     settings.paywall_permissions,
-    hasActiveSubscription,
-    hasActiveTrial,
   ]);
 
   const canCurrentUserPlayAnotherAudioAsync = useCallback(async (): Promise<boolean> => {
@@ -348,14 +346,14 @@ export const PlayerProvider = ({ children }: { children: React.ReactNode }) => {
 
     // Assinantes/trial com acesso total
     if (effectiveUserType === 'active_subscription') {
-      if (permissions.active_subscription.full_access_enabled || hasActiveSubscription) {
+      if (permissions.active_subscription.full_access_enabled) {
         return true;
       }
       // se acesso total estiver desligado, cai para regra de no_subscription
     }
 
     if (effectiveUserType === 'trial') {
-      if (permissions.trial.full_access_enabled || hasActiveTrial) {
+      if (permissions.trial.full_access_enabled) {
         return true;
       }
       // se acesso total estiver desligado, cai para regra de no_subscription
@@ -428,8 +426,6 @@ export const PlayerProvider = ({ children }: { children: React.ReactNode }) => {
     userType,
     user,
     settings.paywall_permissions,
-    hasActiveSubscription,
-    hasActiveTrial,
   ]);
 
   // Inicializar elemento de áudio
