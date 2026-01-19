@@ -24,6 +24,7 @@ Se houver conflito entre este arquivo e o codigo, DEV_RULES.md ou AI_RULES.md, e
 - Middleware de admin: `middleware.ts`.
 - Supabase client: `src/lib/supabase.ts`.
 - Supabase admin client (service role): `src/lib/supabase-admin.ts`.
+- Configurações de conta (perfil e senha): `src/app/eu/config`.
 - Rotas API: `src/app/api/*`.
 - Edge Functions: `supabase/functions/*`.
 - Migrations SQL: `supabase/sql/*`.
