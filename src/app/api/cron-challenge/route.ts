@@ -205,21 +205,20 @@ export async function inlineSend(test: boolean, limit?: number) {
     const track = trackList[nextIndex - 1];
     const audioId = track.audio_id;
     const title = track.title || 'Oração';
-    const playlistTitle = playlistTitleById[playlistId] || 'Desafio de oração';
+    const playlistTitle = playlistTitleById[playlistId] || 'Desafio';
 
     // Montar mensagem com link para o áudio específico da jornada
     const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://agapefy.com';
     const audioUrl = `${baseUrl.replace(/\/$/, '')}/player/audio/${audioId}`;
 
-    const message = `🙏 Desafio de oração
-*${playlistTitle}*
-Dia ${nextIndex} de ${trackList.length}
+    const message = `🙏 *${playlistTitle}*
 
-*${title}*
+✅ Dia ${nextIndex} de ${trackList.length}
+🛐 Oração: *${title}*
 
 Ouça agora: ${audioUrl}
 
-_Agapefy - Seu companheiro espiritual_ ✨`;
+*Agapefy* - Ore. Conecte-se. Transforme. ✨`;
 
     if (!test) {
       // Insert log BEFORE sending to prevent race conditions
