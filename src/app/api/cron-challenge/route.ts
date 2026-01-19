@@ -213,12 +213,12 @@ export async function inlineSend(test: boolean, limit?: number) {
 
     const message = `🙏 *${playlistTitle}*
 
-Dia ${nextIndex} de ${trackList.length} - Oração:
-*${title}*
+✅ Dia ${nextIndex} de ${trackList.length}
+🛐 Oração: *${title}*
 
 Ouça agora: ${audioUrl}
 
-_Agapefy - Seu companheiro espiritual_ ✨`;
+*Agapefy* - Ore. Conecte-se. Transforme. ✨`;
 
     if (!test) {
       // Insert log BEFORE sending to prevent race conditions

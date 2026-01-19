@@ -26,6 +26,7 @@ Se houver conflito entre este arquivo e o codigo, DEV_RULES.md ou AI_RULES.md, e
 - Supabase admin client (service role): `src/lib/supabase-admin.ts`.
 - Rotas API: `src/app/api/*`.
 - Edge Functions: `supabase/functions/*`.
+- Cron do desafio WhatsApp: `src/app/api/cron-challenge/route.ts`.
 - Migrations SQL: `supabase/sql/*`.
 - Testes e2e: `tests/onboarding-whatsapp.spec.ts`.
 
