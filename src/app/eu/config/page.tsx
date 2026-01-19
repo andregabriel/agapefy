@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { NotificationSettings } from '@/components/NotificationSettings';
 import { ProfileEditCard } from './_components/ProfileEditCard';
+import { ChangePasswordCard } from './_components/ChangePasswordCard';
 import { SubscriptionCard } from './_components/SubscriptionCard';
 import { PresentModal } from '@/components/modals/PresentModal';
 import { InstallAppCard } from '@/components/pwa/InstallAppCard';
@@ -109,7 +110,13 @@ export default function ConfigPage() {
           {/* 1. Perfil */}
           <ProfileEditCard />
 
-          {/* 2. Suporte */}
+          {/* 2. Segurança */}
+          <ChangePasswordCard
+            isOpen={activeSection === 'security'}
+            onToggle={() => toggleSection('security')}
+          />
+
+          {/* 3. Suporte */}
           <Card className="bg-gray-900 border-gray-800">
             <CardHeader className="pb-3">
               <Button
@@ -150,7 +157,7 @@ export default function ConfigPage() {
           {/* Instalar app */}
           <InstallAppCard />
 
-          {/* 3. Notificações */}
+          {/* 4. Notificações */}
           <Card className="bg-gray-900 border-gray-800">
             <CardHeader className="pb-3">
               <Button
@@ -183,7 +190,7 @@ export default function ConfigPage() {
             )}
           </Card>
 
-          {/* 4. Dê um Presente */}
+          {/* 5. Dê um Presente */}
           <Card className="bg-gray-900 border-gray-800">
             <CardHeader className="pb-3">
               <Button
@@ -221,10 +228,10 @@ export default function ConfigPage() {
             )}
           </Card>
 
-          {/* 5. Assinatura */}
+          {/* 6. Assinatura */}
           <SubscriptionCard />
 
-          {/* 6. Jurídico */}
+          {/* 7. Jurídico */}
           <Card className="bg-gray-900 border-gray-800">
             <CardHeader className="pb-3">
               <Button
@@ -272,7 +279,7 @@ export default function ConfigPage() {
             )}
           </Card>
 
-          {/* 7. Sair */}
+          {/* 8. Sair */}
           <Card className="bg-gray-900 border-gray-800 border-red-800/30">
             <CardContent className="p-6">
               <div className="flex items-center justify-between">

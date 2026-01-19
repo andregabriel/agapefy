@@ -69,6 +69,7 @@ Este documento lista todas as funcionalidades implementadas no aplicativo, organ
 - Editar nome, username, bio
 - Atualização de avatar
 - Preferências pessoais
+- Alteração de senha
 
 ### 6. CRUD de Intenções
 - Criar, editar, excluir intenções de oração
@@ -189,4 +190,4 @@ Este documento lista todas as funcionalidades implementadas no aplicativo, organ
 
 ---
 
-*Última atualização: Janeiro 2025*
+*Última atualização: Janeiro 2026*
