@@ -464,7 +464,7 @@ export function ProfileEditCard() {
                       <Button
                         type="button"
                         variant="outline"
-                        className="border-gray-600 text-gray-200 hover:bg-gray-800"
+                        className="border-gray-500 bg-gray-800 text-gray-100 hover:bg-gray-700 hover:text-white"
                         disabled={uploadingAvatar}
                       >
                         {uploadingAvatar ? (
@@ -564,7 +564,7 @@ export function ProfileEditCard() {
                     setIsEditing(false);
                     loadProfile();
                   }}
-                  className="border-gray-600 text-gray-300 hover:bg-gray-800"
+                  className="border-gray-500 bg-gray-800 text-gray-100 hover:bg-gray-700 hover:text-white"
                 >
                   Cancelar
                 </Button>
