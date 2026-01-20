@@ -124,7 +124,7 @@ export function ContentCard({
         </div>
         {showDailyVerseBadge && (
           <div className="absolute top-2 left-2 z-10">
-            <span className="px-2 py-1 text-lg md:text-xl font-bold uppercase tracking-wide text-white bg-black/60 rounded">
+            <span className="px-2 py-1 text-lg md:text-xl font-bold tracking-wide text-white bg-black/60 rounded">
               Versículo do Dia
             </span>
           </div>
