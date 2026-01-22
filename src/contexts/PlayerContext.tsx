@@ -660,6 +660,9 @@ export const PlayerProvider = ({ children }: { children: React.ReactNode }) => {
 
   const pause = useCallback(() => {
     console.log('🎵 Comando: Pause');
+    if (audioRef.current && !audioRef.current.paused) {
+      audioRef.current.pause();
+    }
     dispatch({ type: 'PAUSE' });
   }, []);
 

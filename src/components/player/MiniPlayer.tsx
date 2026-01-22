@@ -28,7 +28,10 @@ export const MiniPlayer = () => {
   };
 
   return (
-    <div className="fixed bottom-20 left-0 right-0 bg-gray-900 border-t border-gray-800 p-4 z-30">
+    <div
+      className="fixed left-0 right-0 bg-gray-900 border-t border-gray-800 p-4 z-30"
+      style={{ bottom: 'var(--tabbar-h, 0px)' }}
+    >
       {/* Barra de progresso */}
       <div className="mb-3">
         <Slider

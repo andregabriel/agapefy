@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { Button } from '@/components/ui/button';
-import { Heart, Download, Plus, Check } from 'lucide-react';
+import { Heart, Download, Plus, Check, Share2 } from 'lucide-react';
 import { useFavorites } from '@/hooks/useFavorites';
 import { useDownloads } from '@/hooks/useDownloads';
 import { useRoutinePlaylist } from '@/hooks/useRoutinePlaylist';
@@ -15,6 +15,9 @@ interface AudioActionButtonsProps {
   variant?: 'default' | 'compact';
   className?: string;
   hideDownload?: boolean;
+  showShare?: boolean;
+  onShare?: () => void;
+  shareClassName?: string;
 }
 
 export function AudioActionButtons({ 
@@ -22,25 +25,37 @@ export function AudioActionButtons({
   audioTitle, 
   variant = 'default',
   className = '',
-  hideDownload = false
+  hideDownload = false,
+  showShare = false,
+  onShare,
+  shareClassName = ''
 }: AudioActionButtonsProps) {
   const { user } = useAuth();
   const { isFavorite, toggleFavorite } = useFavorites();
   const { isDownloaded, toggleDownload } = useDownloads();
   const { isAudioInRoutine, addAudioToRoutine, removeAudioFromRoutine } = useRoutinePlaylist();
 
-  if (!user) {
-    return null; // Não mostra botões se usuário não estiver logado
-  }
-
   const isAudioFavorite = isFavorite(audioId);
   const isAudioDownloaded = isDownloaded(audioId);
   const isInRoutine = isAudioInRoutine(audioId);
+  const shareButtonClass = shareClassName ? ` ${shareClassName}` : '';
+
+  const requireAuth = (message: string) => {
+    if (!user) {
+      toast.info(message);
+      return false;
+    }
+    return true;
+  };
 
   const handleToggleFavorite = async (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
     
+    if (!requireAuth('Faça login para favoritar.')) {
+      return;
+    }
+
     try {
       const success = await toggleFavorite(audioId);
       if (success) {
@@ -62,6 +77,10 @@ export function AudioActionButtons({
     e.preventDefault();
     e.stopPropagation();
     
+    if (!requireAuth('Faça login para baixar.')) {
+      return;
+    }
+
     try {
       const success = await toggleDownload(audioId);
       if (success) {
@@ -83,6 +102,10 @@ export function AudioActionButtons({
     e.preventDefault();
     e.stopPropagation();
     
+    if (!requireAuth('Faça login para adicionar à rotina.')) {
+      return;
+    }
+
     try {
       if (isInRoutine) {
         const success = await removeAudioFromRoutine(audioId);
@@ -103,6 +126,12 @@ export function AudioActionButtons({
       console.error('Erro ao gerenciar rotina:', error);
       toast.error('Erro inesperado');
     }
+  };
+
+  const handleShare = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    onShare?.();
   };
 
   if (variant === 'compact') {
@@ -126,6 +155,18 @@ export function AudioActionButtons({
             <Download size={16} fill={isAudioDownloaded ? 'currentColor' : 'none'} />
           </Button>
         )}
+
+        {showShare && (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={handleShare}
+            className={`p-2 text-gray-400 hover:text-white${shareButtonClass}`}
+            title="Compartilhar"
+          >
+            <Share2 size={16} />
+          </Button>
+        )}
         
         <Button
           variant="ghost"
@@ -146,7 +187,7 @@ export function AudioActionButtons({
         size="icon"
         onClick={handleToggleFavorite}
         className={`${isAudioFavorite ? 'text-red-500 hover:text-red-600' : 'text-gray-400 hover:text-red-500'}`}
-        title={isAudioFavorite ? 'Remover dos favoritos' : 'Adicionar aos favoritos'}
+        title={user ? (isAudioFavorite ? 'Remover dos favoritos' : 'Adicionar aos favoritos') : 'Faça login para favoritar'}
       >
         <Heart size={20} fill={isAudioFavorite ? 'currentColor' : 'none'} />
       </Button>
@@ -157,9 +198,21 @@ export function AudioActionButtons({
           size="icon"
           onClick={handleToggleDownload}
           className={`${isAudioDownloaded ? 'text-green-500 hover:text-green-600' : 'text-gray-400 hover:text-green-500'}`}
-          title={isAudioDownloaded ? 'Remover download' : 'Baixar áudio'}
+          title={user ? (isAudioDownloaded ? 'Remover download' : 'Baixar áudio') : 'Faça login para baixar'}
         >
           <Download size={20} fill={isAudioDownloaded ? 'currentColor' : 'none'} />
+        </Button>
+      )}
+
+      {showShare && (
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={handleShare}
+          className={`text-gray-400 hover:text-white${shareButtonClass}`}
+          title="Compartilhar"
+        >
+          <Share2 size={20} />
         </Button>
       )}
       
@@ -168,7 +221,7 @@ export function AudioActionButtons({
         size="icon"
         onClick={handleToggleRoutine}
         className={`${isInRoutine ? 'text-blue-500 hover:text-blue-600' : 'text-gray-400 hover:text-blue-500'}`}
-        title={isInRoutine ? 'Remover da rotina' : 'Adicionar à rotina'}
+        title={user ? (isInRoutine ? 'Remover da rotina' : 'Adicionar à rotina') : 'Faça login para adicionar à rotina'}
       >
         {isInRoutine ? <Check size={20} /> : <Plus size={20} />}
       </Button>
