@@ -7,11 +7,31 @@ import { TrackingScripts } from '@/components/TrackingScripts';
 const inter = Inter({ subsets: ['latin'] });
 
 export const metadata: Metadata = {
+  metadataBase: new URL('https://www.agapefy.com'),
   manifest: '/manifest.json',
   appleWebApp: {
     capable: true,
     statusBarStyle: 'black-translucent',
     title: 'Agapefy',
+  },
+  openGraph: {
+    type: 'website',
+    url: '/',
+    title: 'Agapefy',
+    siteName: 'Agapefy',
+    images: [
+      {
+        url: '/og-image.png',
+        width: 1200,
+        height: 630,
+        alt: 'Agapefy',
+      },
+    ],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Agapefy',
+    images: ['/og-image.png'],
   },
   icons: {
     icon: [

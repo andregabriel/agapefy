@@ -306,43 +306,6 @@ export default function AudioPlayerPage({ params }: AudioPlayerPageProps) {
               </p>
             </div>
           )}
-
-          {/* Audio Info Card */}
-          <div className="bg-gray-900 rounded-lg p-6">
-            <h3 className="text-lg font-semibold mb-4 text-white">Informações</h3>
-            <div className="space-y-3">
-              <div className="flex justify-between">
-                <span className="text-gray-400">Título:</span>
-                <span className="text-white">{audio.title}</span>
-              </div>
-              
-              {audio.subtitle && (
-                <div className="flex justify-between">
-                  <span className="text-gray-400">Subtítulo:</span>
-                  <span className="text-white">{audio.subtitle}</span>
-                </div>
-              )}
-              
-              {audio.duration && (
-                <div className="flex justify-between">
-                  <span className="text-gray-400">Duração:</span>
-                  <span className="text-white">{formatDuration(audio.duration)}</span>
-                </div>
-              )}
-              
-              {audio.category && (
-                <div className="flex justify-between">
-                  <span className="text-gray-400">Categoria:</span>
-                  <span className="text-white">{audio.category.name}</span>
-                </div>
-              )}
-              
-              <div className="flex justify-between">
-                <span className="text-gray-400">Criado em:</span>
-                <span className="text-white">{new Date(audio.created_at).toLocaleDateString()}</span>
-              </div>
-            </div>
-          </div>
         </div>
       </div>
 
