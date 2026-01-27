@@ -178,6 +178,45 @@ export default function AudioPlayerPage({ params }: AudioPlayerPageProps) {
     ? normalizeImageUrl(coverUrl, { width: 640, height: 640, quality: 70 }) || coverUrl
     : null;
 
+  const playButton = (
+    <Button 
+      size="icon" 
+      className="bg-green-500 hover:bg-green-400 text-black w-14 h-14 rounded-full"
+      onClick={handlePlayAudio}
+    >
+      {state.currentAudio?.id === audio.id && state.isLoading ? (
+        <div className="w-5 h-5 border-2 border-black border-t-transparent rounded-full animate-spin" />
+      ) : state.currentAudio?.id === audio.id && state.isPlaying ? (
+        <Pause size={20} fill="currentColor" />
+      ) : (
+        <Play size={20} fill="currentColor" className="ml-1" />
+      )}
+    </Button>
+  );
+
+  const mobileActionButtons = (
+    <AudioActionButtons 
+      audioId={audio.id}
+      audioTitle={audio.title}
+      variant="compact"
+      hideDownload
+      showShare
+      onShare={handleShareAudio}
+    />
+  );
+
+  const desktopActionButtons = (
+    <AudioActionButtons 
+      audioId={audio.id}
+      audioTitle={audio.title}
+      variant="default"
+      hideDownload
+      showShare
+      onShare={handleShareAudio}
+      shareClassName="hidden sm:inline-flex"
+    />
+  );
+
   return (
     <div className="min-h-screen bg-black text-white flex flex-col relative">
       <div className="px-4 pt-12">
@@ -233,6 +272,13 @@ export default function AudioPlayerPage({ params }: AudioPlayerPageProps) {
                 </div>
               )}
 
+              <div className="sm:hidden">
+                <div className="flex items-center gap-4">
+                  <div>{playButton}</div>
+                  <div>{mobileActionButtons}</div>
+                </div>
+              </div>
+
               {audio.description && (
                 <div className="text-gray-300 text-sm leading-relaxed">
                   {audio.description}
@@ -258,34 +304,14 @@ export default function AudioPlayerPage({ params }: AudioPlayerPageProps) {
             </div>
           </div>
 
-          <div className="order-4 mt-6 sm:mt-4 sm:col-start-2 sm:row-start-2">
+          <div className="order-4 mt-6 sm:mt-4 sm:col-start-2 sm:row-start-2 hidden sm:block">
             <div className="flex items-center justify-between sm:justify-start sm:gap-4">
               <div className="order-1 sm:order-2">
-                <AudioActionButtons 
-                  audioId={audio.id}
-                  audioTitle={audio.title}
-                  variant="default"
-                  hideDownload
-                  showShare
-                  onShare={handleShareAudio}
-                  shareClassName="hidden sm:inline-flex"
-                />
+                {desktopActionButtons}
               </div>
 
               <div className="order-2 sm:order-1">
-                <Button 
-                  size="icon" 
-                  className="bg-green-500 hover:bg-green-400 text-black w-14 h-14 rounded-full"
-                  onClick={handlePlayAudio}
-                >
-                  {state.currentAudio?.id === audio.id && state.isLoading ? (
-                    <div className="w-5 h-5 border-2 border-black border-t-transparent rounded-full animate-spin" />
-                  ) : state.currentAudio?.id === audio.id && state.isPlaying ? (
-                    <Pause size={20} fill="currentColor" />
-                  ) : (
-                    <Play size={20} fill="currentColor" className="ml-1" />
-                  )}
-                </Button>
+                {playButton}
               </div>
             </div>
           </div>
