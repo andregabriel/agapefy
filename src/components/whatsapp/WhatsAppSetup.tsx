@@ -144,6 +144,11 @@ export default function WhatsAppSetup({ variant = "standalone", redirectIfNotLog
   const [attemptedOnboardingLink, setAttemptedOnboardingLink] = useState(false);
   const [hasSentFirstMessage, setHasSentFirstMessage] = useState<boolean | null>(null);
   const [loadingFirstMessage, setLoadingFirstMessage] = useState(true);
+  const [historyModalOpen, setHistoryModalOpen] = useState(false);
+  const [historyConfirmOpen, setHistoryConfirmOpen] = useState(false);
+  const [historyLastIndex, setHistoryLastIndex] = useState<number | null>(null);
+  const [historyChecking, setHistoryChecking] = useState(false);
+  const [pendingStart, setPendingStart] = useState<null | { playlistId: string; pickedDifferent: boolean; isSameAsActive: boolean }>(null);
   const selectedChallengeTitle = useMemo(
     () => (challengePlaylists.find(p => p.id === selectedChallengeId)?.title || ""),
     [challengePlaylists, selectedChallengeId]
@@ -838,14 +843,15 @@ export default function WhatsAppSetup({ variant = "standalone", redirectIfNotLog
     }
   }
 
-  async function saveChallengeSelection() {
+  async function saveChallengeSelection(playlistIdOverride?: string) {
     const clean = getFullPhoneNumber();
     // Precisa ter phone_number para salvar
     if (!clean) {
       return;
     }
     try {
-    if (!selectedChallengeId) {
+    const challengeId = playlistIdOverride || selectedChallengeId;
+    if (!challengeId) {
       return;
     }
     const supportsSendTime = await ensureWhatsAppChallengesSendTimeSupport();
@@ -854,7 +860,7 @@ export default function WhatsAppSetup({ variant = "standalone", redirectIfNotLog
     }
     
     const payload: any = {
-      playlist_id: selectedChallengeId,
+      playlist_id: challengeId,
     };
     if (supportsSendTime) {
       payload.send_time = challengeTime;
@@ -869,7 +875,7 @@ export default function WhatsAppSetup({ variant = "standalone", redirectIfNotLog
           .from('whatsapp_user_challenges')
           .delete()
           .eq('phone_number', clean)
-          .neq('playlist_id', selectedChallengeId);
+        .neq('playlist_id', challengeId);
       }
       
       // Upsert current selection with time
@@ -888,6 +894,56 @@ export default function WhatsAppSetup({ variant = "standalone", redirectIfNotLog
       console.error('Erro ao salvar jornada:', e);
       // Não mostrar toast para não atrapalhar a experiência
     }
+  }
+
+  async function performStartChallenge(params: { playlistId: string; reset: boolean }) {
+    const { playlistId, reset } = params;
+    if (reset) {
+      try {
+        const clean = getFullPhoneNumber();
+        if (clean && playlistId) {
+          await authFetch("/api/whatsapp/challenge/reset", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ phone: clean, playlist_id: playlistId }),
+          });
+        }
+      } catch (e) {
+        console.warn("Falha ao resetar progresso do desafio (whatsapp_challenge_log):", e);
+      }
+    }
+    await saveChallengeSelection(playlistId);
+    setActiveChallengeId(playlistId);
+    await updatePreference("receives_daily_prayer", true);
+  }
+
+  async function checkHistoryAndMaybeConfirm(params: { playlistId: string; pickedDifferent: boolean; isSameAsActive: boolean }) {
+    const clean = getFullPhoneNumber();
+    if (!clean) {
+      await performStartChallenge({ playlistId: params.playlistId, reset: params.pickedDifferent });
+      return;
+    }
+    setHistoryChecking(true);
+    try {
+      const resp = await authFetch("/api/whatsapp/challenge/history", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ phone: clean, playlist_id: params.playlistId }),
+      });
+      const payload = resp.ok ? await resp.json() : null;
+      const lastIndex = Number(payload?.lastIndex || 0);
+      if (payload?.ok && lastIndex > 0) {
+        setHistoryLastIndex(lastIndex);
+        setPendingStart(params);
+        setHistoryModalOpen(true);
+        return;
+      }
+    } catch (e) {
+      console.warn("Falha ao verificar histórico do desafio:", e);
+    } finally {
+      setHistoryChecking(false);
+    }
+    await performStartChallenge({ playlistId: params.playlistId, reset: params.pickedDifferent });
   }
 
   async function updatePreference(
@@ -1429,7 +1485,7 @@ export default function WhatsAppSetup({ variant = "standalone", redirectIfNotLog
                           : "default"
                       }
                       className="w-full"
-                      disabled={!selectedChallengeId || !challengeTime || challengeTime.length < 4}
+                      disabled={!selectedChallengeId || !challengeTime || challengeTime.length < 4 || historyChecking}
                       onClick={async () => {
                         // Se ainda não enviou a primeira mensagem, pedir ativação do WhatsApp antes de iniciar.
                         if (variant === "standalone" && hasSentFirstMessage === false) {
@@ -1440,6 +1496,8 @@ export default function WhatsAppSetup({ variant = "standalone", redirectIfNotLog
                         const hasActive = !!activeChallengeId;
                         const isSameAsActive = hasActive && selectedChallengeId === activeChallengeId;
                         const pickedDifferent = hasActive && selectedChallengeId !== activeChallengeId;
+                        const playlistId = selectedChallengeId;
+                        if (!playlistId) return;
 
                         // Ativo + mesmo desafio => Pausar
                         if (dailyPrayer && isSameAsActive) {
@@ -1447,32 +1505,7 @@ export default function WhatsAppSetup({ variant = "standalone", redirectIfNotLog
                           return;
                         }
 
-                        // Selecionou outro desafio (ativo ou pausado) => Começar novo desafio
-                        if (pickedDifferent) {
-                          // Resetar progresso do NOVO desafio para começar do Dia 1
-                          // (a cron usa whatsapp_challenge_log como cursor 1..N por usuário/playlist)
-                          try {
-                            const clean = getFullPhoneNumber();
-                            if (clean && selectedChallengeId) {
-                              await authFetch("/api/whatsapp/challenge/reset", {
-                                method: "POST",
-                                headers: { "Content-Type": "application/json" },
-                                body: JSON.stringify({ phone: clean, playlist_id: selectedChallengeId }),
-                              });
-                            }
-                          } catch (e) {
-                            console.warn("Falha ao resetar progresso do desafio (whatsapp_challenge_log):", e);
-                          }
-                          await saveChallengeSelection();
-                          setActiveChallengeId(selectedChallengeId);
-                          await updatePreference("receives_daily_prayer", true);
-                          return;
-                        }
-
-                        // Pausado + mesmo (ou ainda não tinha um ativo) => Continuar/Começar
-                        await saveChallengeSelection();
-                        setActiveChallengeId(selectedChallengeId);
-                        await updatePreference("receives_daily_prayer", true);
+                        await checkHistoryAndMaybeConfirm({ playlistId, pickedDifferent, isSameAsActive });
                       }}
                     >
                       {(() => {
@@ -1480,6 +1513,7 @@ export default function WhatsAppSetup({ variant = "standalone", redirectIfNotLog
                         const isSameAsActive = hasActive && selectedChallengeId === activeChallengeId;
                         const pickedDifferent = hasActive && selectedChallengeId !== activeChallengeId;
 
+                        if (historyChecking) return "Verificando...";
                         if (dailyPrayer && isSameAsActive) return "Pausar desafio";
                         if (pickedDifferent) return "Começar novo desafio";
                         if (!dailyPrayer && isSameAsActive) return "Continuar desafio";
@@ -1643,6 +1677,88 @@ export default function WhatsAppSetup({ variant = "standalone", redirectIfNotLog
             <DialogTitle>Ative no WhatsApp para começar</DialogTitle>
           </DialogHeader>
           <div className="pt-2">{FirstMessageCtaInner}</div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={historyModalOpen} onOpenChange={setHistoryModalOpen}>
+        <DialogContent className="sm:max-w-[520px] [&>button.absolute.right-4.top-4]:hidden">
+          <DialogClose className="absolute right-3 top-3 rounded-md p-2 text-foreground/80 hover:text-foreground hover:bg-muted focus:outline-none focus:ring-2 focus:ring-ring">
+            <X className="h-4 w-4" />
+            <span className="sr-only">Fechar</span>
+          </DialogClose>
+          <DialogHeader>
+            <DialogTitle>Continuar ou recomeçar?</DialogTitle>
+          </DialogHeader>
+          <div className="pt-2 space-y-4">
+            <p className="text-sm text-muted-foreground">
+              Você já recebeu <span className="font-medium text-foreground">{historyLastIndex || 0}</span> dias deste desafio.
+            </p>
+            <div className="grid gap-2">
+              <Button
+                type="button"
+                onClick={async () => {
+                  const pending = pendingStart;
+                  setHistoryModalOpen(false);
+                  if (!pending) return;
+                  await performStartChallenge({ playlistId: pending.playlistId, reset: false });
+                  setPendingStart(null);
+                }}
+              >
+                Continuar do Dia {Math.max((historyLastIndex || 0) + 1, 1)}
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  setHistoryModalOpen(false);
+                  setHistoryConfirmOpen(true);
+                }}
+              >
+                Recomeçar do Dia 1
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={historyConfirmOpen} onOpenChange={setHistoryConfirmOpen}>
+        <DialogContent className="sm:max-w-[520px] [&>button.absolute.right-4.top-4]:hidden">
+          <DialogClose className="absolute right-3 top-3 rounded-md p-2 text-foreground/80 hover:text-foreground hover:bg-muted focus:outline-none focus:ring-2 focus:ring-ring">
+            <X className="h-4 w-4" />
+            <span className="sr-only">Fechar</span>
+          </DialogClose>
+          <DialogHeader>
+            <DialogTitle>Confirmar reinício</DialogTitle>
+          </DialogHeader>
+          <div className="pt-2 space-y-4">
+            <p className="text-sm text-muted-foreground">
+              Isso apaga seu progresso anterior deste desafio. Deseja continuar?
+            </p>
+            <div className="grid gap-2">
+              <Button
+                type="button"
+                onClick={async () => {
+                  const pending = pendingStart;
+                  setHistoryConfirmOpen(false);
+                  if (!pending) return;
+                  await performStartChallenge({ playlistId: pending.playlistId, reset: true });
+                  setPendingStart(null);
+                }}
+              >
+                Sim, recomeçar
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  setHistoryConfirmOpen(false);
+                  setHistoryModalOpen(true);
+                }}
+              >
+                Não
+              </Button>
+            </div>
+          </div>
         </DialogContent>
       </Dialog>
     </>

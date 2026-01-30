@@ -6,6 +6,7 @@ type ChallengeRow = {
   phone_number: string;
   playlist_id: string;
   send_time: string | null;
+  last_interaction_at?: string | null;
 };
 
 function getWritableClient() {
@@ -51,6 +52,31 @@ async function sendWhatsAppText(phone: string, message: string) {
   return { ok: res.ok, status: res.status, body: txt } as const;
 }
 
+async function sendWhatsAppButtonList(phone: string, message: string, buttonLabels: string[]) {
+  const ZAPI_INSTANCE_NAME = process.env.ZAPI_INSTANCE_NAME || '';
+  const ZAPI_TOKEN = process.env.ZAPI_TOKEN || '';
+  const ZAPI_CLIENT_TOKEN = process.env.ZAPI_CLIENT_TOKEN || '';
+  if (!ZAPI_INSTANCE_NAME || !ZAPI_TOKEN || !ZAPI_CLIENT_TOKEN) {
+    return { ok: false, status: 500, error: 'zapi_missing_env' } as const;
+  }
+  const ZAPI_BASE_URL = `https://api.z-api.io/instances/${ZAPI_INSTANCE_NAME}/token/${ZAPI_TOKEN}`;
+  const buttons = buttonLabels.map((label, index) => ({
+    id: String(index + 1),
+    label,
+  }));
+  const res = await fetch(`${ZAPI_BASE_URL}/send-button-list`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Client-Token': ZAPI_CLIENT_TOKEN },
+    body: JSON.stringify({
+      phone,
+      message,
+      buttonList: { buttons },
+    }),
+  });
+  const txt = await res.text().catch(() => '');
+  return { ok: res.ok, status: res.status, body: txt } as const;
+}
+
 export async function inlineSend(test: boolean, limit?: number) {
   const adminSupabase = getWritableClient();
   const { timeStr, dateStr } = getNowInSaoPaulo();
@@ -71,7 +97,8 @@ export async function inlineSend(test: boolean, limit?: number) {
       whatsapp_users!inner(
         is_active,
         receives_daily_prayer,
-        has_sent_first_message
+        has_sent_first_message,
+        last_interaction_at
       )
     `);
 
@@ -102,6 +129,7 @@ export async function inlineSend(test: boolean, limit?: number) {
       phone_number: r.phone_number as string,
       playlist_id: r.playlist_id as string,
       send_time: (r.send_time as string) || null,
+      last_interaction_at: (r.whatsapp_users?.last_interaction_at as string) || null,
     }));
 
   if (eligible.length === 0) {
@@ -187,7 +215,7 @@ export async function inlineSend(test: boolean, limit?: number) {
     // Buscar apenas logs do dia atual ou anteriores (não futuros)
     const { data: lastLog } = await adminSupabase
       .from('whatsapp_challenge_log')
-      .select('sequence_index')
+      .select('sequence_index, created_at')
       .eq('user_phone', phone)
       .eq('playlist_id', playlistId)
       .lte('sent_date', dateStr) // Apenas até hoje, não futuros
@@ -196,6 +224,15 @@ export async function inlineSend(test: boolean, limit?: number) {
 
     const lastIndex = (lastLog && lastLog[0]?.sequence_index) || 0;
     const nextIndex = lastIndex + 1;
+
+    // Exigir interação após o último envio para avançar na jornada
+    const lastSentAt = lastLog && lastLog[0]?.created_at ? new Date(lastLog[0].created_at) : null;
+    const lastInteractionAt = c.last_interaction_at ? new Date(c.last_interaction_at) : null;
+    if (lastSentAt) {
+      if (!lastInteractionAt || lastInteractionAt <= lastSentAt) {
+        continue;
+      }
+    }
 
     // Se já enviou todos os áudios, não enviar mais nada para este desafio
     if (nextIndex > trackList.length) {
@@ -218,7 +255,10 @@ export async function inlineSend(test: boolean, limit?: number) {
 
 Ouça agora: ${audioUrl}
 
-*Agapefy* - Ore. Conecte-se. Transforme. ✨`;
+*Agapefy* - Ore. Conecte-se. Transforme. ✨
+
+Para receber a próxima mensagem, toque em "Quero receber" ou responda qualquer coisa.
+Para parar, responda PARAR.`;
 
     if (!test) {
       // Insert log BEFORE sending to prevent race conditions
@@ -240,7 +280,10 @@ Ouça agora: ${audioUrl}
         continue;
       }
 
-      const res = await sendWhatsAppText(phone, message);
+      let res = await sendWhatsAppButtonList(phone, message, ['Quero receber']);
+      if (!res.ok) {
+        res = await sendWhatsAppText(phone, message);
+      }
       if (res.ok) {
         sentCount++;
       } else {
@@ -286,5 +329,4 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ ok: false, error: e?.message || 'cron_challenge_error' }, { status: 500 });
   }
 }
-
 

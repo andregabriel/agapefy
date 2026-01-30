@@ -102,19 +102,21 @@ export async function POST(request: NextRequest) {
     console.log(`🔑 Message ID recebido: ${messageId || 'NÃO ENCONTRADO'}`);
 
     // Normalizar conteúdo da mensagem - Z-API pode enviar em diferentes formatos
-    const messageContent = (
-                          body.message?.conversation || 
-                          body.message?.text || 
-                          body.message?.extendedTextMessage?.text || 
-                          body.message?.imageMessage?.caption ||
-                          body.message?.videoMessage?.caption ||
-                          body.message?.documentMessage?.caption ||
-                          body.message?.buttonsResponseMessage?.selectedDisplayText ||
-                          body.message?.buttonsResponseMessage?.selectedButtonId ||
-                          body.message?.listResponseMessage?.title ||
-                          body.message?.listResponseMessage?.description ||
-                          body.message?.templateButtonReplyMessage?.selectedDisplayText ||
-                          body.message?.templateButtonReplyMessage?.selectedId ||
+    const messagePayload = body.message || body.data?.message || {};
+    let messageType: string = 'text';
+    const messageContentRaw = (
+                          messagePayload?.conversation || 
+                          messagePayload?.text || 
+                          messagePayload?.extendedTextMessage?.text || 
+                          messagePayload?.imageMessage?.caption ||
+                          messagePayload?.videoMessage?.caption ||
+                          messagePayload?.documentMessage?.caption ||
+                          messagePayload?.buttonsResponseMessage?.selectedDisplayText ||
+                          messagePayload?.buttonsResponseMessage?.selectedButtonId ||
+                          messagePayload?.listResponseMessage?.title ||
+                          messagePayload?.listResponseMessage?.description ||
+                          messagePayload?.templateButtonReplyMessage?.selectedDisplayText ||
+                          messagePayload?.templateButtonReplyMessage?.selectedId ||
                           body.text?.message ||
                           body.text ||
                           body.data?.message ||
@@ -130,6 +132,40 @@ export async function POST(request: NextRequest) {
                           (typeof body.data?.text === 'string' ? body.data.text : '') ||
                           ''
                         ) as string;
+
+    if (messagePayload?.buttonsResponseMessage || messagePayload?.templateButtonReplyMessage) {
+      messageType = 'button_reply';
+    } else if (messagePayload?.listResponseMessage) {
+      messageType = 'list_reply';
+    } else if (messagePayload?.stickerMessage) {
+      messageType = 'sticker';
+    } else if (messagePayload?.imageMessage) {
+      messageType = 'image';
+    } else if (messagePayload?.videoMessage) {
+      messageType = 'video';
+    } else if (messagePayload?.audioMessage) {
+      messageType = 'audio';
+    } else if (messagePayload?.documentMessage) {
+      messageType = 'document';
+    } else if (messagePayload?.contactMessage || messagePayload?.contactsArrayMessage) {
+      messageType = 'contact';
+    } else if (messagePayload?.locationMessage) {
+      messageType = 'location';
+    } else if (messagePayload?.reactionMessage) {
+      messageType = 'reaction';
+    }
+
+    let messageContent = messageContentRaw;
+    if (!messageContent || !messageContent.trim()) {
+      if (messageType === 'sticker') messageContent = '[sticker]';
+      else if (messageType === 'image') messageContent = '[image]';
+      else if (messageType === 'video') messageContent = '[video]';
+      else if (messageType === 'audio') messageContent = '[audio]';
+      else if (messageType === 'document') messageContent = '[document]';
+      else if (messageType === 'contact') messageContent = '[contact]';
+      else if (messageType === 'location') messageContent = '[location]';
+      else if (messageType === 'reaction') messageContent = '[reaction]';
+    }
     
     const userName = body.senderName || body.pushName || body.chatName || body.data?.senderName || body.data?.pushName || 'Irmão(ã)';
 
@@ -246,7 +282,7 @@ export async function POST(request: NextRequest) {
     
     const { data: existingUser, error: userError } = await admin
       .from('whatsapp_users')
-      .select('has_sent_first_message')
+      .select('has_sent_first_message, is_active, receives_daily_verse')
       .eq('phone_number', userPhone)
       .maybeSingle();
     
@@ -263,9 +299,10 @@ export async function POST(request: NextRequest) {
     const upsertResult = await admin.from('whatsapp_users').upsert({
       phone_number: userPhone,
       name: userName,
-      is_active: true,
-      receives_daily_verse: true,
+      is_active: existingUser?.is_active ?? true,
+      receives_daily_verse: existingUser?.receives_daily_verse ?? true,
       has_sent_first_message: hasSentFirstMessage,
+      last_interaction_at: new Date().toISOString(),
       updated_at: new Date().toISOString()
     }, { onConflict: 'phone_number' });
     
@@ -324,7 +361,7 @@ export async function POST(request: NextRequest) {
         conversation_type: conversationType,
         message_content: messageContent,
         response_content: 'Processando...', // Placeholder
-        message_type: 'text'
+        message_type: messageType
     };
 
     // Se tivermos messageId, incluímos para garantir unicidade física
@@ -363,9 +400,30 @@ export async function POST(request: NextRequest) {
 
     // Gerar resposta inteligente com IA
     console.log('🤖 Gerando resposta inteligente...');
-    const responseResult = await generateIntelligentResponse(request, messageContent, userName, userPhone, settingsMap);
-    const response = typeof responseResult === 'string' ? responseResult : responseResult.response;
-    const responseThreadId = typeof responseResult === 'object' ? responseResult.threadId : undefined;
+    let response = '';
+    let responseThreadId: string | undefined;
+    const normalizedCommand = normalizeText(messageContent || '');
+    const isReactivateCommand = /\breativar\b/.test(normalizedCommand);
+    const isStopCommand = /\bparar\b/.test(normalizedCommand);
+    const shouldSkipWelcome = isReactivateCommand || isStopCommand;
+
+    if (isReactivateCommand) {
+      await admin
+        .from('whatsapp_users')
+        .update({ is_active: true, updated_at: new Date().toISOString() })
+        .eq('phone_number', userPhone);
+      response = '✅ Mensagens reativadas. Você voltará a receber normalmente.';
+    } else if (isStopCommand) {
+      await admin
+        .from('whatsapp_users')
+        .update({ is_active: false, updated_at: new Date().toISOString() })
+        .eq('phone_number', userPhone);
+      response = '✅ Entendido. Pausamos todas as mensagens. Quando quiser voltar, envie REATIVAR.';
+    } else {
+      const responseResult = await generateIntelligentResponse(request, messageContent, userName, userPhone, settingsMap);
+      response = typeof responseResult === 'string' ? responseResult : responseResult.response;
+      responseThreadId = typeof responseResult === 'object' ? responseResult.threadId : undefined;
+    }
     console.log(`💬 Resposta gerada: "${response}"`);
 
     // Atualizar conversa no banco com a resposta final
@@ -397,7 +455,7 @@ export async function POST(request: NextRequest) {
         conversation_type: detectConversationType(messageContent),
         message_content: messageContent,
         response_content: response,
-        message_type: 'text'
+        message_type: messageType
       };
       if (responseThreadId) {
         conversationData.thread_id = responseThreadId;
@@ -438,7 +496,7 @@ export async function POST(request: NextRequest) {
       console.log(`  - welcomeText length: ${welcomeText.length}`);
       console.log(`  - menuText length: ${menuText.length}`);
       
-      if (sendWelcome) {
+      if (sendWelcome && !shouldSkipWelcome) {
         // Montar mensagem: boas-vindas + menu (se menu estiver ativado)
         const welcomeParts = [welcomeText];
         if (menuEnabled && menuText) {
