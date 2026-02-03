@@ -229,7 +229,19 @@ export async function inlineSend(test: boolean, limit?: number) {
     const lastSentAt = lastLog && lastLog[0]?.created_at ? new Date(lastLog[0].created_at) : null;
     const lastInteractionAt = c.last_interaction_at ? new Date(c.last_interaction_at) : null;
     if (lastSentAt) {
-      if (!lastInteractionAt || lastInteractionAt <= lastSentAt) {
+      let hasInteractionAfterLastSend = !!(lastInteractionAt && lastInteractionAt > lastSentAt);
+      if (!hasInteractionAfterLastSend) {
+        // Fallback para usuários legados: usar histórico de mensagens recebidas
+        // caso last_interaction_at ainda não tenha sido populado.
+        const { data: inboundAfterLastSend } = await adminSupabase
+          .from('whatsapp_conversations')
+          .select('id')
+          .eq('user_phone', phone)
+          .gt('created_at', lastSentAt.toISOString())
+          .limit(1);
+        hasInteractionAfterLastSend = !!(inboundAfterLastSend && inboundAfterLastSend.length > 0);
+      }
+      if (!hasInteractionAfterLastSend) {
         continue;
       }
     }
@@ -329,4 +341,3 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ ok: false, error: e?.message || 'cron_challenge_error' }, { status: 500 });
   }
 }
-

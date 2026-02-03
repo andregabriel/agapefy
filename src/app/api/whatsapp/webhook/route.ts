@@ -73,19 +73,21 @@ export async function POST(request: NextRequest) {
     const userPhone = typeof userPhoneRaw === 'string' ? userPhoneRaw.replace(/\D/g, '') : '';
     // Versão mascarada para logs (mantém apenas últimos 4 dígitos)
     const maskedUserPhone = userPhone ? userPhone.replace(/\d(?=\d{4})/g, 'x') : '';
-    const messageContent = (
-      body.message?.conversation ||
-      body.message?.text ||
-      body.message?.extendedTextMessage?.text ||
-      body.message?.imageMessage?.caption ||
-      body.message?.videoMessage?.caption ||
-      body.message?.documentMessage?.caption ||
-      body.message?.buttonsResponseMessage?.selectedDisplayText ||
-      body.message?.buttonsResponseMessage?.selectedButtonId ||
-      body.message?.listResponseMessage?.title ||
-      body.message?.listResponseMessage?.description ||
-      body.message?.templateButtonReplyMessage?.selectedDisplayText ||
-      body.message?.templateButtonReplyMessage?.selectedId ||
+    const messagePayload = body.message || body.data?.message || {};
+    let messageType = 'text';
+    const messageContentRaw = (
+      messagePayload?.conversation ||
+      messagePayload?.text ||
+      messagePayload?.extendedTextMessage?.text ||
+      messagePayload?.imageMessage?.caption ||
+      messagePayload?.videoMessage?.caption ||
+      messagePayload?.documentMessage?.caption ||
+      messagePayload?.buttonsResponseMessage?.selectedDisplayText ||
+      messagePayload?.buttonsResponseMessage?.selectedButtonId ||
+      messagePayload?.listResponseMessage?.title ||
+      messagePayload?.listResponseMessage?.description ||
+      messagePayload?.templateButtonReplyMessage?.selectedDisplayText ||
+      messagePayload?.templateButtonReplyMessage?.selectedId ||
       body.text?.message ||
       body.text ||
       body.data?.message ||
@@ -101,6 +103,39 @@ export async function POST(request: NextRequest) {
       (typeof body.data?.text === 'string' ? body.data.text : '') ||
       ''
     ) as string;
+    if (messagePayload?.buttonsResponseMessage || messagePayload?.templateButtonReplyMessage) {
+      messageType = 'button_reply';
+    } else if (messagePayload?.listResponseMessage) {
+      messageType = 'list_reply';
+    } else if (messagePayload?.stickerMessage) {
+      messageType = 'sticker';
+    } else if (messagePayload?.imageMessage) {
+      messageType = 'image';
+    } else if (messagePayload?.videoMessage) {
+      messageType = 'video';
+    } else if (messagePayload?.audioMessage) {
+      messageType = 'audio';
+    } else if (messagePayload?.documentMessage) {
+      messageType = 'document';
+    } else if (messagePayload?.contactMessage || messagePayload?.contactsArrayMessage) {
+      messageType = 'contact';
+    } else if (messagePayload?.locationMessage) {
+      messageType = 'location';
+    } else if (messagePayload?.reactionMessage) {
+      messageType = 'reaction';
+    }
+
+    let messageContent = messageContentRaw;
+    if (!messageContent || !messageContent.trim()) {
+      if (messageType === 'sticker') messageContent = '[sticker]';
+      else if (messageType === 'image') messageContent = '[image]';
+      else if (messageType === 'video') messageContent = '[video]';
+      else if (messageType === 'audio') messageContent = '[audio]';
+      else if (messageType === 'document') messageContent = '[document]';
+      else if (messageType === 'contact') messageContent = '[contact]';
+      else if (messageType === 'location') messageContent = '[location]';
+      else if (messageType === 'reaction') messageContent = '[reaction]';
+    }
     const userName = body.senderName || body.pushName || body.chatName || body.data?.senderName || body.data?.pushName || 'Irmão(ã)';
 
     // Log detalhado do que foi extraído
@@ -187,7 +222,9 @@ export async function POST(request: NextRequest) {
       .maybeSingle();
     
     // Verificar se o usuário está ativo
-    if (existingUser && existingUser.is_active === false) {
+    const normalizedMessage = normalizeText(messageContent || '');
+    const requestedReactivate = /\breativar\b/.test(normalizedMessage);
+    if (existingUser && existingUser.is_active === false && !requestedReactivate) {
       console.log(`❌ Usuário ${maskedUserPhone || '***'} está inativo - mensagem ignorada`);
       return NextResponse.json({ 
         status: 'ignored', 
@@ -206,6 +243,7 @@ export async function POST(request: NextRequest) {
       name: userName,
       is_active: existingUser?.is_active ?? true, // Manter status existente ou criar como ativo
       has_sent_first_message: hasSentFirstMessage,
+      last_interaction_at: new Date().toISOString(),
       updated_at: new Date().toISOString()
     }, { onConflict: 'phone_number' });
 
@@ -241,7 +279,7 @@ export async function POST(request: NextRequest) {
       conversation_type: 'intelligent_chat',
       message_content: messageContent,
       response_content: response,
-      message_type: 'text'
+      message_type: messageType
     };
     
     // Adicionar thread_id se disponível (para continuidade de conversa com assistentes)
