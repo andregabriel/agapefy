@@ -386,11 +386,11 @@ function BibliaPageContent() {
       {/* FAB Biblicus (mobile) */}
       <Link
         href="/biblicus"
-        aria-label="Consulte a Bíblia"
+        aria-label="Tire suas dúvidas"
         className="fixed bottom-20 right-4 inline-flex items-center gap-1 h-10 px-3 rounded-full bg-emerald-600 hover:bg-emerald-700 text-white text-sm shadow-lg hover:shadow-xl transition-colors focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2"
       >
         <MessageCircle size={16} />
-        <span className="ml-1">Consulte a Bíblia</span>
+        <span className="ml-1">Tire suas dúvidas</span>
       </Link>
 
       {/* Modal de Busca Bíblica */}

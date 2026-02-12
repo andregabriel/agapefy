@@ -65,9 +65,10 @@ export default function Page() {
 
   const suggestions = useMemo(
     () => [
-      "Como devo tratar as outras pessoas?",
-      "Quem cuida de mim quando tudo parece faltar?",
-      "Como posso suportar e vencer as dificuldades?",
+      "Como interpretar a Bíblia corretamente?",
+      "O que fazer quando estou com ansiedade?",
+      "Como entender o livro de Apocalipse?",
+      "Como perdoar alguém que me feriu?",
     ],
     []
   );
