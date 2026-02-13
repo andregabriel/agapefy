@@ -62,13 +62,11 @@ test("anonymous clicking play on audio page redirects to /login", async ({ page 
 
   await page.goto("/player/audio/test-audio", { waitUntil: "domcontentloaded" });
 
-  const playButton = page.locator("button.bg-green-500");
+  const playButton = page.locator("button.bg-green-500:visible");
   await expect(playButton).toBeVisible({ timeout: 60_000 });
   await playButton.click();
 
   await page.waitForURL(/\/login(\?|$)/, { timeout: 60_000 });
   await expect(page).toHaveURL(/\/login(\?|$)/);
 });
-
-
 

@@ -1,0 +1,16 @@
+export const PAYWALL_COLORS = {
+  gold: '#E5A100',
+  goldLight: '#FFF8E7',
+  goldDark: '#C48D00',
+  dark: '#1A1A2E',
+  darkSoft: '#2D2D44',
+  white: '#FFFFFF',
+  offWhite: '#FAFAF8',
+  warmGray: '#F5F3EF',
+  textDark: '#1A1A2E',
+  textMedium: '#5A5A6E',
+  textLight: '#8A8A9E',
+  green: '#2D8F4E',
+  greenLight: '#E8F5EC',
+  red: '#D94444',
+} as const;

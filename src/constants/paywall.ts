@@ -62,6 +62,15 @@ export interface PaywallScreenConfig {
   testimonials: PaywallTestimonial[];
 }
 
+export interface PaywallCheckoutLinks {
+  offer_cta: string;
+  promo: string;
+  anual: string;
+  mensal: string;
+  anual_avista: string;
+  familia: string;
+}
+
 export const DEFAULT_PAYWALL_SCREEN_CONFIG: PaywallScreenConfig = {
   title: 'Sua conta vem com uma avaliação gratuita de 30 dias!',
   description:
@@ -88,6 +97,15 @@ export const DEFAULT_PAYWALL_SCREEN_CONFIG: PaywallScreenConfig = {
       rating: 5,
     },
   ],
+};
+
+export const DEFAULT_PAYWALL_CHECKOUT_LINKS: PaywallCheckoutLinks = {
+  offer_cta: 'https://clkdmg.site/subscribe/plano-mensal-agapefy/1click',
+  promo: 'https://clkdmg.site/subscribe/plano-mensal-agapefy/1click',
+  anual: 'https://clkdmg.site/subscribe/agapefy-plano-anual/1click',
+  mensal: 'https://clkdmg.site/subscribe/plano-mensal-agapefy/1click',
+  anual_avista: 'https://clkdmg.site/subscribe/agapefy-plano-anual/1click',
+  familia: 'https://clkdmg.site/subscribe/agapefy-plano-anual/1click',
 };
 
 function normalizeLimitedAccessConfig(
@@ -167,3 +185,33 @@ export function parsePaywallScreenConfig(raw?: string | null): PaywallScreenConf
   }
 }
 
+function normalizeCheckoutUrl(raw: unknown, fallback: string): string {
+  if (typeof raw !== 'string') return fallback;
+  return raw.trim();
+}
+
+export function parsePaywallCheckoutLinks(raw?: string | null): PaywallCheckoutLinks {
+  if (!raw) return DEFAULT_PAYWALL_CHECKOUT_LINKS;
+  try {
+    const parsed = JSON.parse(raw);
+    return {
+      offer_cta: normalizeCheckoutUrl(
+        parsed?.offer_cta,
+        DEFAULT_PAYWALL_CHECKOUT_LINKS.offer_cta,
+      ),
+      promo: normalizeCheckoutUrl(parsed?.promo, DEFAULT_PAYWALL_CHECKOUT_LINKS.promo),
+      anual: normalizeCheckoutUrl(parsed?.anual, DEFAULT_PAYWALL_CHECKOUT_LINKS.anual),
+      mensal: normalizeCheckoutUrl(parsed?.mensal, DEFAULT_PAYWALL_CHECKOUT_LINKS.mensal),
+      anual_avista: normalizeCheckoutUrl(
+        parsed?.anual_avista,
+        DEFAULT_PAYWALL_CHECKOUT_LINKS.anual_avista,
+      ),
+      familia: normalizeCheckoutUrl(
+        parsed?.familia,
+        DEFAULT_PAYWALL_CHECKOUT_LINKS.familia,
+      ),
+    };
+  } catch {
+    return DEFAULT_PAYWALL_CHECKOUT_LINKS;
+  }
+}

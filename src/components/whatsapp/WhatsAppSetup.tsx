@@ -698,9 +698,13 @@ export default function WhatsAppSetup({ variant = "standalone", redirectIfNotLog
     fetchUserChallenges();
   }, [phone, phoneNumber, countryCode, user?.id, session?.access_token, attemptedOnboardingLink, dailyPrayer]);
 
-  // Auto-save when both challenge and time are set.
+  // Auto-save when both challenge and time are set (standalone only).
   // Importante: se já estiver ativo, NÃO auto-salvar troca de desafio sem confirmação no botão "Trocar para novo desafio".
+  // No onboarding (embedded), o vínculo da jornada é feito após salvar o telefone via onSavedPhone.
   useEffect(() => {
+    if (variant === "embedded") {
+      return;
+    }
     // Só salvar se tiver número salvo ou user_id
     const clean = getFullPhoneNumber();
     const allowAutoSave =
@@ -886,12 +890,12 @@ export default function WhatsAppSetup({ variant = "standalone", redirectIfNotLog
       
       if (error) {
         // Log do erro mas não quebra a UX
-        console.error('Erro ao salvar jornada:', error);
+        console.warn('Falha ao salvar jornada (não bloqueante):', error);
         // Não mostrar toast para não atrapalhar a experiência
       }
     } catch (e: any) {
       // Log do erro mas não quebra a UX
-      console.error('Erro ao salvar jornada:', e);
+      console.warn('Falha ao salvar jornada (não bloqueante):', e);
       // Não mostrar toast para não atrapalhar a experiência
     }
   }

@@ -211,16 +211,19 @@ test.describe("player permissions (logged in)", () => {
 
     // First audio: allowed
     await page.goto("/player/audio/audio-1", { waitUntil: "domcontentloaded" });
-    await expect(page.locator("button.bg-green-500")).toBeVisible({ timeout: 60_000 });
-    await page.locator("button.bg-green-500").click();
+    const playButtonFirstAudio = page.locator("button.bg-green-500:visible");
+    await expect(playButtonFirstAudio).toBeVisible({ timeout: 60_000 });
+    await playButtonFirstAudio.click();
 
     // Second audio (new): should be blocked and open paywall
     await page.goto("/player/audio/audio-2", { waitUntil: "domcontentloaded" });
-    await expect(page.locator("button.bg-green-500")).toBeVisible({ timeout: 60_000 });
-    await page.locator("button.bg-green-500").click();
+    const playButtonSecondAudio = page.locator("button.bg-green-500:visible");
+    await expect(playButtonSecondAudio).toBeVisible({ timeout: 60_000 });
+    await playButtonSecondAudio.click();
 
-    // Paywall modal content (from DEFAULT_PAYWALL_SCREEN_CONFIG)
-    await expect(page.getByText("30 Dias por R$ 0,00")).toBeVisible({ timeout: 60_000 });
+    await expect(page.getByText("Comece cada dia", { exact: false })).toBeVisible({
+      timeout: 60_000,
+    });
   });
 
   test("active_subscription: full access bypasses /api/free-plays/check", async ({ page }) => {
@@ -288,8 +291,9 @@ test.describe("player permissions (logged in)", () => {
     );
 
     await page.goto("/player/audio/audio-3", { waitUntil: "domcontentloaded" });
-    await expect(page.locator("button.bg-green-500")).toBeVisible({ timeout: 60_000 });
-    await page.locator("button.bg-green-500").click();
+    const playButton = page.locator("button.bg-green-500:visible");
+    await expect(playButton).toBeVisible({ timeout: 60_000 });
+    await playButton.click();
 
     await expect.poll(() => freePlaysHit).toBe(false);
   });
@@ -359,11 +363,10 @@ test.describe("player permissions (logged in)", () => {
     );
 
     await page.goto("/player/audio/audio-4", { waitUntil: "domcontentloaded" });
-    await expect(page.locator("button.bg-green-500")).toBeVisible({ timeout: 60_000 });
-    await page.locator("button.bg-green-500").click();
+    const playButton = page.locator("button.bg-green-500:visible");
+    await expect(playButton).toBeVisible({ timeout: 60_000 });
+    await playButton.click();
 
     await expect.poll(() => freePlaysHit).toBe(false);
   });
 });
-
-

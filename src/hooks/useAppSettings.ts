@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import { logger } from '@/lib/logger';
 import {
+  DEFAULT_PAYWALL_CHECKOUT_LINKS,
   DEFAULT_PAYWALL_PERMISSIONS,
   DEFAULT_PAYWALL_SCREEN_CONFIG,
 } from '@/constants/paywall';
@@ -97,6 +98,8 @@ interface AppSettings {
   // Paywall / assinaturas
   paywall_permissions?: string;
   paywall_screen_config?: string;
+  paywall_checkout_links?: string;
+  paywall_show_ratings_badge?: string;
 }
 
 const DEFAULT_SETTINGS: AppSettings = {
@@ -180,6 +183,8 @@ const DEFAULT_SETTINGS: AppSettings = {
   // Paywall / assinaturas
   paywall_permissions: JSON.stringify(DEFAULT_PAYWALL_PERMISSIONS),
   paywall_screen_config: JSON.stringify(DEFAULT_PAYWALL_SCREEN_CONFIG),
+  paywall_checkout_links: JSON.stringify(DEFAULT_PAYWALL_CHECKOUT_LINKS),
+  paywall_show_ratings_badge: 'false',
 };
 
 export function useAppSettings() {

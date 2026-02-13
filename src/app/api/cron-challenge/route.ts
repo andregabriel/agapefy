@@ -52,29 +52,20 @@ async function sendWhatsAppText(phone: string, message: string) {
   return { ok: res.ok, status: res.status, body: txt } as const;
 }
 
-async function sendWhatsAppButtonList(phone: string, message: string, buttonLabels: string[]) {
-  const ZAPI_INSTANCE_NAME = process.env.ZAPI_INSTANCE_NAME || '';
-  const ZAPI_TOKEN = process.env.ZAPI_TOKEN || '';
-  const ZAPI_CLIENT_TOKEN = process.env.ZAPI_CLIENT_TOKEN || '';
-  if (!ZAPI_INSTANCE_NAME || !ZAPI_TOKEN || !ZAPI_CLIENT_TOKEN) {
-    return { ok: false, status: 500, error: 'zapi_missing_env' } as const;
+function providerAcceptedSend(response: { ok: boolean; body?: string }) {
+  if (!response.ok) return false;
+  const body = (response.body || '').trim();
+  if (!body) return true;
+  try {
+    const parsed = JSON.parse(body) as Record<string, unknown>;
+    if (parsed.error) return false;
+    if (parsed.success === false) return false;
+    if (typeof parsed.status === 'string' && parsed.status.toLowerCase() === 'error') return false;
+    return true;
+  } catch {
+    // Some providers can return text payloads; keep acceptance tied to HTTP success.
+    return true;
   }
-  const ZAPI_BASE_URL = `https://api.z-api.io/instances/${ZAPI_INSTANCE_NAME}/token/${ZAPI_TOKEN}`;
-  const buttons = buttonLabels.map((label, index) => ({
-    id: String(index + 1),
-    label,
-  }));
-  const res = await fetch(`${ZAPI_BASE_URL}/send-button-list`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'Client-Token': ZAPI_CLIENT_TOKEN },
-    body: JSON.stringify({
-      phone,
-      message,
-      buttonList: { buttons },
-    }),
-  });
-  const txt = await res.text().catch(() => '');
-  return { ok: res.ok, status: res.status, body: txt } as const;
 }
 
 export async function inlineSend(test: boolean, limit?: number) {
@@ -269,7 +260,7 @@ Ouça agora: ${audioUrl}
 
 *Agapefy* - Ore. Conecte-se. Transforme. ✨
 
-Para receber a próxima mensagem, toque em "Quero receber" ou responda qualquer coisa.
+Para receber a próxima mensagem, responda qualquer coisa.
 Para parar, responda PARAR.`;
 
     if (!test) {
@@ -292,13 +283,12 @@ Para parar, responda PARAR.`;
         continue;
       }
 
-      let res = await sendWhatsAppButtonList(phone, message, ['Quero receber']);
-      if (!res.ok) {
-        res = await sendWhatsAppText(phone, message);
-      }
-      if (res.ok) {
+      const res = await sendWhatsAppText(phone, message);
+      if (providerAcceptedSend(res)) {
         sentCount++;
       } else {
+        const maskedPhone = phone.replace(/\d(?=\d{4})/g, 'x');
+        console.log(`Send rejected for ${maskedPhone} status=${res.status} body=${(res.body || '').slice(0, 200)}`);
         // If send failed, remove the log entry so it can be retried later
         await adminSupabase
           .from('whatsapp_challenge_log')
