@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
+import { authFetch } from '@/lib/auth-fetch';
 import { User, Edit, Trash2, Plus, Search } from 'lucide-react';
 import UserModal from './UserModal';
 
@@ -11,7 +12,11 @@ interface Profile {
   full_name: string;
   role: string;
   created_at: string;
-  email?: string;
+  email?: string | null;
+  subscription_access?: 'active' | 'inactive' | 'none';
+  subscription_provider_status?: string | null;
+  subscription_updated_at?: string | null;
+  subscription_cancel_at_cycle_end?: boolean | null;
 }
 
 export default function UsersManagement() {
@@ -28,33 +33,21 @@ export default function UsersManagement() {
   const fetchUsers = async () => {
     try {
       setLoading(true);
-      
-      // Buscar perfis com emails dos usuários
-      const { data: profiles, error: profilesError } = await supabase
-        .from('profiles')
-        .select('*')
-        .order('created_at', { ascending: false });
+      const response = await authFetch('/api/admin/users', {
+        method: 'GET',
+      });
 
-      if (profilesError) throw profilesError;
-
-      // Buscar emails dos usuários da tabela auth.users
-      const { data: authUsers, error: authError } = await supabase
-        .from('auth.users')
-        .select('id, email');
-
-      if (authError) {
-        console.error('Erro ao buscar emails:', authError);
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`);
       }
 
-      // Combinar dados
-      const usersWithEmails = profiles?.map(profile => ({
-        ...profile,
-        email: authUsers?.find(user => user.id === profile.id)?.email || 'Email não encontrado'
-      })) || [];
-
-      setUsers(usersWithEmails);
+      const payload = (await response.json()) as {
+        users?: Profile[];
+      };
+      setUsers(payload.users || []);
     } catch (error) {
-      console.error('Erro ao buscar usuários:', error);
+      console.warn('Falha ao buscar usuários no admin:', error);
+      setUsers([]);
     } finally {
       setLoading(false);
     }
@@ -81,7 +74,8 @@ export default function UsersManagement() {
   const filteredUsers = users.filter(user =>
     user.full_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     user.username?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    user.email?.toLowerCase().includes(searchTerm.toLowerCase())
+    user.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    user.subscription_provider_status?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   if (loading) {
@@ -139,6 +133,9 @@ export default function UsersManagement() {
                   Role
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Assinatura
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Criado em
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -163,7 +160,7 @@ export default function UsersManagement() {
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {user.email}
+                    {user.email || 'Email não encontrado'}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
@@ -173,6 +170,29 @@ export default function UsersManagement() {
                     }`}>
                       {user.role}
                     </span>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="flex flex-col gap-1">
+                      <span className={`inline-flex w-fit px-2 py-1 text-xs font-semibold rounded-full ${
+                        user.subscription_access === 'active'
+                          ? 'bg-emerald-100 text-emerald-800'
+                          : user.subscription_access === 'inactive'
+                            ? 'bg-amber-100 text-amber-800'
+                            : 'bg-gray-100 text-gray-700'
+                      }`}>
+                        {user.subscription_access === 'active'
+                          ? 'Ativa'
+                          : user.subscription_access === 'inactive'
+                            ? 'Sem assinatura ativa'
+                            : 'Sem registro'}
+                      </span>
+                      {user.subscription_provider_status && (
+                        <span className="text-xs text-gray-500">
+                          Guru: {user.subscription_provider_status}
+                          {user.subscription_cancel_at_cycle_end ? ' · cancela no fim do ciclo' : ''}
+                        </span>
+                      )}
+                    </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                     {new Date(user.created_at).toLocaleDateString()}

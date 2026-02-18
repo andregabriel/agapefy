@@ -19,10 +19,10 @@ describe('classifyUserTypeFromSubscriptions', () => {
     });
   });
 
-  it('prefers active_subscription when status is active/paid even if trial fields exist', () => {
+  it('returns active_subscription only when status is active', () => {
     const rows: AssinaturaRow[] = [
       {
-        status: 'paid',
+        status: 'active',
         trial_days: 30,
         trial_started_at: '2026-01-01T00:00:00.000Z',
         trial_finished_at: '2026-02-01T00:00:00.000Z',
@@ -37,7 +37,7 @@ describe('classifyUserTypeFromSubscriptions', () => {
     });
   });
 
-  it('returns trial when status is trialing', () => {
+  it('returns no_subscription when status is trialing (MVP sem trial)', () => {
     const rows: AssinaturaRow[] = [
       {
         status: 'trialing',
@@ -49,16 +49,16 @@ describe('classifyUserTypeFromSubscriptions', () => {
     ];
 
     expect(classifyUserTypeFromSubscriptions(rows)).toEqual({
-      userType: 'trial',
+      userType: 'no_subscription',
       hasActiveSubscription: false,
-      hasActiveTrial: true,
+      hasActiveTrial: false,
     });
   });
 
-  it('returns no_subscription when trial is finished and status is not active', () => {
+  it('returns no_subscription when status is not active', () => {
     const rows: AssinaturaRow[] = [
       {
-        status: 'expired',
+        status: 'pastdue',
         trial_days: 30,
         trial_started_at: '2025-11-01T00:00:00.000Z',
         trial_finished_at: '2025-12-01T00:00:00.000Z',
@@ -72,7 +72,23 @@ describe('classifyUserTypeFromSubscriptions', () => {
       hasActiveTrial: false,
     });
   });
+
+  it('normalizes status casing/whitespace before classifying', () => {
+    const rows: AssinaturaRow[] = [
+      {
+        status: '  ACTIVE  ',
+        trial_days: 0,
+        trial_started_at: null,
+        trial_finished_at: null,
+        cancel_at_cycle_end: true,
+      },
+    ];
+
+    expect(classifyUserTypeFromSubscriptions(rows)).toEqual({
+      userType: 'active_subscription',
+      hasActiveSubscription: true,
+      hasActiveTrial: false,
+    });
+  });
 });
-
-
 

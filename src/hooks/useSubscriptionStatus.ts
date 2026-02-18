@@ -10,6 +10,11 @@ interface SubscriptionStatus {
   hasActiveTrial: boolean;
 }
 
+interface FetchStatusOptions {
+  silent?: boolean;
+  force?: boolean;
+}
+
 const DEFAULT_STATUS: SubscriptionStatus = {
   userType: 'anonymous',
   hasActiveSubscription: false,
@@ -23,12 +28,21 @@ export function useSubscriptionStatus() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const requestIdRef = useRef(0);
+  const lastFetchAtRef = useRef(0);
 
-  const fetchStatus = useCallback(async () => {
+  const fetchStatus = useCallback(async (options: FetchStatusOptions = {}) => {
+    const { silent = false, force = false } = options;
+    const now = Date.now();
+    if (!force && now - lastFetchAtRef.current < 1500) {
+      return;
+    }
+
     const requestId = requestIdRef.current + 1;
     requestIdRef.current = requestId;
     try {
-      setLoading(true);
+      if (!silent) {
+        setLoading(true);
+      }
       setError(null);
       const res = await fetch('/api/subscription/status', {
         method: 'GET',
@@ -57,6 +71,7 @@ export function useSubscriptionStatus() {
         hasActiveSubscription: !!data.hasActiveSubscription,
         hasActiveTrial: !!data.hasActiveTrial,
       });
+      lastFetchAtRef.current = Date.now();
     } catch (e) {
       // eslint-disable-next-line no-console
       console.error('useSubscriptionStatus: erro ao buscar status', e);
@@ -67,7 +82,9 @@ export function useSubscriptionStatus() {
       setStatus(DEFAULT_STATUS);
     } finally {
       if (requestIdRef.current === requestId) {
-        setLoading(false);
+        if (!silent) {
+          setLoading(false);
+        }
       }
     }
   }, []);
@@ -87,13 +104,45 @@ export function useSubscriptionStatus() {
       return;
     }
 
-    fetchStatus();
+    void fetchStatus({ force: true });
   }, [authLoading, userId, fetchStatus]);
+
+  useEffect(() => {
+    if (authLoading || !userId || typeof window === 'undefined') {
+      return;
+    }
+
+    const refreshSilently = () => {
+      void fetchStatus({ silent: true });
+    };
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        refreshSilently();
+      }
+    };
+
+    const intervalId = window.setInterval(refreshSilently, 60_000);
+    window.addEventListener('focus', refreshSilently);
+    window.addEventListener('pageshow', refreshSilently);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      window.clearInterval(intervalId);
+      window.removeEventListener('focus', refreshSilently);
+      window.removeEventListener('pageshow', refreshSilently);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [authLoading, userId, fetchStatus]);
+
+  const refetch = useCallback(() => {
+    void fetchStatus({ force: true });
+  }, [fetchStatus]);
 
   return {
     ...status,
     loading,
     error,
-    refetch: fetchStatus,
+    refetch,
   };
 }

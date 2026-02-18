@@ -21,17 +21,17 @@ export function classifyUserTypeFromSubscriptions(rows: AssinaturaRow[]): {
     };
   }
 
-  const now = new Date();
   const normalized = rows.map((row) => ({
-    status: (row.status || '').toLowerCase(),
+    status: (row.status || '').trim().toLowerCase(),
     trial_days: row.trial_days ?? 0,
     trial_started_at: row.trial_started_at ? new Date(row.trial_started_at) : null,
     trial_finished_at: row.trial_finished_at ? new Date(row.trial_finished_at) : null,
     cancel_at_cycle_end: !!row.cancel_at_cycle_end,
   }));
 
-  // Se o status já é pago/ativo, isso deve prevalecer sobre datas de trial.
-  const activeStatuses = ['active', 'paid', 'authorized'];
+  // MVP: apenas status "active" concede acesso total.
+  // Trial não concede acesso nessa fase.
+  const activeStatuses = ['active'];
   const hasActiveSubscription = normalized.some((row) => activeStatuses.includes(row.status));
 
   if (hasActiveSubscription) {
@@ -42,34 +42,11 @@ export function classifyUserTypeFromSubscriptions(rows: AssinaturaRow[]): {
     };
   }
 
-  // trialing é um status explícito de trial (quando o provedor envia assim)
-  const hasExplicitTrialingStatus = normalized.some((row) => row.status === 'trialing');
-
-  const hasActiveTrial =
-    hasExplicitTrialingStatus ||
-    normalized.some((row) => {
-      if (!row.trial_days || row.trial_days <= 0) return false;
-      if (row.trial_finished_at && row.trial_finished_at < now) return false;
-      if (row.status === 'canceled' || row.status === 'cancelled' || row.status === 'expired') {
-        return false;
-      }
-      return true;
-    });
-
-  if (hasActiveTrial) {
-    return {
-      userType: 'trial',
-      hasActiveSubscription: false,
-      hasActiveTrial: true,
-    };
-  }
-
   return {
     userType: 'no_subscription',
     hasActiveSubscription: false,
     hasActiveTrial: false,
   };
 }
-
 
 

@@ -24,6 +24,7 @@ export async function GET(_req: NextRequest) {
         hasActiveTrial: false,
       });
     }
+    const normalizedUserEmail = user.email.trim().toLowerCase();
 
     const admin = getAdminSupabase();
 
@@ -48,7 +49,9 @@ export async function GET(_req: NextRequest) {
       .select(
         'status, trial_days, trial_started_at, trial_finished_at, cancel_at_cycle_end',
       )
-      .eq('subscriber_email', user.email)
+      // Busca case-insensitive para suportar registros antigos
+      // antes da normalização de e-mail no webhook.
+      .ilike('subscriber_email', normalizedUserEmail)
       .order('created_at', { ascending: false })
       .limit(10);
 
@@ -80,5 +83,4 @@ export async function GET(_req: NextRequest) {
     );
   }
 }
-
 

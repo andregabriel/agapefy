@@ -4,10 +4,24 @@ import { getAdminSupabase } from '@/lib/supabase-admin';
 // Token de API do Digital Manager Guru (configurado no .env)
 const DMG_API_TOKEN = process.env.DMG_API_TOKEN || '';
 
+function normalizeEmail(value: unknown): string | null {
+  if (typeof value !== 'string') return null;
+  const normalized = value.trim().toLowerCase();
+  return normalized || null;
+}
+
+function parseDate(value: unknown): Date | null {
+  if (typeof value !== 'string' || !value.trim()) return null;
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return null;
+  return parsed;
+}
+
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     console.log('🔔 Webhook de assinatura recebido:', JSON.stringify(body, null, 2));
+    const requestId = request.headers.get('x-request-id') || null;
 
     // Validar token de API (aceita no header Authorization OU no corpo do JSON)
     if (DMG_API_TOKEN) {
@@ -52,9 +66,32 @@ export async function POST(request: NextRequest) {
     // Verificar se já existe uma assinatura com esse subscription_id
     const { data: existingSubscription } = await supabase
       .from('assinaturas')
-      .select('id')
+      .select('id, last_status_at')
       .eq('subscription_id', subscriptionData.subscription_id)
       .maybeSingle();
+
+    const existingLastStatusAt = parseDate(existingSubscription?.last_status_at);
+    const incomingLastStatusAt = parseDate(subscriptionData.last_status_at);
+    // Evita regressão de status quando um webhook antigo chega depois.
+    if (
+      existingSubscription &&
+      existingLastStatusAt &&
+      incomingLastStatusAt &&
+      incomingLastStatusAt.getTime() < existingLastStatusAt.getTime()
+    ) {
+      console.log('⏭️ Webhook antigo ignorado por last_status_at:', {
+        subscription_id: subscriptionData.subscription_id,
+        existingLastStatusAt: existingSubscription.last_status_at,
+        incomingLastStatusAt: subscriptionData.last_status_at,
+        requestId,
+      });
+      return NextResponse.json({
+        status: 'ignored',
+        reason: 'stale_event',
+        subscription_id: subscriptionData.subscription_id,
+        request_id: requestId,
+      });
+    }
 
     if (existingSubscription) {
       // Atualizar assinatura existente
@@ -91,6 +128,7 @@ export async function POST(request: NextRequest) {
       subscription_id: subscriptionData.subscription_id,
       subscriber_email: subscriptionData.subscriber_email,
       status_assinatura: subscriptionData.status,
+      request_id: requestId,
       timestamp: new Date().toISOString()
     });
 
@@ -111,6 +149,9 @@ export async function POST(request: NextRequest) {
  * Extrai e formata os dados mais importantes do webhook para a tabela assinaturas
  */
 function extractSubscriptionData(body: any) {
+  const normalizedSubscriberEmail = normalizeEmail(
+    body.subscriber?.email || body.last_transaction?.contact?.email || null,
+  );
   return {
     // IDs do sistema de pagamento
     subscription_id: body.id || '',
@@ -118,12 +159,15 @@ function extractSubscriptionData(body: any) {
     subscription_code: body.subscription_code || null,
 
     // Status da assinatura
-    status: body.last_status || 'unknown',
+    status:
+      typeof body.last_status === 'string' && body.last_status.trim()
+        ? body.last_status.trim().toLowerCase()
+        : 'unknown',
 
     // Informações do assinante
     subscriber_id: body.subscriber?.id || '',
     subscriber_name: body.subscriber?.name || null,
-    subscriber_email: body.subscriber?.email || null,
+    subscriber_email: normalizedSubscriberEmail,
     subscriber_doc: body.subscriber?.doc || null,
     subscriber_phone: body.subscriber?.phone_number || null,
     subscriber_phone_local_code: body.subscriber?.phone_local_code || null,
