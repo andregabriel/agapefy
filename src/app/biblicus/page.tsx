@@ -277,7 +277,7 @@ export default function Page() {
               <p>• As respostas são baseadas exclusivamente na Bíblia.</p>
               <p>• Os versículos que fundamentam cada resposta são sempre informados.</p>
               <p>• As respostas não substituem sua leitura pessoal nem a orientação de seu pastor.</p>
-              <p>• As respostas podem cometer erros. Por isso, considere confirmar as informações apresentadas.</p>
+              <p>• As respostas podem conter erros. Por isso, considere confirmar as informações apresentadas.</p>
               <p>
                 • Caso identifique algo incorreto ou queira enviar sugestões, deixe seu feedback
                 <a className="underline ml-1" href="mailto:feedback@agapefy.com">aqui</a>.
