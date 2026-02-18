@@ -132,11 +132,12 @@ export default function Page() {
         <h1 className="text-lg font-semibold">Respostas baseadas na Bíblia</h1>
         <div className="ml-auto">
           <button
-            className="text-sm underline"
+            className="text-sm text-zinc-500 hover:text-zinc-700"
             aria-haspopup="dialog"
+            aria-label="Sobre"
             onClick={() => setShowRules(true)}
           >
-            Sobre
+            (i)
           </button>
         </div>
       </header>
@@ -270,27 +271,16 @@ export default function Page() {
           >
             <div className="flex items-center gap-2 mb-2">
               <span className="text-xl">📖</span>
-              <h2 className="font-semibold">Regras</h2>
+              <h2 className="font-semibold">Sobre</h2>
             </div>
             <div className="text-sm text-zinc-700 space-y-2">
-              <p>• Respostas apenas com base na Bíblia.</p>
-              <p>• Cito versículos relevantes quando aplicável.</p>
-              <p>• Preservo a neutralidade em temas polêmicos.</p>
-              <p>• Informo quando o tema não tem resposta direta na Bíblia.</p>
-            </div>
-            <div className="mt-4 text-sm text-zinc-700 space-y-2">
-              <div className="font-medium">ℹ️ Respostas do Biblicus</div>
-              <p>O Biblicus é um chatbot que usa tecnologia de inteligência artificial para responder com base nos textos da Bíblia Sagrada.</p>
-              <p>Ele pode ajudar a localizar passagens e oferecer explicações bíblicas, mas:</p>
-              <ul className="list-disc pl-5 space-y-1">
-                <li>Pode conter erros ou limitações, pois é uma tecnologia em constante aprendizado.</li>
-                <li>Não substitui a leitura pessoal da Bíblia, nem a orientação de líderes espirituais (pastores, padres, mestres ou conselheiros de fé).</li>
-                <li>As interpretações bíblicas podem variar entre tradições religiosas.</li>
-              </ul>
-              <p>Use o Biblicus como apoio, sempre confirmando nas Escrituras e dialogando com sua comunidade de fé.</p>
+              <p>• As respostas são baseadas exclusivamente na Bíblia.</p>
+              <p>• Os versículos que fundamentam cada resposta são sempre informados.</p>
+              <p>• As respostas não substituem sua leitura pessoal nem a orientação de seu pastor.</p>
+              <p>• As respostas podem cometer erros. Por isso, considere confirmar as informações apresentadas.</p>
               <p>
-                Se notar algo incorreto ou quiser dar sugestões,
-                <a className="underline ml-1" href="mailto:feedback@agapefy.com">envie seu feedback aqui</a>.
+                • Caso identifique algo incorreto ou queira enviar sugestões, deixe seu feedback
+                <a className="underline ml-1" href="mailto:feedback@agapefy.com">aqui</a>.
               </p>
             </div>
             <div className="mt-4 flex justify-end">
