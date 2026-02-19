@@ -218,7 +218,7 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
               ? 'pb-44'
               : 'pb-24'
             : ''
-        } ${!hideHeader ? 'pt-16' : ''}`}
+        } ${!hideHeader ? 'pt-16 bg-[#FAFAF7]' : ''}`}
       >
         {shouldBlockRender ? null : children}
       </main>

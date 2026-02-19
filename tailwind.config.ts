@@ -10,6 +10,17 @@ export default {
   theme: {
     extend: {
       colors: {
+        brand: {
+          navy: "#1A2744",
+          gold: "#B8924A",
+          goldLight: "#D4B06A",
+          bg: "#FAFAF7",
+          warm: "#F5F0E8",
+          border: "#EEEBE5",
+          muted: "#9A9A9A",
+          success: "#3D8B5F",
+          successLight: "#E8F5EE",
+        },
         background: "hsl(var(--background))",
         foreground: "hsl(var(--foreground))",
         card: {
