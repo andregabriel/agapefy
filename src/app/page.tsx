@@ -3,15 +3,15 @@
 import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
-import { logger } from '@/lib/logger';
 
 // Importar o componente da home atual
 import HomePage from './home/page';
 
 export default function RootPage() {
-  const { user, loading } = useAuth();
+  const { loading } = useAuth();
   const router = useRouter();
   const [clientLoaded, setClientLoaded] = useState(false);
+  void HomePage;
 
   // Evita mismatch de hidratação: só renderizamos conteúdo real após o mount do cliente.
   useEffect(() => {
@@ -19,10 +19,10 @@ export default function RootPage() {
   }, []);
 
   useEffect(() => {
-    if (user && !loading) {
+    if (clientLoaded && !loading) {
       router.replace('/hoje');
     }
-  }, [user, loading, router]);
+  }, [clientLoaded, loading, router]);
 
   // Loading state - aguardamos apenas o mount do cliente para evitar mismatch de hidratação.
   if (!clientLoaded) {
@@ -36,14 +36,7 @@ export default function RootPage() {
     );
   }
 
-  // Visitante (sem login): sempre pode ver a Home.
-  if (!user) {
-    return <HomePage />;
-  }
-
-  // Usuário logado: enquanto o auth finaliza, mantemos o loading (evita flicker).
   if (loading) {
-    logger.debug('🔄 Usuário logado, aguardando auth finalizar...');
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-900 via-gray-800 to-black">
         <div className="text-center text-white">

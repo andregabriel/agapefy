@@ -1,6 +1,6 @@
 "use client";
 
-import { Home, Book, User, Sun } from 'lucide-react';
+import { Book, User, Sun } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useLayoutEffect, useRef } from 'react';
@@ -33,9 +33,26 @@ const WhatsAppIcon = ({ size = 24 }: { size?: number }) => (
   </svg>
 );
 
+const PrayerIcon = ({ size = 24 }: { size?: number }) => (
+  <svg
+    width={size}
+    height={size}
+    viewBox="0 0 24 24"
+    fill="none"
+    xmlns="http://www.w3.org/2000/svg"
+    stroke="currentColor"
+    strokeWidth="1.5"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
+    <path d="M12 2C12 2 9 7 9 10c0 1.5.5 2.5 1.5 3.2L9 22h6l-1.5-8.8c1-.7 1.5-1.7 1.5-3.2 0-3-3-8-3-8z" />
+    <path d="M9.5 10c0-2 1-4.5 2.5-7 1.5 2.5 2.5 5 2.5 7" />
+  </svg>
+);
+
 const navItems = [
   { href: '/hoje', icon: Sun, label: 'Hoje' },
-  { href: '/', icon: Home, label: 'Orações' },
+  { href: '/home', icon: PrayerIcon, label: 'Orações' },
   { href: '/biblia', icon: Book, label: 'Bíblia' },
   { href: '/whatsapp', icon: WhatsAppIcon, label: 'WhatsApp' },
   { href: '/eu', icon: User, label: 'Você' },
@@ -85,8 +102,8 @@ export const BottomNavigation = () => {
               href={href}
               className={cn(
                 "flex flex-col items-center py-2 px-3 rounded-lg transition-colors",
-                isActive 
-                  ? "text-green-500" 
+                isActive
+                  ? href === '/hoje' ? "text-[#B8924A]" : "text-green-500"
                   : "text-gray-400 hover:text-white"
               )}
             >

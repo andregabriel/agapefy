@@ -111,8 +111,8 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
         }
         if (json?.pending && typeof json?.nextStep === 'number') {
           if (!alreadyRedirected) {
-            keepBlocking = true;
-            setOnboardingGateReadyForUser(null);
+            // keepBlocking = true; // DESATIVADO junto com onboarding
+            // setOnboardingGateReadyForUser(null); // DESATIVADO junto com onboarding
             // ONBOARDING DESATIVADO TEMPORARIAMENTE - reativar na Fase 2 pós-MVP
             // router.replace(`/onboarding?step=${json.nextStep}`);
             try {
@@ -166,8 +166,8 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
         if (aborted) return;
         if (!data?.phone_number) {
           if (!alreadyRedirected) {
-            keepBlocking = true;
-            setOnboardingGateReadyForUser(null);
+            // keepBlocking = true; // DESATIVADO junto com onboarding
+            // setOnboardingGateReadyForUser(null); // DESATIVADO junto com onboarding
             // ONBOARDING DESATIVADO TEMPORARIAMENTE - reativar na Fase 2 pós-MVP
             // router.replace('/onboarding?step=7');
             try {
