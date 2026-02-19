@@ -113,7 +113,8 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
           if (!alreadyRedirected) {
             keepBlocking = true;
             setOnboardingGateReadyForUser(null);
-            router.replace(`/onboarding?step=${json.nextStep}`);
+            // ONBOARDING DESATIVADO TEMPORARIAMENTE - reativar na Fase 2 pós-MVP
+            // router.replace(`/onboarding?step=${json.nextStep}`);
             try {
               sessionStorage.setItem(redirectKey, '1');
             } catch {
@@ -167,7 +168,8 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
           if (!alreadyRedirected) {
             keepBlocking = true;
             setOnboardingGateReadyForUser(null);
-            router.replace('/onboarding?step=7');
+            // ONBOARDING DESATIVADO TEMPORARIAMENTE - reativar na Fase 2 pós-MVP
+            // router.replace('/onboarding?step=7');
             try {
               sessionStorage.setItem(redirectKey, '1');
             } catch {

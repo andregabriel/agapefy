@@ -1,6 +1,6 @@
 "use client";
 
-import { Home, Search, Book, User } from 'lucide-react';
+import { Home, Book, User, Sun } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useLayoutEffect, useRef } from 'react';
@@ -34,8 +34,8 @@ const WhatsAppIcon = ({ size = 24 }: { size?: number }) => (
 );
 
 const navItems = [
-  { href: '/', icon: Home, label: 'Início' },
-  { href: '/busca', icon: Search, label: 'Buscar' },
+  { href: '/hoje', icon: Sun, label: 'Hoje' },
+  { href: '/', icon: Home, label: 'Orações' },
   { href: '/biblia', icon: Book, label: 'Bíblia' },
   { href: '/whatsapp', icon: WhatsAppIcon, label: 'WhatsApp' },
   { href: '/eu', icon: User, label: 'Você' },
