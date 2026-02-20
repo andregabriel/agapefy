@@ -228,3 +228,13 @@
     }
   }
 }
+
+/* Pulse animation for mute CTA */
+@keyframes mute-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(184,146,74,0.5); }
+  50% { box-shadow: 0 0 0 10px rgba(184,146,74,0); }
+}
+
+.animate-mute-pulse {
+  animation: mute-pulse 2s ease-in-out infinite;
+}

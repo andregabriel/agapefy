@@ -481,11 +481,22 @@ export default function HojePage() {
   }, [user, router, liked]);
 
   const handleBlockClick = useCallback((blockId: string) => {
-    if (!user) { router.push("/login"); return; }
-    // Fase 4: navigate to block detail screens
-    // For now, mark as complete (temporary behavior)
-    setDone(prev => new Set([...prev, blockId]));
-  }, [user, router]);
+    if (blockId === "citation") {
+      setShowCitation(true);
+      return;
+    }
+
+    const blockRouteMap: Record<string, string> = {
+      verse: "/hoje/verso",
+      reflection: "/hoje/reflexao",
+      prayer: "/hoje/oracao",
+    };
+
+    const route = blockRouteMap[blockId];
+    if (route) {
+      router.push(route);
+    }
+  }, [router]);
 
   // Loading
   if (loading) {
